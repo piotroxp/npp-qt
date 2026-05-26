@@ -1,0 +1,71 @@
+/* Default dark theme for Notepad-- */
+QMainWindow {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+}
+
+QMenuBar {
+    background-color: #252526;
+    color: #d4d4d4;
+    border-bottom: 1px solid #3e3e42;
+}
+
+QMenuBar::item {
+    background-color: transparent;
+    padding: 4px 8px;
+}
+
+QMenuBar::item:selected {
+    background-color: #094771;
+}
+
+QMenu {
+    background-color: #252526;
+    color: #d4d4d4;
+    border: 1px solid #3e3e42;
+}
+
+QMenu::item {
+    padding: 4px 24px;
+}
+
+QMenu::item:selected {
+    background-color: #094771;
+}
+
+QToolBar {
+    background-color: #252526;
+    border: 1px solid #3e3e42;
+    spacing: 3px;
+}
+
+QStatusBar {
+    background-color: #007acc;
+    color: #ffffff;
+}
+
+QTabWidget::pane {
+    border: 1px solid #3e3e42;
+    background-color: #1e1e1e;
+}
+
+QTabBar::tab {
+    background-color: #2d2d30;
+    color: #d4d4d4;
+    padding: 4px 12px;
+    border: 1px solid #3e3e42;
+}
+
+QTabBar::tab:selected {
+    background-color: #1e1e1e;
+    border-bottom: 1px solid #1e1e1e;
+}
+
+QTabBar::tab:hover {
+    background-color: #094771;
+}
+
+ScintillaEditView {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+}

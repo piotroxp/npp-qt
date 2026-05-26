@@ -1,0 +1,23 @@
+// Buffer.h - Qt port
+#pragma once
+#include <mutex>
+#include <QObject>
+#include <QFile>
+#include <QTextCodec>
+#include "Utf8_16.h"
+class Notepad_plus;
+class Buffer;
+typedef Buffer* BufferID;
+#define BUFFER_INVALID reinterpret_cast<BufferID>(0)
+typedef sptr_t Document;
+enum DocFileStatus { DOC_REGULAR = 0x01, DOC_UNNAMED = 0x02, DOC_DELETED = 0x04, DOC_MODIFIED = 0x08, DOC_NEEDRELOAD = 0x10, DOC_INACCESSIBLE = 0x20 };
+enum BufferStatusInfo { BufferChangeNone = 0x000, BufferChangeLanguage = 0x001, BufferChangeDirty = 0x002, BufferChangeFormat = 0x004, BufferChangeUnicode = 0x008, BufferChangeReadonly = 0x010, BufferChangeStatus = 0x020, BufferChangeTimestamp = 0x040, BufferChangeFilename = 0x080, BufferChangeRecentTag = 0x100, BufferChangeLexing = 0x200, BufferChangeMask = 0x3FF };
+enum SavingStatus { SaveOK = 0, SaveOpenFailed = 1, SaveWritingFailed = 2, NotEnoughRoom = 3, FullReadOnlySavingForbidden = 4 };
+enum EolType { EolType::osdefault, EolUnix = 1, EolMac = 2, EolWindows = 0, EolUnknown = 3 };
+enum UniMode { uni8Bit = 0, uniUTF8 = 1, uni16BE = 2, uni16LE = 3, uniCookie = 4, uni7Bit = 5, uni16BE_NoBOM = 6, uni16LE_NoBOM = 7 };
+struct BufferViewInfo { BufferID _bufID = 0; int _iView = 0; BufferViewInfo() = delete; BufferViewInfo(BufferID buf, int view) : _bufID(buf), _iView(view) {} };
+const wchar_t UNTITLED_STR[] = L"new ";
+struct Position { intptr_t _pos = 0; intptr_t _scrollPos = 0; int _marker = -1; int _selectionStart = 0; int _selectionEnd = 0; int _currentLength = 0; int _nbChar = 0; bool _isSel = false; bool _isHighlights = false; bool _isWordWrap = false; lineWrapMethod _lineWrapMode = LINEWRAP_NONE; intptr_t _XOffset = 0; };
+struct MapPosition { int _firstVisibleLine = 0; int _firstVisibleDigit = 0; int _offset = 0; int _scrollWidth = 0; int _caretPos = 0; int _lastSelAnchorPos = 0; };
+class FileManager final { public: void init(Notepad_plus* pNotepadPlus, ScintillaEditView* pscratchTilla); void checkFilesystemChanges(bool bCheckOnlyCurrentBuffer); size_t getNbBuffers() const { return _nbBufs; } size_t getNbDirtyBuffers() const; int getBufferIndexByID(BufferID id); Buffer* getBufferByIndex(size_t index); Buffer* getBufferByID(BufferID id) { return id; } void beNotifiedOfBufferChange(Buffer* theBuf, int mask); void closeBuffer(BufferID, const ScintillaEditView* identifer); void addBufferReference(BufferID id, ScintillaEditView* identifer); BufferID loadFile(const wchar_t* filename, Document doc = static_cast<Document>(NULL), int encoding = -1, const wchar_t* backupFileName = nullptr, FILETIME fileNameTimestamp = {}); BufferID newEmptyDocument(); BufferID newPlaceholderDocument(const wchar_t* missingFilename, int whichOne, const wchar_t* userCreatedSessionName); BufferID bufferFromDocument(Document doc, bool isMainEditZone); BufferID getBufferFromName(const wchar_t* name); BufferID getBufferFromDocument(Document doc); void setLoadedBufferEncodingAndEol(Buffer* buf, const Utf8_16_Read& UnicodeConvertor, int encoding, EolType bkformat); bool reloadBuffer(BufferID id); bool reloadBufferDeferred(BufferID id); SavingStatus saveBuffer(BufferID id, const wchar_t* filename, bool isCopy = false); bool backupCurrentBuffer(); bool deleteBufferBackup(BufferID id); bool deleteFile(BufferID id); bool moveFile(BufferID id, const wchar_t* newFilename); bool createEmptyFile(const wchar_t* path); static FileManager& getInstance() { static FileManager instance; return instance; } int getFileNameFromBuffer(BufferID id, wchar_t* fn2copy); size_t docLength(Buffer* buffer) const; void removeHotSpot(Buffer* buffer) const; size_t nextUntitledNewNumber() const; void enableAutoDetectEncoding4Loading() { isAutoDetectEncodingDisabled4Loading = false; } void disableAutoDetectEncoding4Loading() { isAutoDetectEncodingDisabled4Loading = true; } private: struct LoadedFileFormat { LoadedFileFormat() = default; LangType _language = L_TEXT; int _encoding = uni8Bit; EolType _eolFormat = EolType::osdefault; }; FileManager() = default; ~FileManager(); FileManager(const FileManager&) = delete; FileManager& operator=(const FileManager&) = delete; FileManager(FileManager&&) = delete; FileManager& operator=(FileManager&&) = delete; int detectCodepage(char* buf, size_t len); bool isAutoDetectEncodingDisabled4Loading = false; bool loadFileData(Document doc, int64_t fileSize, const wchar_t* filename, char* buffer, Utf8_16_Read* UnicodeConvertor, LoadedFileFormat& fileFormat); LangType detectLanguageFromTextBeginning(const unsigned char* data, size_t dataLen); Notepad_plus* _pNotepadPlus = nullptr; ScintillaEditView* _pscratchTilla = nullptr; Document _scratchDocDefault = 0; std::vector<Buffer*> _buffers; BufferID _nextBufferID = 0; size_t _nbBufs = 0; };
+#define MainFileManager FileManager::getInstance()
