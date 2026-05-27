@@ -148,7 +148,7 @@ public:
     bool restoreLayout(const QByteArray& state);
 
     // Container access
-    QDockWidgetArea getDockArea(int container) const;
+    Qt::DockWidgetArea getDockArea(int container) const;
 
 signals:
     void layoutChanged();

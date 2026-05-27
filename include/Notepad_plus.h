@@ -655,11 +655,11 @@ private:
     int menuID2LangType(int cmdID);
 
     // Selection and search
-    bool processIncrFindAccel(const QKeyEvent* event) const;
-    bool processFindAccel(const QKeyEvent* event) const;
-    bool processTabSwitchAccel(const QKeyEvent* event) const;
+    bool processIncrFindAccel(const QKeyEvent* event);
+    bool processFindAccel(const QKeyEvent* event);
+    bool processTabSwitchAccel(const QKeyEvent* event);
 
-    void checkMenuItem(int itemID, bool willBeChecked) const;
+    void checkMenuItem(int itemID, bool willBeChecked);
     bool isConditionExprLine(intptr_t lineNumber);
     intptr_t findMachedBracePos(size_t startPos, size_t endPos, char targetSymbol, char matchedSymbol);
     void maintainIndentation(QChar ch);
@@ -668,12 +668,12 @@ private:
     void removeAllHotSpot();
 
     // Bookmark operations
-    void bookmarkAdd(intptr_t lineno = -1) const;
-    void bookmarkDelete(size_t lineno = static_cast<size_t>(-1)) const;
-    bool bookmarkPresent(intptr_t lineno = -1) const;
-    void bookmarkToggle(intptr_t lineno = -1) const;
+    void bookmarkAdd(intptr_t lineno = -1);
+    void bookmarkDelete(size_t lineno = static_cast<size_t>(-1));
+    bool bookmarkPresent(intptr_t lineno = -1);
+    void bookmarkToggle(intptr_t lineno = -1);
     void bookmarkNext(bool forwardScan);
-    void bookmarkClearAll() const;
+    void bookmarkClearAll();
 
     // Line operations
     void copyMarkedLines();
@@ -725,7 +725,7 @@ private:
     int getLangFromMenuName(const wchar_t* langName);
     std::wstring getLangFromMenu(const Buffer* buf);
 
-    std::wstring exts2Filters(const std::wstring& exts, int maxExtsLen = -1) const;
+    std::wstring exts2Filters(const std::wstring& exts, int maxExtsLen = -1);
     int setFileOpenSaveDlgFilters(CustomFileDialog& fDlg, bool showAllExt, int langType = -1);
     Style* getStyleFromName(const wchar_t* styleName);
     bool dumpFiles(const wchar_t* outdir, const wchar_t* fileprefix = L"");
@@ -735,7 +735,7 @@ private:
 
     std::vector<std::wstring> loadCommandlineParams(const wchar_t* commandLine, 
                                                      const void* pCmdParams);
-    bool noOpenedDoc() const;
+    bool noOpenedDoc();
     bool goToPreviousIndicator(int indicID2Search, bool isWrap = true) const;
     bool goToNextIndicator(int indicID2Search, bool isWrap = true) const;
     int wordCount();
@@ -759,7 +759,7 @@ private:
     void launchFileBrowser(const std::vector<std::wstring>& folders, 
                           const std::wstring& selectedItemPath, 
                           bool fromScratch = false);
-    void showAllQuotes() const;
+    void showAllQuotes();
 
     // Background threads
     static DWORD WINAPI threadTextPlayer(void* text2display);

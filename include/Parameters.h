@@ -128,8 +128,14 @@ enum class LangType {
     L_EXTERNAL_LANG = 200
 };
 
+// Saving status for file buffers
+enum class SavingStatus {
+    SaveOK = 0,
+    SaveOpenFailed = 1
+};
+
 // Position structure
-struct Position {
+struct NppPosition {
     intptr_t _firstVisibleLine = 0;
     intptr_t _startPos = 0;
     intptr_t _endPos = 0;
@@ -141,11 +147,11 @@ struct Position {
 };
 
 // Session file info
-struct sessionFileInfo : public Position {
+struct sessionFileInfo : public NppPosition {
     sessionFileInfo() = default;
     sessionFileInfo(const wchar_t* fn, const wchar_t* ln, int encoding, 
                    bool userReadOnly, bool isPinned, bool isUntitleTabRenamed,
-                   const Position& pos, const wchar_t* backupFilePath,
+                   const NppPosition& pos, const wchar_t* backupFilePath,
                    uint64_t originalFileLastModifTimestamp,
                    void* mapPos) noexcept;
     

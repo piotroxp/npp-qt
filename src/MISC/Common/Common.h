@@ -1,6 +1,8 @@
 // Common.h - Cross-platform Qt6 utilities (replaces Windows MFC)
 #pragma once
-#include "WindowsCompat.h"
+#include "../MISC/Common/WindowsCompat.h"
+#include <QFileDialog>
+#include <QTextCodec>
 #include <QString>
 #include <QStringList>
 #include <QList>

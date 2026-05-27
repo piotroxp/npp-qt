@@ -258,14 +258,23 @@ inline QCursor* LoadCursor(HINSTANCE, int id) {
     }
 }
 
-// ─── System ───────────────────────────────────────────────────────────────────
+// Wrap GetTickCount and Sleep to avoid redefinition if already in WindowsCompat.h
+#ifndef GETTICKCOUNT_DEFINED
+#define GETTICKCOUNT_DEFINED
 inline DWORD GetTickCount() {
     struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);
     return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
+#endif
+
 inline DWORD GetCurrentThreadId() { return (DWORD)(quintptr)QThread::currentThreadId(); }
 inline DWORD GetCurrentProcessId() { return (DWORD)QCoreApplication::applicationPid(); }
+
+#ifndef SLEEP_DEFINED
+#define SLEEP_DEFINED
 inline void Sleep(DWORD ms) { QThread::msleep(ms); }
+#endif
+
 #define OutputDebugString(s) qDebug() << s
 #define GetLastError() errno
 

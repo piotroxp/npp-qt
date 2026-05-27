@@ -4,10 +4,18 @@ project(npp-qt LANGUAGES CXX VERSION 8.9.4)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
+# Exclude Qsci system headers from AUTOMOC to prevent
+# Scintilla macro conflicts (INVALID_POSITION, SCI_* defines break moc)
+set(CMAKE_AUTOMOC_RELAXED_NAMES ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-# Include paths (must be before add_executable)
+# Scintilla subdirectories (must be before Qt package find, so include paths are set first)
+add_subdirectory(src/ScintillaComponents/lexilla)
+add_subdirectory(src/ScintillaComponents/scintilla)
+
+# Include paths - project scintilla FIRST to override system Qsci
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ScintillaComponents/scintilla/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ScintillaComponent)
@@ -39,13 +47,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/WinControls/RunFromZipFinder
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/WinControls/UserDefineDialog)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/WinControls/OpenSaveFileDialog)
 
-# Qt6
+# Qt6 (after project includes so system Qsci is found by Qt's internal paths only)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets PrintSupport Network Xml)
 find_package(Qt6Core5Compat REQUIRED)
-
-# Scintilla subdirectories (lexilla before scintilla since scintilla depends on it)
-add_subdirectory(src/ScintillaComponents/lexilla)
-add_subdirectory(src/ScintillaComponents/scintilla)
 
 # Core source files
 file(GLOB_RECURSE NPP_CORE_SOURCES

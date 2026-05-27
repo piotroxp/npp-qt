@@ -117,7 +117,7 @@ struct LanguageNameInfo {
     const wchar_t* _langName = nullptr;
     const wchar_t* _shortName = nullptr;
     const wchar_t* _longName = nullptr;
-    LangType _langID = L_TEXT;
+    LangType _langID = LangType::L_TEXT;
     const char* _lexerID = nullptr;
 };
 
@@ -168,14 +168,14 @@ public:
      * @brief Get the underlying QsciScintilla pointer
      * @return Pointer to QsciScintilla
      */
-    QsciScintilla* sci() { return _sci; }
-    const QsciScintilla* sci() const { return _sci; }
+    QsciScintilla* sci() { return _scintillaEdit; }
+    const QsciScintilla* sci() const { return _scintillaEdit; }
 
     /**
      * @brief Get the native widget handle
      * @return QWidget pointer (HWND shim)
      */
-    HWND getHSelf() const { return const_cast<QWidget*>(static_cast<const QWidget*>(_sci)); }
+    HWND getHSelf() const { return const_cast<QWidget*>(static_cast<const QWidget*>(_scintillaEdit)); }
 
     /**
      * @brief Execute a Scintilla message
@@ -371,7 +371,7 @@ public:
     void clearIndicator(int indicatorNumber);
     bool getIndicatorRange(size_t indicatorNumber, size_t* from = nullptr, size_t* to = nullptr, size_t* cur = nullptr);
 
-    static LanguageNameInfo _langNameInfoArray[L_EXTERNAL + 1];
+    static LanguageNameInfo _langNameInfoArray[101];
 
     // Buffer management
     void bufferUpdated(Buffer* buffer, int mask);
@@ -435,7 +435,7 @@ public:
     void setElementColour(int element, COLORREF color) const { execute(SCI_SETELEMENTCOLOUR, element, color | 0xFF000000); }
 
     // Focus handling
-    void grabFocus() const { if (_sci) _sci->setFocus(); }
+    void grabFocus() const { if (_scintillaEdit) _scintillaEdit->setFocus(); }
 
 public slots:
     void destroy();
@@ -450,7 +450,7 @@ protected:
     void handleNotification(SCNotification* scn);
 
 private:
-    QPointer<QsciScintilla> _sci;
+    QPointer<QsciScintilla> _scintillaEdit;
 
     // Class-level initialization tracking
     static bool _SciInit;
@@ -464,7 +464,7 @@ private:
 
     // State
     bool _isMainEditZone = false;
-    int _codepage = CP_ACP;
+    int _codepage = 0;
     bool _wrapRestoreNeeded = false;
     bool _positionRestoreNeeded = false;
     uint32_t _restorePositionRetryCount = 0;

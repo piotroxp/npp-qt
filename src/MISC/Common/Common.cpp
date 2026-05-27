@@ -1,5 +1,6 @@
 // MISC/Common/Common.cpp - Qt6 port of Notepad++ Common utilities
 #include "Common.h"
+#include "WindowsCompat.h"
 #include <QFile>
 #include <QTextStream>
 #include <QFileInfo>
@@ -11,6 +12,8 @@
 #include <QColor>
 #include <QLabel>
 #include <QFontMetrics>
+#include <QFileDialog>
+#include <QTextCodec>
 
 using namespace std;
 

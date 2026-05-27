@@ -5,14 +5,18 @@
 #include <QFile>
 #include <QTextCodec>
 #include "Utf8_16.h"
-#include "WindowsCompat.h"
-#include <Scintilla.h>  // For sptr_t, uptr_t
 
-// Forward declarations
+// Forward declarations - must be before Parameters.h
 class Notepad_plus;
-class Buffer;
 class FileManager;
 class ScintillaEditView;
+class Buffer;
+class sessionFileInfo;
+
+// Then include Parameters after forward decls are set up
+#include "Parameters.h"
+#include "WindowsCompat.h"
+#include <Scintilla.h>  // For sptr_t, uptr_t
 
 // Typedefs
 typedef Buffer* BufferID;
@@ -33,27 +37,6 @@ enum BufferStatusInfo {
 };
 
 enum class EolType { OsDefault = -1, Windows = 0, Unix = 1, Mac = 2, Unknown = 3 };
-enum class LangType { L_TEXT = 0, L_C = 2, L_CPP = 3, L_HTML = 8, L_XML = 9, L_PYTHON = 18, L_USER = 15, L_EXTERNAL = 100, L_EXTERNAL_LANG = 200 };
-enum SavingStatus { SaveOK = 0, SaveOpenFailed = 1, SaveWritingFailed = 2, NotEnoughRoom = 3, FullReadOnlySavingForbidden = 4 };
-enum class UniMode { uni8Bit = 0, uniUTF8 = 1, uni16BE = 2, uni16LE = 3, uniCookie = 4, uniUTF8Bom = 5, uniEnd = 6 };
-
-const wchar_t UNTITLED_STR[] = L"new ";
-
-// Structs
-struct BufferViewInfo {
-    BufferID _bufID = nullptr;
-    int _iView = 0;
-    BufferViewInfo() = delete;
-    BufferViewInfo(BufferID buf, int view) : _bufID(buf), _iView(view) {}
-};
-
-struct Position {
-    intptr_t _pos = 0; intptr_t _scrollPos = 0; int _marker = -1;
-    int _selectionStart = 0; int _selectionEnd = 0; int _currentLength = 0;
-    int _nbChar = 0; bool _isSel = false; bool _isHighlights = false;
-    bool _isWordWrap = false; int _lineWrapMode = 0;
-    intptr_t _XOffset = 0;
-};
 
 struct MapPosition {
     int _firstVisibleLine = 0; int _firstVisibleDigit = 0; int _offset = 0;
@@ -66,7 +49,7 @@ public:
     Buffer(const wchar_t* filePathName, Document doc, bool isMainDoc = true);
     ~Buffer();
 
-    BufferID getID() const { return this; }
+    BufferID getID() const { return const_cast<Buffer*>(this); }
     const wchar_t* getFullPath() const { return _fullPathName.c_str(); }
     const wchar_t* getFileName() const { return _fileName.c_str(); }
     Document getNavigator() const { return _doc; }
@@ -106,7 +89,7 @@ private:
     FILETIME _fileTime{};
     int _referenceCount = 0;
     int _lastSeenTabIndex = 0;
-    Position _pos;
+    NppPosition _pos;
     MapPosition _mapPos;
     bool _rulerBarEnabled = false;
     bool _currentLineHilitingEnabled = false;

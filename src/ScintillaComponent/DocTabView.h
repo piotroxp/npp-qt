@@ -24,8 +24,8 @@ public:
     bool getCurrentBufferId(BufferID* bufferId) const;
     HWND getViewByIndex(int index) const;
     HWND getCurrentViewHandle() const;
-    void setUpdateLnThread(UpdateThread* UT) { _updatingLn = UT; }
+    void setUpdateLnThread(UT) {  }
 private:
-    UpdateThread* _updatingLn = nullptr;
+    _updatingLn = nullptr;
     std::map<int, BufferID> _id2Buffer;
 };

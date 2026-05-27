@@ -1,6 +1,8 @@
 // AutoCompletion.h - Qt6 port
 #pragma once
 #include <QWidget>
+#include <Qsci/qsciscintillabase.h>
+typedef unsigned int COLORREF;
 #include <vector>
 #include <string>
 #include "FunctionCallTip.h"
@@ -57,22 +59,22 @@ public:
     void update(int character) { Q_UNUSED(character); }
     void callTipClick(size_t direction) { Q_UNUSED(direction); }
     void getCloseTag(char* closeTag, size_t closeTagLen, size_t caretPos, bool isHTML) const { Q_UNUSED(closeTag); Q_UNUSED(closeTagLen); Q_UNUSED(caretPos); Q_UNUSED(isHTML); }
-    static void setColour(COLORREF colour2Set, AutocompleteColorIndex i) { Q_UNUSED(colour2Set); Q_UNUSED(i); }
+    static void setColour(QRgb colour2Set, AutocompleteColorIndex i) { Q_UNUSED(colour2Set); Q_UNUSED(i); }
     static void drawAutocomplete(const ScintillaEditView* pEditView) { Q_UNUSED(pEditView); }
 
 protected:
-    static COLORREF _autocompleteBg;
-    static COLORREF _autocompleteText;
-    static COLORREF _selectedBg;
-    static COLORREF _selectedText;
-    static COLORREF _calltipBg;
-    static COLORREF _calltipText;
-    static COLORREF _calltipHighlight;
+    static QRgb _autocompleteBg;
+    static QRgb _autocompleteText;
+    static QRgb _selectedBg;
+    static QRgb _selectedText;
+    static QRgb _calltipBg;
+    static QRgb _calltipText;
+    static QRgb _calltipHighlight;
 
 private:
     bool _funcCompletionActive = false;
     ScintillaEditView* _pEditView = nullptr;
-    LangType _curLang = L_TEXT;
+    LangType _curLang = L_USER;
     void* _pXmlFile = nullptr;
     std::string _xmlKeyword;
     bool _isFxImageRegistered = false;
