@@ -24,7 +24,7 @@
 #include "FileManager.h"
 #include "Parameters.h"
 #include "NppDarkMode.h"
-#include "CustomFileDialog.h"
+#include "WinControls/OpenSaveFileDialog/CustomFileDialog.h"
 #include "Utf8_16.h"
 #include "EncodingMapper.h"
 

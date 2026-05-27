@@ -17,6 +17,8 @@
 #include "ColourPicker.h"
 
 #include <QPainter>
+#include <QMouseEvent>
+#include <QPaintEvent>
 #include <QColorDialog>
 #include <QColor>
 #include <QHBoxLayout>

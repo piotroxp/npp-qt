@@ -44,7 +44,7 @@ public:
     bool goToSection(size_t iPage);
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private:
     void makeCategoryList();

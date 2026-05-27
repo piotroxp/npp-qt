@@ -2,6 +2,7 @@
 #pragma once
 
 #include <QString>
+#include <QList>
 
 enum SecurityMode { sm_certif = 0, sm_sha256 = 1 };
 enum NppModule { nm_gup = 1, nm_pluginList = 2 };

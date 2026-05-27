@@ -1,5 +1,6 @@
 // NppXml.cpp - XML parsing utilities for NppParameters
 #include "NppXml.h"
+#include <QBuffer>
 
 bool NppXmlDoc::load(const QString& filePath) {
     QFile file(filePath);

@@ -68,7 +68,7 @@ signals:
     void pluginClosed(const QString& pluginName);
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private:
     void initPluginList();

@@ -2,41 +2,80 @@
 #pragma once
 #include <QMap>
 #include <QSignalMapper>
+#include <QMenu>
+#include <memory>
+#include <map>
+#include <string>
 #include "PluginInterface.h"
-#include "NppNotepad_plus.h"
 #include "ScintillaEditView.h"
+
 struct PluginCommand { int _cmdID = 0; PFUNCPLUGINCMD _pFunc = nullptr; const wchar_t* _pluginName = nullptr; ShortcutKey* _pShortcut = nullptr; bool _wasChecked = false; };
 struct ShortcutKeyAndCmdID { int _key = 0; int _cmd = 0; const wchar_t* _pluginName = nullptr; };
+
+struct DynamicIDAlloc {
+    int _nextID = 1000;
+    bool allocate(int numberRequired, int* start) {
+        *start = _nextID;
+        _nextID += numberRequired;
+        return true;
+    }
+};
+
+struct PluginInfo {
+    QString _funcName;
+    QString _moduleName;
+    QString _modulePath;
+    PFUNCSETINFO _pFuncSetInfo = nullptr;
+    PFUNCGETNAME _pFuncGetName = nullptr;
+    PFUNCGETFUNCSARRAY _pFuncGetFuncsArray = nullptr;
+    PBENOTIFIED _pBeNotified = nullptr;
+    PMESSAGEPROC _pMessageProc = nullptr;
+    PFUNCISUNICODE _pFuncIsUnicode = nullptr;
+    FuncItem* _funcItems = nullptr;
+    int _nbFuncItem = 0;
+};
+
 class PluginsManager {
 public:
     static PluginsManager& getInstance() { static PluginsManager pm; return pm; }
+    
     void initHMenus(HMENUFunctions pfn);
-    void loadPlugins(const wchar_t* pluginsDirectoryPath, int nbTotalPlugins);
-    void loadPlugin(const wchar_t* pluginModuleName, bool isEnabled = true, bool orderByName = true);
-    void unloadPlugin(const wchar_t* pluginModuleName, int unloadFlags = 0, HMENUFunctions pfnHMENU = 0);
-    void disablePlugin(const wchar_t* pluginModuleName, bool doDisable);
-    std::vector<PluginCommand> getPluginCommands() const { return _pluginsCommands; }
-    std::vector<PluginCommand> getPluginCommadsByShortcutKey(size_t ScintillaHandle, int shortcutKey);
-    void runPluginCommand(const wchar_t* pluginModuleName);
-    void runFuncCommand(size_t cmdID, ScintillaEditView** ppEditView);
-    void notify(long long bufferID, int message) const;
-    long long comunicChecker(size_t wParam, long long lParam) const;
-    void setPluginType(const wchar_t* pluginModuleName, bool legacyDll);
-    bool isLegacyPlugin(const wchar_t* pluginModuleName);
-    bool unregisterShortkey(int key, int cmd);
-    void registerShortkey(int key, int cmd, const wchar_t* pluginName);
-    bool allocateMarker(HMENUFunctions pFnAllocMarkers);
-    bool allocateCmdId(HMENUFunctions pFnAllocCmdIds);
+    int loadPluginFromPath(const QString& pluginFilePath);
+    bool loadPlugins(const QString& dir, const PluginViewList*, PluginViewList*);
+    
+    void runPluginCommand(size_t i);
+    void runPluginCommand(const QString& pluginName, int commandID);
+    void runFuncCommand(const wchar_t* funcName, ScintillaEditView** ppEditView);
+    
+    void* initMenu(void* hMenu, bool);
+    void addInMenuFromPMIndex(int i);
+    
+    bool allocateCmdID(int numberRequired, int* start);
+    bool allocateMarker(int numberRequired, int* start);
+    bool allocateIndicator(int numberRequired, int* start);
+    
+    void notify(size_t eventType, const void* notification);
+    void notify(const void* notification);
+    void relayNppMessages(unsigned int msg, size_t wParam, long lParam);
+    bool relayPluginMessages(unsigned int msg, size_t wParam, long lParam);
+    
+    bool getShortcutByCmdID(int, ShortcutKey*);
+    bool removeShortcutByCmdID(int);
+    long long comunicChecker(size_t, long long) const;
+    
+    QString getLoadedPluginNames() const;
     int getCurrentScratchTBVisible() const { return _isCurrentScratchVisible; }
     void setCurrentScratchTBVisible() { _isCurrentScratchVisible = false; }
+    
+    void addInLoadedDlls(const QString& path, const QString& moduleName) { Q_UNUSED(path); Q_UNUSED(moduleName); }
+    
 private:
-    PluginsManager() = default;
-    std::vector<PluginDLLHandle> _vecPluginDLLHandles;
-    std::map<std::wstring, Path> _pluginPaths;
-    std::vector<PluginCommand> _pluginsCommands;
+    std::vector<std::unique_ptr<PluginInfo>> _pluginInfos;
     std::map<int, std::wstring> _shortcuts;
     int _nbShortcuts = 0;
     HMENUFunctions _pfnHMENU = nullptr;
     bool _isCurrentScratchVisible = false;
+    DynamicIDAlloc _dynamicIDAlloc;
 };
+
 #define NB_MAX_UPDATES 10

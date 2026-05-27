@@ -6,6 +6,23 @@
 #include <QSize>
 #include <QPoint>
 #include <QColor>
+#include <QApplication>
+
+// Base Window class for WinForms → Qt6 translation
+class Window : public QWidget
+{
+    Q_OBJECT
+public:
+    Window() : QWidget() {}
+    virtual ~Window() {}
+
+    virtual void display(bool toShow = true) { toShow ? show() : hide(); }
+    virtual void destroy() { close(); deleteLater(); }
+
+protected:
+    void keyPressEvent(QKeyEvent* event) override { QWidget::keyPressEvent(event); }
+    void closeEvent(QCloseEvent* event) override { QWidget::closeEvent(event); }
+};
 
 // Common window utilities shim for Win32 → Qt6
 
@@ -123,9 +140,9 @@ inline void showWindow(QWidget* w, int cmd)
 
 // ─── Focus ───────────────────────────────────────────────────
 
-inline void setFocus(QWidget* w) { w->setFocus(); }
-inline QWidget* getFocus() { return QApplication::focusWidget(); }
-inline QWidget* getActiveWindow() { return QApplication::activeWindow(); }
+// Duplicated in WindowsCompat.h: setFocus
+// Duplicated in WindowsCompat.h: getFocus
+// getActiveWindow() defined in Win32QtShim.h - no need to redefine
 
 // ─── Cursor ──────────────────────────────────────────────────
 
@@ -143,20 +160,4 @@ inline Qt::CursorShape loadCursor(int id)
         case 32648: return Qt::PointingHandCursor;
         default: return Qt::ArrowCursor;
     }
-}
-
-// ─── Screen info ─────────────────────────────────────────────
-
-inline QSize getScreenSize()
-{
-    if (QWidget* w = QApplication::primaryScreen())
-        return w->size();
-    return QSize(1920, 1080);
-}
-
-inline QRect getWorkArea()
-{
-    if (QWidget* w = QApplication::primaryScreen())
-        return w->availableGeometry();
-    return QRect(0, 0, 1920, 1080);
 }

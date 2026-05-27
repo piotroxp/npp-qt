@@ -36,7 +36,7 @@ public:
     ~VerticalFileSwitcher() override = default;
 
     void init(QWidget* parent);
-    void destroy() override;
+    void destroy();
     void popUp() {
         display(true);
     }
@@ -66,7 +66,7 @@ signals:
     void deleteCurrent();
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private:
     void selectEntry();

@@ -17,7 +17,7 @@
 #pragma once
 
 #include <QWidget>
-#include "../Window/Window.h"
+#include "../Window.h"
 #include "BabyGrid.h"
 
 // BabyGridWrapper - Wrapper for BabyGrid control

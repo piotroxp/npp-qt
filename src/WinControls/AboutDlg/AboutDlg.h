@@ -53,7 +53,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 )";
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private:
     //URLCtrl _emailLink;
@@ -82,7 +82,7 @@ public:
     void destroy() override {}
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private:
     QString _debugInfoStr;
@@ -112,7 +112,7 @@ public:
     void setFontSize(int s) { _fontSize = s; }
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private:
     QString _fontFamily = "Courier New";
@@ -138,7 +138,7 @@ public:
     void changeLang();
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private:
     int _clickedButtonId = -1;
@@ -165,7 +165,7 @@ public:
     void changeLang();
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private:
     int _clickedButtonId = -1;

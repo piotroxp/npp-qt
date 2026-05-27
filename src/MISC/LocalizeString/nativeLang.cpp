@@ -36,7 +36,7 @@ bool NativeLang::loadLanguage(const QString& langFilePath)
     }
     
     QTextStream stream(&file);
-    stream.setCodec("UTF-8");
+    stream.setEncoding(QStringConverter::Utf8);
     
     parseLanguageFile(langFilePath);
     
@@ -59,7 +59,7 @@ void NativeLang::parseLanguageFile(const QString& filePath)
         xml.readNext();
         
         if (xml.isStartElement()) {
-            if (xml.name() == "Item") {
+            if (xml.name().toString() == "Item") {
                 QString key = xml.attributes().value("name").toString();
                 xml.readNext();
                 if (xml.isCharacters() && !xml.text().isNull()) {

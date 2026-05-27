@@ -30,11 +30,11 @@ public:
     void redrawDlgItem(int nIDDlgItem, bool forceUpdate = false) const;
 
     // Position helpers
-    void goToCenter(unsigned swpFlags = Qt::WindowFlags(Qt::ShowWindow));
+    void goToCenter(unsigned swpFlags = 0);
     bool moveForDpiChange();
 
     // Display/hide
-    void display(bool toShow = true) override;
+    void display(bool toShow = true);
     void displayEnhanced(bool toShow);
 
     // Viewable position rect for multi-monitor
@@ -49,25 +49,22 @@ public:
 
     // DPI
     void setDpi() { /* handled by Qt */ }
-    void setPositionDpi(WPARAM wParam, LPARAM lParam);
+    void setPositionDpi(long wParam, long lParam);
 
     // Get rect
     QRect getRect() const { return _rc; }
 
     // Destroy
-    void destroy() override;
+    void destroy();
 
-signals:
-    void dpiChanged();
+// Signal for DPI changes
+    void dpiChanged() { Q_EMIT dpiChanged(); }
 
 protected:
     // Override run_dlgProc in subclasses
-    virtual int run_dlgProc(QEvent* event) = 0;
+    virtual intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) = 0;
 
     bool event(QEvent* event) override;
-    void showEvent(QShowEvent* event) override;
-    void closeEvent(QCloseEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
 
     QRect _rc;
     bool _isCreated = false;

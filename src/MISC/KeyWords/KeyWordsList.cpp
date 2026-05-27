@@ -1,6 +1,7 @@
 // MISC/KeyWords/KeyWordsList.cpp - Qt6 port of keyword lists for syntax highlighting
 #include "KeyWordsList.h"
 #include <QRegularExpression>
+#include <QStringList>
 
 KeyWordsList::KeyWordsList()
 {
@@ -20,7 +21,7 @@ void KeyWordsList::setKeywords(const QString& keywords)
 void KeyWordsList::parseKeywords(const QString& keywords)
 {
     // Split by whitespace (space or tab)
-    QStringList parts = keywords.split(QRegExp("[\\s]+"), Qt::SkipEmptyParts);
+    QStringList parts = keywords.split(QRegularExpression("[\\s]+"), Qt::SkipEmptyParts);
     for (const QString& part : parts) {
         if (!part.isEmpty())
             _keywords.append(part);

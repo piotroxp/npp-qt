@@ -6,7 +6,6 @@
 #include "NppConstants.h"
 #include "Colors.h"
 #include "Utf8_16.h"
-#include <Qsci/qsciscintilla.h>
 #include <QApplication>
 #include <QBoxLayout>
 bool ScintillaEditView::_SciInit = false;

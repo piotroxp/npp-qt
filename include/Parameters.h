@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "WindowsCompat.h"
 #include <QtCore/QSettings>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
@@ -44,11 +45,9 @@
 class NativeLangSpeaker;
 class NppXml;
 
-// Color types (matching original)
-using COLORREF = unsigned long;
-constexpr COLORREF black = 0x000000;
-constexpr COLORREF white = 0xFFFFFF;
-constexpr COLORREF STYLE_NOT_USED = 0x1000000;
+// Style constants (using COLORREF from WindowsCompat.h)
+using COLORREF = DWORD;
+#define STYLE_NOT_USED -1
 
 // Forward declarations for lexer/Scintilla
 struct Style;
@@ -60,13 +59,13 @@ class Accelerator;
 class ScintillaAccelerator;
 struct ScintillaViewParams;
 
-// EOL types
-enum class EolType {
-    osdefault = -1,
-    windows = 0,  // CR LF
-    unix = 1,     // LF
-    mac = 2,      // CR
-    unknown = 3
+// EOL types (with preprocessor macros for C compatibility)
+enum class NppEolType {
+    OsDefault = -1,
+    Windows = 0,
+    Unix = 1,
+    Mac = 2,
+    Unknown = 3
 };
 
 // Unicode modes
@@ -301,7 +300,7 @@ private:
 
 // New document default settings
 struct NewDocDefaultSettings {
-    EolType _format = EolType::osdefault;
+    NppEolType _format = NppEolType::OsDefault;
     UniMode _unicodeMode = UniMode::uniUTF8;
     bool _openAnsiAsUtf8 = true;
     int _lang = 0;
@@ -705,10 +704,15 @@ struct FindHistory {
     bool _regexBackward4PowerUser = false;
 };
 
+// Scintilla enums (re-exported for convenience in other files)
+enum class NumBase : unsigned char { BASE_10 = 0, BASE_16 = 1, BASE_8 = 2, BASE_2 = 3, BASE_16_UPPER = 4 };
+enum TextCase : unsigned char { LOWER = 0, UPPER = 1, TITLE = 2, SENTENCE = 3 };
+enum folderStyle : unsigned char {_FOLDER = 1, _FOLDER_CHAR = 2, _FOLDER_ARROW = 3, _FOLDER_BOX = 4, _FOLDER_BOX_EMPTY = 5, _FOLDER_BOX_DOTTED = 6, FOLDER_END = 7, _FOLDER_CHAR_END = 8, _FOLDER_ARROW_END = 9, _FOLDER_BOX_END = 10, _FOLDER_BOX_DOTTED_END = 11};
+enum lineWrapMethod : unsigned char { LINEWRAP_NO = 0, LINEWRAP_BY_WINDOW_WIDTH = 1, LINEWRAP_BY_ZOOM = 2 };
+
 // Column editor parameters
 struct ColumnEditorParam {
     enum class LeadingChoice : unsigned char { noneLeading, zeroLeading, spaceLeading };
-    enum class NumBase : unsigned char { BASE_10 = 0, BASE_16 = 1, BASE_8 = 2, BASE_2 = 3, BASE_16_UPPER = 4 };
     
     bool _mainChoice = false;
     std::wstring _insertedTextContent;
@@ -719,23 +723,6 @@ struct ColumnEditorParam {
     LeadingChoice _leadingChoice = LeadingChoice::noneLeading;
 };
 
-// Localization switcher
-class LocalizationSwitcher {
-public:
-    bool addLanguageFromXml(const std::wstring& xmlFullPath);
-    std::wstring getLangFromXmlFileName(const wchar_t* fn) const;
-    std::wstring getXmlFilePathFromLangName(const wchar_t* langName) const;
-    bool switchToLang(const wchar_t* lang2switch) const;
-    size_t size() const { return _localizationList.size(); }
-    std::pair<std::wstring, std::wstring> getElementFromIndex(size_t index) const;
-    void setFileName(const char* fn);
-    const std::string& getFileName() const { return _fileName; }
-    
-private:
-    std::vector<std::pair<std::wstring, std::wstring>> _localizationList;
-    std::wstring _nativeLangPath;
-    std::string _fileName;
-};
 
 // Theme switcher
 class ThemeSwitcher {
@@ -914,3 +901,45 @@ public:
     bool isRemappingShortcut() const { return !_shortcuts.empty(); }
     std::vector<void*>& getUserShortcuts() { return _shortcuts; }
     void addUserModifiedIndex(size_t index);
+
+private:
+    // Language management
+    int _nbLang = 0;
+    int _nbUserLang = 0;
+    int _nbExternalLang = 0;
+
+    // Recent files
+    int _nbRecentFile = 0;
+    unsigned int _nbMaxRecentFile = 10;
+    bool _putRecentFileInSubMenu = false;
+    int _recentFileCustomLength = 0;
+    std::vector<std::unique_ptr<std::wstring>> _LRFileList;
+
+    // GUI and view parameters
+    NppGUI _nppGUI;
+    ScintillaViewParams _svp;
+
+    // Styler arrays
+    LexerStylerArray _lexerStylerVect;
+    StyleArray _widgetStyleArray;
+
+    // Fonts
+    std::vector<std::wstring> _fontlist;
+
+    // XML documents
+    void* _pXmlNativeLangDoc = nullptr;
+    void* _pXmlToolButtonsConfDoc = nullptr;
+
+    // Command line
+    void* _cmdLineParams = nullptr;
+    std::wstring _cmdLineString;
+
+    // File dialog
+    int _fileSaveDlgFilterIndex = 0;
+
+    // Shortcuts
+    std::vector<void*> _shortcuts;
+
+    // Settings path cache
+    mutable QString _cachedSettingsPath;
+};

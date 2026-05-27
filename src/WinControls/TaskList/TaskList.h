@@ -22,7 +22,7 @@
 #include <QVector>
 #include <QRect>
 
-#include "../Window/Window.h"
+#include "../Window.h"
 
 // TaskList - Task list panel
 // Replaces MFC ListView-based task list with Qt QTableWidget

@@ -3,6 +3,9 @@
 
 #include <QDialog>
 
+// Hash type enum - moved outside classes for easier access
+enum HashType { hash_md5 = 16, hash_sha1 = 20, hash_sha256 = 32, hash_sha512 = 64 };
+
 class HashFromFilesDlg : public QDialog
 {
     Q_OBJECT
@@ -14,7 +17,6 @@ public:
     void reject() override;
 
     void setHashType(int hashType2set);
-    enum hashType { hash_md5 = 16, hash_sha1 = 20, hash_sha256 = 32, hash_sha512 = 64 };
 
 private:
     int _ht = hash_md5;
@@ -37,5 +39,5 @@ private:
     int _ht = hash_md5;
 };
 
-#define HASH_MAX_LENGTH HashFromFilesDlg::hash_sha512
-#define HASH_STR_MAX_LENGTH (HashFromFilesDlg::hash_sha512 * 2 + 1)
+#define HASH_MAX_LENGTH hash_sha512
+#define HASH_STR_MAX_LENGTH (hash_sha512 * 2 + 1)

@@ -25,7 +25,7 @@
 
 #include "../StaticDialog/StaticDialog.h"
 #include "BabyGridWrapper.h"
-#include "ContextMenu.h"
+#include "../ContextMenu/ContextMenu.h"
 
 // Resource IDs
 #define IDD_SHORTCUTMAPPER_DLG 2600
@@ -46,7 +46,7 @@ public:
     ~ShortcutMapper() override;
 
     void init(QWidget* parent, GridState initState = STATE_MENU);
-    void destroy() override;
+    void destroy();
     void doDialog(bool isRTL = false);
 
     bool findKeyConflicts(QString* keyConflictLocation, const QString& itemKeyCombo, size_t itemIndex);
@@ -55,7 +55,7 @@ signals:
     void shortcutChanged();
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private slots:
     void onTabChanged(int index);

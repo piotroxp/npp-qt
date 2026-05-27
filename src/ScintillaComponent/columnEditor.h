@@ -6,8 +6,10 @@
 #include <QComboBox>
 #include <QCheckBox>
 #include "ScintillaEditView.h"
+
 enum Order { Incr = 0, Decr = 1, Insert = 2 };
 enum Action { Fill_Every_N = 0, Fill_On_Selection = 1, Fill_On_All_Found = 2, Delete = 3, Revert = 4 };
+
 class columnEditor : public QDialog {
     Q_OBJECT
 public:

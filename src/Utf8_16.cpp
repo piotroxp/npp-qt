@@ -2,6 +2,7 @@
 #include "Utf8_16.h"
 #include <QFile>
 #include <QByteArray>
+#include <QTextCodec>
 
 const unsigned char Utf8_16::UTF8_BOM[] = { 0xEF, 0xBB, 0xBF };
 const unsigned char Utf8_16::UTF16_LE_BOM[] = { 0xFF, 0xFE };

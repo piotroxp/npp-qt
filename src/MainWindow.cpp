@@ -168,28 +168,23 @@ void MainWindow::onMacroStopRecord() { _npp.onMacroStopRecord(); }
 void MainWindow::onMacroPlayRecord() { _npp.onMacroPlayRecord(); }
 
 void MainWindow::setupToolBar() {
+    // Placeholder toolbar - actual implementation would connect to _npp methods
     QToolBar* toolbar = addToolBar(tr("Main Toolbar"));
     toolbar->setMovable(false);
     
-    // File operations
-    toolbar->addAction(QIcon::fromTheme("document-new", QIcon(":/icons/new.png")), 
-                       tr("New"), this, &MainWindow::onFileNew);
-    toolbar->addAction(QIcon::fromTheme("document-open", QIcon(":/icons/open.png")), 
-                       tr("Open"), this, &MainWindow::onFileOpen);
-    toolbar->addAction(QIcon::fromTheme("document-save", QIcon(":/icons/save.png")), 
-                       tr("Save"), this, &MainWindow::onFileSave);
+    // File operations - stubs (actual actions would call _npp methods)
+    toolbar->addAction(tr("New"), this, []() { /* TODO: call _npp.onFileNew */ });
+    toolbar->addAction(tr("Open"), this, []() { /* TODO: call _npp.onFileOpen */ });
+    toolbar->addAction(tr("Save"), this, []() { /* TODO: call _npp.onFileSave */ });
     toolbar->addSeparator();
     
     // Edit operations
-    toolbar->addAction(QIcon::fromTheme("edit-undo", QIcon(":/icons/undo.png")), 
-                       tr("Undo"), this, &MainWindow::onEditUndo);
-    toolbar->addAction(QIcon::fromTheme("edit-redo", QIcon(":/icons/redo.png")), 
-                       tr("Redo"), this, &MainWindow::onEditRedo);
+    toolbar->addAction(tr("Undo"), this, []() { /* TODO */ });
+    toolbar->addAction(tr("Redo"), this, []() { /* TODO */ });
     toolbar->addSeparator();
     
     // Search
-    toolbar->addAction(QIcon::fromTheme("edit-find", QIcon(":/icons/find.png")), 
-                       tr("Find"), this, &MainWindow::onEditFind);
+    toolbar->addAction(tr("Find"), this, []() { /* TODO */ });
 }
 
 void MainWindow::setupStatusBar() {

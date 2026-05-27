@@ -19,9 +19,9 @@
 #include <QListWidget>
 #include <QString>
 
-#include "../Window/Window.h"
+#include "Window.h"
+#include "Window/Widget.h"
 
-// VerticalFileSwitcherListView - List view for file switcher
 class VerticalFileSwitcherListView : public Widget< QListWidget >
 {
     Q_OBJECT
@@ -31,7 +31,7 @@ public:
     ~VerticalFileSwitcherListView() override = default;
 
     void init(QWidget* parent);
-    void destroy() override;
+    void destroy();
 
     void setList(const QVector<QString>& entryNameArray);
     void getList(QVector<QString>& targetArray) const;

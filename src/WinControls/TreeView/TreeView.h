@@ -23,7 +23,7 @@
 #include <QPoint>
 #include <QPixmap>
 
-#include "../Window/Window.h"
+#include "../Window.h"
 
 // TreeView - Tree view control
 // Replaces MFC CTreeCtrl with Qt QTreeWidget
@@ -36,7 +36,7 @@ public:
     ~TreeView() override = default;
 
     void init(QWidget* parent, int treeViewID);
-    void destroy() override;
+    void destroy();
 
     // Item operations
     QTreeWidgetItem* addItem(const QString& itemName, QTreeWidgetItem* hParentItem, int iImage, intptr_t lParam = 0);

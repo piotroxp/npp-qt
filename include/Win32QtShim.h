@@ -230,11 +230,9 @@
 #include <functional>
 
 // ─── Window / Cursor Functions ──────────────────────────────────────────────────
-inline QWidget* getActiveWindow() { return QApplication::activeWindow(); }
 inline QWidget* getForegroundWindow() { return QApplication::activeWindow(); }
 #define GetActiveWindow() QApplication::activeWindow()
 #define GetForegroundWindow() QApplication::activeWindow()
-inline void SetForegroundWindow(QWidget*) {}
 inline void BringWindowToTop(QWidget*) {}
 inline void SetFocus(QWidget*) {}
 inline void SetActiveWindow(QWidget*) {}
@@ -259,10 +257,6 @@ inline QCursor* LoadCursor(HINSTANCE, int id) {
         default: return new QCursor(Qt::ArrowCursor);
     }
 }
-#define SetCursor(cursor) if(cursor) QApplication::setOverrideCursor(*(cursor))
-#define GetCursor() nullptr
-#define ClipCursor(rect) (void)0
-#define GetClipCursor() nullptr
 
 // ─── System ───────────────────────────────────────────────────────────────────
 inline DWORD GetTickCount() {
@@ -289,10 +283,8 @@ inline void Sleep(DWORD ms) { QThread::msleep(ms); }
 #define _TEXT(x) u"" x
 
 // ─── Registry ────────────────────────────────────────────────────────────────
-inline LONG RegOpenKeyEx(HKEY, LPCTSTR, DWORD, REGSAM, PHKEY) { return 0; }
 inline LONG RegSetValueEx(HKEY, LPCWSTR, DWORD, DWORD, const BYTE*, DWORD) { return 0; }
 inline LONG RegQueryValueEx(HKEY, LPCWSTR, LPDWORD, LPDWORD, LPBYTE*, LPDWORD) { return 0; }
-inline LONG RegCloseKey(HKEY) { return 0; }
 #define HKEY_CURRENT_USER "HKEY_CURRENT_USER"
 #define HKEY_LOCAL_MACHINE "HKEY_LOCAL_MACHINE"
 #define HKEY_CLASSES_ROOT "HKEY_CLASSES_ROOT"
@@ -399,11 +391,6 @@ inline DWORD ShellExecute(QWidget*, const QString& verb, const QString& file,
 #define SB_LINEUP 0
 #define SB_LINEDOWN 1
 
-// ─── DPI / Monitor ─────────────────────────────────────────────────────────────
-inline int GetDpiForWindow(QWidget* w) {
-    if (w && w->windowHandle()) return w->windowHandle()->screen()->logicalDpiY();
-    return qApp->devicePixelRatio() * 96;
-}
 
 // ─── Misc macros ───────────────────────────────────────────────────────────────
 #define IsWindowVisible(w) (w && w->isVisible())
@@ -422,10 +409,10 @@ inline int GetDpiForWindow(QWidget* w) {
 #define EndDialog(d, r) do { if(d) d->done(r); } while(false)
 #define GetDlgItem(p, id) (p ? p->findChild<QWidget*>(QString("dlg_%1").arg(id)) : nullptr)
 #define SetDlgItemText(p, id, t) do { auto* w = GetDlgItem(p, id); if(w) w->setWindowTitle(t); } while(false)
-#define GetDlgItemText(p, id) ([](auto...) -> QString { return QString(); }(p, id))
 #define CheckDlgButton(p, id, c) do { auto* b = qobject_cast<QAbstractButton*>(GetDlgItem(p, id)); if(b) b->setChecked(c != 0); } while(false)
-#define IsDlgButtonChecked(p, id) ([](auto...) -> int { return 0; }(p, id))
 #define LoadLibrary(x) nullptr
+inline QString GetDlgItemText(QWidget* p, int id) { auto* w = p ? p->findChild<QWidget*>(QString("dlg_%1").arg(id)) : nullptr; return w ? w->windowTitle() : QString(); }
+inline int IsDlgButtonChecked(QWidget*, int) { return 0; }
 #define FreeLibrary(m) (void)0
 #define GetProcAddress(m, n) nullptr
 #define GetModuleHandle(m) nullptr

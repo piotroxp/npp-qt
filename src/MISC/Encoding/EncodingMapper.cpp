@@ -1,5 +1,7 @@
 // MISC/Encoding/EncodingMapper.cpp - Qt6 port of encoding mapping
 #include "EncodingMapper.h"
+#include <QTextCodec>
+#include <QtCore5Compat/QTextCodec>
 
 EncodingMapper::EncodingMapper()
 {
@@ -104,8 +106,9 @@ QString EncodingMapper::codePageToEncodingName(int codePage) const
         return getEncodingFromIndex(idx);
     
     // Try to find via QTextCodec
-    QTextCodec* codec = QTextCodec::codecForMib(QTextCodec::mibEnumForCodec(QTextCodec::codecForName("System").data()));
-    Q_UNUSED(codec);
+    // Note: QTextCodec removed in Qt6 - use QStringConverter
+    // For encoding conversion use QStringConverter directly
+    QTextDecoder* decoder = nullptr; // placeholder
     
     return QString();
 }

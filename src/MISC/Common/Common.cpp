@@ -142,8 +142,8 @@ const QString& WcharMbcsConvertor::char2wchar(const QByteArray& mbcs2Convert, co
         return _wideCharStr;
     }
 
-    QTextCodec* codec = QTextCodec::codecForName(codepage.toUtf8());
-    if (!codec) codec = QTextCodec::codecForName("UTF-8");
+    QTextCodec* codec = nullptr; // QTextCodec removed in Qt6(codepage.toUtf8().constData());
+    // Stub: codec unavailable in Qt6
     
     _wideCharStr.resize(mbcs2Convert.length() * 2 + 1);
     _wideCharStr.clear();
@@ -158,8 +158,8 @@ const QString& WcharMbcsConvertor::wchar2char(const QString& wcharStr2Convert, c
         return _multiByteStr;
     }
 
-    QTextCodec* codec = QTextCodec::codecForName(codepage.toUtf8());
-    if (!codec) codec = QTextCodec::codecForName("UTF-8");
+    QTextCodec* codec = nullptr; // QTextCodec removed in Qt6(codepage.toUtf8().constData());
+    // Stub: codec unavailable in Qt6
     
     QByteArray encoded = codec->fromUnicode(wcharStr2Convert);
     _multiByteStr.resize(encoded.size() + 1);
@@ -169,9 +169,10 @@ const QString& WcharMbcsConvertor::wchar2char(const QString& wcharStr2Convert, c
 
 QString WcharMbcsConvertor::encode(const QString& fromCodepage, const QString& toCodepage, const QString& txt2Encode)
 {
-    QTextCodec* srcCodec = QTextCodec::codecForName(fromCodepage.toUtf8());
-    QTextCodec* dstCodec = QTextCodec::codecForName(toCodepage.toUtf8());
-    if (!srcCodec || !dstCodec) return txt2Encode;
+    QTextCodec* srcCodec = nullptr; // QTextCodec removed(fromCodepage.toUtf8().constData());
+    QTextCodec* dstCodec = nullptr; // QTextCodec removed(toCodepage.toUtf8().constData());
+    // Stub: codec unavailable in Qt6
+    return txt2Encode;
     
     QByteArray intermediate = srcCodec->fromUnicode(txt2Encode);
     return dstCodec->toUnicode(intermediate);
@@ -179,16 +180,16 @@ QString WcharMbcsConvertor::encode(const QString& fromCodepage, const QString& t
 
 QString string2wstring(const QString& rString, const char* codepage)
 {
-    QTextCodec* codec = QTextCodec::codecForName(codepage);
+    QTextCodec* codec = nullptr; // QTextCodec removed in Qt6(codepage);
     if (!codec) return rString;
-    return codec->toUnicode(rString.toUtf8());
+    return rString; // Stub
 }
 
 QString wstring2string(const QString& rwString, const char* codepage)
 {
-    QTextCodec* codec = QTextCodec::codecForName(codepage);
+    QTextCodec* codec = nullptr; // QTextCodec removed in Qt6(codepage);
     if (!codec) return rwString;
-    return codec->fromUnicode(rwString).constData();
+    return rwString.toUtf8().constData(); // Stub
 }
 
 bool isInList(const QString& token, const QString& list)

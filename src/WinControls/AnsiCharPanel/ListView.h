@@ -93,14 +93,14 @@ public:
         return -1;
     }
 
-    void setSelection(int itemIndex) const {
+    void setSelection(int itemIndex) {
         if (itemIndex >= 0 && itemIndex < rowCount()) {
             selectRow(itemIndex);
-            scrollToItem(item(itemIndex));
+            scrollToItem(this->item(itemIndex, 0));
         }
     }
 
-    intptr_t getLParamFromIndex(int itemIndex) const {
+    intptr_t getLParamFromIndex(int itemIndex) {
         if (itemIndex >= 0 && itemIndex < rowCount()) {
             auto* item = this->item(itemIndex, 0);
             if (item) {

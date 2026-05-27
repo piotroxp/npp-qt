@@ -3,8 +3,13 @@
 
 #include <QDialog>
 #include <QByteArray>
+#include <QVector>
+#include <QString>
+#include <QIcon>
+#include <QRect>
 
-class DockedWidgetData;
+// Forward declaration - DockedWidgetData is defined in Docking.h
+struct DockedWidgetData;
 
 class DockingDlgInterface : public QDialog
 {
@@ -17,6 +22,9 @@ public:
     // Create with docking data
     virtual void create(DockedWidgetData* data, bool isRTL = false);
     virtual void create(DockedWidgetData* data, QVector<int> iconIDs, bool isRTL = false);
+    
+    // Dialog procedure (WinForms → Qt6 shim)
+    virtual intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) { Q_UNUSED(message); Q_UNUSED(wParam); Q_UNUSED(lParam); return 0; }
 
     // Update display info
     virtual void updateDockingDlg();
@@ -26,7 +34,7 @@ public:
     virtual void setForegroundColor(QRgb color) { Q_UNUSED(color); }
 
     // Display state
-    void display(bool toShow = true) override;
+    void display(bool toShow = true);
 
     // Plugin info
     bool isClosed() const { return _isClosed; }
@@ -47,18 +55,4 @@ protected:
     int _dockedPosition = 0;
 
     bool event(QEvent* event) override;
-};
-
-// Dockable dialog data structure
-struct DockedWidgetData
-{
-    QWidget* client = nullptr;
-    QString name;
-    int dlgID = 0;
-    unsigned mask = 0;
-    QIcon iconTab;
-    QString addInfo;
-    QRect floatRect;
-    int prevCont = 0;
-    QString moduleName;
 };

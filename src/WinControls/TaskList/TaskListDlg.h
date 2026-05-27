@@ -55,13 +55,13 @@ public:
 
     void init(QWidget* parent, bool dir);
     int doDialog(bool isRTL = false);
-    void destroy() override;
+    void destroy();
 
 signals:
     void taskPicked(int index);
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private:
     TaskList _taskList;

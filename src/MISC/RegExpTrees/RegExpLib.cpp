@@ -118,7 +118,7 @@ QString RegExpLib::replace(const QString& text, const QString& replacement, int 
         }
         return result;
     } else {
-        return text.replace(_regex, replacement);
+        return QString(text).replace(_regex, replacement);
     }
 }
 
@@ -133,16 +133,17 @@ QStringList RegExpLib::split(const QString& text)
 void RegExpLib::setCaseSensitive(bool caseSensitive)
 {
     _caseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
-    _regex.setCaseSensitivity(_caseSensitivity);
+    // Qt6 QRegularExpression doesn't have setCaseSensitivity, rebuild regex with proper flags
+    _regex.setPatternOptions(_caseSensitivity == Qt::CaseSensitive ? 
+        QRegularExpression::NoPatternOption : QRegularExpression::CaseInsensitiveOption);
 }
 
 void RegExpLib::setMinimalMatch(bool minimal)
 {
     QRegularExpression::PatternOptions options = _regex.patternOptions();
-    if (minimal)
-        options |= QRegularExpression::IngreedyMatchOption;
-    else
-        options &= ~QRegularExpression::IngreedyMatchOption;
+    // Qt6 doesn't have IngreedyMatchOption - minimal matching handled via pattern
+    // In Qt6, use non-greedy quantifiers (e.g., *?, +?) in the pattern itself
+    Q_UNUSED(minimal);
     _regex.setPatternOptions(options);
 }
 

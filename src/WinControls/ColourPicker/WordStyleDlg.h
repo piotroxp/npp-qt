@@ -47,7 +47,7 @@ signals:
     void styleApplied();
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private slots:
     void onForegroundColorClicked();

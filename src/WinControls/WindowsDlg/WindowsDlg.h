@@ -32,10 +32,10 @@ public:
 
     void init(QWidget* parent);
     void run();
-    void destroy() override;
+    void destroy();
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private slots:
     void onItemDoubleClicked(QListWidgetItem* item);

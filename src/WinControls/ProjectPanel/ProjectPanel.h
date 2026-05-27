@@ -22,7 +22,7 @@
 #include <QString>
 #include <QVector>
 
-#include "../DockingDlgInterface/DockingDlgInterface.h"
+#include "DockingWnd/DockingDlgInterface.h"
 #include "../TreeView/TreeView.h"
 
 // Resource IDs
@@ -63,7 +63,7 @@ public:
     void setForegroundColor(QRgb fgColour) override;
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private slots:
     void onItemDoubleClicked(QTreeWidgetItem* item, int column);
@@ -96,11 +96,11 @@ public:
     ~FileRelocalizerDlg() override = default;
 
     int doDialog(const QString& fn, bool isRTL = false);
-    void destroy() override {}
+    void destroy() {};
     QString getFullFilePath() const { return _fullFilePath; }
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private:
     QString _fullFilePath;

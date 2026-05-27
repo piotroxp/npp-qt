@@ -142,18 +142,9 @@ QString PluginsManager::getLoadedPluginNames() const
     return names.join(", ");
 }
 
-bool PluginsManager::getShortcutByCmdID(int cmdID, ShortcutKey* sk)
-{
-    Q_UNUSED(cmdID);
-    Q_UNUSED(sk);
-    return false;
-}
-
-bool PluginsManager::removeShortcutByCmdID(int cmdID)
-{
-    Q_UNUSED(cmdID);
-    return false;
-}
+bool PluginsManager::getShortcutByCmdID(int, ShortcutKey*) { return false; }
+bool PluginsManager::removeShortcutByCmdID(int) { return false; }
+long long PluginsManager::comunicChecker(size_t, long long) const { return 0; }
 
 void PluginsManager::notify(size_t, const void* notification)
 {

@@ -2,8 +2,10 @@
 #pragma once
 
 #include <QWidget>
+#include <QMouseEvent>
+#include <QObject>
 
-class DockingSplitter : public QWidget
+class DockingSplitter : public QObject
 {
     Q_OBJECT
 
@@ -14,16 +16,12 @@ public:
     void init(Direction dir);
 
 signals:
-    void splitterMoved(int offset);
+    void splitterOffsetChanged(int offset);
 
 protected:
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
+    bool eventFilter(QObject* obj, QEvent* event) override;
 
 private:
     Direction _direction = Horizontal;
-    bool _isDragging = false;
-    QPoint _dragStart;
-    int _startOffset = 0;
+    QWidget* _target = nullptr;
 };

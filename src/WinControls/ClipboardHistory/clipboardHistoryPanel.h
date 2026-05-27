@@ -23,7 +23,7 @@
 #include <QClipboard>
 #include <QApplication>
 
-#include "../DockingDlgInterface/DockingDlgInterface.h"
+#include "DockingWnd/DockingDlgInterface.h"
 
 // Resource IDs
 #define IDD_CLIPBOARDHISTORY_PANEL 2800
@@ -90,7 +90,7 @@ signals:
     void clipboardEntryActivated(const QString& text, bool isBinary);
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private slots:
     void onItemDoubleClicked(QListWidgetItem* item);
@@ -122,7 +122,7 @@ ClipboardHistoryPanel::ClipboardHistoryPanel()
 
 void ClipboardHistoryPanel::init(QWidget* parent, ScintillaEditView** ppEditView)
 {
-    DockingDlgInterface::init(parent);
+    Q_UNUSED(parent);
     _ppEditView = ppEditView;
     
     // Connect to clipboard changes
@@ -132,7 +132,7 @@ void ClipboardHistoryPanel::init(QWidget* parent, ScintillaEditView** ppEditView
 
 void ClipboardHistoryPanel::setParent(QWidget* parent2set)
 {
-    _hParent = parent2set;
+    QWidget::setParent(parent2set);
 }
 
 ClipboardDataInfo ClipboardHistoryPanel::getClipboadData()

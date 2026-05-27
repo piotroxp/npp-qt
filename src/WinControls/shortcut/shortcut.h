@@ -42,7 +42,7 @@ public:
     Shortcut(const QString& name, bool isCtrl, bool isAlt, bool isShift, quint8 key, QObject* parent = nullptr);
 
     // Enable/disable
-    bool isEnabled() const { return _keyCombo._key != 0; }
+    virtual bool isEnabled() const { return _keyCombo._key != 0; }
     bool isValid() const;
 
     // Accessors
@@ -55,7 +55,7 @@ public:
     Qt::KeyboardModifiers qtModifiers() const;
 
     // String representations
-    QString toString() const;           // "Ctrl+Alt+S"
+    virtual QString toString() const;           // "Ctrl+Alt+S"
     QString toMenuItemString() const;     // "Menu Name\tCtrl+S"
 
     // Set name

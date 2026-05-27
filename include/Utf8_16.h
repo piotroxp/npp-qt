@@ -21,12 +21,8 @@ enum class EncodingType {
    ANSI = 8
 };
 
-enum class EolType {
-    EolNone = 0,
-    EolWindows = 1,    // CR + LF
-    EolUnix = 2,       // LF only
-    EolMac = 3          // CR only
-};
+// Note: EolType is defined in Buffer.h - re-export for convenience
+// Forward declaration to avoid circular dependency issues
 
 class Utf8_16 {
 public:

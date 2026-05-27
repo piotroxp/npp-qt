@@ -18,6 +18,7 @@
 
 #include <QWidget>
 #include <QDialog>
+#include <QGridLayout>
 #include <QRgb>
 #include <QPoint>
 
@@ -40,7 +41,7 @@ public:
     void createColorPopup();
     void doDialog(QPoint p);
 
-    void destroy() override {
+    void destroy() {
         reject();
     }
 

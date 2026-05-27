@@ -37,7 +37,7 @@ public:
     ~ColourPicker() override;
 
     void init(QWidget* parent);
-    void destroy() override;
+    void destroy();
 
     QRgb colour() const { return _currentColour; }
     void setColour(QRgb c) {

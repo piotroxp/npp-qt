@@ -38,29 +38,29 @@ private:
     static const int S11, S12, S13, S14, S21, S22, S23, S24, S31, S32, S33, S34, S41, S42, S43, S44;
 };
 
-#define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
-#define G(x, y, z) (((x) & (z)) | ((y) & (~z)))
-#define H(x, y, z) ((x) ^ (y) ^ (z))
-#define I(x, y, z) ((y) ^ ((x) | (~z)))
+#define MD5_F(x, y, z) (((x) & (y)) | ((~x) & (z)))
+#define MD5_G(x, y, z) (((x) & (z)) | ((y) & (~z)))
+#define MD5_H(x, y, z) ((x) ^ (y) ^ (z))
+#define MD5_I(x, y, z) ((y) ^ ((x) | (~z)))
 #define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32-(n))))
 
-#define FF(a, b, c, d, x, s, ac) { \
-    (a) += F((b), (c), (d)) + (x) + (uint32_t)(ac); \
+#define MD5_FF(a, b, c, d, x, s, ac) { \
+    (a) += MD5_F((b), (c), (d)) + (x) + (uint32_t)(ac); \
     (a) = ROTATE_LEFT((a), (s)); \
     (a) += (b); \
 }
-#define GG(a, b, c, d, x, s, ac) { \
-    (a) += G((b), (c), (d)) + (x) + (uint32_t)(ac); \
+#define MD5_GG(a, b, c, d, x, s, ac) { \
+    (a) += MD5_G((b), (c), (d)) + (x) + (uint32_t)(ac); \
     (a) = ROTATE_LEFT((a), (s)); \
     (a) += (b); \
 }
-#define HH(a, b, c, d, x, s, ac) { \
-    (a) += H((b), (c), (d)) + (x) + (uint32_t)(ac); \
+#define MD5_HH(a, b, c, d, x, s, ac) { \
+    (a) += MD5_H((b), (c), (d)) + (x) + (uint32_t)(ac); \
     (a) = ROTATE_LEFT((a), (s)); \
     (a) += (b); \
 }
-#define II(a, b, c, d, x, s, ac) { \
-    (a) += I((b), (c), (d)) + (x) + (uint32_t)(ac); \
+#define MD5_II(a, b, c, d, x, s, ac) { \
+    (a) += MD5_I((b), (c), (d)) + (x) + (uint32_t)(ac); \
     (a) = ROTATE_LEFT((a), (s)); \
     (a) += (b); \
 }

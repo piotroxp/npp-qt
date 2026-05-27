@@ -7,7 +7,6 @@
 #include <QPushButton>
 #include <QTabWidget>
 #include "ScintillaEditView.h"
-#include "Finder.h"
 enum DIALOG_TYPE { FIND_DLG, REPLACE_DLG, FINDINFILES_DLG, FINDINFILES_DLG2, MARK_DLG };
 #define DIR_DOWN true
 #define DIR_UP false

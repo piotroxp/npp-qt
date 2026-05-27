@@ -33,7 +33,7 @@
 #include "Parameters.h"
 
 class ScintillaEditView;
-class QsciScintilla;
+class ScintillaEdit;
 
 #define WM_DOCK_USERDEFINE_DLG      (SCINTILLA_USER + 1)
 #define WM_UNDOCK_USERDEFINE_DLG    (SCINTILLA_USER + 2)
@@ -79,7 +79,7 @@ inline constexpr int MARK_HIDELINESEND = 18;
 size_t getNbDigits(size_t aNum, size_t base);
 
 template<typename T>
-T* variedFormatNumber2String(T* str, size_t strLen, size_t number, size_t base, bool useUpper, size_t nbDigits, ColumnEditorParam::leadingChoice lead);
+T* variedFormatNumber2String(T* str, size_t strLen, size_t number, size_t base, bool useUpper, size_t nbDigits, ColumnEditorParam::LeadingChoice lead);
 
 struct ColumnModeInfo {
     intptr_t _selLpos = 0;
@@ -365,7 +365,7 @@ public:
     ColumnModeInfos getColumnModeSelectInfo();
     void columnReplace(ColumnModeInfos& cmi, const char* str) const;
     void columnReplace(ColumnModeInfos& cmi, size_t initial, size_t incr, size_t repeat,
-                        NumBase format, ColumnEditorParam::leadingChoice lead) const;
+                        NumBase format, ColumnEditorParam::LeadingChoice lead) const;
 
     // Indicators
     void clearIndicator(int indicatorNumber);
@@ -596,4 +596,3 @@ private:
     void setMainEditZone(bool val) { _isMainEditZone = val; }
 };
 
-#endif // SCINTILLA_EDIT_VIEW_H

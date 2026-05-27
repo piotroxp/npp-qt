@@ -1,5 +1,7 @@
 // MISC/sha1/sha1.cpp - Qt6 port of SHA1 implementation
 #include "sha1.h"
+#include <cstring>
+#include <cstdio>
 
 const unsigned char SHA1::PADDING[64] = {
     0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -46,8 +48,9 @@ void SHA1::update(const unsigned char* input, size_t len)
 
 void SHA1::transform(const unsigned char* buffer)
 {
-    uint32_t a, b, c, d, e, t, temp;
+    uint32_t a, b, c, d, e, temp;
     uint32_t w[80];
+    int i;
 
     for (i = 0; i < 16; i++) {
         w[i] = (buffer[i * 4] << 24) |
@@ -69,15 +72,15 @@ void SHA1::transform(const unsigned char* buffer)
         temp = rotl(a, 5) + ((b & c) | ((~b) & d)) + e + w[i] + 0x5A827999;
         e = d; d = c; c = rotl(b, 30); b = a; a = temp;
     }
-    for (; i < 40; i++) {
+    for (i = 20; i < 40; i++) {
         temp = rotl(a, 5) + (b ^ c ^ d) + e + w[i] + 0x6ED9EBA1;
         e = d; d = c; c = rotl(b, 30); b = a; a = temp;
     }
-    for (; i < 60; i++) {
+    for (i = 40; i < 60; i++) {
         temp = rotl(a, 5) + ((b & c) | (b & d) | (c & d)) + e + w[i] + 0x8F1BBCDC;
         e = d; d = c; c = rotl(b, 30); b = a; a = temp;
     }
-    for (; i < 80; i++) {
+    for (i = 60; i < 80; i++) {
         temp = rotl(a, 5) + (b ^ c ^ d) + e + w[i] + 0xCA62C1D6;
         e = d; d = c; c = rotl(b, 30); b = a; a = temp;
     }

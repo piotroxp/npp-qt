@@ -21,7 +21,7 @@
 #include <QVector>
 #include <QString>
 
-#include "../DockingDlgInterface/DockingDlgInterface.h"
+#include "DockingWnd/DockingDlgInterface.h"
 
 // Resource IDs
 #define IDD_ANSIASCII_PANEL 2700
@@ -57,7 +57,7 @@ signals:
     void insertText(const QString& text);
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private slots:
     void onItemDoubleClicked(QListWidgetItem* item);

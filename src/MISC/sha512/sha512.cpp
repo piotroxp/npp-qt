@@ -1,5 +1,6 @@
 // MISC/sha512/sha512.cpp - Qt6 port of SHA-512 implementation
 #include "sha512.h"
+#include <cstring>
 
 const uint64_t SHA512::K[80] = {
     0x428a2f98d728ae22ULL, 0x7137449123ef65cdULL, 0xb5c0fbcfec4d3b2fULL, 0xe9b5dba58189dbbcULL,

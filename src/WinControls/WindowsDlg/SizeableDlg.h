@@ -38,7 +38,7 @@ public:
     bool isLargeMode() const { return _isLargeMode; }
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
 
 private:
     int _dlgID = 0;

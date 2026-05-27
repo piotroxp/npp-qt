@@ -22,6 +22,32 @@
 
 #include "WindowsCompat.h"
 #include "Win32QtShim.h"
+#include "ScintillaComponent/Buffer.h"
+#include "WinControls/DockingWnd/Docking.h"
+#include "AutoCompletion.h"
+#include "SmartHighlighter.h"
+#include "NativeLangSpeaker.h"
+#include "LocalizationSwitcher.h"
+#include "ScintillaComponent/DocTabView.h"
+#include "ScintillaEditView.h"
+#include "WinControls/SplitterContainer/Splitter.h"
+#include "WinControls/ContextMenu/ContextMenu.h"
+#include "ScintillaComponent/FindReplaceDlg.h"
+#include "WinControls/AboutDlg/AboutDlg.h"
+#include "WinControls/StaticDialog/RunDlg/RunDlg.h"
+#include "ScintillaComponent/GoToLineDlg.h"
+#include "ScintillaComponent/ColumnEditorDlg.h"
+#include "WinControls/ColourPicker/WordStyleDlg.h"
+#include "WinControls/Preference/preferenceDlg.h"
+#include "WinControls/PluginsAdmin/pluginsAdmin.h"
+#include "ScintillaComponent/DocumentPeeker.h"
+#include "LastRecentFileList.h"
+#include "WinControls/StatusBar/StatusBar.h"
+#include "WinControls/ToolBar/ToolBar.h"
+#include "WinControls/TabBar/TabBar.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
+#include "ScintillaComponent/ScintillaCtrls.h"
+
 
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenuBar>
@@ -73,7 +99,7 @@ class FindCharsInRange;
 class ColumnEditorDlg;
 class WordStyleDlg;
 class PreferenceDlg;
-class PluginsManager;
+#include "MISC/PluginsManager/PluginsManager.h"
 class RunMacroDlg;
 class DockingManager;
 class AutoCompletion;
@@ -83,7 +109,6 @@ class PluginsAdminDlg;
 class NativeLangSpeaker;
 class LocalizationSwitcher;
 class Buffer;
-class BufferID;
 class NppParameters;
 class TaskListInfo;
 class Macro;
@@ -290,7 +315,7 @@ public:
 
     // Buffer access
     Buffer* getCurrentBuffer() {
-        return _pEditView->getCurrentBuffer();
+        return getCurrentEditView()->getCurrentBuffer();
     }
 
     // Quote features
@@ -423,12 +448,19 @@ private:
     DocTabView* _pNonDocTab = nullptr;
 
     // Scintilla editors
-    ScintillaEditView _subEditView;
+    enum { MAIN_VIEW = 0, SUB_VIEW = 1 };
     ScintillaEditView _mainEditView;
+    ScintillaEditView _subEditView;
     ScintillaEditView _invisibleEditView;
     ScintillaEditView _fileEditView;
     ScintillaEditView* _pEditView = nullptr;
     ScintillaEditView* _pNonEditView = nullptr;
+
+    // View accessors
+    ScintillaEditView* getCurrentEditView() const { return (_activeView == MAIN_VIEW) ? const_cast<ScintillaEditView*>(&_mainEditView) : const_cast<ScintillaEditView*>(&_subEditView); }
+    ScintillaEditView* getNonCurrentEditView() const { return (_activeView == MAIN_VIEW) ? const_cast<ScintillaEditView*>(&_subEditView) : const_cast<ScintillaEditView*>(&_mainEditView); }
+    ScintillaEditView& getMainEditView() { return _mainEditView; }
+    ScintillaEditView& getSubEditView() { return _subEditView; }
 
     // Splitters
     SplitterContainer* _pMainSplitter = nullptr;
@@ -689,7 +721,7 @@ private:
     void setWorkingDir(const wchar_t* dir);
 
     // UI helpers
-    bool getIntegralDockingData(void& dockData, int& iCont, bool& isVisible);
+    bool getIntegralDockingData(DockedWidgetData& dockData, int& iCont, bool& isVisible);
     int getLangFromMenuName(const wchar_t* langName);
     std::wstring getLangFromMenu(const Buffer* buf);
 
@@ -785,6 +817,3 @@ private:
     void loadBufferIntoView(BufferID id, int whichOne);
 };
 
-// Buffer ID type
-using BufferID = void*;
-constexpr BufferID BUFFER_INVALID = nullptr;

@@ -4,39 +4,29 @@
 #include <QListWidget>
 #include <QPushButton>
 #include <QLabel>
-class regExtDlg : public QDialog {
+#include <QString>
+
+// Qt-compatible shims (no Windows headers needed)
+using HINSTANCE = void*;
+
+class RegExtDlg : public QDialog {
     Q_OBJECT
 public:
-    regExtDlg() : QDialog() {}
-    void init(HINSTANCE hInst, HWND parent) { Q_UNUSED(hInst); _hParent = parent; }
+    RegExtDlg(QWidget* parent = nullptr);  // Fixed: had wrong signature
+    void init(HINSTANCE hInst, HWND parent);
     void doDialog(bool toShow = true);
     bool checkTheFileAndAssignExt(const wchar_t* fileExt);
     void writeSettings();
+
+private slots:
+    void showDialog();
+    void getRegisteredExts();
+    void getDefSupportedExts();
+    void addExt(const QString& ext);
+    bool deleteExts(const QString& ext);
+    void writeNppPath();
+
 private:
     HWND _hParent = nullptr;
     QListWidget* _extList = nullptr;
 };
-HeaderEOF
-
-cat > /workspace/piotro/npp-qt/src/MISC/md5/md5Dlgs.h << 'HEADEREOF'
-// md5Dlgs.h - Qt port (cross-platform MD5)
-#pragma once
-#include <QDialog>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QLabel>
-#include <QCryptographicHash>
-class md5Dlgs : public QDialog {
-    Q_OBJECT
-public:
-    md5Dlgs() : QDialog() {}
-    void init(HINSTANCE hInst, HWND parent) { Q_UNUSED(hInst); _hParent = parent; }
-    void doDialog();
-    bool compute_md5_ansi(const wchar_t* text);
-private:
-    HWND _hParent = nullptr;
-    QString _text2Calculate;
-    QString _calculatedMD5;
-};
-HeaderEOF
-echo "md5Dlgs created"
