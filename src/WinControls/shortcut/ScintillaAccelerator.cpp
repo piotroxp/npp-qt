@@ -3,7 +3,7 @@
 
 ScintillaAccelerator::ScintillaAccelerator(QObject* parent) : QObject(parent) {}
 
-bool ScintillaAccelerator::init(QVector<QWidget*>* /*views*/, QMenu* /*menu*/, QWidget* /*parent*/) {
+bool ScintillaAccelerator::init(QVector<QWidget*>* /*views*/, QMenuBar* /*menu*/, QWidget* /*parent*/) {
     return true;
 }
 

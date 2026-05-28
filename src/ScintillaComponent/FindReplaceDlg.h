@@ -1,6 +1,6 @@
 // FindReplaceDlg.h - Qt port
 #pragma once
-#include "StaticDialog.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
 #include <QLineEdit>
 #include <QCheckBox>
 #include <QComboBox>

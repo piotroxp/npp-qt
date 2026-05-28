@@ -9,6 +9,6 @@ class ScintillaAccelerator : public QObject {
     Q_OBJECT
 public:
     explicit ScintillaAccelerator(QObject* parent = nullptr);
-    bool init(QVector<QWidget*>* views, QMenu* menu, QWidget* parent);
+    bool init(QVector<QWidget*>* views, QMenuBar* menu, QWidget* parent);
     void updateKeys();
 };

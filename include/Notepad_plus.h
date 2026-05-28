@@ -22,8 +22,10 @@
 
 #include "WindowsCompat.h"
 #include "Win32QtShim.h"
+#include "NppConstants.h"
 #include "ScintillaComponent/Buffer.h"
 #include "WinControls/DockingWnd/Docking.h"
+#include "WinControls/Grid/ShortcutMapper.h"
 #include "AutoCompletion.h"
 #include "SmartHighlighter.h"
 #include "NativeLangSpeaker.h"
@@ -181,6 +183,7 @@ struct QuoteParams {
 class Notepad_plus_Window;
 class Notepad_plus : public QMainWindow {
     friend class Notepad_plus_Window;
+    friend class MainWindow;
     friend class FileManager;
 
 Q_OBJECT
@@ -507,7 +510,7 @@ private:
 
     // Windows menu
     void* _pWindowsMenu = nullptr;
-    QMenu* _pMainMenu = nullptr;
+    QMenuBar* _pMainMenu = nullptr;
 
     bool _sysMenuEntering = false;
     bool _isAttemptingCloseOnQuit = false;

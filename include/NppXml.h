@@ -4,8 +4,7 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 #include <QFile>
-#include <QString>
-#include <QByteArray>
+#include <QMap>
 #include <memory>
 
 class NppXml {
@@ -113,4 +112,31 @@ private:
     std::unique_ptr<QXmlStreamWriter> _writer;
 };
 
+
+// XmlNode - minimal XML node representation
+struct XmlNode {
+    QString name;
+    QMap<QString, QString> attributes;
+    QString text;
+    QVector<XmlNode> children;
+    
+    XmlNode() {}
+    XmlNode(const QString& n) : name(n) {}
+    
+    QString attribute(const QString& key, const QString& def = QString()) const {
+        return attributes.value(key, def);
+    }
+    
+    XmlNode* findChild(const QString& childName) {
+        for (auto& child : children) {
+            if (child.name == childName)
+                return &child;
+        }
+        return nullptr;
+    }
+};
+
 using NppXmlPtr = std::unique_ptr<NppXml>;
+
+
+

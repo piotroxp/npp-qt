@@ -2,12 +2,12 @@
 #pragma once
 #include <QObject>
 #include <QString>
+#include <QMenu>
 #include <QStringList>
 #include <QMap>
 #include "NppXml.h"
 
 // Forward declarations for missing types
-struct XmlNode;
 
 // Simple document holder
 using NppXmlDoc = NppXml*;
@@ -45,7 +45,7 @@ public:
                                       const QString& nodeL2Name = "name");
     
 private:
-    XmlNode _nativeLang;
+    NppXml* _nativeLang = nullptr;
     bool _isRTL = false;
     bool _isEditZoneRTL = false;
     QString _fileName;

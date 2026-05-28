@@ -128,14 +128,14 @@ void MainWindow::setupMenuBar() {
 }
 
 // File menu slots
-void MainWindow::onFileNew() { _npp.onFileNew(); }
-void MainWindow::onFileOpen() { _npp.onFileOpen(); }
-void MainWindow::onFileSave() { _npp.onFileSave(); }
-void MainWindow::onFileSaveAs() { _npp.onFileSaveAs(); }
-void MainWindow::onFileSaveAll() { _npp.onFileSaveAll(); }
-void MainWindow::onFileClose() { _npp.onFileClose(); }
-void MainWindow::onFileCloseAll() { _npp.onFileCloseAll(); }
-void MainWindow::onFilePrint() { _npp.onFilePrint(); }
+void MainWindow::onFileNew() { if (_npp) _npp->onFileNew(); }
+void MainWindow::onFileOpen() { if (_npp) _npp->onFileOpen(); }
+void MainWindow::onFileSave() { if (_npp) _npp->onFileSave(); }
+void MainWindow::onFileSaveAs() { if (_npp) _npp->onFileSaveAs(); }
+void MainWindow::onFileSaveAll() { if (_npp) _npp->onFileSaveAll(); }
+void MainWindow::onFileClose() { if (_npp) _npp->onFileClose(); }
+void MainWindow::onFileCloseAll() { if (_npp) _npp->onFileCloseAll(); }
+void MainWindow::onFilePrint() { if (_npp) _npp->onFilePrint(); }
 
 // Edit menu slots
 void MainWindow::onEditUndo() { /* handled by scintilla */ }
@@ -145,27 +145,27 @@ void MainWindow::onEditCopy() { /* handled by scintilla */ }
 void MainWindow::onEditPaste() { /* handled by scintilla */ }
 void MainWindow::onEditDelete() { /* handled by scintilla */ }
 void MainWindow::onEditSelectAll() { /* handled by scintilla */ }
-void MainWindow::onEditFind() { _npp.onEditFind(); }
-void MainWindow::onEditReplace() { _npp.onEditReplace(); }
+void MainWindow::onEditFind() { if (_npp) _npp->onEditFind(); }
+void MainWindow::onEditReplace() { if (_npp) _npp->onEditReplace(); }
 
 // Search menu slots
-void MainWindow::onSearchFindNext() { _npp.onSearchFindNext(); }
-void MainWindow::onSearchFindPrev() { _npp.onSearchFindPrev(); }
+void MainWindow::onSearchFindNext() { if (_npp) _npp->onSearchFindNext(); }
+void MainWindow::onSearchFindPrev() { if (_npp) _npp->onSearchFindPrev(); }
 void MainWindow::onSearchGoToLine() { /* open dialog */ }
 
 // View menu slots
-void MainWindow::onViewZoomIn() { _npp.onViewZoomIn(); }
-void MainWindow::onViewZoomOut() { _npp.onViewZoomOut(); }
+void MainWindow::onViewZoomIn() { if (_npp) _npp->onViewZoomIn(); }
+void MainWindow::onViewZoomOut() { if (_npp) _npp->onViewZoomOut(); }
 void MainWindow::onViewFullScreen() { /* toggle fullscreen */ }
 void MainWindow::onViewPostIt() { /* toggle post-it mode */ }
 
 // Tools menu slots
-void MainWindow::onRunCommand() { _npp.onRunCommand(); }
+void MainWindow::onRunCommand() { if (_npp) _npp->onRunCommand(); }
 
 // Macro menu slots
-void MainWindow::onMacroStartRecord() { _npp.onMacroStartRecord(); }
-void MainWindow::onMacroStopRecord() { _npp.onMacroStopRecord(); }
-void MainWindow::onMacroPlayRecord() { _npp.onMacroPlayRecord(); }
+void MainWindow::onMacroStartRecord() { if (_npp) _npp->onMacroStartRecord(); }
+void MainWindow::onMacroStopRecord() { if (_npp) _npp->onMacroStopRecord(); }
+void MainWindow::onMacroPlayRecord() { if (_npp) _npp->onMacroPlayRecord(); }
 
 void MainWindow::setupToolBar() {
     // Placeholder toolbar - actual implementation would connect to _npp methods
@@ -193,7 +193,7 @@ void MainWindow::setupStatusBar() {
 }
 
 ScintillaEditView* MainWindow::activeEditor() {
-    return _npp.getCurrentEditView();
+    return _npp ? _npp->getCurrentEditView() : nullptr;
 }
 
 void MainWindow::openFiles(const QStringList& files) {
@@ -209,14 +209,14 @@ void MainWindow::loadSession(const QString& sessionFile) {
 
 void MainWindow::closeEvent(QCloseEvent* event) {
     // Check for unsaved changes
-    if (_npp.getNbDirtyBuffer(0) > 0) {
+    if (_npp && _npp->getNbDirtyBuffer(0) > 0) {
         QMessageBox::StandardButton reply = QMessageBox::question(
             this, tr("Save Changes?"),
             tr("Some files have unsaved changes. Do you want to save them?"),
             QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
         
         if (reply == QMessageBox::Save) {
-            _npp.fileSaveAllConfirm();
+            _npp->fileSaveAllConfirm();
         } else if (reply == QMessageBox::Cancel) {
             event->ignore();
             return;

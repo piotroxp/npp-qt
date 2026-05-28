@@ -1,4 +1,6 @@
 // Buffer.h - Qt port
+#ifndef BUFFER_H_SCOPED
+#define BUFFER_H_SCOPED
 #pragma once
 #include <mutex>
 #include <QObject>
@@ -8,7 +10,6 @@
 
 // Forward declarations - must be before Parameters.h
 class Notepad_plus;
-class FileManager;
 class ScintillaEditView;
 class Buffer;
 class sessionFileInfo;
@@ -96,16 +97,10 @@ private:
     bool _currentLineHilitingEnabled = false;
 };
 
-// FileManager class
-class FileManager {
-public:
-    void init(Notepad_plus* pNotepadPlus, ScintillaEditView* pscratchTilla);
-    BufferID loadFile(const wchar_t* filename, Document doc = 0, int encoding = -1);
-    BufferID newEmptyDocument();
-    BufferID getBufferByID(BufferID id) { return id; }
-    static FileManager& getInstance() { static FileManager instance; return instance; }
-private:
-    std::vector<Buffer*> _buffers;
-};
-
+// Include FileManager after Buffer class to avoid circular include issues
+// FileManager.h includes Buffer.h which is guarded by pragma once here
+// so we need to explicitly include it to get the FileManager definition
+#include "FileManager.h"
 #define MainFileManager FileManager::getInstance()
+
+#endif  // BUFFER_H_SCOPED

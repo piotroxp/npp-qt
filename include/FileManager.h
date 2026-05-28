@@ -1,7 +1,7 @@
 // FileManager.h - Manages file operations and document buffering
 #pragma once
 
-#include "Buffer.h"
+
 #include <QString>
 #include <QMap>
 #include <memory>
@@ -28,7 +28,7 @@ public:
         if (index >= _buffers.size()) return nullptr;
         auto it = _buffers.begin();
         std::advance(it, index);
-        return it->second.get();
+        return it.value().get();
     }
 
     // Close operations

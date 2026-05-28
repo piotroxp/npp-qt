@@ -8,7 +8,8 @@
 #include <QMenu>
 #include <QAction>
 #include <QCloseEvent>
-#include "Notepad_plus.h"
+class Notepad_plus;
+class ScintillaEditView;
 #include "Parameters.h"
 
 class MainWindow : public QMainWindow {
@@ -87,7 +88,7 @@ private:
     void setupStatusBar();
     void createTrayIcon();
 
-    Notepad_plus _npp;
+    Notepad_plus* _npp = nullptr;
     bool _readOnly = false;
     bool _noPlugin = false;
 

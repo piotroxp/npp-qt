@@ -58,6 +58,24 @@ enum folderStyle
     FOLDER_STYLE_NONE
 };
 
+// Missing SC_MARKNUM_* constants (Scintilla bundled header only defines SC_MARKNUM_HISTORY_* + SC_MARKNUM_FOLDER*)
+// These values follow the standard Scintilla numbering scheme
+#define SC_MARKNUM_EMPTY 24
+#define SC_MARKNUM_VERTLINE 24
+#define SC_MARKNUM_FOLDEREND 25
+#define SC_MARKNUM_FOLDEROPENMID 26
+#define SC_MARKNUM_FOLDERMIDTAIL 27
+#define SC_MARKNUM_FOLDERTAIL 28
+#define SC_MARKNUM_FOLDERSUB 29
+#define SC_MARKNUM_FOLDER 30
+#define SC_MARKNUM_FOLDEROPEN 31
+#define SC_MARKNUM_BOXPLUS 0
+#define SC_MARKNUM_BOXMINUS 2
+#define SC_MARKNUM_BOXPLUSCONNECTED 3
+#define SC_MARKNUM_BOXMINUSCONNECTED 4
+#define SC_MARKNUM_LINES 6
+#define SC_MARKNUM_MINUS 7
+
 // Line wrap methods
 enum lineWrapMethod
 {
