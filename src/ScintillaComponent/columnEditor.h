@@ -1,31 +1,65 @@
-// columnEditor.h - Qt port
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 #pragma once
-#include <QDialog>
-#include <QTableWidget>
-#include <QSpinBox>
-#include <QComboBox>
-#include <QCheckBox>
-#include "ScintillaEditView.h"
 
-enum Order { Incr = 0, Decr = 1, Insert = 2 };
-enum Action { Fill_Every_N = 0, Fill_On_Selection = 1, Fill_On_All_Found = 2, Delete = 3, Revert = 4 };
+#include "../MISC/Common/WindowsCompat.h"
 
-class columnEditor : public QDialog {
-    Q_OBJECT
-public:
-    columnEditor() : QDialog() { _fillColumn = 0; _fillIncDec = 0; _numericValue = 0; _numericStep = 1; _nbRows = 0; _currentIndex = 0; }
-    void init(HINSTANCE hInst, HWND hParent, ScintillaEditView** ppEditView) { Q_UNUSED(hInst); Q_UNUSED(hParent); _ppEditView = ppEditView; }
-    void doModal(bool isRTL = false);
-protected:
-    int run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) { Q_UNUSED(message); Q_UNUSED(wParam); Q_UNUSED(lParam); return 0; }
-private slots:
-    void fill(); void insertNumber(); void deleteCol(); void revert();
-private:
-    ScintillaEditView** _ppEditView = nullptr;
-    int _fillColumn = 0;
-    int _fillIncDec = 0;
-    int _numericValue = 0;
-    int _numericStep = 0;
-    int _nbRows = 0;
-    int _currentIndex = 0;
+#include <string>
+
+#include "NppConstants.h"
+#include "../Parameters.h"
+#include "StaticDialog.h"
+#include "Window.h"
+#include "columnEditor_rc.h"
+
+class ScintillaEditView;
+
+
+class ColumnEditorDlg : public StaticDialog
+{
+public :
+	ColumnEditorDlg() = default;
+	void init(HINSTANCE hInst, HWND hPere, ScintillaEditView **ppEditView);
+
+	void doDialog(bool isRTL = false) {
+		if (!isCreated())
+			create(IDD_COLUMNEDIT, isRTL);
+		const bool isTextMode = isCheckedOrNot(IDC_COL_TEXT_RADIO);
+		display();
+		::SetFocus(::GetDlgItem(_hSelf, isTextMode?IDC_COL_TEXT_EDIT:IDC_COL_INITNUM_EDIT));
+	}
+
+	void display(bool toShow = true) const override;
+	void switchTo(bool toText);
+	NumBase getFormat();
+	ColumnEditorParam::leadingChoice getLeading();
+	NumBase getHexCase();
+
+protected :
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
+
+private :
+	ScintillaEditView **_ppEditView = nullptr;
+	HWND _hCurrentBalloonTip = nullptr;
+
+	using Window::init;
+
+	void setNumericFields(const ColumnEditorParam& colEditParam);
+	int getNumericFieldValueFromText(NumBase formatChoice, const std::wstring& str);
+	int sendValidationErrorMessage(int whichFlashRed, NumBase formatChoice, wchar_t str[]);
 };

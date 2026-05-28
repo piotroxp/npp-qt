@@ -8,7 +8,7 @@
 
 // Qt-compatible shims (no Windows headers needed)
 #ifdef _WIN32
-#include <windows.h>
+#include "MISC/Common/WindowsCompat.h"
 #else
 using HINSTANCE = void*;
 using HWND = void*;

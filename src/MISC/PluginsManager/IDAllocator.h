@@ -1,34 +1,47 @@
-// MISC/PluginsManager/IDAllocator.h - Qt6 port of ID allocation for plugins
-#pragma once
+// IDAllocator.h code is copyrighted (C) 2010 by Dave Brotherstone
 
-#include <cstdint>
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+#pragma once
 
 class IDAllocator
 {
 public:
-    IDAllocator(int32_t start, int32_t end)
-        : _start(start), _end(end), _next(start) {}
+	IDAllocator(int start, int maximumID) : _start(start), _nextID(start), _maximumID(maximumID) {}
 
-    bool isInRange(int32_t id) const {
-        return id >= _start && id <= _end;
-    }
+	/// Returns -1 if not enough available
+	int allocate(int quantity) {
+		int retVal = -1;
 
-    bool allocate(int32_t numberRequired, int32_t* start) {
-        if (_next + numberRequired - 1 > _end)
-            return false;
-        *start = _next;
-        _next += numberRequired;
-        return true;
-    }
+		if (_nextID + quantity <= _maximumID && quantity > 0)
+		{
+			retVal = _nextID;
+			_nextID += quantity;
+		}
 
-    void release(int32_t id, int32_t count) {
-        Q_UNUSED(id);
-        Q_UNUSED(count);
-        // In this simplified version, we don't support release
-    }
+		return retVal;
+	}
+
+	bool isInRange(int id) const { return (id >= _start && id < _nextID); }
 
 private:
-    int32_t _start;
-    int32_t _end;
-    int32_t _next;
+	int _start = 0;
+	int _nextID = 0;
+	int _maximumID = 0;
 };
+

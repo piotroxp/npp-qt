@@ -13,84 +13,60 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 #pragma once
+#include "Common.h"
 
-#include <QMenu>
-#include <QString>
-#include <QVector>
-#include <QPoint>
 
-struct MenuItemUnit {
-    unsigned long _cmdID = 0;
-    QString _itemName;
-    QString _parentFolderName;
 
-    MenuItemUnit() = default;
-    MenuItemUnit(unsigned long cmdID, const QString& itemName, const QString& parentFolderName = QString())
-        : _cmdID(cmdID), _itemName(itemName), _parentFolderName(parentFolderName) {}
+struct MenuItemUnit final
+{
+	unsigned long _cmdID = 0;
+	std::wstring _itemName;
+	std::wstring _parentFolderName;
+
+	MenuItemUnit() = default;
+	MenuItemUnit(unsigned long cmdID, const std::wstring& itemName, const std::wstring& parentFolderName = std::wstring())
+		: _cmdID(cmdID), _itemName(itemName), _parentFolderName(parentFolderName) {}
+	MenuItemUnit(unsigned long cmdID, const wchar_t* itemName, const wchar_t* parentFolderName = nullptr);
 };
 
-// ContextMenu - Context (right-click) menu
-// Replaces Win32 popup menus with Qt QMenu
-class ContextMenu : public QMenu
+
+class ContextMenu final
 {
-    Q_OBJECT
-
 public:
-    ~ContextMenu() override {
-        destroy();
-    }
+	~ContextMenu() {
+		destroy();
+	}
 
-    void create(QWidget* hParent, const QVector<MenuItemUnit>& menuItemArray, QMenu* mainMenuHandle = nullptr, bool copyLink = false);
-    bool isCreated() const { return !_menuItems.isEmpty(); }
+	void create(HWND hParent, const std::vector<MenuItemUnit> & menuItemArray, const HMENU mainMenuHandle = NULL, bool copyLink = false);
+	bool isCreated() const {return _hMenu != NULL;}
+	
+	void display(const POINT & p) const {
+		::TrackPopupMenu(_hMenu, TPM_LEFTALIGN, p.x, p.y, 0, _hParent, NULL);
+	}
 
-    void display(const QPoint& p) {
-        if (!_menuItems.isEmpty()) {
-            QMenu::popup(p);
-        }
-    }
+	void display(HWND hwnd) const;
 
-    void displayAtCursor() {
-        display(QCursor::pos());
-    }
+	void enableItem(int cmdID, bool doEnable) const
+	{
+		int flag = doEnable ? (MF_ENABLED | MF_BYCOMMAND) : (MF_DISABLED | MF_GRAYED | MF_BYCOMMAND);
+		::EnableMenuItem(_hMenu, cmdID, flag);
+	}
 
-    void display(QWidget* hwnd) {
-        Q_UNUSED(hwnd);
-        display(QCursor::pos());
-    }
+	void checkItem(int cmdID, bool doCheck) const
+	{
+		::CheckMenuItem(_hMenu, cmdID, MF_BYCOMMAND | (doCheck ? MF_CHECKED : MF_UNCHECKED));
+	}
 
-    void enableItem(int cmdID, bool doEnable) const {
-        auto it = _actionMap.find(cmdID);
-        if (it != _actionMap.end() && it.value()) {
-            it.value()->setEnabled(doEnable);
-        }
-    }
+	HMENU getMenuHandle() const
+	{
+		return _hMenu;
+	}
 
-    void checkItem(int cmdID, bool doCheck) const {
-        auto it = _actionMap.find(cmdID);
-        if (it != _actionMap.end() && it.value()) {
-            it.value()->setChecked(doCheck);
-        }
-    }
-
-    QMenu* getMenuHandle() const { return const_cast<QMenu*>(static_cast<const QMenu*>(this)); }
-
-    void destroy() {
-        clear();
-        _menuItems.clear();
-        _actionMap.clear();
-        _subMenus.clear();
-    }
-
-signals:
-    void menuItemClicked(int cmdID);
-    void aboutToShow();
-    void aboutToHide();
+	void destroy();
 
 private:
-    QWidget* _hParent = nullptr;
-    QVector<MenuItemUnit> _menuItems;
-    QMap<int, QAction*> _actionMap;
-    QVector<QMenu*> _subMenus;
+	HWND _hParent = NULL;
+	HMENU _hMenu = NULL;
+	std::vector<HMENU> _subMenus;
 };

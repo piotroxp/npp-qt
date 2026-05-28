@@ -14,82 +14,147 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #include "ContextMenu.h"
+#include "menuCmdID.h"
+#include "Parameters.h"
+#include "localization.h"
 
-#include <QAction>
-#include <QMenuBar>
-#include <QApplication>
-
-void ContextMenu::create(QWidget* hParent, const QVector<MenuItemUnit>& menuItemArray, QMenu* mainMenuHandle, bool copyLink)
+MenuItemUnit::MenuItemUnit(unsigned long cmdID, const wchar_t* itemName, const wchar_t* parentFolderName) : _cmdID(cmdID)
 {
-    Q_UNUSED(mainMenuHandle);
-    Q_UNUSED(copyLink);
+	if (!itemName)
+		_itemName.clear();
+	else
+		_itemName = itemName;
 
-    _hParent = hParent;
-    _menuItems = menuItemArray;
-
-    clear();
-    _actionMap.clear();
-    _subMenus.clear();
-
-    bool lastIsSep = false;
-    QMenu* hParentFolder = nullptr;
-    QString currentParentFolderStr;
-    int folderIndex = 0;
-
-    for (int i = 0; i < menuItemArray.size(); ++i) {
-        const MenuItemUnit& item = menuItemArray[i];
-
-        if (item._parentFolderName.isEmpty()) {
-            // No parent folder
-            currentParentFolderStr.clear();
-            hParentFolder = nullptr;
-            folderIndex = 0;
-        } else {
-            // Check if we're starting a new folder
-            if (item._parentFolderName != currentParentFolderStr) {
-                currentParentFolderStr = item._parentFolderName;
-                hParentFolder = new QMenu(currentParentFolderStr, this);
-                _subMenus.append(hParentFolder);
-                addMenu(hParentFolder);
-                folderIndex = 0;
-            }
-        }
-
-        QAction* action = nullptr;
-
-        if (item._cmdID == 0) {
-            // Separator
-            if ((i == 0 || i == menuItemArray.size() - 1)) {
-                lastIsSep = true;
-            } else if (!lastIsSep) {
-                QAction* sep = addSeparator();
-                Q_UNUSED(sep);
-                lastIsSep = true;
-            }
-            continue;
-        }
-
-        lastIsSep = false;
-
-        if (hParentFolder) {
-            action = hParentFolder->addAction(item._itemName);
-        } else {
-            action = addAction(item._itemName);
-        }
-
-        if (action) {
-            action->setData(QVariant::fromValue(static_cast<int>(item._cmdID)));
-            _actionMap[item._cmdID] = action;
-
-            connect(action, &QAction::triggered, this, [this, item]() {
-                emit menuItemClicked(item._cmdID);
-            });
-        }
-    }
-
-    // Add "Copy link" option if requested
-    Q_UNUSED(copyLink);
+	if (!parentFolderName)
+		_parentFolderName.clear();
+	else
+		_parentFolderName = parentFolderName;
 }
 
-// Note: display(const QPoint&) is defined inline in ContextMenu.h
+void ContextMenu::create(HWND hParent, const std::vector<MenuItemUnit> & menuItemArray, const HMENU mainMenuHandle, bool copyLink)
+{ 
+	_hParent = hParent;
+	_hMenu = ::CreatePopupMenu();
+	bool lastIsSep = false;
+	HMENU hParentFolder = NULL;
+	std::wstring currentParentFolderStr;
+	int j = 0;
+	MENUITEMINFO mii{};
+
+	for (size_t i = 0, len = menuItemArray.size(); i < len; ++i)
+	{
+		const MenuItemUnit & item = menuItemArray[i];
+		if (item._parentFolderName.empty())
+		{
+			currentParentFolderStr.clear();
+			hParentFolder = NULL;
+			j = 0;
+		}
+		else
+		{
+			if (item._parentFolderName != currentParentFolderStr)
+			{
+				currentParentFolderStr = item._parentFolderName;
+				hParentFolder = ::CreateMenu();
+				j = 0;
+
+				_subMenus.push_back(hParentFolder);
+				::InsertMenu(_hMenu, static_cast<UINT>(i), MF_BYPOSITION | MF_POPUP, (UINT_PTR)hParentFolder, currentParentFolderStr.c_str());
+			}
+		}
+
+		unsigned int flag = MF_BYPOSITION | ((item._cmdID == 0)?MF_SEPARATOR:0);
+		if (hParentFolder)
+		{
+			::InsertMenu(hParentFolder, j++, flag, item._cmdID, item._itemName.c_str());
+			lastIsSep = false;
+		}
+		else if ((i == 0 || i == menuItemArray.size() - 1) && item._cmdID == 0)
+		{
+			lastIsSep = true;
+		}
+		else if (item._cmdID != 0)
+		{
+			::InsertMenu(_hMenu, static_cast<UINT>(i), flag, item._cmdID, item._itemName.c_str());
+			lastIsSep = false;
+		}
+		else if (/*item._cmdID == 0 &&*/ !lastIsSep)
+		{
+			::InsertMenu(_hMenu, static_cast<int32_t>(i), flag, item._cmdID, item._itemName.c_str());
+			lastIsSep = true;
+		}
+		else // last item is separator and current item is separator
+		{
+			lastIsSep = true;
+		}
+
+		if (mainMenuHandle)
+		{
+			UINT s = ::GetMenuState(mainMenuHandle, item._cmdID, MF_BYCOMMAND);
+			if (s != ((UINT)-1))
+			{
+				bool isEnabled = (s & (MF_DISABLED | MF_GRAYED)) == 0;
+				bool isChecked = (s & (MF_CHECKED)) != 0;
+				if (!isEnabled)
+					enableItem(item._cmdID, isEnabled);
+				if (isChecked)
+					checkItem(item._cmdID, isChecked);
+			}
+
+			// set up any menu item bitmaps in the context menu, using main menu bitmaps
+			memset(&mii, 0, sizeof(mii));
+			mii.cbSize = sizeof(MENUITEMINFO);
+			mii.fMask = MIIM_CHECKMARKS;
+			mii.fType = MFT_BITMAP;
+			GetMenuItemInfo(mainMenuHandle, item._cmdID, FALSE, &mii);
+			SetMenuItemInfo(_hMenu, item._cmdID, FALSE, &mii);
+		}
+
+		if (copyLink && (item._cmdID == IDM_EDIT_COPY))
+		{
+			NativeLangSpeaker* nativeLangSpeaker = NppParameters::getInstance().getNativeLangSpeaker();
+			std::wstring localized = nativeLangSpeaker->getNativeLangMenuString(IDM_EDIT_COPY_LINK);
+			if (localized.length() == 0)
+				localized = L"Copy link";
+			memset(&mii, 0, sizeof(mii));
+			mii.cbSize = sizeof(MENUITEMINFO);
+			mii.fMask = MIIM_ID | MIIM_STRING | MIIM_STATE;
+			mii.wID = IDM_EDIT_COPY_LINK;
+			mii.dwTypeData = (wchar_t*) localized.c_str();
+			mii.fState = MFS_ENABLED;
+			int c = GetMenuItemCount(_hMenu);
+			SetMenuItemInfo(_hMenu, c - 1, TRUE, & mii);
+		}
+	}
+}
+
+void ContextMenu::display(HWND hwnd) const
+{
+	RECT rcItem{};
+	::GetClientRect(hwnd, &rcItem);
+	::MapWindowPoints(hwnd, HWND_DESKTOP, reinterpret_cast<LPPOINT>(&rcItem), 2);
+
+	TPMPARAMS tpm{};
+	tpm.cbSize = sizeof(TPMPARAMS);
+	tpm.rcExclude = rcItem;
+
+	const NativeLangSpeaker* nativeLangSpeaker = NppParameters::getInstance().getNativeLangSpeaker();
+	const UINT flags = nativeLangSpeaker->isRTL() ? (TPM_RIGHTALIGN | TPM_RIGHTBUTTON | TPM_LAYOUTRTL) : (TPM_LEFTALIGN | TPM_LEFTBUTTON);
+	::TrackPopupMenuEx(_hMenu, flags | TPM_VERTICAL, rcItem.left, rcItem.bottom, _hParent, &tpm);
+}
+
+void ContextMenu::destroy()
+{
+	if (isCreated())
+	{
+		for (size_t i = 0, len = _subMenus.size(); i < len; ++i)
+		{
+			::DestroyMenu(_subMenus[i]);
+			_subMenus[i] = nullptr;
+		}
+		::DestroyMenu(_hMenu);
+		_hMenu = nullptr;
+	}
+}
