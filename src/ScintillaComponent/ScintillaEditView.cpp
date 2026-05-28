@@ -46,10 +46,10 @@
 
 #include "ScintillaComponent/Buffer.h"
 #include "../MISC/Common/Common.h"
-#include "NppConstants.h"
+#include "MISC/Common/NppConstants.h"
 #include "../NppDarkMode.h"
 #include "../Parameters.h"
-#include "Sorters.h"
+#include "MISC/Common/Sorters.h"
 #include "UserDefineDialog.h"
 #include "WinControls/Window.h"
 #include "dpiManagerV2.h"

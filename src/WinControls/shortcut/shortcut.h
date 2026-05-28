@@ -18,9 +18,9 @@
 #pragma once
 
 #include "shortcutRc.h"
-#include "Scintilla.h"
-#include "StaticDialog.h"
-#include "Common.h"
+#include "scintilla/include/Scintilla.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
+#include "MISC/Common/Common.h"
 #include "menuCmdID.h"
 
 constexpr int menuItemStrLenMax = 64 + 64;	// Add 64 "units" more for being compatible to the current localization file. See:

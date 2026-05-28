@@ -19,7 +19,7 @@
 
 #include "WindowsDlgRc.h"
 #include "WinMgr.h"
-#include "StaticDialog.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
 
 class SizeableDlg : public StaticDialog {
 	typedef StaticDialog MyBaseClass;

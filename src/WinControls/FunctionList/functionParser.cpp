@@ -27,8 +27,8 @@
 #include <BoostRegexSearch.h>
 #include "scintilla/include/Scintilla.h"
 
-#include "Common.h"
-#include "Notepad_plus_msgs.h"
+#include "MISC/Common/Common.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "NppXml.h"
 #include "ScintillaComponent/ScintillaEditView.h"
 

@@ -22,7 +22,7 @@
 #include <utility>
 #include <vector>
 
-#include "Notepad_plus_msgs.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "NppXml.h"
 
 class ScintillaEditView;

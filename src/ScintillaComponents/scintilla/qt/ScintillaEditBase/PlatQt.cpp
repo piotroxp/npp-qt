@@ -12,10 +12,10 @@
 #include <cstdio>
 
 #include "PlatQt.h"
-#include "Scintilla.h"
-#include "XPM.h"
-#include "UniConversion.h"
-#include "DBCS.h"
+#include "ScintillaComponents/scintilla/include/Scintilla.h"
+#include "ScintillaComponents/scintilla/src/XPM.h"
+#include "ScintillaComponents/scintilla/src/UniConversion.h"
+#include "ScintillaComponents/scintilla/src/DBCS.h"
 
 #include <QApplication>
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
@@ -100,8 +100,9 @@ const char *CharacterSetID(CharacterSet characterSet)
 	}
 }
 
-QString UnicodeFromText(QTextCodec *codec, std::string_view text) {
-	return codec->toUnicode(text.data(), static_cast<int>(text.length()));
+static QString UnicodeFromText(QTextCodec *codec, std::string_view text) {
+	return codec->toUnicode(QByteArray(text.data(), text.length()))
+      ;
 }
 
 static QFont::StyleStrategy ChooseStrategy(FontQuality eff)
@@ -657,7 +658,7 @@ void SurfaceImpl::DrawTextNoClipUTF8(PRectangle rc,
 
 	GetPainter()->setBackground(QColorFromColourRGBA(back));
 	GetPainter()->setBackgroundMode(Qt::OpaqueMode);
-	QString su = QString::fromUtf8(text.data(), static_cast<int>(text.length()));
+	QString su = QString::fromUtf8(QByteArray(text.data(), text.length()).constData(), static_cast<int>(text.length()));
 	GetPainter()->drawText(QPointF(rc.left, ybase), su);
 }
 
@@ -683,7 +684,7 @@ void SurfaceImpl::DrawTextTransparentUTF8(PRectangle rc,
 	PenColour(fore);
 
 	GetPainter()->setBackgroundMode(Qt::TransparentMode);
-	QString su = QString::fromUtf8(text.data(), static_cast<int>(text.length()));
+	QString su = QString::fromUtf8(QByteArray(text.data(), text.length()).constData(), static_cast<int>(text.length()));
 	GetPainter()->drawText(QPointF(rc.left, ybase), su);
 }
 
@@ -693,7 +694,7 @@ void SurfaceImpl::MeasureWidthsUTF8(const Font *font,
 {
 	if (!font)
 		return;
-	QString su = QString::fromUtf8(text.data(), static_cast<int>(text.length()));
+	QString su = QString::fromUtf8(QByteArray(text.data(), text.length()).constData(), static_cast<int>(text.length()));
 	QTextLayout tlay(su, *FontPointer(font), GetPaintDevice());
 	tlay.beginLayout();
 	QTextLine tl = tlay.createLine();
@@ -722,7 +723,7 @@ void SurfaceImpl::MeasureWidthsUTF8(const Font *font,
 XYPOSITION SurfaceImpl::WidthTextUTF8(const Font *font, std::string_view text)
 {
 	QFontMetricsF metrics(*FontPointer(font), device);
-	QString su = QString::fromUtf8(text.data(), static_cast<int>(text.length()));
+	QString su = QString::fromUtf8(QByteArray(text.data(), text.length()).constData(), static_cast<int>(text.length()));
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 	return metrics.horizontalAdvance(su);
 #else

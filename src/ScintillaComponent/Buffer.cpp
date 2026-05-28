@@ -20,15 +20,15 @@
 #include <locale>
 #include <sys/stat.h>
 #include "ScintillaComponent/Buffer.h"
-#include "Scintilla.h"
-#include "ILexer.h"
-#include "Lexilla.h"
+#include "ScintillaComponents/scintilla/include/Scintilla.h"
+#include "ScintillaComponents/scintilla/include/ILexer.h"
+#include "ScintillaComponents/lexilla/include/Lexilla.h"
 #include "../Parameters.h"
 #include "Notepad_plus.h"
 #include "ScintillaComponent/ScintillaEditView.h"
 #include "EncodingMapper.h"
-#include "uchardet.h"
-#include "FileInterface.h"
+#include "uchardet/uchardet.h"
+#include "MISC/Common/FileInterface.h"
 
 
 static const int blockSize = 128 * 1024 + 4;

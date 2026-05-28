@@ -18,6 +18,7 @@
 #include <iostream>
 #include <stdexcept>
 #include "ToolTip.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "../NppDarkMode.h"
 
 void ToolTip::init(HINSTANCE hInst, HWND hParent)

@@ -17,8 +17,9 @@
 #include <stdexcept>
 #include "ColourPicker.h"
 #include "ColourPopup.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "../NppDarkMode.h"
-#include "NppConstants.h"
+#include "MISC/Common/NppConstants.h"
 
 #include "MISC/Common/WindowsStubs.h"
 

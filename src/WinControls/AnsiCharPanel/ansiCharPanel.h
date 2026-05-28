@@ -20,7 +20,7 @@
 #include "MISC/Common/WindowsCompat.h"
 #include "MISC/Common/WindowsStubs.h"
 
-#include "DockingDlgInterface.h"
+#include "WinControls/DockingWnd/DockingDlgInterface.h"
 #include "ansiCharPanel_rc.h"
 #include "asciiListView.h"
 

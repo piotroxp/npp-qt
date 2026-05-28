@@ -1,17 +1,15 @@
 #ifndef WINDOWS_STUBS_H
+#define WCHAR wchar_t
 #define WINDOWS_STUBS_H
 
-#include <QtCore>
-#include <QString>
-#include <QByteArray>
+// Include WindowsCompat first - it includes Qt headers and all Windows types
+#include "WindowsCompat.h"
+
+// Additional POSIX/stdlib includes
 #include <cstring>
 #include <cerrno>
 #include <sys/stat.h>
-#include <cassert>
 #include <cwchar>
-
-// Include WindowsCompat first for basic types (defines all the Windows types)
-#include "WindowsCompat.h"
 
 // =============================================================================
 // shlwapi.h stubs

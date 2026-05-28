@@ -26,7 +26,7 @@
 
 #include "../Parameters.h"
 #include "Splitter.h"
-#include "Window.h"
+#include "WinControls/Window.h"
 #include "localization.h"
 #include "resource.h"
 

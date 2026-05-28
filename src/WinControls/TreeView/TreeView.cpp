@@ -17,6 +17,7 @@
 
 
 #include "TreeView.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "../Parameters.h"
 
 using namespace std;

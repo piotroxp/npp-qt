@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "MISC/Common/WindowsStubs.h"
+#include "MISC/Common/WindowsCompat.h"
 #include <stdexcept>
 #include "VerticalFileSwitcherListView.h"
 #include "ScintillaComponent/Buffer.h"

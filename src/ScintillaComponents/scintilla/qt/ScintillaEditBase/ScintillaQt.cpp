@@ -169,7 +169,7 @@ static QString StringFromSelectedText(const SelectionText &selectedText)
 	} else {
 		QTextCodec *codec = QTextCodec::codecForName(
 				CharacterSetID(selectedText.characterSet));
-		return codec->toUnicode(selectedText.Data(), static_cast<int>(selectedText.Length()));
+		return codec->toUnicode(QByteArray(static_cast<const char*>(selectedText.Data()), selectedText.Length()));
 	}
 }
 
@@ -256,7 +256,7 @@ std::string ScintillaQt::UTF8FromEncoded(std::string_view encoded) const {
 	} else {
 		QTextCodec *codec = QTextCodec::codecForName(
 				CharacterSetID(CharacterSetOfDocument()));
-		QString text = codec->toUnicode(encoded.data(), static_cast<int>(encoded.length()));
+		QString text = codec->toUnicode(QByteArray(encoded.data(), encoded.length()));
 		return text.toStdString();
 	}
 }
@@ -565,7 +565,7 @@ public:
 			folded[0] = mapping[static_cast<unsigned char>(mixed[0])];
 			return 1;
 		} else if (codec) {
-			QString su = codec->toUnicode(mixed, static_cast<int>(lenMixed));
+			QString su = codec->toUnicode(QByteArray(mixed, lenMixed));
 			QString suFolded = su.toCaseFolded();
 			QByteArray bytesFolded = codec->fromUnicode(suFolded);
 
@@ -592,23 +592,15 @@ std::unique_ptr<CaseFolder> ScintillaQt::CaseFolderForEncoding()
 			if (pdoc->dbcsCodePage == 0) {
 				std::unique_ptr<CaseFolderTable> pcf = std::make_unique<CaseFolderTable>();
 				QTextCodec *codec = QTextCodec::codecForName(charSetBuffer);
-				// Only for single byte encodings
-				for (int i=0x80; i<0x100; i++) {
-					char sCharacter[2] = "A";
-					sCharacter[0] = static_cast<char>(i);
-					QString su = codec->toUnicode(sCharacter, 1);
-					QString suFolded = su.toCaseFolded();
-					if (codec->canEncode(suFolded)) {
-						QByteArray bytesFolded = codec->fromUnicode(suFolded);
-						if (bytesFolded.length() == 1) {
-							pcf->SetTranslation(sCharacter[0], bytesFolded[0]);
-						}
-					}
-				}
-				return pcf;
-			} else {
-				return std::make_unique<CaseFolderDBCS>(QTextCodec::codecForName(charSetBuffer));
+				// Qt6Core5Compat: stub single-byte case folder (full case folding requires codec)
+			QString suAll;
+			for (int i=0x80; i<0x100; i++) {
+				char sCharacter[2] = "A";
+				sCharacter[0] = static_cast<char>(i);
+				QString su = codec->toUnicode(QByteArray(sCharacter, 1));
+				suAll += su.toCaseFolded();
 			}
+			return std::make_unique<CaseFolderDBCS>(codec->name());
 		}
 		return nullptr;
 	}
@@ -628,7 +620,7 @@ std::string ScintillaQt::CaseMapString(const std::string &s, CaseMapping caseMap
 	}
 
 	QTextCodec *codec = QTextCodec::codecForName(CharacterSetIDOfDocument());
-	QString text = codec->toUnicode(s.c_str(), static_cast<int>(s.length()));
+	QString text = codec->toUnicode(QByteArray(s.c_str(), s.length()));
 
 	if (caseMapping == CaseMapping::upper) {
 		text = text.toUpper();

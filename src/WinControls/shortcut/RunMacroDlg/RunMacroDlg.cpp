@@ -1,5 +1,5 @@
 // RunMacroDlg.cpp — Qt6 translation of macro run dialog
-#include "RunMacroDlg.h"
+#include "WinControls/shortcut/RunMacroDlg.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>

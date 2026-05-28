@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "MISC/Common/WindowsCompat.h"
+#include "../MISC/Common/WindowsCompat.h"
 
 #include <sstream>
 #include <string>
@@ -30,10 +30,10 @@
 #include "scintilla/include/Scintilla.h"
 
 #include "ScintillaComponent/Buffer.h"
-#include "Notepad_plus_msgs.h"
-#include "NppConstants.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
+#include "../MISC/Common/NppConstants.h"
 #include "UserDefineDialog.h"
-#include "WinControls/Window.h"
+#include "../WinControls/Window.h"
 #include "colors.h"
 
 class NppParameters;

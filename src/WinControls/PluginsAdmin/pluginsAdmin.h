@@ -23,11 +23,11 @@
 #include <utility>
 #include <vector>
 
-#include "Common.h"
-#include "ListView.h"
-#include "StaticDialog.h"
-#include "TabBar.h"
-#include "URLCtrl.h"
+#include "MISC/Common/Common.h"
+#include "WinControls/AnsiCharPanel/ListView.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
+#include "WinControls/TabBar/TabBar.h"
+#include "WinControls/AboutDlg/URLCtrl.h"
 #include "dpiManagerV2.h"
 #include "pluginsAdminRes.h"
 

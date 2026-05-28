@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "MISC/Common/WindowsCompat.h"
+#include "../MISC/Common/WindowsCompat.h"
 
 #include <cwchar>
 #include <memory>
@@ -26,13 +26,13 @@
 
 #include "lexilla/include/SciLexer.h"
 
-#include "ColourPicker.h"
-#include "WinControls/TabBar/ControlsTab.h"
+#include "../WinControls/ColourPicker/ColourPicker.h"
+#include "../WinControls/TabBar/ControlsTab.h"
 #include "../Parameters.h"
-#include "WinControls/StaticDialog/StaticDialog.h"
-#include "MISC/Common/URLCtrl.h"
+#include "../WinControls/StaticDialog/StaticDialog.h"
+#include "../MISC/Common/URLCtrl.h"
 #include "UserDefineResource.h"
-#include "WinControls/Window.h"
+#include "../WinControls/Window.h"
 
 class ScintillaEditView;
 

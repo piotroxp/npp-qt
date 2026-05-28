@@ -23,11 +23,11 @@
 #include <string>
 #include <vector>
 
-#include "DockingDlgInterface.h"
+#include "WinControls/DockingWnd/DockingDlgInterface.h"
 #include "NppXml.h"
 #include "ProjectPanel_rc.h"
-#include "StaticDialog.h"
-#include "TreeView.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
+#include "WinControls/TreeView/TreeView.h"
 
 #define PM_PROJECTPANELTITLE       L"Project Panel"
 #define PM_WORKSPACEROOTNAME       L"Workspace"

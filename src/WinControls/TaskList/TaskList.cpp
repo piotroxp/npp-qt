@@ -17,13 +17,14 @@
 #include <stdexcept>
 #include "TaskList.h"
 #include "TaskListDlg_rc.h"
-#include "colors.h"
+#include "MISC/Common/WindowsCompat.h"
+#include "ScintillaComponent/colors.h"
 
 #include "MISC/Common/WindowsStubs.h"
 
 #include <cwchar>
 
-#include "NppConstants.h"
+#include "MISC/Common/NppConstants.h"
 #include "../NppDarkMode.h"
 #include "dpiManagerV2.h"
 

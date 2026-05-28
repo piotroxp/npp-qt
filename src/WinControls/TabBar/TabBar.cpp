@@ -17,11 +17,12 @@
 #include <stdexcept>
 #include "ScintillaComponent/Buffer.h"
 #include "TabBar.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "../Parameters.h"
 #include "DoubleBuffer/DoubleBuffer.h"
 
 #include <cwchar>
-#include "NppConstants.h"
+#include "MISC/Common/NppConstants.h"
 
 #define	IDC_DRAG_TAB     1404
 #define	IDC_DRAG_INTERDIT_TAB 1405

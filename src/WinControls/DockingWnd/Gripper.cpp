@@ -17,6 +17,7 @@
 
 #include <stdexcept>
 #include "Gripper.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "DockingManager.h"
 #include "../Parameters.h"
 

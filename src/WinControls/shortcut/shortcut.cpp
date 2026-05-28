@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <array>
 #include "shortcut.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "../Parameters.h"
 #include "ScintillaComponent/ScintillaEditView.h"
 #include "resource.h"

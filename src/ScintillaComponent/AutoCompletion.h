@@ -19,12 +19,12 @@
 
 #include "FunctionCallTip.h"
 
-#include "MISC/Common/WindowsCompat.h"
+#include "../MISC/Common/WindowsCompat.h"
 
 #include <string>
 #include <vector>
 
-#include "Notepad_plus_msgs.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "NppXml.h"
 #include "../Parameters.h"
 

@@ -17,6 +17,7 @@
 
 #include "WindowsDlg.h"
 #include "WindowsDlgRc.h"
+#include "MISC/Common/WindowsCompat.h"
 
 SizeableDlg::SizeableDlg(WINRECT* pWinMap)
 	: MyBaseClass(), _winMgr(pWinMap)

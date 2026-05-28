@@ -37,7 +37,7 @@
 #include <vector>
 
 #include "Common.h"
-#include "sha-256.h"
+#include "MISC/sha2/sha-256.h"
 
 using namespace std;
 

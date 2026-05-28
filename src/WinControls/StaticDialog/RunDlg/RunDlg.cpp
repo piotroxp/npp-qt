@@ -14,11 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "StaticDialog.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
 #include "RunDlg.h"
-#include "CustomFileDialog.h"
-#include "Notepad_plus_msgs.h"
-#include "shortcut.h"
+#include "MISC/Common/WindowsCompat.h"
+#include "WinControls/OpenSaveFileDialog/CustomFileDialog.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
+#include "WinControls/shortcut/shortcut.h"
 #include "../Parameters.h"
 #include "Notepad_plus.h"
 #include <strsafe.h>

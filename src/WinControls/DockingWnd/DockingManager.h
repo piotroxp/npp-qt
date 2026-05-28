@@ -19,9 +19,9 @@
 #include <vector>
 #include "MISC/Common/WindowsCompat.h"
 #include "MISC/Common/WindowsStubs.h"
-#include "Window.h"
+#include "WinControls/Window.h"
 #include "DockingCont.h"
-#include "SplitterContainer.h"
+#include "WinControls/SplitterContainer/SplitterContainer.h"
 
 #define DSPC_CLASS_NAME L"dockingManager"
 #define	CONT_MAP_MAX	50

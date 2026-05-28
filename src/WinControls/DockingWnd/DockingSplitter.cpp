@@ -17,7 +17,8 @@
 
 #include <stdexcept>
 #include "DockingSplitter.h"
-#include "Notepad_plus_msgs.h"
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "../Parameters.h"
 
 BOOL DockingSplitter::_isVertReg = FALSE;

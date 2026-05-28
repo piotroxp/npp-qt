@@ -30,14 +30,14 @@
 #include <vector>
 #include <filesystem>
 
-#include "Common.h"
-#include "DockingDlgInterface.h"
-#include "Notepad_plus_msgs.h"
+#include "MISC/Common/Common.h"
+#include "WinControls/DockingWnd/DockingDlgInterface.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "../NppDarkMode.h"
 #include "../Parameters.h"
-#include "ReadDirectoryChanges.h"
-#include "RunDlg.h"
-#include "dockingResource.h"
+#include "WinControls/ReadDirectoryChanges/ReadDirectoryChanges.h"
+#include "WinControls/StaticDialog/RunDlg/RunDlg.h"
+#include "WinControls/DockingWnd/dockingResource.h"
 #include "dpiManagerV2.h"
 #include "fileBrowser_rc.h"
 #include "localization.h"

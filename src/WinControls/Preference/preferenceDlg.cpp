@@ -34,25 +34,25 @@
 
 #include "scintilla/include/Scintilla.h"
 
-#include "ColourPicker.h"
-#include "Common.h"
-#include "ContextMenu.h"
-#include "ControlsTab.h"
+#include "WinControls/ColourPicker/ColourPicker.h"
+#include "MISC/Common/Common.h"
+#include "WinControls/ContextMenu/ContextMenu.h"
+#include "WinControls/ControlsTab/ControlsTab.h"
 #include "EncodingMapper.h"
-#include "Notepad_plus_msgs.h"
-#include "NppConstants.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
+#include "MISC/Common/NppConstants.h"
 #include "../NppDarkMode.h"
 #include "NppXml.h"
 #include "../Parameters.h"
 #include "ScintillaComponent/ScintillaEditView.h"
-#include "ToolBar.h"
+#include "WinControls/ToolBar/ToolBar.h"
 #include "dpiManagerV2.h"
 #include "localization.h"
 #include "menuCmdID.h"
 #include "preference_rc.h"
 #include "regExtDlgRc.h"
 #include "resource.h"
-#include "shortcut.h"
+#include "WinControls/shortcut/shortcut.h"
 
 using namespace std;
 

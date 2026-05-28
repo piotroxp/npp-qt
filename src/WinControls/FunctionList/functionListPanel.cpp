@@ -16,6 +16,7 @@
 
 #include "json.hpp"
 #include "functionListPanel.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "ScintillaComponent/ScintillaEditView.h"
 #include "localization.h"
 #include <fstream>

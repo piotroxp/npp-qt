@@ -21,13 +21,13 @@
 #include <optional>
 #include <memory>
 
-#include "Debugging.h"
-#include "Geometry.h"
-#include "ScintillaTypes.h"
-#include "ScintillaMessages.h"
-#include "ScintillaStructures.h"
-#include "Platform.h"
-#include "Scintilla.h"
+#include "ScintillaComponents/scintilla/src/Debugging.h"
+#include "ScintillaComponents/scintilla/src/Geometry.h"
+#include "ScintillaComponents/scintilla/include/ScintillaTypes.h"
+#include "ScintillaComponents/scintilla/include/ScintillaMessages.h"
+#include "ScintillaComponents/scintilla/include/ScintillaStructures.h"
+#include "ScintillaComponents/scintilla/src/Platform.h"
+#include "ScintillaComponents/scintilla/include/Scintilla.h"
 
 #include <QAbstractScrollArea>
 #include <QMimeData>

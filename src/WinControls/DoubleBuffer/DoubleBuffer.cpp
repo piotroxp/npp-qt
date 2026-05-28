@@ -15,7 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "DoubleBuffer.h"
-#include "NppConstants.h"
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/NppConstants.h"
 #include "MISC/Common/WindowsStubs.h"
 #include <cassert>
 #include <memory>

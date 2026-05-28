@@ -17,6 +17,7 @@
 
 #include "ImageListSet.h"
 
+#include "MISC/Common/WindowsCompat.h"
 #include "windows.h"
 
 #include <cstdlib>

@@ -11,6 +11,7 @@ Modified by Don HO <don.h@free.fr>
 */
 
 #include "BabyGrid.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "../Parameters.h"
 
 #define MAX_ROWS 32000

@@ -23,10 +23,10 @@
 #include <string>
 #include <vector>
 
-#include "ImageListSet.h"
-#include "Notepad_plus_msgs.h"
+#include "WinControls/ImageListSet/ImageListSet.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "NppXml.h"
-#include "Window.h"
+#include "WinControls/Window.h"
 #include "dpiManagerV2.h"
 
 #define REBAR_BAR_TOOLBAR		0

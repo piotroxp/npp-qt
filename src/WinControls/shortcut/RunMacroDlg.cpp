@@ -18,8 +18,9 @@
 
 
 #include "RunMacroDlg.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "ScintillaComponent/ScintillaEditView.h"
-#include "Notepad_plus_msgs.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 
 void RunMacroDlg::initMacroList()
 {

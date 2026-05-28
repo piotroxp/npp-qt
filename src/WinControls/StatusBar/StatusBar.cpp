@@ -29,9 +29,9 @@
 #include <string>
 
 #include "DoubleBuffer/DoubleBuffer.h"
-#include "NppConstants.h"
+#include "MISC/Common/NppConstants.h"
 #include "../NppDarkMode.h"
-#include "Window.h"
+#include "WinControls/Window.h"
 #include "dpiManagerV2.h"
 
 //#define IDC_STATUSBAR 789

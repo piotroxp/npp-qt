@@ -1,477 +1,916 @@
 #ifndef WINDOWS_COMPAT_H
 #define WINDOWS_COMPAT_H
 
+// =============================================================================
+// Qt headers - must come BEFORE any typedefs using qint64/quint64
+// =============================================================================
 #include <QtCore>
-#include <QtWidgets>
-#include <QtCore/private/qtextcodec_p.h>
-#include <QString>
-#include <QByteArray>
-#include <QFile>
-
-#include <QMenu>
-#include <QAction>
-#include <QPainter>
-#include <QWidget>
-#include <cassert>
+#include <QPoint>
+#include <QSize>
+#include <QRect>
+#include <cstdint>
 
 // =============================================================================
-// Basic Windows Type Aliases - MUST come before anything else
+// Basic Windows types
 // =============================================================================
-
-typedef unsigned int UINT;
+#ifndef BYTE
 typedef unsigned char BYTE;
-typedef int BOOL;
-typedef int INT;
-typedef qint8 INT8;
-typedef quint8 UINT8;
-typedef qint16 INT16;
-typedef quint16 UINT16;
-typedef qint32 INT32;
-typedef quint32 UINT32;
-typedef qint64 INT64;
-typedef quint64 UINT64;
-typedef qint32 LONG;
-typedef quint32 DWORD;
-typedef qint64 LONGLONG;
-typedef quint64 ULONGLONG;
-typedef wchar_t WCHAR;
-typedef void* HANDLE;
-typedef void* HWND;
-typedef void* HGDIOBJ;
-typedef void* HBRUSH;
-typedef void* HFONT;
-typedef void* HBITMAP;
-typedef void* HCURSOR;
-typedef void* HICON;
-typedef void* HMENU;
-typedef void* HDC;
-typedef void* HRGN;
-typedef void* HMODULE;
-typedef void* HINSTANCE;
-typedef void* HACCEL;
-typedef void* HDWP;
-typedef void* LPVOID;
-typedef const void* LPCVOID;
-typedef void* LPSECURITY_ATTRIBUTES;
-typedef void* HIMAGELIST;
-typedef void* HPRINTER;
-typedef void* HCOLORSPACE;
-typedef long LONG32;
-typedef long* PLONG32;
-typedef long LACCDWORD;
-typedef unsigned long* PULARGE_INTEGER;
-typedef unsigned int DWORD32;
+#endif
+
+#ifndef WORD
 typedef unsigned short WORD;
-typedef unsigned char UCHAR;
-typedef BYTE* LPBYTE;
-typedef unsigned long DWORD_PTR;
-typedef unsigned long U_LONG;
-typedef void** LPVOID*;
-typedef void* HPEN;
-typedef int64_t INT_PTR;
-typedef uint64_t UINT_PTR;
-typedef int64_t LONG_PTR;
-typedef uint64_t ULONG_PTR;
-typedef void* HTHEME;
+#endif
 
-// Type pointers
-typedef const char* LPCSTR;
-typedef const wchar_t* LPCWSTR;
-typedef char* LPSTR;
-typedef wchar_t* LPWSTR;
-typedef long LRESULT;
+#ifndef DWORD
+typedef unsigned int DWORD;
+#endif
+
+#ifndef INT
+typedef int INT;
+#endif
+
+#ifndef UINT
+typedef unsigned int UINT;
+#endif
+
+#ifndef LONG
+typedef long LONG;
+#endif
+
+#ifndef ULONG
+typedef unsigned long ULONG;
+#endif
+
+#ifndef BOOL
+typedef int BOOL;
+#endif
+
+#ifndef WPARAM
 typedef unsigned long WPARAM;
+#endif
+
+#ifndef LPARAM
 typedef long LPARAM;
+#endif
+
+#ifndef LRESULT
+typedef long LRESULT;
+#endif
+
+#ifndef HRESULT
 typedef long HRESULT;
+#endif
+
+#ifndef COLORREF
 typedef unsigned long COLORREF;
+#endif
+
+#ifndef ATOM
+typedef unsigned long ATOM;
+#endif
+
+// Pointer-sized types
+#ifndef INT_PTR
+typedef intptr_t INT_PTR;
+#endif
+
+#ifndef UINT_PTR
+typedef uintptr_t UINT_PTR;
+#endif
+
+#ifndef LONG_PTR
+typedef long LONG_PTR;
+#endif
+
+// 8-byte integers
+#ifndef QINT64
+typedef long long QINT64;
+#endif
+
+#ifndef QUINT64
+typedef unsigned long long QUINT64;
+#endif
 
 // =============================================================================
-// Windows Constants
+// Handle types
 // =============================================================================
+#ifndef HANDLE
+typedef void* HANDLE;
+#endif
 
-#define HANDLE_NULL nullptr
-#define INVALID_HANDLE_VALUE nullptr
-#define MAX_PATH 260
-#define MAXDWORD 0xFFFFFFFF
-#define TRUE 1
-#define FALSE 0
+#ifndef HWND
+typedef void* HWND;
+#endif
 
-#define VOID void
-#define CONST const
-#define WINAPI
+#ifndef HDC
+typedef void* HDC;
+#endif
 
-#define WM_COMMAND 0x0111
-#define WM_NOTIFY 0x004E
-#define WM_INITDIALOG 0x0110
-#define WM_CLOSE 0x0010
-#define WM_DESTROY 0x0002
-#define WM_SIZE 0x0005
-#define WM_MOVE 0x0003
-#define WM_KEYDOWN 0x0100
-#define WM_KEYUP 0x0101
-#define WM_CHAR 0x0102
-#define WM_LBUTTONDOWN 0x0201
-#define WM_LBUTTONUP 0x0202
-#define WM_RBUTTONDOWN 0x0204
-#define WM_RBUTTONUP 0x0205
-#define WM_MOUSEMOVE 0x0200
-#define WM_PAINT 0x000F
-#define WM_SETFOCUS 0x0007
-#define WM_KILLFOCUS 0x0008
-#define WM_GETTEXT 0x000D
-#define WM_SETTEXT 0x000C
-#define WM_SYSCOMMAND 0x0112
-#define WM_USER 0x0400
-#define WM_CTLCOLOREDIT 0x0133
-#define WM_CTLCOLORSTATIC 0x0138
-#define WM_DRAWITEM 0x002B
-#define WM_MEASUREITEM 0x002C
-#define CP_UTF8 65001
+#ifndef HGDIOBJ
+typedef void* HGDIOBJ;
+#endif
 
-#define BN_CLICKED 0
-#define EN_CHANGE 0x0300
+#ifndef HBRUSH
+typedef void* HBRUSH;
+#endif
 
-#define VK_BACK 0x08
-#define VK_TAB 0x09
-#define VK_RETURN 0x0D
-#define VK_SHIFT 0x10
-#define VK_CONTROL 0x11
-#define VK_ESCAPE 0x1B
-#define VK_SPACE 0x20
-#define VK_F1 0x70
-#define VK_F2 0x71
-#define VK_F3 0x72
-#define VK_F4 0x73
-#define VK_F5 0x74
-#define VK_F6 0x75
-#define VK_F7 0x76
-#define VK_F8 0x77
-#define VK_F9 0x78
-#define VK_F10 0x79
-#define VK_F11 0x7A
-#define VK_F12 0x7B
-#define VK_DELETE 0x2E
-#define VK_LEFT 0x25
-#define VK_RIGHT 0x27
-#define VK_UP 0x26
-#define VK_DOWN 0x28
+#ifndef HPEN
+typedef void* HPEN;
+#endif
 
-#define WS_OVERLAPPED 0x00000000
-#define WS_POPUP 0x80000000
-#define WS_CHILD 0x40000000
-#define WS_MINIMIZE 0x20000000
-#define WS_VISIBLE 0x10000000
-#define WS_CAPTION 0x00C00000
-#define WS_BORDER 0x00800000
-#define WS_EX_LEFT 0x00000000
-#define WS_EX_WINDOWEDGE 0x00000100
-#define WS_EX_CLIENTEDGE 0x00000200
+#ifndef HFONT
+typedef void* HFONT;
+#endif
 
-#define IDOK 1
-#define IDCANCEL 2
-#define IDYES 6
-#define IDNO 7
-#define IDCLOSE 8
-#define IDHELP 9
+#ifndef HBITMAP
+typedef void* HBITMAP;
+#endif
 
-#define COLOR_WINDOW 5
-#define COLOR_WINDOWTEXT 8
-#define COLOR_HIGHLIGHT 13
-#define CF_TEXT 1
-#define CF_UNICODETEXT 13
-#define MB_OK 0x00000000
-#define MB_OKCANCEL 0x00000001
-#define MB_YESNO 0x00000004
-#define MB_ICONINFORMATION 0x00000040
+#ifndef HCURSOR
+typedef void* HCURSOR;
+#endif
 
-#define S_OK ((HRESULT)0L)
-#define S_FALSE ((HRESULT)1L)
-#define E_FAIL ((HRESULT)0x80000008L)
-#define E_NOTIMPL ((HRESULT)0x80000001L)
+#ifndef HICON
+typedef void* HICON;
+#endif
 
-#define SM_CXSCREEN 0
-#define SM_CYSCREEN 1
+#ifndef HMENU
+typedef void* HMENU;
+#endif
+
+#ifndef HRGN
+typedef void* HRGN;
+#endif
+
+#ifndef HMODULE
+typedef void* HMODULE;
+#endif
+
+#ifndef HINSTANCE
+typedef void* HINSTANCE;
+#endif
+
+#ifndef HLOCAL
+typedef void* HLOCAL;
+#endif
+
+#ifndef HGLOBAL
+typedef void* HGLOBAL;
+#endif
+
+#ifndef HACCEL
+typedef void* HACCEL;
+#endif
+
+#ifndef HDWP
+typedef void* HDWP;
+#endif
+
+#ifndef HPRINTER
+typedef void* HPRINTER;
+#endif
+
+#ifndef HCOLORSPACE
+typedef void* HCOLORSPACE;
+#endif
+
+#ifndef HIMAGELIST
+typedef void* HIMAGELIST;
+#endif
+
+#ifndef HHOOK
+typedef void* HHOOK;
+#endif
+
+#ifndef FARPROC
+typedef void* FARPROC;
+#endif
+
+#ifndef HRSRC
+typedef void* HRSRC;
+#endif
+
+#ifndef HTHEME
+typedef void* HTHEME;
+#endif
+
+#ifndef HMONITOR
+typedef void* HMONITOR;
+#endif
+
+#ifndef HTREEITEM
+typedef void* HTREEITEM;
+#endif
+
+#ifndef HDROP
+typedef void* HDROP;
+#endif
+
+#ifndef HKEY
+typedef void* HKEY;
+#endif
+
+#ifndef LPVOID
+typedef void* LPVOID;
+#endif
+
+#ifndef LPCVOID
+typedef const void* LPCVOID;
+#endif
+
+// =============================================================================
+// String types
+// =============================================================================
+#ifndef LPSTR
+typedef char* LPSTR;
+#endif
+
+#ifndef LPCSTR
+typedef const char* LPCSTR;
+#endif
+
+#ifndef LPWSTR
+typedef wchar_t* LPWSTR;
+#endif
+
+#ifndef LPCWSTR
+typedef const wchar_t* LPCWSTR;
+#endif
+
+#ifndef LPTSTR
+typedef wchar_t* LPTSTR;
+#endif
+
+#ifndef LPCTSTR
+typedef const wchar_t* LPCTSTR;
+#endif
+
+#ifndef TCHAR
+typedef wchar_t TCHAR;
+#endif
+
+// =============================================================================
+// Qt types aliased to Windows names (for code using Windows-style POINT/SIZE/RECT)
+// =============================================================================
+typedef QPoint                  POINT;
+typedef QSize                   SIZE;
+typedef POINT*                  PPOINT;
+typedef SIZE*                    PSIZE;
+struct RECT { long left, top, right, bottom; };
+typedef RECT*                   PRECT;
+typedef RECT*                   LPRECT;
+typedef const RECT*             LPCRECT;
 
 // =============================================================================
 // Windows Structures
 // =============================================================================
-
-struct POINT { LONG x; LONG y; POINT(long _x=0, long _y=0) : x(_x), y(_y) {} };
-struct SIZE { LONG cx; LONG cy; SIZE(long _cx=0, long _cy=0) : cx(_cx), cy(_cy) {} };
-struct RECT { LONG left; LONG top; LONG right; LONG bottom; RECT(long l=0, long t=0, long r=0, long b=0) : left(l), top(t), right(r), bottom(b) {} long Width() const { return right - left; } long Height() const { return bottom - top; } };
-
-// Pointer aliases
-typedef POINT* PPOINT;
-typedef SIZE* PSIZE;
-typedef RECT* PRECT;
-typedef RECT* LPRECT;
-typedef const RECT* LPCRECT;
-
-// =============================================================================
-// DRAWITEMSTRUCT / MEASUREITEMSTRUCT (for menu drawing)
-// =============================================================================
-
-struct DRAWITEMSTRUCT {
-    UINT  CtlType;
-    UINT  CtlID;
-    UINT  itemID;
-    UINT  itemAction;
-    UINT  itemState;
-    HWND  hwndItem;
-    HDC   hDC;
-    RECT  rcItem;
-    ULONG_PTR itemData;
+#ifndef _FILETIME_DEFINED
+#define _FILETIME_DEFINED
+struct FILETIME {
+    unsigned long dwLowDateTime;
+    unsigned long dwHighDateTime;
 };
+#endif
 
-struct MEASUREITEMSTRUCT {
-    UINT  CtlType;
-    UINT  CtlID;
-    UINT  itemID;
-    UINT  itemWidth;
-    UINT  itemHeight;
-    ULONG_PTR itemData;
+#ifndef _SYSTEMTIME_DEFINED
+#define _SYSTEMTIME_DEFINED
+struct SYSTEMTIME {
+    unsigned short wYear;
+    unsigned short wMonth;
+    unsigned short wDayOfWeek;
+    unsigned short wDay;
+    unsigned short wHour;
+    unsigned short wMinute;
+    unsigned short wSecond;
+    unsigned short wMilliseconds;
 };
+#endif
 
-// =============================================================================
-// Macros
-// =============================================================================
-
-#define SetRect(r,l,t,rt,b) do { (r).left=l;(r).top=t;(r).right=rt;(r).bottom=b; } while(0)
-#define IsRectEmpty(r) ((r).left >= (r).right || (r).top >= (r).bottom)
-#define WidthRect(r) ((r).right - (r).left)
-#define HeightRect(r) ((r).bottom - (r).top)
-#define MAKELONG(a,b) ((LONG)(((DWORD)((WORD)(a)) | ((DWORD)((WORD)(b))) << 16))
-#define HIWORD(x) ((WORD)((((DWORD)(x)) >> 16) & 0xFFFF))
-#define LOWORD(x) ((WORD)(((DWORD)(x)) & 0xFFFF))
-
-// =============================================================================
-// MFC stubs
-// =============================================================================
-
-#define ASSERT(x) assert(x)
-#define TRACE(...) ((void)0)
-#define VERIFY(x) assert(x)
-#define cbWndExtra 0
-#define cbClsExtra 0
-
-static inline void AfxThrowNotSupportedException() { throw "Not supported"; }
-
-// =============================================================================
-// CFile stub
-// =============================================================================
-
-class CFile {
-public:
-    enum OpenFlags { modeRead=0, modeWrite=1 };
-    enum Attribute { normal=0 };
-    CFile() : _file(nullptr) {}
-    ~CFile() { if(_file) { _file->close(); delete _file; } }
-    bool Open(const char* name, OpenFlags flags) {
-        QIODevice::OpenMode m = (flags & modeWrite) ? QIODevice::WriteOnly : QIODevice::ReadOnly;
-        _file = new QFile(QString::fromLocal8Bit(name));
-        return _file->open(m);
-    }
-    ULONGLONG GetLength() const { return _file ? _file->size() : 0; }
-    void Read(void* buf, UINT count) { if(_file) _file->read(static_cast<char*>(buf), count); }
-    void Write(const void* buf, UINT count) { if(_file) _file->write(static_cast<const char*>(buf), count); }
-    void SeekToBegin() { if(_file) _file->seek(0); }
-    void Close() { if(_file) _file->close(); }
-private:
-    QFile* _file;
+#ifndef _ULARGE_INTEGER_DEFINED
+#define _ULARGE_INTEGER_DEFINED
+union ULARGE_INTEGER {
+    struct { unsigned long LowPart; unsigned long HighPart; } u;
+    unsigned long long QuadPart;
 };
+#endif
 
-// =============================================================================
-// CArchive stub
-// =============================================================================
-
-class CArchive {
-public:
-    enum Mode { load=0, store=1 };
-    CArchive(CFile* f, Mode m) : _file(f), _mode(m) {}
-    bool IsLoading() const { return _mode == load; }
-    bool IsStoring() const { return _mode == store; }
-private:
-    CFile* _file;
-    Mode _mode;
+#ifndef _MSG_DEFINED
+#define _MSG_DEFINED
+struct MSG {
+    HWND       hwnd;
+    UINT       message;
+    WPARAM     wParam;
+    LPARAM     lParam;
+    unsigned long time;
+    POINT      pt;
 };
+#endif
 
-// =============================================================================
-// CString stub
-// =============================================================================
-
-class CString : public QString {
-public:
-    CString() : QString() {}
-    CString(const char* s) : QString(QString::fromLocal8Bit(s)) {}
-    CString(const QString& s) : QString(s) {}
-    CString& operator=(const char* s) { QString::operator=(QString::fromLocal8Bit(s)); return *this; }
-    CString& operator=(const QString& s) { QString::operator=(s); return *this; }
-    int GetLength() const { return length(); }
-    bool IsEmpty() const { return isEmpty(); }
-    void Empty() { clear(); }
-    const char* c_str() const { return toLocal8Bit().constData(); }
-    CString Mid(int n, int len=-1) const { return CString(mid(n, len)); }
-    CString Left(int n) const { return CString(left(n)); }
-    CString Right(int n) const { return CString(right(n)); }
-    int Find(char c, int start=0) const { return indexOf(c, start); }
+#ifndef _NMHDR_DEFINED
+#define _NMHDR_DEFINED
+struct NMHDR {
+    void* hwndFrom;
+    UINT  idFrom;
+    UINT  code;
 };
+#endif
 
-// =============================================================================
-// CWnd stub
-// =============================================================================
-
-class CWnd {
-public:
-    CWnd() : m_hWnd(nullptr) {}
-    virtual ~CWnd() {}
-    HWND GetSafeHwnd() const { return m_hWnd; }
-    void Attach(HWND h) { m_hWnd = h; }
-    HWND Detach() { HWND h = m_hWnd; m_hWnd = nullptr; return h; }
-    LRESULT SendMessage(UINT msg, WPARAM wp, LPARAM lp) { Q_UNUSED(msg); Q_UNUSED(wp); Q_UNUSED(lp); return 0; }
-    BOOL ShowWindow(int cmd) { Q_UNUSED(cmd); return FALSE; }
-    void SetWindowText(const char* txt) { Q_UNUSED(txt); }
-    void GetWindowRect(LPRECT r) const { Q_UNUSED(r); }
-    void GetClientRect(LPRECT r) const { Q_UNUSED(r); }
-    void MoveWindow(int x, int y, int w, int h, BOOL repaint=TRUE) { Q_UNUSED(x); Q_UNUSED(y); Q_UNUSED(w); Q_UNUSED(h); Q_UNUSED(repaint); }
-    void SetFocus() {}
-    void Invalidate(BOOL erase=TRUE) { Q_UNUSED(erase); }
-    void UpdateWindow() {}
-    BOOL CreateEx(DWORD exStyle, const char* cls, const char* name, DWORD style, int x, int y, int w, int h, HWND parent, HMENU menu, LPVOID param) {
-        Q_UNUSED(exStyle); Q_UNUSED(cls); Q_UNUSED(name); Q_UNUSED(style);
-        Q_UNUSED(x); Q_UNUSED(y); Q_UNUSED(w); Q_UNUSED(h); Q_UNUSED(parent); Q_UNUSED(menu); Q_UNUSED(param);
-        return FALSE;
-    }
-    HWND m_hWnd;
+#ifndef _TOOLINFO_DEFINED
+#define _TOOLINFO_DEFINED
+struct TOOLINFO {
+    unsigned int cbSize;
+    unsigned int uFlags;
+    HWND        hwndOwner;
+    unsigned int uId;
+    RECT        rect;
+    HINSTANCE  lpReserved;
+    wchar_t*    lpszText;
+    LPARAM     lParam;
+    void*      hinst;
 };
+#endif
 
-// =============================================================================
-// CMenu stub
-// =============================================================================
-
-class CMenu {
-public:
-    CMenu() : _menu(nullptr) {}
-    ~CMenu() { if(_menu) delete _menu; }
-    BOOL CreatePopupMenu() { _menu = new QMenu(); return TRUE; }
-    BOOL AppendMenu(UINT flags, UINT id=0, const char* text=nullptr) {
-        if(_menu) { _menu->addAction(QString::fromLocal8Bit(text ? text : "")); }
-        Q_UNUSED(flags); Q_UNUSED(id);
-        return TRUE;
-    }
-    BOOL TrackPopupMenu(UINT flags, int x, int y, CWnd* parent) {
-        Q_UNUSED(flags); Q_UNUSED(x); Q_UNUSED(y); Q_UNUSED(parent);
-        if(_menu) { _menu->exec(); return TRUE; }
-        return FALSE;
-    }
-    void DestroyMenu() { if((_menu)) { delete _menu; _menu = nullptr; } }
-    QMenu* _menu;
+#ifndef _WIN32_FILE_ATTRIBUTE_DATA_DEFINED
+#define _WIN32_FILE_ATTRIBUTE_DATA_DEFINED
+struct WIN32_FILE_ATTRIBUTE_DATA {
+    DWORD         dwFileAttributes;
+    FILETIME      ftCreationTime;
+    FILETIME      ftLastAccessTime;
+    FILETIME      ftLastWriteTime;
+    ULARGE_INTEGER nFileSize;
 };
+#endif
+
+#ifndef _WINDOWPLACEMENT_DEFINED
+#define _WINDOWPLACEMENT_DEFINED
+struct WINDOWPLACEMENT {
+    UINT  length;
+    UINT  flags;
+    UINT  showCmd;
+    long  ptMinPosition[2];
+    long  ptMaxPosition[2];
+    long  rcNormalPosition[4];
+};
+#endif
 
 // =============================================================================
-// CDC stub
+// COM / GUID types
 // =============================================================================
+#ifndef _GUID_DEFINED
+#define _GUID_DEFINED
+typedef struct { unsigned long Data1; unsigned short Data2; unsigned short Data3; unsigned char Data4[8]; } GUID;
+#endif
 
-class CDC {
-public:
-    CDC() : _textColor(0), _bkMode(0) {}
-    void SetTextColor(COLORREF c) { _textColor = c; }
-    void SetBkMode(int mode) { _bkMode = mode; }
-    COLORREF _textColor;
-    int _bkMode;
-};
+#ifndef IID
+typedef GUID IID;
+#endif
 
-class CClientDC : public CDC {
-public:
-    CClientDC(CWnd* w) { Q_UNUSED(w); }
-};
-
-class CWindowDC : public CDC {
-public:
-    CWindowDC(CWnd* w) { Q_UNUSED(w); }
-};
-
-class CMemDC : public CDC {
-public:
-    CMemDC() {}
-};
-
-class CPaintDC : public CDC {
-public:
-    CPaintDC(CWnd* w) { Q_UNUSED(w); }
-};
+#ifndef CLSID
+typedef GUID CLSID;
+#endif
 
 // =============================================================================
-// CFont / CBitmap stubs
+// Windows Constants
+// =============================================================================
+#ifndef S_OK
+#define S_OK                  ((HRESULT)0L)
+#endif
+
+#ifndef S_FALSE
+#define S_FALSE               ((HRESULT)1L)
+#endif
+
+#ifndef E_FAIL
+#define E_FAIL                ((HRESULT)0x80000008L)
+#endif
+
+#ifndef E_NOTIMPL
+#define E_NOTIMPL             ((HRESULT)0x80000001L)
+#endif
+
+#ifndef E_NOINTERFACE
+#define E_NOINTERFACE         ((HRESULT)0x80004002L)
+#endif
+
+#ifndef NO_ERROR
+#define NO_ERROR              0
+#endif
+
+#ifndef ERROR_SUCCESS
+#define ERROR_SUCCESS        0
+#endif
+
+#ifndef ERROR_FILE_NOT_FOUND
+#define ERROR_FILE_NOT_FOUND  2
+#endif
+
+#ifndef TRUE
+#define TRUE                  1
+#endif
+
+#ifndef FALSE
+#define FALSE                 0
+#endif
+
+#ifndef MAX_PATH
+#define MAX_PATH              260
+#endif
+
+// Message box styles
+#ifndef MB_OK
+#define MB_OK                 0x00000000L
+#endif
+
+#ifndef MB_OKCANCEL
+#define MB_OKCANCEL           0x00000001L
+#endif
+
+#ifndef MB_YESNO
+#define MB_YESNO              0x00000004L
+#endif
+
+#ifndef MB_ICONINFORMATION
+#define MB_ICONINFORMATION    0x00000040L
+#endif
+
+#ifndef MB_ICONSTOP
+#define MB_ICONSTOP           0x00000010L
+#endif
+
+// Window messages
+#ifndef WM_COMMAND
+#define WM_COMMAND            0x0111
+#endif
+
+#ifndef WM_NOTIFY
+#define WM_NOTIFY             0x004E
+#endif
+
+#ifndef WM_CLOSE
+#define WM_CLOSE              0x0010
+#endif
+
+#ifndef WM_DESTROY
+#define WM_DESTROY            0x0002
+#endif
+
+#ifndef WM_SIZE
+#define WM_SIZE               0x0005
+#endif
+
+#ifndef WM_PAINT
+#define WM_PAINT              0x000F
+#endif
+
+#ifndef WM_ERASEBKGND
+#define WM_ERASEBKGND         0x0014
+#endif
+
+#ifndef WM_LBUTTONDOWN
+#define WM_LBUTTONDOWN        0x0201
+#endif
+
+#ifndef WM_LBUTTONUP
+#define WM_LBUTTONUP          0x0202
+#endif
+
+#ifndef WM_RBUTTONDOWN
+#define WM_RBUTTONDOWN        0x0204
+#endif
+
+#ifndef WM_MOUSEMOVE
+#define WM_MOUSEMOVE          0x0200
+#endif
+
+#ifndef WM_MOUSEWHEEL
+#define WM_MOUSEWHEEL         0x020A
+#endif
+
+#ifndef WM_USER
+#define WM_USER               0x0400
+#endif
+
+// File attributes
+#ifndef FILE_ATTRIBUTE_NORMAL
+#define FILE_ATTRIBUTE_NORMAL       0x00000080
+#endif
+
+#ifndef FILE_ATTRIBUTE_HIDDEN
+#define FILE_ATTRIBUTE_HIDDEN       0x00000002
+#endif
+
+#ifndef FILE_ATTRIBUTE_SYSTEM
+#define FILE_ATTRIBUTE_SYSTEM       0x00000004
+#endif
+
+#ifndef FILE_ATTRIBUTE_READONLY
+#define FILE_ATTRIBUTE_READONLY     0x00000001
+#endif
+
+#ifndef FILE_ATTRIBUTE_DIRECTORY
+#define FILE_ATTRIBUTE_DIRECTORY     0x00000010
+#endif
+
+#ifndef INVALID_FILE_ATTRIBUTES
+#define INVALID_FILE_ATTRIBUTES     0xFFFFFFFF
+#endif
+
+// GENERIC constants
+#ifndef GENERIC_READ
+#define GENERIC_READ         0x80000000
+#endif
+
+#ifndef GENERIC_WRITE
+#define GENERIC_WRITE        0x40000000
+#endif
+
+#ifndef GENERIC_EXECUTE
+#define GENERIC_EXECUTE      0x20000000
+#endif
+
+#ifndef GENERIC_ALL
+#define GENERIC_ALL          0x10000000
+#endif
+
+// System metrics
+#ifndef SM_CXSMICON
+#define SM_CXSMICON          49
+#endif
+
+#ifndef SM_CYSMICON
+#define SM_CYSMICON          50
+#endif
+
+// Code page
+#ifndef CP_UTF8
+#define CP_UTF8              65001
+#endif
+
+// File move flags
+#ifndef MOVEFILE_COPY_ALLOWED
+#define MOVEFILE_COPY_ALLOWED  0x00000002
+#endif
+
+#ifndef MOVEFILE_DELAY_IF_BUSY
+#define MOVEFILE_DELAY_IF_BUSY 0x00000010
+#endif
+
+// Scroll bar
+#ifndef SB_VERT
+#define SB_VERT              0x0001
+#endif
+
+#ifndef SB_THUMBPOSITION
+#define SB_THUMBPOSITION     4
+#endif
+
+#ifndef SB_THUMBTRACK
+#define SB_THUMBTRACK        5
+#endif
+
+// Show window commands
+#ifndef SW_HIDE
+#define SW_HIDE              0x0000
+#endif
+
+#ifndef SW_SHOW
+#define SW_SHOW               0x0005
+#endif
+
+#ifndef SW_SHOWMAXIMIZED
+#define SW_SHOWMAXIMIZED      3
+#endif
+
+// SetWindowPos flags
+#ifndef SWP_NOZORDER
+#define SWP_NOZORDER         0x0004
+#endif
+
+#ifndef SWP_NOSIZE
+#define SWP_NOSIZE           0x0001
+#endif
+
+#ifndef SWP_NOMOVE
+#define SWP_NOMOVE           0x0002
+#endif
+
+#ifndef SWP_SHOWWINDOW
+#define SWP_SHOWWINDOW       0x0040
+#endif
+
+// Window styles
+#ifndef WS_VISIBLE
+#define WS_VISIBLE           0x10000000L
+#endif
+
+#ifndef WS_DISABLED
+#define WS_DISABLED          0x08000000L
+#endif
+
+#ifndef WS_CAPTION
+#define WS_CAPTION           0x00C00000L
+#endif
+
+#ifndef WS_THICKFRAME
+#define WS_THICKFRAME         0x00040000L
+#endif
+
+#ifndef WS_HSCROLL
+#define WS_HSCROLL            0x00100000L
+#endif
+
+#ifndef WS_VSCROLL
+#define WS_VSCROLL           0x00200000L
+#endif
+
+#ifndef WS_OVERLAPPED
+#define WS_OVERLAPPED        0x00000000L
+#endif
+
+#ifndef WS_CLIPCHILDREN
+#define WS_CLIPCHILDREN      0x02000000L
+#endif
+
+#ifndef WS_MINIMIZEBOX
+#define WS_MINIMIZEBOX       0x00020000L
+#endif
+
+#ifndef WS_MAXIMIZEBOX
+#define WS_MAXIMIZEBOX        0x00010000L
+#endif
+
+// GetWindowLong offsets
+#ifndef GWL_STYLE
+#define GWL_STYLE            (-16)
+#endif
+
+#ifndef GWL_WNDPROC
+#define GWL_WNDPROC          (-4)
+#endif
+
+// Menu item flags
+#ifndef MF_BYCOMMAND
+#define MF_BYCOMMAND         0x00000000
+#endif
+
+#ifndef MF_CHECKED
+#define MF_CHECKED           0x00000008
+#endif
+
+#ifndef MF_UNCHECKED
+#define MF_UNCHECKED        0x00000000
+#endif
+
+#ifndef MF_ENABLED
+#define MF_ENABLED          0x00000000
+#endif
+
+#ifndef MF_GRAYED
+#define MF_GRAYED           0x00000001
+#endif
+
+#ifndef MF_POPUP
+#define MF_POPUP            0x00000010
+#endif
+
+#ifndef MF_SEPARATOR
+#define MF_SEPARATOR        0x00000800
+#endif
+
+// TreeView messages
+#ifndef TVM_GETITEM
+#define TVM_GETITEM          0x100D
+#endif
+
+#ifndef TVM_SETITEM
+#define TVM_SETITEM          0x100E
+#endif
+
+#ifndef TVM_DELETEITEM
+#define TVM_DELETEITEM       0x1009
+#endif
+
+// TreeView notifications
+#ifndef TVN_SELCHANGED
+#define TVN_SELCHANGED       0xFFFFFD02
+#endif
+
+#ifndef TVN_BEGINDRAG
+#define TVN_BEGINDRAG        0xFFFFFD03
+#endif
+
+#ifndef TVN_ROOT
+#define TVN_ROOT            0x0000
+#endif
+
+#ifndef TVN_CARET
+#define TVN_CARET           0x0009
+#endif
+
+// ListView messages
+#ifndef LVM_GETITEMCOUNT
+#define LVM_GETITEMCOUNT     0x1004
+#endif
+
+#ifndef LVM_GETITEM
+#define LVM_GETITEM          0x1005
+#endif
+
+#ifndef LVM_SETITEM
+#define LVM_SETITEM          0x1006
+#endif
+
+#ifndef LVM_INSERTITEM
+#define LVM_INSERTITEM        0x1007
+#endif
+
+#ifndef LVM_DELETEITEM
+#define LVM_DELETEITEM       0x1008
+#endif
+
+#ifndef LVM_DELETEALLITEMS
+#define LVM_DELETEALLITEMS  0x1009
+#endif
+
+#ifndef LVM_GETITEMTEXT
+#define LVM_GETITEMTEXT      0x102D
+#endif
+
+#ifndef LVM_SETITEMTEXT
+#define LVM_SETITEMTEXT      0x102E
+#endif
+
+// ComboBox messages
+#ifndef CB_GETCOUNT
+#define CB_GETCOUNT          0x0147
+#endif
+
+#ifndef CB_GETLBTEXT
+#define CB_GETLBTEXT         0x0148
+#endif
+
+#ifndef CB_GETLBTEXTLEN
+#define CB_GETLBTEXTLEN      0x0149
+#endif
+
+#ifndef CB_GETCURSEL
+#define CB_GETCURSEL         0x0140
+#endif
+
+#ifndef CB_SETCURSEL
+#define CB_SETCURSEL         0x014E
+#endif
+
+#ifndef CB_ADDSTRING
+#define CB_ADDSTRING         0x0143
+#endif
+
+#ifndef CB_RESETCONTENT
+#define CB_RESETCONTENT      0x014B
+#endif
+
+// Button notifications
+#ifndef BN_CLICKED
+#define BN_CLICKED           0x00F0
+#endif
+
+// GDI / Image constants
+#ifndef IMAGE_ICON
+#define IMAGE_ICON           1
+#endif
+
+#ifndef IMAGE_BITMAP
+#define IMAGE_BITMAP         0
+#endif
+
+#ifndef IMAGE_CURSOR
+#define IMAGE_CURSOR         2
+#endif
+
+#ifndef LR_LOADFROMFILE
+#define LR_LOADFROMFILE      0x00000010
+#endif
+
+#ifndef LR_SHARED
+#define LR_SHARED            0x00000008
+#endif
+
+#ifndef LR_DEFAULTSIZE
+#define LR_DEFAULTSIZE       0x00000040
+#endif
+
+// Helper macros - NOTE: Already using inline functions below instead of macros
+#ifndef SUCCEEDED
+#define SUCCEEDED(hr)       (((HRESULT)(hr)) >= 0)
+#endif
+
+// Stub type aliases for toolbar (compatibility with original code)
+struct tagNMTOOLBARW { int unused; };
+#ifndef LPNMTOOLBARW
+#define LPNMTOOLBARW tagNMTOOLBARW*
+#endif
+
+// =============================================================================
+// Globals for dark mode (always false on Linux)
+// =============================================================================
+#ifndef g_darkModeSupported
+#define g_darkModeSupported (*(bool*)nullptr)
+#endif
+
+#ifndef g_darkModeEnabled
+#define g_darkModeEnabled (*(bool*)nullptr)
+#endif
+
+// =============================================================================
+// No-op inline function stubs for Windows API
 // =============================================================================
 
-class CFont {
-public:
-    CFont() {}
-    BOOL CreateFont(int h, int w, int esc, int ori, int weight, BYTE italic, BYTE underline, BYTE strikeout, BYTE charset, BYTE outprec, BYTE clipprec, BYTE quality, BYTE pitch, const char* facename) {
-        Q_UNUSED(h); Q_UNUSED(w); Q_UNUSED(esc); Q_UNUSED(ori); Q_UNUSED(weight);
-        Q_UNUSED(italic); Q_UNUSED(underline); Q_UNUSED(strikeout); Q_UNUSED(charset);
-        Q_UNUSED(outprec); Q_UNUSED(clipprec); Q_UNUSED(quality); Q_UNUSED(pitch); Q_UNUSED(facename);
-        return TRUE;
-    }
-};
+// COM stubs
+inline void CoInitializeEx(void*, unsigned long) {}
+inline void CoUninitialize() {}
 
-class CBitmap {
-public:
-    CBitmap() {}
-    BOOL LoadBitmap(const char* name) { Q_UNUSED(name); return TRUE; }
-    void* _data = nullptr;
-};
+// Message box stubs
+inline int MessageBoxW(void*, const wchar_t*, const wchar_t*, unsigned int) { return 0; }
+inline int MessageBox(void*, const wchar_t*, const wchar_t*, unsigned int) { return 0; }
+inline BOOL DestroyMenu(HMENU) { return TRUE; }
+inline BOOL DestroyIcon(HICON) { return TRUE; }
+inline BOOL DestroyWindow(HWND) { return TRUE; }
 
-struct BITMAP {
-    int bmType = 0;
-    int bmWidth = 0;
-    int bmHeight = 0;
-    int bmWidthBytes = 0;
-    WORD bmPlanes = 0;
-    WORD bmBitsPixel = 0;
-    void* bmBits = nullptr;
-};
+// Library stubs
+inline BOOL FreeLibrary(HMODULE) { return TRUE; }
+inline FARPROC GetProcAddress(HMODULE, const char*) { return nullptr; }
+inline HMODULE LoadLibraryW(const wchar_t*) { return nullptr; }
 
-// =============================================================================
-// CDocTemplate / CDocument stubs
-// =============================================================================
+// Image / icon stubs
+inline HICON LoadImage(HINSTANCE, const wchar_t*, unsigned int, int, int, unsigned int) { return nullptr; }
+inline HICON CreateIconFromResource(unsigned char*, DWORD, BOOL, DWORD) { return nullptr; }
 
-class CDocTemplate { public: CDocTemplate() {} };
-class CDocument { public: CDocument() {} virtual ~CDocument() {} };
+// GDI stubs
+inline HBRUSH CreateSolidBrush(COLORREF) { return nullptr; }
+inline HDC GetDC(HWND) { return nullptr; }
+inline int ReleaseDC(HWND, HDC) { return 0; }
+inline BOOL DeleteDC(HDC) { return TRUE; }
+inline BOOL DeleteObject(HGDIOBJ) { return TRUE; }
+inline HDC BeginPaint(HWND, void*) { return nullptr; }
+inline BOOL EndPaint(HWND, void*) { return TRUE; }
 
-// =============================================================================
-// CRectTracker / CSocket stubs
-// =============================================================================
+// System / window stubs
+inline int GetSystemMetrics(int) { return 32; }
+inline LONG GetWindowLongW(HWND, int) { return 0; }
+inline LONG SetWindowLongW(HWND, int, LONG) { return 0; }
+inline BOOL SetWindowPos(HWND, HWND, int, int, int, int, UINT) { return TRUE; }
+inline BOOL ShowWindow(HWND, int) { return TRUE; }
+inline BOOL UpdateWindow(HWND) { return TRUE; }
+inline BOOL InvalidateRect(HWND, const RECT*, BOOL) { return TRUE; }
+inline BOOL RedrawWindow(HWND, const RECT*, HRGN, UINT) { return TRUE; }
+inline BOOL GetWindowRect(HWND, RECT*) { return TRUE; }
+inline BOOL SetForegroundWindow(HWND) { return TRUE; }
+inline HWND SetCapture(HWND) { return nullptr; }
+inline BOOL ReleaseCapture() { return TRUE; }
+inline BOOL GetClientRect(HWND, RECT*) { return TRUE; }
 
-class CRectTracker {
-public:
-    CRectTracker() {}
-    void Draw(CDC*) {}
-    int HitTest(POINT) { return 0; }
-};
+// Menu helpers
+inline UINT CheckMenuItem(HMENU, UINT, UINT) { return 0; }
+inline BOOL DrawMenuBar(HWND) { return TRUE; }
+inline HMENU GetSubMenu(HMENU, int) { return nullptr; }
 
-struct SOCKADDR { short sa_family; char sa_data[14]; };
+// Drag & drop / file stubs
+inline UINT DragQueryFileW(HDROP, UINT, wchar_t*, UINT) { return 0; }
+inline void DragFinish(HDROP) {}
 
-class CSocket {
-public:
-    CSocket() {}
-    virtual ~CSocket() {}
-    virtual BOOL Create(UINT, int, int) { return FALSE; }
-    virtual BOOL Listen(int) { return FALSE; }
-    virtual void Close() {}
-    virtual int Send(const void*, int, int) { return 0; }
-    virtual int Receive(void*, int, int) { return 0; }
-};
+// Registry stubs
+inline LONG RegOpenKeyExW(HKEY, const wchar_t*, unsigned long, unsigned long, HKEY*) { return ERROR_SUCCESS; }
+inline LONG RegQueryValueExW(HKEY, const wchar_t*, unsigned long*, unsigned char*, unsigned long*) { return ERROR_SUCCESS; }
+inline LONG RegSetValueExW(HKEY, const wchar_t*, unsigned long, unsigned long, const unsigned char*, unsigned long) { return ERROR_SUCCESS; }
+inline LONG RegCloseKey(HKEY) { return ERROR_SUCCESS; }
 
-// =============================================================================
-// ATL / GDI+ stubs
-// =============================================================================
+// Keyboard / locale stubs
+inline int GetKeyState(int) { return 0; }
+inline SHORT VkKeyScanW(wchar_t) { return 0; }
 
-#define USES_CONVERSION
-#define A2W(x) ((WCHAR*)nullptr)
-#define W2A(x) ((char*)nullptr)
+// Character classification
+inline BOOL IsCharAlphaNumericW(wchar_t) { return TRUE; }
+inline BOOL IsCharAlphaW(wchar_t) { return TRUE; }
+inline BOOL IsCharLowerW(wchar_t) { return TRUE; }
+inline BOOL IsCharUpperW(wchar_t) { return TRUE; }
 
-static inline int GdiplusStartup(void** token, void*, void*) { return 0; }
-static inline void GdiplusShutdown(void* token) { Q_UNUSED(token); }
+// Misc stubs
+inline DWORD GetCurrentThreadId() { return 1; }
+inline DWORD GetCurrentProcessId() { return 1; }
+inline BOOL MoveFileExW(const wchar_t*, const wchar_t*, DWORD) { return TRUE; }
+inline HLOCAL LocalFree(HLOCAL) { return nullptr; }
+inline DWORD GetTickCount() { return 0; }
 
-#endif // WINDOWS_COMPAT_H
+// String stubs - use standard library on Linux
+#ifdef __linux__
+#define _wcsicmp wcscasecmp
+#define _wcsnicmp wcsncasecmp
+#else
+inline int _wcsicmp(const wchar_t*, const wchar_t*) { return 0; }
+inline int _wcsnicmp(const wchar_t*, const wchar_t*, size_t) { return 0; }
+#endif
+
+#endif // WINDOWS_COMPAT_H#define SHORT short
+// Window API stubs for Window.h (Qt widget methods)
+// Duplicate
+#define SHORT short

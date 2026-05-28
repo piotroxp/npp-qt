@@ -16,6 +16,7 @@
 
 
 #include <shobjidl.h>
+#include "MISC/Common/WindowsCompat.h"
 #ifdef __MINGW32__
 #include <cwchar>
 #endif

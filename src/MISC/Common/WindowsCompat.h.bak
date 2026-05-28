@@ -1,0 +1,942 @@
+// This file is part of Notepad++ project
+// Copyright (c) 2025 Notepad++ team
+
+// Cross-platform compatibility header - stubs Windows types/constants for Linux.
+// Every typedef/define is guarded so it never duplicates.
+
+#pragma once
+
+// =============================================================================
+// Minimal Windows types - must come FIRST
+// =============================================================================
+
+#ifndef WINDOWS_COMPAT_H
+#define WINDOWS_COMPAT_H
+
+#include <QtGlobal>
+#include <cstdint>
+#include <cstddef>
+#include <cstring>
+
+// Basic signed/unsigned integer types
+#ifndef BYTE
+#define BYTE unsigned char
+#endif
+#ifndef WORD
+#define WORD unsigned short
+#endif
+#ifndef DWORD
+#define DWORD unsigned int
+#endif
+#ifndef QINT32
+#define QINT32 qint32
+#endif
+#ifndef LONG
+#define LONG long
+#endif
+#ifndef ULONG
+#define ULONG unsigned long
+#endif
+
+// Pointer-sized integers
+#ifndef INT_PTR
+#define INT_PTR intptr_t
+#endif
+#ifndef UINT_PTR
+#define UINT_PTR uintptr_t
+#endif
+#ifndef LONG_PTR
+#define LONG_PTR long
+#endif
+#ifndef WPARAM
+#define WPARAM UINT_PTR
+#endif
+#ifndef LPARAM
+#define LPARAM LONG_PTR
+#endif
+#ifndef LRESULT
+#define LRESULT LONG_PTR
+#endif
+#ifndef BOOL
+#define BOOL int
+#endif
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
+#ifndef NULL
+#define NULL nullptr
+#endif
+
+// HANDLE types
+#ifndef HANDLE
+#define HANDLE void*
+#endif
+#ifndef HWND
+#define HWND HANDLE
+#endif
+#ifndef HMODULE
+#define HMODULE HANDLE
+#endif
+#ifndef HINSTANCE
+#define HINSTANCE HANDLE
+#endif
+#ifndef HDC
+#define HDC HANDLE
+#endif
+#ifndef HBRUSH
+#define HBRUSH HANDLE
+#endif
+#ifndef HPEN
+#define HPEN HANDLE
+#endif
+#ifndef HFONT
+#define HFONT HANDLE
+#endif
+#ifndef HBITMAP
+#define HBITMAP HANDLE
+#endif
+#ifndef HICON
+#define HICON HANDLE
+#endif
+#ifndef HMENU
+#define HMENU HANDLE
+#endif
+#ifndef HGLOBAL
+#define HGLOBAL HANDLE
+#endif
+#ifndef HGDIOBJ
+#define HGDIOBJ HANDLE
+#endif
+#ifndef HMONITOR
+#define HMONITOR HANDLE
+#endif
+#ifndef HDROP
+#define HDROP HANDLE
+#endif
+#ifndef HPALETTE
+#define HPALETTE HANDLE
+#endif
+#ifndef HKEY
+#define HKEY HANDLE
+#endif
+#ifndef PHKEY
+#define PHKEY HKEY*
+#endif
+
+#ifndef LPTSTR
+#define LPTSTR wchar_t*
+#endif
+#ifndef LPCTSTR
+#define LPCTSTR const wchar_t*
+#endif
+#ifndef LPCSTR
+#define LPCSTR const char*
+#endif
+#ifndef LPSTR
+#define LPSTR char*
+#endif
+#ifndef LPWSTR
+#define LPWSTR wchar_t*
+#endif
+#ifndef LPCWSTR
+#define LPCWSTR const wchar_t*
+#endif
+
+#ifndef UINT
+#define UINT unsigned int
+#endif
+#ifndef WCHAR
+#define WCHAR wchar_t
+#endif
+#ifndef UCHAR
+#define UCHAR unsigned char
+#endif
+#ifndef CHAR
+#define CHAR char
+#endif
+#ifndef USHORT
+#define USHORT unsigned short
+#endif
+#ifndef ATOM
+#define ATOM WORD
+#endif
+#ifndef COLORREF
+#define COLORREF DWORD
+#endif
+#ifndef LANGID
+#define LANGID unsigned short
+#endif
+#ifndef LCID
+#define LCID unsigned long
+#endif
+
+// Common numeric constants
+#ifndef MAX_PATH
+#define MAX_PATH 260
+#endif
+#define CCH_BUFFERSIZE MAX_PATH
+
+// =============================================================================
+// File attribute and handle constants
+// =============================================================================
+
+#ifndef INVALID_HANDLE_VALUE
+#define INVALID_HANDLE_VALUE ((HANDLE)-1)
+#endif
+#ifndef INVALID_FILE_ATTRIBUTES
+#define INVALID_FILE_ATTRIBUTES 0xFFFFFFFF
+#endif
+
+// File access modes
+#ifndef GENERIC_READ
+#define GENERIC_READ 0x80000000
+#endif
+#ifndef GENERIC_WRITE
+#define GENERIC_WRITE 0x40000000
+#endif
+#ifndef GENERIC_EXECUTE
+#define GENERIC_EXECUTE 0x20000000
+#endif
+#ifndef GENERIC_ALL
+#define GENERIC_ALL 0x10000000
+#endif
+
+// File share modes
+#ifndef FILE_SHARE_READ
+#define FILE_SHARE_READ 0x00000001
+#endif
+#ifndef FILE_SHARE_WRITE
+#define FILE_SHARE_WRITE 0x00000002
+#endif
+#ifndef FILE_SHARE_DELETE
+#define FILE_SHARE_DELETE 0x00000004
+#endif
+
+// File creation disposition
+#ifndef CREATE_NEW
+#define CREATE_NEW 1
+#endif
+#ifndef CREATE_ALWAYS
+#define CREATE_ALWAYS 2
+#endif
+#ifndef OPEN_EXISTING
+#define OPEN_EXISTING 3
+#endif
+#ifndef OPEN_ALWAYS
+#define OPEN_ALWAYS 4
+#endif
+#ifndef TRUNCATE_EXISTING
+#define TRUNCATE_EXISTING 5
+#endif
+
+// File attribute constants
+#ifndef FILE_ATTRIBUTE_NORMAL
+#define FILE_ATTRIBUTE_NORMAL 0x00000080
+#endif
+#ifndef FILE_ATTRIBUTE_HIDDEN
+#define FILE_ATTRIBUTE_HIDDEN 0x00000002
+#endif
+#ifndef FILE_ATTRIBUTE_SYSTEM
+#define FILE_ATTRIBUTE_SYSTEM 0x00000004
+#endif
+#ifndef FILE_ATTRIBUTE_READONLY
+#define FILE_ATTRIBUTE_READONLY 0x00000001
+#endif
+#ifndef FILE_ATTRIBUTE_DIRECTORY
+#define FILE_ATTRIBUTE_DIRECTORY 0x00000010
+#endif
+
+// File flags for SetFilePointer, CreateFile
+#ifndef FILE_BEGIN
+#define FILE_BEGIN 0
+#endif
+#ifndef FILE_CURRENT
+#define FILE_CURRENT 1
+#endif
+#ifndef FILE_END
+#define FILE_END 2
+#endif
+
+// =============================================================================
+// Error codes
+// =============================================================================
+
+#ifndef NO_ERROR
+#define NO_ERROR 0
+#endif
+#ifndef ERROR_SUCCESS
+#define ERROR_SUCCESS 0
+#endif
+#ifndef ERROR_FILE_NOT_FOUND
+#define ERROR_FILE_NOT_FOUND 2
+#endif
+
+// =============================================================================
+// Basic structures (RECT, POINT, SIZE)
+// =============================================================================
+
+#ifndef RECT_DEFINED
+#define RECT_DEFINED
+struct RECT {
+    LONG left;
+    LONG top;
+    LONG right;
+    LONG bottom;
+};
+#endif
+
+#ifndef POINT_DEFINED
+#define POINT_DEFINED
+struct POINT {
+    LONG x;
+    LONG y;
+};
+#endif
+
+#ifndef SIZE_DEFINED
+#define SIZE_DEFINED
+struct SIZE {
+    LONG cx;
+    LONG cy;
+};
+#endif
+
+// =============================================================================
+// DATE and TIME structures
+// =============================================================================
+
+#ifndef DATE_DEFINED
+#define DATE_DEFINED
+typedef double DATE;
+#endif
+
+#ifndef FILETIME_DEFINED
+#define FILETIME_DEFINED
+struct FILETIME {
+    DWORD dwLowDateTime;
+    DWORD dwHighDateTime;
+};
+#endif
+
+#ifndef SYSTEMTIME_DEFINED
+#define SYSTEMTIME_DEFINED
+struct SYSTEMTIME {
+    WORD wYear;
+    WORD wMonth;
+    WORD wDayOfWeek;
+    WORD wDay;
+    WORD wHour;
+    WORD wMinute;
+    WORD wSecond;
+    WORD wMilliseconds;
+};
+#endif
+
+#ifndef ULARGE_INTEGER_DEFINED
+#define ULARGE_INTEGER_DEFINED
+union ULARGE_INTEGER {
+    struct { DWORD LowPart; DWORD HighPart; };
+    unsigned long long QuadPart;
+};
+#endif
+
+// =============================================================================
+// GUID / COM types
+// =============================================================================
+
+#ifndef REFGUID
+#define REFGUID const IID&
+#endif
+#ifndef LPIID
+#define LPIID IID*
+#endif
+
+#ifndef CLSID_DEFINED
+#define CLSID_DEFINED
+typedef IID CLSID;
+#endif
+
+// =============================================================================
+// Locale / charset
+// =============================================================================
+
+#ifndef CP_UTF8
+#define CP_UTF8 65001
+#endif
+#ifndef CP_ACP
+#define CP_ACP 0
+#endif
+#ifndef MAKELANGID
+#define MAKELANGID(p,s) (((WORD)(s) << 10) | (WORD)(p))
+#endif
+#ifndef MAKELCID
+#define MAKELCID(lgid) ((unsigned long)(lgid))
+#endif
+
+#endif  // WINDOWS_COMPAT_H — end minimal types
+
+// =============================================================================
+// Additional stubs - guarded independently (may overlap conceptually)
+// =============================================================================
+
+#ifndef WINDOWS_COMPAT_EXTRA
+#define WINDOWS_COMPAT_EXTRA
+
+// Menu flags
+#ifndef MF_BYCOMMAND
+#define MF_BYCOMMAND 0x00000000L
+#endif
+#ifndef MF_CHECKED
+#define MF_CHECKED 0x00000008L
+#endif
+#ifndef MF_UNCHECKED
+#define MF_UNCHECKED 0x00000000L
+#endif
+#ifndef MF_ENABLED
+#define MF_ENABLED 0x00000000L
+#endif
+#ifndef MF_GRAYED
+#define MF_GRAYED 0x00000001L
+#endif
+#ifndef MF_POPUP
+#define MF_POPUP 0x00000010L
+#endif
+#ifndef MF_SEPARATOR
+#define MF_SEPARATOR 0x00000800L
+#endif
+
+// Window styles
+#ifndef WS_OVERLAPPED
+#define WS_OVERLAPPED 0x00000000L
+#endif
+#ifndef WS_CAPTION
+#define WS_CAPTION 0x00C00000L
+#endif
+#ifndef WS_THICKFRAME
+#define WS_THICKFRAME 0x00040000L
+#endif
+#ifndef WS_MINIMIZEBOX
+#define WS_MINIMIZEBOX 0x00020000L
+#endif
+#ifndef WS_MAXIMIZEBOX
+#define WS_MAXIMIZEBOX 0x00010000L
+#endif
+#ifndef WS_OVERLAPPEDWINDOW (WS_OVERLAPPED | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX)
+// Note: MSVC calculates this at compile time
+#endif
+#ifndef WS_CLIPCHILDREN
+#define WS_CLIPCHILDREN 0x02000000L
+#endif
+#ifndef WS_VISIBLE
+#define WS_VISIBLE 0x10000000L
+#endif
+#ifndef WS_DISABLED
+#define WS_DISABLED 0x08000000L
+#endif
+#ifndef WS_HSCROLL
+#define WS_HSCROLL 0x00100000L
+#endif
+#ifndef WS_VSCROLL
+#define WS_VSCROLL 0x00200000L
+#endif
+#ifndef WS_SYSMENU
+#define WS_SYSMENU 0x00080000L
+#endif
+#ifndef WS_TABSTOP
+#define WS_TABSTOP 0x00010000L
+#endif
+
+// Window messages
+#ifndef WM_COMMAND
+#define WM_COMMAND 0x0111
+#endif
+#ifndef WM_NOTIFY
+#define WM_NOTIFY 0x004E
+#endif
+#ifndef WM_SIZE
+#define WM_SIZE 0x0005
+#endif
+#ifndef WM_PAINT
+#define WM_PAINT 0x000F
+#endif
+#ifndef WM_ERASEBKGND
+#define WM_ERASEBKGND 0x0014
+#endif
+#ifndef WM_LBUTTONDOWN
+#define WM_LBUTTONDOWN 0x0201
+#endif
+#ifndef WM_RBUTTONDOWN
+#define WM_RBUTTONDOWN 0x0204
+#endif
+#ifndef WM_MOUSEMOVE
+#define WM_MOUSEMOVE 0x0200
+#endif
+#ifndef WM_USER
+#define WM_USER 0x0400
+#endif
+#ifndef WM_INITDIALOG
+#define WM_INITDIALOG 0x0110
+#endif
+#ifndef WM_CLOSE
+#define WM_CLOSE 0x0010
+#endif
+#ifndef WM_DESTROY
+#define WM_DESTROY 0x0002
+#endif
+#ifndef WM_NCDESTROY
+#define WM_NCDESTROY 0x0082
+#endif
+#ifndef WM_SETFOCUS
+#define WM_SETFOCUS 0x0007
+#endif
+#ifndef WM_KILLFOCUS
+#define WM_KILLFOCUS 0x0008
+#endif
+#ifndef WM_ENABLE
+#define WM_ENABLE 0x000A
+#endif
+#ifndef WM_MOVE
+#define WM_MOVE 0x0003
+#endif
+#ifndef WM_SHOWWINDOW
+#define WM_SHOWWINDOW 0x0018
+#endif
+#ifndef WM_GETTEXT
+#define WM_GETTEXT 0x000D
+#endif
+#ifndef WM_SETTEXT
+#define WM_SETTEXT 0x000C
+#endif
+#ifndef WM_GETICON
+#define WM_GETICON 0x007F
+#endif
+#ifndef BM_CLICK
+#define BM_CLICK 0x00F5
+#endif
+#ifndef BN_CLICKED
+#define BN_CLICKED 0x00F0
+#endif
+
+// Scroll bar messages
+#ifndef SB_VERT
+#define SB_VERT 0x0001
+#endif
+#ifndef SB_THUMBPOSITION
+#define SB_THUMBPOSITION 4
+#endif
+#ifndef SB_THUMBTRACK
+#define SB_THUMBTRACK 5
+#endif
+#ifndef SB_LINEPREV
+#define SB_LINEUP 0
+#endif
+#ifndef SB_LINEUP
+#define SB_LINEUP 0
+#endif
+#ifndef SB_LINEDOWN
+#define SB_LINEDOWN 1
+#endif
+#ifndef SB_PAGEUP
+#define SB_PAGEUP 2
+#endif
+#ifndef SB_PAGEDOWN
+#define SB_PAGEDOWN 3
+#endif
+#ifndef SB_ENDSCROLL
+#define SB_ENDSCROLL 8
+#endif
+
+// ShowWindow commands
+#ifndef SW_HIDE
+#define SW_HIDE 0x0000
+#endif
+#ifndef SW_SHOW
+#define SW_SHOW 0x0005
+#endif
+#ifndef SW_SHOWNORMAL
+#define SW_SHOWNORMAL 1
+#endif
+#ifndef SW_SHOWMINIMIZED
+#define SW_SHOWMINIMIZED 2
+#endif
+#ifndef SW_SHOWMAXIMIZED
+#define SW_SHOWMAXIMIZED 3
+#endif
+
+// SetWindowPos flags
+#ifndef SWP_NOZORDER
+#define SWP_NOZORDER 0x0004
+#endif
+#ifndef SWP_NOSIZE
+#define SWP_NOSIZE 0x0001
+#endif
+#ifndef SWP_NOMOVE
+#define SWP_NOMOVE 0x0002
+#endif
+#ifndef SWP_SHOWWINDOW
+#define SWP_SHOWWINDOW 0x0040
+#endif
+
+// GetWindowLong indices
+#ifndef GWL_STYLE
+#define GWL_STYLE (-16)
+#endif
+#ifndef GWL_WNDPROC
+#define GWL_WNDPROC (-4)
+#endif
+#ifndef GWL_EXSTYLE
+#define GWL_EXSTYLE (-20)
+#endif
+
+// Combo box messages
+#ifndef CB_ERR
+#define CB_ERR (-1)
+#endif
+#ifndef CB_GETCOUNT
+#define CB_GETCOUNT 0x0147
+#endif
+#ifndef CB_GETLBTEXT
+#define CB_GETLBTEXT 0x0148
+#endif
+#ifndef CB_GETLBTEXTLEN
+#define CB_GETLBTEXTLEN 0x0149
+#endif
+#ifndef CB_GETCURSEL
+#define CB_GETCURSEL 0x0140
+#endif
+#ifndef CB_SETCURSEL
+#define CB_SETCURSEL 0x014E
+#endif
+#ifndef CB_ADDSTRING
+#define CB_ADDSTRING 0x0143
+#endif
+#ifndef CB_RESETCONTENT
+#define CB_RESETCONTENT 0x014B
+#endif
+#ifndef CB_FINDSTRING
+#define CB_FINDSTRING 0x014F
+#endif
+#ifndef CB_SHOWDROPDOWN
+#define CB_SHOWDROPDOWN 0x014F
+#endif
+#ifndef CBN_DROPDOWN
+#define CBN_DROPDOWN 5
+#endif
+#ifndef CBN_CLOSEUP
+#define CBN_CLOSEUP 8
+#endif
+
+// ListView messages
+#ifndef LVM_GETITEMCOUNT
+#define LVM_GETITEMCOUNT 0x1004
+#endif
+#ifndef LVM_GETITEM
+#define LVM_GETITEM 0x1005
+#endif
+#ifndef LVM_SETITEM
+#define LVM_SETITEM 0x1006
+#endif
+#ifndef LVM_INSERTITEM
+#define LVM_INSERTITEM 0x1007
+#endif
+#ifndef LVM_DELETEITEM
+#define LVM_DELETEITEM 0x1008
+#endif
+#ifndef LVM_DELETEALLITEMS
+#define LVM_DELETEALLITEMS 0x1009
+#endif
+#ifndef LVM_GETITEMTEXT
+#define LVM_GETITEMTEXT 0x102D
+#endif
+#ifndef LVM_SETITEMTEXT
+#define LVM_SETITEMTEXT 0x102E
+#endif
+#ifndef LVM_GETSELECTEDCOUNT
+#define LVM_GETSELECTEDCOUNT 0x1032
+#endif
+
+// TreeView messages
+#ifndef TVM_GETITEM
+#define TVM_GETITEM 0x100D
+#endif
+#ifndef TVM_SETITEM
+#define TVM_SETITEM 0x100E
+#endif
+#ifndef TVM_DELETEITEM
+#define TVM_DELETEITEM 0x1009
+#endif
+#ifndef TVGN_ROOT
+#define TVGN_ROOT 0x0000
+#endif
+#ifndef TVGN_CARET
+#define TVGN_CARET 0x0009
+#endif
+#ifndef TVN_SELCHANGED
+#define TVN_SELCHANGED 0xFFFFFD02
+#endif
+#ifndef TVN_BEGINDRAG
+#define TVN_BEGINDRAG 0xFFFFFD03
+#endif
+
+// COM / registry constants
+#ifndef COINIT_APARTMENTTHREADED
+#define COINIT_APARTMENTTHREADED 0x02
+#endif
+#ifndef COINIT_MULTITHREADED
+#define COINIT_MULTITHREADED 0x00
+#endif
+#ifndef CO_E_CHANGED_MODE
+#define CO_E_CHANGED_MODE ((long)0x80010106L)
+#endif
+#ifndef RPC_E_CHANGED_MODE
+#define RPC_E_CHANGED_MODE ((long)0x80010106L)
+#endif
+
+// HRESULT checks
+#ifndef SUCCEEDED
+#define SUCCEEDED(hr) ((long)(hr) >= 0)
+#endif
+#ifndef FAILED
+#define FAILED(hr) ((long)(hr) < 0)
+#endif
+
+// Dialog codes
+#ifndef EN_CHANGE
+#define EN_CHANGE 0x0300
+#endif
+#ifndef EN_UPDATE
+#define EN_UPDATE 0x0400
+#endif
+#ifndef EN_KILLFOCUS
+#define EN_KILLFOCUS 0x0200
+#endif
+#ifndef EN_SETFOCUS
+#define EN_SETFOCUS 0x0100
+#endif
+#ifndef EN_SELCHANGE
+#define EN_SELCHANGE 0x030B
+#endif
+
+// Message box flags  
+#ifndef MB_ICONSTOP
+#define MB_ICONSTOP 0x00000010L
+#endif
+#ifndef MB_OK
+#define MB_OK 0x00000000L
+#endif
+#ifndef MB_ICONERROR
+#define MB_ICONERROR MB_ICONSTOP
+#endif
+#ifndef MB_ICONINFORMATION
+#define MB_ICONINFORMATION 0x00000040L
+#endif
+#ifndef MB_YESNO
+#define MB_YESNO 0x00000004L
+#endif
+#ifndef MB_YESNOCANCEL
+#define MB_YESNOCANCEL 0x00000003L
+#endif
+#ifndef IDOK
+#define IDOK 1
+#endif
+#ifndef IDCANCEL
+#define IDCANCEL 2
+#endif
+#ifndef IDYES
+#define IDYES 6
+#endif
+#ifndef IDNO
+#define IDNO 7
+#endif
+
+// Scroll bar / system metrics
+#ifndef SM_CYSMICON
+#define SM_CYSMICON 50
+#endif
+#ifndef SM_CXSMICON
+#define SM_CXSMICON 49
+#endif
+#ifndef SM_CXSCREEN
+#define SM_CXSCREEN 0
+#endif
+#ifndef SM_CYSCREEN
+#define SM_CYSCREEN 1
+#endif
+
+// MAKEINTRESOURCE
+#ifndef MAKEINTRESOURCE
+#define MAKEINTRESOURCE(i) ((LPWSTR)((int)((WORD)(unsigned int)(i)))
+#endif
+
+// FINDREPLACE / FindText
+#ifndef FR_DOWN
+#define FR_DOWN 0x00000001L
+#endif
+#ifndef FR_WHOLEWORD
+#define FR_WHOLEWORD 0x00000002L
+#endif
+#ifndef FR_MATCHCASE
+#define FR_MATCHCASE 0x00000004L
+#endif
+#ifndef FR_NOMATCHCASE
+#define FR_NOMATCHCASE 0x00000000L
+#endif
+#ifndef FR_NOWHOLEWORD
+#define FR_NOWHOLEWORD 0x00000000L
+#endif
+#ifndef FR_REPLACE
+#define FR_REPLACE 0x00000010L
+#endif
+#ifndef FR_REPLACEALL
+#define FR_REPLACEALL 0x00000100L
+#endif
+#ifndef FR_FINDNEXT
+#define FR_FINDNEXT 0x00000008L
+#endif
+
+// Drag and drop
+#ifndef DragQueryFile
+#define DragQueryFile(hDrop, i, l, c) (0)
+#endif
+
+// Typedef aliases
+#define FindCharsInRangeDlg FindCharsInRange
+
+// wcsicmp stub (Linux uses wcscasecmp)
+#if defined(__linux__) && !defined(_wcsicmp)
+#define _wcsicmp wcscasecmp
+#endif
+
+// NMHDR (notification header structure)
+struct NMHDR {
+    HWND hwndFrom;
+    UINT_PTR idFrom;
+    unsigned int code;
+};
+#define LPNMHDR NMHDR*
+
+#endif  // WINDOWS_COMPAT_EXTRA
+
+// =============================================================================
+// Stub function declarations - called by ScopedCOMInit and others
+// (No #ifndef guard — these are inline and idempotent)
+// =============================================================================
+// COM / Shell stubs used across the codebase
+inline void CoInitializeEx(void*, unsigned long) {}
+inline void CoUninitialize() {}
+inline int MessageBox(void*, const wchar_t*, const wchar_t*, unsigned int) { return IDOK; }
+inline bool DestroyMenu(void*) { return true; }
+inline bool DestroyWindow(void*) { return true; }
+inline bool DestroyIcon(void*) { return true; }
+inline bool FreeLibrary(void*) { return true; }
+inline bool VerifyVersionInfoW(void*, long, unsigned long) { return true; }
+
+#ifndef RLSMODE
+#define RLSMODE int
+#endif
+
+// =============================================================================
+// stubs: NOTYPO - for Notepad_plus.h static thread functions
+// (These NEED to be declared with proper return types)
+// =============================================================================
+#ifndef WINAPI
+#define WINAPI __attribute__((ms_abi))
+#endif
+
+// =============================================================================
+// GDI / color stubs for NppDarkMode.cpp
+// =============================================================================
+#ifndef HBRUSH
+#define HBRUSH void*
+#endif
+#ifndef HPEN
+#define HPEN void*
+#endif
+#ifndef HFONT
+#define HFONT void*
+#endif
+#ifndef HGDIOBJ
+#define HGDIOBJ void*
+#endif
+#ifndef COLORREF
+#define COLORREF DWORD
+#endif
+#ifndef GdiObject
+#define GdiObject int
+#endif
+
+// Dark mode globals (stubbed on Linux)
+extern bool g_darkModeSupported;
+extern bool g_darkModeEnabled;
+
+// =============================================================================
+// WINDOWPLACEMENT structure
+// =============================================================================
+#ifndef WINDOWPLACEMENT
+#define WINDOWPLACEMENT
+struct __WINDOWPLACEMENT {
+    UINT length;
+    UINT flags;
+    UINT showCmd;
+    POINT ptMinPosition;
+    POINT ptMaxPosition;
+    RECT rcNormalPosition;
+};
+using WINDOWPLACEMENT = struct __WINDOWPLACEMENT;
+#endif
+#ifndef SW_SHOWNORMAL
+#define SW_SHOWNORMAL 1
+#endif
+#ifndef SW_SHOWMAXIMIZED
+#define SW_SHOWMAXIMIZED 3
+#endif
+#ifndef WPF_RESTORETOMAXIMIZED
+#define WPF_RESTORETOMAXIMIZED 0x0002
+#endif
+
+// =============================================================================
+// CheckMenuItem stub (used in Notepad_plus.h)
+// =============================================================================
+#define CheckMenuItem(hMenu, id, flags) ((unsigned int)0)
+#define CheckMenuItemRadio(hMenu, first, last, id, flags) ((unsigned int)0)
+
+// =============================================================================
+// WinMgr.h: SetRect method naming conflict (WindowsCompat macro)
+/*
+The WindowsCompat SetRect macro conflicts with WinMgr.h's SetRect method.
+The method has been renamed to setRect via sed substitution in WinMgr.h.
+*/
+
+// =============================================================================
+// LoadImage stubs for Icons
+// =============================================================================
+#ifndef IMAGE_ICON
+#define IMAGE_ICON 1
+#define IMAGE_BITMAP 0
+#define IMAGE_CURSOR 2
+#endif
+#ifndef LR_LOADFROMFILE
+#define LR_LOADFROMFILE 0x00000010
+#endif
+#ifndef LR_SHARED
+#define LR_SHARED 0x00000008
+#endif
+#ifndef LR_DEFAULTSIZE
+#define LR_DEFAULTSIZE 0x00000040
+#endif
+#ifndef LoadImage
+#define LoadImage(a,b,c,d,e,f,g) ((HICON)nullptr)
+#endif
+
+// =============================================================================
+// MOVEFILE constants
+// =============================================================================
+#ifndef MOVEFILE_COPY_ALLOWED
+#define MOVEFILE_COPY_ALLOWED 0x00000002
+#endif
+#ifndef MOVEFILE_DELAY_IF_BUSY
+#define MOVEFILE_DELAY_IF_BUSY 0x00000010
+#endif

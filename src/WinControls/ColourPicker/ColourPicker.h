@@ -17,7 +17,8 @@
 
 #pragma once
 
-#include "Window.h"
+#include "WinControls/Window.h"
+#include "MISC/Common/WindowsCompat.h"
 
 class ColourPopup;
 

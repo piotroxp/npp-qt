@@ -36,16 +36,16 @@
 #include <Lexilla.h>
 #include "scintilla/include/Scintilla.h"
 
-#include "Common.h"
+#include "MISC/Common/Common.h"
 #include "Notepad_plus_msgs.h"
-#include "NppConstants.h"
+#include "MISC/Common/NppConstants.h"
 #include "NppXml.h"
 #include "../Parameters.h"
 #include "PluginInterface.h"
 #include "menuCmdID.h"
-#include "pluginsAdmin.h"
+#include "WinControls/PluginsAdmin/pluginsAdmin.h"
 #include "resource.h"
-#include "shortcut.h"
+#include "WinControls/shortcut/shortcut.h"
 
 using namespace std;
 

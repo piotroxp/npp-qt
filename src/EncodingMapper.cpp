@@ -17,7 +17,7 @@
 
 #include <string.h>
 #include "EncodingMapper.h"
-#include "Scintilla.h"
+#include "scintilla/include/Scintilla.h"
 
 // Don't change the order
 static EncodingUnit encodings[] = {

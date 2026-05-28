@@ -28,12 +28,11 @@
 
 #include "scintilla/include/Scintilla.h"
 
-#include "Common.h"
+#include "MISC/Common/Common.h"
 #include "IDAllocator.h"
 #include "PluginInterface.h"
 #include "resource.h"
 
-using PFUNCISUNICODE = BOOL (__cdecl*)();
 class PluginViewList;
 
 struct PluginCommand

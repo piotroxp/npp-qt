@@ -22,8 +22,8 @@
 #include <string>
 #include <vector>
 
-#include "Window.h"
-#include "StaticDialog.h"
+#include "WinControls/Window.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
 #include "TaskList.h"
 
 #define	TASKLIST_USER    (WM_USER + 8000)

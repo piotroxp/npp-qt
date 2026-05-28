@@ -19,7 +19,7 @@
 
 #include "MISC/Common/WindowsCompat.h"
 
-#include "StaticDialog.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
 #include "resource.h"
 
 #define WM_PICKUP_COLOR (COLOURPOPUP_USER + 1)

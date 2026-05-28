@@ -29,7 +29,7 @@
 #include "scintilla/include/Scintilla.h"
 
 #include "../MISC/Common/Common.h"
-#include "NppConstants.h"
+#include "MISC/Common/NppConstants.h"
 #include "../NppDarkMode.h"
 #include "../Parameters.h"
 #include "ScintillaComponent/ScintillaEditView.h"

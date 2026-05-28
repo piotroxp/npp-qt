@@ -10,6 +10,7 @@
 
 
 #include "WinMgr.h"
+#include "MISC/Common/WindowsCompat.h"
 
 // Theo - Style Helpers
 inline static DWORD GetStyle(HWND hWnd) {

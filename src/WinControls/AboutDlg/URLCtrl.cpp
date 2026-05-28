@@ -19,8 +19,8 @@
 
 #include "MISC/Common/WindowsStubs.h"
 
-#include "Common.h"
-#include "NppConstants.h"
+#include "MISC/Common/Common.h"
+#include "MISC/Common/NppConstants.h"
 #include "../NppDarkMode.h"
 #include "dpiManagerV2.h"
 

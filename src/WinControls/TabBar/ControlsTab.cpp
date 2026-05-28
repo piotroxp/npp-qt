@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-#include "ControlsTab.h"
+#include "WinControls/ControlsTab/ControlsTab.h"
 
 void ControlsTab::createTabs(WindowVector & winVector)
 {

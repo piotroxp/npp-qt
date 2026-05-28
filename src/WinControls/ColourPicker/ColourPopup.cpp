@@ -27,8 +27,8 @@
 #include "ColourPopupResource.h"
 #include "../NppDarkMode.h"
 #include "../Parameters.h"
-#include "StaticDialog.h"
-#include "Window.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
+#include "WinControls/Window.h"
 #include "dpiManagerV2.h"
 #include "localization.h"
 

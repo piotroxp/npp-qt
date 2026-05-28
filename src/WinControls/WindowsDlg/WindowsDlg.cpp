@@ -18,8 +18,9 @@
 #include <functional>
 #include <algorithm>
 #include "WindowsDlg.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "WindowsDlgRc.h"
-#include "DocTabView.h"
+#include "ScintillaComponent/DocTabView.h"
 #include "EncodingMapper.h"
 #include "localization.h"
 

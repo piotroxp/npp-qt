@@ -17,16 +17,16 @@
 
 #pragma once
 
-#include "MISC/Common/WindowsCompat.h"
+#include "../MISC/Common/WindowsCompat.h"
 
 #include <vector>
 
 #include "ScintillaComponent/Buffer.h"
-#include "ImageListSet.h"
-#include "NppConstants.h"
+#include "../WinControls/ImageListSet/ImageListSet.h"
+#include "../MISC/Common/NppConstants.h"
 #include "ScintillaComponent/ScintillaEditView.h"
-#include "TabBar.h"
-#include "WinControls/Window.h"
+#include "../WinControls/TabBar/TabBar.h"
+#include "../WinControls/Window.h"
 
 
 class DocTabView : public TabBarPlus

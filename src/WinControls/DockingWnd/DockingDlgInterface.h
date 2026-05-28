@@ -26,9 +26,9 @@
 #include <string>
 
 #include "Docking.h"
-#include "Notepad_plus_msgs.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "../NppDarkMode.h"
-#include "StaticDialog.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
 #include "dockingResource.h"
 
 class DockingDlgInterface : public StaticDialog

@@ -16,6 +16,7 @@
 
 
 #include "FindCharsInRange.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "findCharsInRange_rc.h"
 #include "../Parameters.h"
 #include "localization.h"

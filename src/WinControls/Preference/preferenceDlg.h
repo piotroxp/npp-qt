@@ -23,16 +23,16 @@
 #include <string>
 #include <vector>
 
-#include "ColourPicker.h"
-#include "Common.h"
-#include "ContextMenu.h"
-#include "ControlsTab.h"
-#include "Notepad_plus_msgs.h"
+#include "WinControls/ColourPicker/ColourPicker.h"
+#include "MISC/Common/Common.h"
+#include "WinControls/ContextMenu/ContextMenu.h"
+#include "WinControls/ControlsTab/ControlsTab.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "../Parameters.h"
-#include "StaticDialog.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
 #include "dpiManagerV2.h"
 #include "preference_rc.h"
-#include "regExtDlg.h"
+#include "MISC/RegExt/regExtDlg.h"
 
 class MiscSubDlg : public StaticDialog
 {

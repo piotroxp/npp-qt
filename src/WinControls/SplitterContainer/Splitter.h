@@ -21,7 +21,7 @@
 
 #include <cstdint>
 
-#include "Window.h"
+#include "WinControls/Window.h"
 #include "resource.h"
 
 

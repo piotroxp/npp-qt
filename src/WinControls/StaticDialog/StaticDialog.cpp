@@ -23,11 +23,11 @@
 #include <string>
 #include <vector>
 
-#include "Common.h"
-#include "Notepad_plus_msgs.h"
+#include "MISC/Common/Common.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "../NppDarkMode.h"
 #include "StaticDialog.h"
-#include "Window.h"
+#include "WinControls/Window.h"
 #include "dpiManagerV2.h"
 
 StaticDialog::~StaticDialog()

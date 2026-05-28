@@ -17,7 +17,7 @@
 
 #include "FindReplaceDlg.h"
 #include "ScintillaComponent/ScintillaEditView.h"
-#include "Notepad_plus_msgs.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "localization.h"
 #include "../MISC/Common/Common.h"
 #include "Utf8.h"
@@ -30,7 +30,7 @@
 #include <memory>
 #include <string>
 
-#include "NppConstants.h"
+#include "MISC/Common/NppConstants.h"
 
 using namespace std;
 

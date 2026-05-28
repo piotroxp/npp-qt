@@ -16,6 +16,7 @@
 
 
 #include "ShortcutMapper.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "Notepad_plus.h"
 
 

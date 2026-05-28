@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "DockingDlgInterface.h"
+#include "WinControls/DockingWnd/DockingDlgInterface.h"
 #include "VerticalFileSwitcher_rc.h"
 #include "VerticalFileSwitcherListView.h"
 

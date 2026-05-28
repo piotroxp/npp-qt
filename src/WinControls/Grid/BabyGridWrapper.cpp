@@ -16,6 +16,7 @@
 
 
 #include "BabyGridWrapper.h"
+#include "MISC/Common/WindowsCompat.h"
 
 const wchar_t* babyGridClassName = L"BABYGRID";
 

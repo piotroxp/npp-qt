@@ -122,7 +122,7 @@ public:
 	UINT GetID()				{ return nID; }
 	UINT SetID(UINT id)		{ return nID=id; }
 	RECT& GetRect()					{ return rc; }
-	void SetRect(const RECT& r)	{ rc = r; }
+	void setRect(const RECT& r)	{ rc = r; }
 	WORD Type() const			{ return flags & WRCF_TYPEMASK; }
 	WORD GroupType() const	{ return flags & WRCF_GROUPMASK; }
 	BOOL IsGroup() const		{ return GroupType() && GroupType()!=WRCF_ENDGROUP; }
@@ -251,7 +251,7 @@ public:
 	// calc layout using given rect as total area
 	void CalcLayout(RECT rcTotal, HWND hWnd=NULL) {
 		assert(m_map);
-		m_map->SetRect(rcTotal);
+		m_map->setRect(rcTotal);
 		CalcGroup(m_map, hWnd);
 	}
 
@@ -262,7 +262,7 @@ public:
 	void MoveRect(WINRECT* pwrcMove, POINT ptMove, HWND pParentWnd);
 
 	RECT GetRect(UINT nID)						 { return FindRect(nID)->GetRect(); }
-	void SetRect(UINT nID, const RECT& rc) { FindRect(nID)->SetRect(rc); }
+	void SetRect(UINT nID, const RECT& rc) { FindRect(nID)->setRect(rc); }
 
 	// get WINRECT corresponding to ID
 	WINRECT* FindRect(int nID);

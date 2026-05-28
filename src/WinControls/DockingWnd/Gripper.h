@@ -19,7 +19,7 @@
 
 #include "MISC/Common/WindowsCompat.h"
 #include "MISC/Common/WindowsStubs.h"
-#include "Common.h"
+#include "MISC/Common/Common.h"
 #include "Docking.h"
 #include "dockingResource.h"
 

@@ -38,20 +38,20 @@
 
 #include <json.hpp>
 
-#include "Common.h"
-#include "ListView.h"
-#include "Notepad_plus_msgs.h"
+#include "MISC/Common/Common.h"
+#include "WinControls/AnsiCharPanel/ListView.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "../NppDarkMode.h"
 #include "../Parameters.h"
-#include "PluginsManager.h"
-#include "StaticDialog.h"
+#include "MISC/PluginsManager/PluginsManager.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
 #include "localization.h"
 #include "menuCmdID.h"
 #include "pluginsAdminRes.h"
 #include "resource.h"
 
 #ifdef NDEBUG
-#include "verifySignedfile.h"
+#include "MISC/Common/verifySignedfile.h"
 #endif
 
 #define TEXTFILE        256

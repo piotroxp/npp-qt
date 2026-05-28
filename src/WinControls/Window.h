@@ -42,49 +42,49 @@ public:
 
 
 	virtual void reSizeTo(RECT & rc) { // should NEVER be const !!!
-		::MoveWindow(_hSelf, rc.left, rc.top, rc.right, rc.bottom, TRUE);
+		_hSelf->setGeometry(rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
 		redraw();
 	}
 
 
 	virtual void reSizeToWH(RECT& rc) { // should NEVER be const !!!
-		::MoveWindow(_hSelf, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, TRUE);
+		_hSelf->setGeometry(rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
 		redraw();
 	}
 
 
 	virtual void redraw(bool forceUpdate = false) const {
-		::InvalidateRect(_hSelf, nullptr, TRUE);
+		_hSelf->update();
 		if (forceUpdate)
-			::UpdateWindow(_hSelf);
+			_hSelf->repaint();
 	}
 
 
     virtual void getClientRect(RECT & rc) const {
-		::GetClientRect(_hSelf, &rc);
+		{ QRect r = _hSelf->rect(); rc.left=r.left(); rc.top=r.top(); rc.right=r.right(); rc.bottom=r.bottom(); }
 	}
 
 	virtual void getWindowRect(RECT & rc) const {
-		::GetWindowRect(_hSelf, &rc);
+		{ QRect r = _hSelf->geometry(); rc.left=r.x(); rc.top=r.y(); rc.right=r.x()+r.width(); rc.bottom=r.y()+r.height(); }
 	}
 
 	virtual int getWidth() const {
 		RECT rc;
-		::GetClientRect(_hSelf, &rc);
+		{ QRect r = _hSelf->rect(); rc.left=r.left(); rc.top=r.top(); rc.right=r.right(); rc.bottom=r.bottom(); }
 		return (rc.right - rc.left);
 	}
 
 	virtual int getHeight() const {
 		RECT rc;
-		::GetClientRect(_hSelf, &rc);
-		if (::IsWindowVisible(_hSelf) == TRUE)
+		{ QRect r = _hSelf->rect(); rc.left=r.left(); rc.top=r.top(); rc.right=r.right(); rc.bottom=r.bottom(); }
+		if (_hSelf->isVisible())
 			return (rc.bottom - rc.top);
 		return 0;
 	}
 
 	virtual bool isVisible() const
 	{
-    	return (::IsWindowVisible(_hSelf)?true:false);
+    	return (_hSelf->isVisible());
 	}
 
 	HWND getHSelf() const {

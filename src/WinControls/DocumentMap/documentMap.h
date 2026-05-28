@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "DockingDlgInterface.h"
+#include "WinControls/DockingWnd/DockingDlgInterface.h"
 #include "documentMap_rc.h"
 
 #define DM_PANELTITLE     L"Document Map"

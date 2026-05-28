@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include "Window.h"
-#include "TaskListDlg.h"
+#include "WinControls/Window.h"
+#include "WinControls/TaskList/TaskListDlg.h"
 #include "ScintillaComponent/Buffer.h"
 
 #define SORT_DIRECTION_NONE     -1

@@ -21,11 +21,18 @@
 
 #pragma once
 
-#include "Scintilla.h"
+#include "scintilla/include/Scintilla.h"
 #include "Notepad_plus_msgs.h"
+#include "MISC/Common/WindowsCompat.h"
+#include <cstdint>
 
+// Stub Windows calling conventions (no-op on Linux)
+#define __cdecl
+#define __declspec(x)
 
-typedef const wchar_t * (__cdecl * PFUNCGETNAME)();
+#ifndef UCHAR
+#define UCHAR unsigned char
+#endif
 
 struct NppData
 {
@@ -34,11 +41,13 @@ struct NppData
 	HWND _scintillaSecondHandle = nullptr;
 };
 
-typedef void (__cdecl * PFUNCSETINFO)(NppData);
-typedef void (__cdecl * PFUNCPLUGINCMD)();
-typedef void (__cdecl * PBENOTIFIED)(SCNotification *);
-typedef LRESULT (__cdecl * PMESSAGEPROC)(UINT Message, WPARAM wParam, LPARAM lParam);
-
+typedef const wchar_t* (*PFUNCGETNAME)();
+typedef void (*PFUNCSETINFO)(NppData);
+typedef void (*PFUNCPLUGINCMD)();
+typedef void (*PBENOTIFIED)(SCNotification*);
+typedef long (*PMESSAGEPROC)(unsigned int, unsigned long, long);
+typedef FuncItem* (*PFUNCGETFUNCSARRAY)(int*);
+typedef bool (*PFUNCISUNICODE)();
 
 struct ShortcutKey
 {
@@ -59,15 +68,10 @@ struct FuncItem
 	ShortcutKey *_pShKey = nullptr;
 };
 
-typedef FuncItem * (__cdecl * PFUNCGETFUNCSARRAY)(int *);
-
-// You should implement (or define an empty function body) those functions which are called by Notepad++ plugin manager
+// Plugin API functions (stub for Linux)
 extern "C" __declspec(dllexport) void setInfo(NppData);
-extern "C" __declspec(dllexport) const wchar_t * getName();
-extern "C" __declspec(dllexport) FuncItem * getFuncsArray(int *);
-extern "C" __declspec(dllexport) void beNotified(SCNotification *);
-extern "C" __declspec(dllexport) LRESULT messageProc(UINT Message, WPARAM wParam, LPARAM lParam);
-
-// This API return always true now, since Notepad++ isn't compiled in ANSI mode anymore
+extern "C" __declspec(dllexport) const wchar_t* getName();
+extern "C" __declspec(dllexport) FuncItem* getFuncsArray(int*);
+extern "C" __declspec(dllexport) void beNotified(SCNotification*);
+extern "C" __declspec(dllexport) long messageProc(unsigned int Message, unsigned long wParam, long lParam);
 extern "C" __declspec(dllexport) BOOL isUnicode();
-

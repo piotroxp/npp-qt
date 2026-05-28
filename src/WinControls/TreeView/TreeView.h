@@ -18,8 +18,8 @@
 
 #include "MISC/Common/WindowsCompat.h"
 #include "MISC/Common/WindowsStubs.h"
-#include "Window.h"
-#include "Common.h"
+#include "WinControls/Window.h"
+#include "MISC/Common/Common.h"
 #include "../NppDarkMode.h"
 
 struct TreeStateNode {

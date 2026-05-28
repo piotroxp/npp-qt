@@ -17,6 +17,7 @@
 
 #include <format>
 #include "AboutDlg.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "../Parameters.h"
 #include "localization.h"
 #include "json.hpp"

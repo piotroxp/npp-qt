@@ -16,6 +16,7 @@
 
 
 #include "trayIconControler.h"
+#include "MISC/Common/WindowsCompat.h"
 
 trayIconControler::trayIconControler(HWND hwnd, UINT uID, UINT uCBMsg, HICON hicon, const wchar_t *tip)
 {

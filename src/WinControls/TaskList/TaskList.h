@@ -19,7 +19,7 @@
 
 #include "MISC/Common/WindowsCompat.h"
 #include "MISC/Common/WindowsStubs.h"
-#include "Window.h"
+#include "WinControls/Window.h"
 
 #ifndef WM_MOUSEWHEEL
 #define WM_MOUSEWHEEL 0x020A

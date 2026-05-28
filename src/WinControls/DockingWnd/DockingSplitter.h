@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "Window.h"
+#include "WinControls/Window.h"
 #include "Docking.h"
 #include "dockingResource.h"
 

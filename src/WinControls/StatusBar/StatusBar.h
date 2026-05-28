@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#include "Window.h"
+#include "WinControls/Window.h"
 
 struct StatusBarSubclassInfo;
 

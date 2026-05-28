@@ -19,7 +19,7 @@
 
 #include "../Parameters.h"
 #include "BabyGrid.h"
-#include "Window.h"
+#include "WinControls/Window.h"
 
 class BabyGridWrapper : public Window
 {

@@ -20,7 +20,7 @@
 #include "MISC/Common/WindowsCompat.h"
 
 #include "Splitter.h"
-#include "Window.h"
+#include "WinControls/Window.h"
 
 
 enum class DIRECTION

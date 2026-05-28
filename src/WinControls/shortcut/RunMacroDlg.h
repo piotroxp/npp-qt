@@ -19,7 +19,7 @@
 #pragma once
 
 #include "RunMacroDlg_rc.h"
-#include "StaticDialog.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
 
 class RunMacroDlg : public StaticDialog
 {

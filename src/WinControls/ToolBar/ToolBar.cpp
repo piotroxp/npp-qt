@@ -26,18 +26,18 @@
 #include <string>
 #include <string_view>
 
-#include "Common.h"
-#include "FindReplaceDlg_rc.h"
-#include "ImageListSet.h"
-#include "Notepad_plus_msgs.h"
-#include "NppConstants.h"
+#include "MISC/Common/Common.h"
+#include "ScintillaComponent/FindReplaceDlg_rc.h"
+#include "WinControls/ImageListSet/ImageListSet.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
+#include "MISC/Common/NppConstants.h"
 #include "../NppDarkMode.h"
 #include "NppXml.h"
 #include "../Parameters.h"
-#include "Window.h"
+#include "WinControls/Window.h"
 #include "menuCmdID.h"
 #include "resource.h"
-#include "shortcut.h"
+#include "WinControls/shortcut/shortcut.h"
 
 static constexpr DWORD WS_TOOLBARSTYLE = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | TBSTYLE_TOOLTIPS | TBSTYLE_FLAT | CCS_TOP | CCS_NOPARENTALIGN | CCS_NORESIZE | CCS_NODIVIDER;
 

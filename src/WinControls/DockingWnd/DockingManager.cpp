@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include "DockingManager.h"
 #include "DockingSplitter.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "DockingCont.h"
 #include "Gripper.h"
 #include "../Parameters.h"

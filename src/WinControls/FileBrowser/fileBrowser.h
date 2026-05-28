@@ -22,8 +22,8 @@
 #include <string>
 #include <vector>
 
-#include "DockingDlgInterface.h"
-#include "TreeView.h"
+#include "WinControls/DockingWnd/DockingDlgInterface.h"
+#include "WinControls/TreeView/TreeView.h"
 #include "fileBrowser_rc.h"
 
 #define FB_PANELTITLE         L"Folder as Workspace"

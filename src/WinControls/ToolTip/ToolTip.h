@@ -19,7 +19,7 @@
 
 #include "MISC/Common/WindowsCompat.h"
 #include "MISC/Common/WindowsStubs.h"
-#include "Window.h"
+#include "WinControls/Window.h"
 
 class ToolTip : public Window
 {

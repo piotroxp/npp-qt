@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "StaticDialog.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
 
 #include "MISC/Common/WindowsCompat.h"
 

@@ -29,16 +29,16 @@
 #include <string>
 #include <vector>
 
-#include "Common.h"
-#include "CustomFileDialog.h"
-#include "DockingDlgInterface.h"
-#include "Notepad_plus_msgs.h"
+#include "MISC/Common/Common.h"
+#include "WinControls/OpenSaveFileDialog/CustomFileDialog.h"
+#include "WinControls/DockingWnd/DockingDlgInterface.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "../NppDarkMode.h"
 #include "NppXml.h"
 #include "../Parameters.h"
 #include "ProjectPanel_rc.h"
-#include "StaticDialog.h"
-#include "dockingResource.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
+#include "WinControls/DockingWnd/dockingResource.h"
 #include "localization.h"
 #include "menuCmdID.h"
 #include "resource.h"

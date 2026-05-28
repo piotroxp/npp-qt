@@ -20,11 +20,11 @@
 #include <optional>
 #include <memory>
 
-#include "Debugging.h"
-#include "Geometry.h"
-#include "ScintillaTypes.h"
-#include "ScintillaMessages.h"
-#include "Platform.h"
+#include "ScintillaComponents/scintilla/src/Debugging.h"
+#include "ScintillaComponents/scintilla/src/Geometry.h"
+#include "ScintillaComponents/scintilla/include/ScintillaTypes.h"
+#include "ScintillaComponents/scintilla/include/ScintillaMessages.h"
+#include "ScintillaComponents/scintilla/src/Platform.h"
 
 #include <QUrl>
 #include <QPaintDevice>

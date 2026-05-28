@@ -19,7 +19,7 @@
 
 #include "URLCtrl.h"
 #include "resource.h"
-#include "StaticDialog.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
 
 #define LICENCE_TXT \
 L"This program is free software; you can redistribute it and/or \

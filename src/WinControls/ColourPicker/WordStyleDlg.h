@@ -24,9 +24,9 @@
 #include <utility>
 
 #include "ColourPicker.h"
-#include "URLCtrl.h"
+#include "WinControls/AboutDlg/URLCtrl.h"
 #include "../Parameters.h"
-#include "StaticDialog.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
 #include "resource.h"
 
 #define WM_UPDATESCINTILLAS      (WORDSTYLE_USER + 1) // WM_UPDATESCINTILLAS (BOOL doChangePanel, 0)

@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "MISC/Common/WindowsCompat.h"
+#include "../MISC/Common/WindowsCompat.h"
 
 #include <locale>
 #include <memory>

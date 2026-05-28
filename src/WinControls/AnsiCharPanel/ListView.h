@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-#include "Window.h"
+#include "WinControls/Window.h"
 
 struct columnInfo {
 	size_t _width;

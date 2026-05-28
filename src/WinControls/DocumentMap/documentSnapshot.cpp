@@ -17,6 +17,7 @@
 
 #include "documentSnapshot.h"
 
+#include "MISC/Common/WindowsCompat.h"
 #include "ScintillaComponent/ScintillaEditView.h"
 #include "documentSnapshot_rc.h"
 

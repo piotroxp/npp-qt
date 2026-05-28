@@ -22,7 +22,7 @@
 #include <stdexcept>
 
 #include "../NppDarkMode.h"
-#include "Window.h"
+#include "WinControls/Window.h"
 #include "dpiManagerV2.h"
 
 

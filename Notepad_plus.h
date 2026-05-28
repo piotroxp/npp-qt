@@ -14,799 +14,664 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Qt6 Translation - Notepad_plus.h
-// Translated from Win32 MFC to Qt6
-
 #pragma once
-#define SC_CP_UTF8 65001
 
-#include "WindowsCompat.h"
-#include "Win32QtShim.h"
-#include "ScintillaComponent/Buffer.h"
-#include "WinControls/DockingWnd/Docking.h"
-#include "AutoCompletion.h"
-#include "SmartHighlighter.h"
-#include "NativeLangSpeaker.h"
-#include "LocalizationSwitcher.h"
+#include "ScintillaComponent/ScintillaEditView.h"
 #include "ScintillaComponent/DocTabView.h"
-#include "ScintillaEditView.h"
-#include "WinControls/SplitterContainer/Splitter.h"
-#include "WinControls/ContextMenu/ContextMenu.h"
+#include "WinControls/SplitterContainer/SplitterContainer.h"
 #include "ScintillaComponent/FindReplaceDlg.h"
 #include "WinControls/AboutDlg/AboutDlg.h"
 #include "WinControls/StaticDialog/RunDlg/RunDlg.h"
-#include "ScintillaComponent/GoToLineDlg.h"
-#include "ScintillaComponent/ColumnEditorDlg.h"
-#include "WinControls/ColourPicker/WordStyleDlg.h"
-#include "WinControls/Preference/preferenceDlg.h"
-#include "WinControls/PluginsAdmin/pluginsAdmin.h"
-#include "ScintillaComponent/DocumentPeeker.h"
-#include "LastRecentFileList.h"
 #include "WinControls/StatusBar/StatusBar.h"
-#include "WinControls/ToolBar/ToolBar.h"
-#include "WinControls/TabBar/TabBar.h"
-#include "WinControls/StaticDialog/StaticDialog.h"
-#include "WinControls/DocumentMap/documentMap.h"
+#include "lastRecentFileList.h"
+#include "ScintillaComponent/GoToLineDlg.h"
+#include "ScintillaComponent/FindCharsInRange.h"
+#include "ScintillaComponent/columnEditor.h"
+#include "WinControls/ColourPicker/WordStyleDlg.h"
+#include "WinControls/TrayIcon/trayIconControler.h"
+#include "MISC/PluginsManager/PluginsManager.h"
+#include "WinControls/Preference/preferenceDlg.h"
+#include "WinControls/WindowsDlg/WindowsDlg.h"
+#include "WinControls/shortcut/RunMacroDlg/RunMacroDlg.h"
+#include "WinControls/DockingWnd/DockingManager.h"
+#include "MISC/Process/Processus.h"
+#include "ScintillaComponent/AutoCompletion.h"
+#include "ScintillaComponent/SmartHighlighter.h"
 #include "ScintillaComponent/ScintillaCtrls.h"
-#include "Macro.h"
-
-// Forward declarations for dialogs - include their headers as needed
-class RunMacroDlg;
-class ShortcutMapper;
-class ScintillaAccelerator;
-class PluginsAdminDlg;
-class ColumnEditorDlg;
-
-
-#include <QtWidgets/QMainWindow>
-#include <QtWidgets/QMenuBar>
-#include <QtWidgets/QMenu>
-#include <QtWidgets/QToolBar>
-#include <QtWidgets/QStatusBar>
-#include <QtWidgets/QTabWidget>
-#include <QtWidgets/QFileDialog>
-#include <QtWidgets/QMessageBox>
-#include <QtCore/QSettings>
-#include <QtCore/QFileSystemWatcher>
-#include <QtCore/QThread>
-#include <QtCore/QTimer>
-#include <QtCore/QMutex>
-#include <QtGui/QCloseEvent>
-#include <QtGui/QDragEnterEvent>
-#include <QtGui/QDropEvent>
-#include <QtGui/QKeyEvent>
-#include <QtGui/QResizeEvent>
-#include <QtCore/QWaitCondition>
-#include <QtCore/QProcess>
+#include "lesDlgs.h"
+#include "WinControls/PluginsAdmin/pluginsAdmin.h"
+#include "localization.h"
+#include "WinControls/DocumentMap/documentSnapshot.h"
+#include "MISC/md5/md5Dlgs.h"
 #include <vector>
-#include <memory>
+#include <iso646.h>
 #include <chrono>
 #include <atomic>
-class LocalizationSwitcher;
-class Buffer;
-class NppParameters;
-class TaskListInfo;
-class Macro;
-class MacroShortcut;
-class recordedMacroStep;
-class Session;
-class BufferViewInfo;
-class FindersInfo;
-class Finder;
-class CustomFileDialog;
-class DocumentPeeker;
 
-// Constants matching original
+extern std::chrono::steady_clock::time_point g_nppStartTimePoint;
+extern std::chrono::steady_clock::duration g_pluginsLoadingTime;
+
+extern std::atomic<bool> g_bNppExitFlag;
+
+
 #define MENU 0x01
 #define TOOLBAR 0x02
+
 #define MAIN_EDIT_ZONE true
 
-// File transfer mode for cloning/moving documents
-enum class FileTransferMode {
-    TransferClone = 0x01,
-    TransferMove = 0x02
+enum FileTransferMode {
+	TransferClone		= 0x01,
+	TransferMove		= 0x02
 };
 
-// Window status bit flags
-enum class WindowStatus : uint8_t {
-    WindowMainActive = 0x01,
-    WindowSubActive = 0x02,
-    WindowBothActive = 0x03,
-    WindowUserActive = 0x04,
-    WindowMask = 0x07
+enum WindowStatus {	//bitwise mask
+	WindowMainActive	= 0x01,
+	WindowSubActive		= 0x02,
+	WindowBothActive	= 0x03,	//little helper shortcut
+	WindowUserActive	= 0x04,
+	WindowMask			= 0x07
 };
 
-// Trim operation types
-enum class TrimOp {
-    lineHeader = 0,
-    lineTail = 1,
-    lineBoth = 2,
-    lineEol = 3
+enum trimOp {
+	lineHeader = 0,
+	lineTail = 1,
+	lineBoth = 2,
+	lineEol = 3
 };
 
-// Space/Tab conversion
-enum class SpaceTab {
-    tab2Space = 0,
-    space2TabLeading = 1,
-    space2TabAll = 2
+enum spaceTab {
+	tab2Space = 0,
+	space2TabLeading = 1,
+	space2TabAll = 2
 };
 
-// Comment modes
-enum class CommentMode {
-    cm_comment,
-    cm_uncomment,
-    cm_toggle
+struct TaskListInfo;
+
+
+struct VisibleGUIConf final
+{
+	bool _isPostIt = false;
+	bool _isFullScreen = false;
+	bool _isDistractionFree = false;
+
+	//Used by postit & fullscreen
+	bool _isMenuShown = true;
+	DWORD_PTR _preStyle = (WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN);
+
+	//used by postit
+	bool _isTabbarShown = true;
+	bool _isAlwaysOnTop = false;
+	bool _isStatusbarShown = true;
+
+	//used by fullscreen
+	WINDOWPLACEMENT _winPlace = {};
+
+	//used by distractionFree
+	bool _was2ViewModeOn = false;
+	std::vector<DockingCont*> _pVisibleDockingContainers;
 };
 
-// Visible GUI configuration
-struct VisibleGUIConf {
-    bool _isPostIt = false;
-    bool _isFullScreen = false;
-    bool _isDistractionFree = false;
-    bool _isMenuShown = true;
-    bool _isTabbarShown = true;
-    bool _isAlwaysOnTop = false;
-    bool _isStatusbarShown = true;
-    bool _was2ViewModeOn = false;
-    std::vector<void*> _pVisibleDockingContainers;
+struct QuoteParams
+{
+	enum Speed { slow = 0, rapid, speedOfLight };
+
+	QuoteParams() {}
+	QuoteParams(const wchar_t* quoter, Speed speed, bool shouldBeTrolling, int encoding, LangType lang, const wchar_t* quote) :
+		_quoter(quoter), _speed(speed), _shouldBeTrolling(shouldBeTrolling), _encoding(encoding), _lang(lang), _quote(quote) {}
+
+	void reset() {
+		_quoter = nullptr;
+		_speed = rapid;
+		_shouldBeTrolling = false;
+		_encoding = SC_CP_UTF8;
+		_lang = L_TEXT;
+		_quote = nullptr;
+	}
+
+	const wchar_t* _quoter = nullptr;
+	Speed _speed = rapid;
+	bool _shouldBeTrolling = false;
+	int _encoding = SC_CP_UTF8;
+	LangType _lang = L_TEXT;
+	const wchar_t* _quote = nullptr;
 };
 
-// Quote parameters
-struct QuoteParams {
-    enum class Speed { slow = 0, rapid, speedOfLight };
-    
-    QuoteParams() = default;
-    QuoteParams(const wchar_t* quoter, Speed speed, bool shouldBeTrolling, 
-                int encoding, int lang, const wchar_t* quote);
-    
-    void reset();
-    
-    const wchar_t* _quoter = nullptr;
-    Speed _speed = Speed::rapid;
-    bool _shouldBeTrolling = false;
-    int _encoding = SC_CP_UTF8;
-    int _lang = 0;
-    const wchar_t* _quote = nullptr;
-};
-
+class CustomFileDialog;
 class Notepad_plus_Window;
-class Notepad_plus : public QMainWindow {
-    friend class Notepad_plus_Window;
-    friend class FileManager;
+class AnsiCharPanel;
+class ClipboardHistoryPanel;
+class VerticalFileSwitcher;
+class ProjectPanel;
+class DocumentMap;
+class FunctionListPanel;
+class FileBrowser;
+struct QuoteParams;
 
-Q_OBJECT
+class Notepad_plus final
+{
+friend class Notepad_plus_Window;
+friend class FileManager;
 
 public:
-    Notepad_plus();
-    ~Notepad_plus();
+	Notepad_plus();
+	~Notepad_plus();
 
-    // Initialization and message processing (Qt slots)
-    bool init();
-    void processCommand(int id);
-    void killAllChildren();
+	LRESULT init(HWND hwnd);
+	LRESULT process(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
+	void killAllChildren();
 
-    // Document operations
-    enum class comment_mode { cm_comment, cm_uncomment, cm_toggle };
-    
-    void setTitle();
-    void getTaskListInfo(void* tli);
-    int getNbDirtyBuffer(int view);
+	enum comment_mode {cm_comment, cm_uncomment, cm_toggle};
 
-    // Single buffer operations
-    BufferID doOpen(const std::wstring& fileName, bool isRecursive = false, 
-                   bool isReadOnly = false, int encoding = -1,
-                   const wchar_t* backupFileName = nullptr,
-                   uint64_t fileNameTimestamp = 0);
-    bool doReload(BufferID id, bool alert = true);
-    bool doSave(BufferID id, const wchar_t* filename, bool isSaveCopy = false);
-    void doClose(BufferID id, int whichOne, bool doDeleteBackup = false);
+	void setTitle();
+	void getTaskListInfo(TaskListInfo *tli);
+	size_t getNbDirtyBuffer(int view);
 
-    // File menu operations
-    void fileOpen();
-    void fileNew();
+
+	// The following functions apply to a single buffer and don't need to worry about views, with the exception of doClose,
+	// since closing one view doesn't have to mean the document is gone
+	BufferID doOpen(const std::wstring& fileName, bool isRecursive = false, bool isReadOnly = false, int encoding = -1, const wchar_t *backupFileName = NULL, FILETIME fileNameTimestamp = {});
+	bool doReload(BufferID id, bool alert = true);
+	bool doSave(BufferID, const wchar_t * filename, bool isSaveCopy = false);
+	void doClose(BufferID, int whichOne, bool doDeleteBackup = false);
+
+
+	void fileOpen();
+	void fileNew();
     bool fileReload();
-    bool fileClose(BufferID id = BUFFER_INVALID, int curView = -1);
-    bool fileCloseAll(bool doDeleteBackup, bool isSnapshotMode = false);
-    bool fileCloseAllButCurrent();
-    void fileCloseAllButPinned();
-    bool fileCloseAllGiven(const std::vector<BufferViewInfo>& krvecBuffer);
-    bool fileCloseAllToLeft();
-    bool fileCloseAllToRight();
-    bool fileCloseAllUnchanged();
-    bool fileSave(BufferID id = BUFFER_INVALID);
-    bool fileSaveAllConfirm();
-    bool fileSaveAll();
-    bool fileSaveSpecific(const std::wstring& fileNameToSave);
-    bool fileSaveAs(BufferID id = BUFFER_INVALID, bool isSaveCopy = false);
-    bool fileDelete(BufferID id = BUFFER_INVALID);
-    bool fileRename(BufferID id = BUFFER_INVALID);
-    bool fileRenameUntitledPluginAPI(BufferID id, const wchar_t* tabNewName);
-    bool useFirstLineAsTabName(BufferID id);
+	bool fileClose(BufferID id = BUFFER_INVALID, int curView = -1);	//use curView to override view to close from
+	bool fileCloseAll(bool doDeleteBackup, bool isSnapshotMode = false);
+	bool fileCloseAllButCurrent();
+	void fileCloseAllButPinned();
+	bool fileCloseAllGiven(const std::vector<BufferViewInfo>& krvecBuffer);
+	bool fileCloseAllToLeft();
+	bool fileCloseAllToRight();
+	bool fileCloseAllUnchanged();
+	bool fileSave(BufferID id = BUFFER_INVALID);
+	bool fileSaveAllConfirm();
+	bool fileSaveAll();
+	bool fileSaveSpecific(const std::wstring& fileNameToSave);
+	bool fileSaveAs(BufferID id = BUFFER_INVALID, bool isSaveCopy = false);
+	bool fileDelete(BufferID id = BUFFER_INVALID);
+	bool fileRename(BufferID id = BUFFER_INVALID);
+	bool fileRenameUntitledPluginAPI(BufferID id, const wchar_t* tabNewName);
+	bool useFirstLineAsTabName(BufferID id);
 
-    void unPinnedForAllBuffers();
-    bool switchToFile(BufferID buffer);
-    
-    // Session operations
-    bool isFileSession(const wchar_t* filename);
-    bool isFileWorkspace(const wchar_t* filename);
-    void filePrint(bool showDialog);
-    void saveScintillasZoom();
+	void unPinnedForAllBuffers();
+	bool switchToFile(BufferID buffer);			//find buffer in active view then in other view.
+	//@}
 
-    // Save settings
-    bool saveGUIParams();
-    bool saveProjectPanelsParams();
-    bool saveFileBrowserParam();
-    bool saveColumnEditorParams();
-    void saveDockingParams();
+	bool isFileSession(const wchar_t * filename);
+	bool isFileWorkspace(const wchar_t * filename);
+	void filePrint(bool showDialog);
+	void saveScintillasZoom();
+
+	bool saveGUIParams();
+	bool saveProjectPanelsParams();
+	bool saveFileBrowserParam();
+	bool saveColumnEditorParams();
+	void saveDockingParams();
     void saveUserDefineLangs();
     void saveShortcuts();
-    void saveSession(const Session& session);
-    void saveCurrentSession();
-    void saveFindHistory();
+	void saveSession(const Session & session);
+	void saveCurrentSession();
+	void saveFindHistory();
 
-    void getCurrentOpenedFiles(Session& session, bool includeUntitledDoc = false);
+	void getCurrentOpenedFiles(Session& session, bool includeUntitledDoc = false);
 
-    bool fileLoadSession(const wchar_t* fn = nullptr);
-    const wchar_t* fileSaveSession(size_t nbFile, wchar_t** fileNames, 
-                                   const wchar_t* sessionFile2save, 
-                                   bool includeFileBrowser = false);
-    const wchar_t* fileSaveSession(size_t nbFile = 0, wchar_t** fileNames = nullptr);
+	bool fileLoadSession(const wchar_t* fn = nullptr);
+	const wchar_t * fileSaveSession(size_t nbFile, wchar_t ** fileNames, const wchar_t *sessionFile2save, bool includeFileBrowser = false);
+	const wchar_t * fileSaveSession(size_t nbFile = 0, wchar_t** fileNames = nullptr);
 
-    // Comment operations
-    bool doBlockComment(comment_mode currCommentMode);
-    bool doStreamComment();
-    bool undoStreamComment(bool tryBlockComment = true);
+	bool doBlockComment(comment_mode currCommentMode);
+	bool doStreamComment();
+	bool undoStreamComment(bool tryBlockComment = true);
 
-    // Macro operations
-    bool addCurrentMacro();
-    void macroPlayback(Macro macro, std::vector<void*>* pDocs4EndUAIn = nullptr);
-    
+	bool addCurrentMacro();
+	void macroPlayback(Macro macro, std::vector<Document>* pDocs4EndUAIn = nullptr);
+
     void loadLastSession();
-    bool loadSession(Session& session, bool isSnapshotMode = false, 
-                    const wchar_t* userCreatedSessionName = nullptr);
+	bool loadSession(Session & session, bool isSnapshotMode = false, const wchar_t* userCreatedSessionName = nullptr);
 
-    // Dialog preparation
-    void prepareBufferChangedDialog(Buffer* buffer);
-    void notifyBufferChanged(Buffer* buffer, int mask);
-    bool findInFinderFiles(FindersInfo* findInFolderInfo);
+	void prepareBufferChangedDialog(Buffer * buffer);
+	void notifyBufferChanged(Buffer * buffer, int mask);
+	bool findInFinderFiles(FindersInfo *findInFolderInfo);
 
-    // Find/Replace operations
-    bool createFilelistForFiles(std::vector<std::wstring>& fileNames);
-    bool createFilelistForProjects(std::vector<std::wstring>& fileNames);
-    bool findInFiles();
-    bool findInProjects();
-    bool findInFilelist(std::vector<std::wstring>& fileList);
-    bool replaceInFiles();
-    bool replaceInProjects();
-    bool replaceInFilelist(std::vector<std::wstring>& fileList);
+	bool createFilelistForFiles(std::vector<std::wstring> & fileNames);
+	bool createFilelistForProjects(std::vector<std::wstring> & fileNames);
+	bool findInFiles();
+	bool findInProjects();
+	bool findInFilelist(std::vector<std::wstring> & fileList);
+	bool replaceInFiles();
+	bool replaceInProjects();
+	bool replaceInFilelist(std::vector<std::wstring> & fileList);
 
-    void setFindReplaceFolderFilter(const wchar_t* dir, const wchar_t* filters);
-    std::vector<std::wstring> addNppComponents(const wchar_t* destDir, 
-                                                const wchar_t* extFilterName, 
-                                                const wchar_t* extFilter);
-    std::vector<std::wstring> addNppPlugins(const wchar_t* extFilterName, 
-                                            const wchar_t* extFilter);
-    int getHtmlXmlEncoding(const wchar_t* fileName) const;
+	void setFindReplaceFolderFilter(const wchar_t *dir, const wchar_t *filters);
+	std::vector<std::wstring> addNppComponents(const wchar_t *destDir, const wchar_t *extFilterName, const wchar_t *extFilter);
+	std::vector<std::wstring> addNppPlugins(const wchar_t *extFilterName, const wchar_t *extFilter);
+    int getHtmlXmlEncoding(const wchar_t *fileName) const;
 
-    // Buffer access
-    Buffer* getCurrentBuffer() {
-        return getCurrentEditView()->getCurrentBuffer();
-    }
+	HACCEL getAccTable() const {
+		return _accelerator.getAccTable();
+	}
 
-    // Quote features
-    void launchDocumentBackupTask();
-    int getQuoteIndexFrom(const wchar_t* quoter) const;
-    void showQuoteFromIndex(int index) const;
-    void showQuote(const QuoteParams* quote) const;
+	bool emergency(const std::wstring& emergencySavedDir);
 
-    std::wstring getPluginListVerStr() const {
-        return _pluginsAdminDlg.getPluginListVerStr();
-    }
+	Buffer* getCurrentBuffer()	{
+		return _pEditView->getCurrentBuffer();
+	}
 
-    // UI management
-    void minimizeDialogs();
-    void restoreMinimizeDialogs();
-    void refreshDarkMode(bool resetStyle = false);
-    void refreshInternalPanelIcons();
-    void changeReadOnlyUserModeForAllOpenedTabs(const bool ro);
+	void launchDocumentBackupTask();
+	int getQuoteIndexFrom(const wchar_t* quoter) const;
+	void showQuoteFromIndex(int index) const;
+	void showQuote(const QuoteParams* quote) const;
 
-    // Recent files management (MRU)
-    LastRecentFileList& getRecentFiles() { return _lastRecentFileList; }
-    
-    // Menu actions - Qt slots
-public slots:
-    // File menu actions
-    void onFileNew();
-    void onFileOpen();
-    void onFileSave();
-    void onFileSaveAs();
-    void onFileSaveAll();
-    void onFileClose();
-    void onFileCloseAll();
-    void onFileCloseAllButCurrent();
-    void onFilePrint();
-    void onFileExit();
-    
-    // Edit menu actions
-    void onEditUndo();
-    void onEditRedo();
-    void onEditCut();
-    void onEditCopy();
-    void onEditPaste();
-    void onEditDelete();
-    void onEditSelectAll();
-    void onEditFind();
-    void onEditReplace();
-    
-    // Search menu actions
-    void onSearchFindNext();
-    void onSearchFindPrev();
-    void onSearchReplace();
-    void onSearchGoToLine();
-    
-    // View menu actions
-    void onViewZoomIn();
-    void onViewZoomOut();
-    void onViewFullScreen();
-    void onViewPostIt();
-    
-    // Macro menu actions
-    void onMacroStartRecord();
-    void onMacroStopRecord();
-    void onMacroPlayRecord();
-    
-    // Run menu actions
-    void onRunCommand();
-    
-    // Language menu
-    void onLanguageChanged(int langType);
-    
-    // Settings menu
-    void onPreferences();
-    void onShortcutMapper();
+	std::wstring getPluginListVerStr() const {
+		return _pluginsAdminDlg.getPluginListVerStr();
+	}
 
-signals:
-    // NPPM_ signals for plugin API
-    void nppBufferActivated(BufferID id, int view);
-    void nppFileOpened(const QString& filePath);
-    void nppFileClosed(BufferID id);
-    void nppFileSaved(BufferID id);
-    void nppDarkModeChanged(bool isDark);
-    void nppLanguageChanged(int langType);
-    void nppDocOrderChanged(int newOrder);
-    
-    // Status bar updates
-    void statusBarTextChanged(const QString& text, int part);
-    void statusBarDocTypeChanged(const QString& docType);
-    void statusBarCurPosChanged(int position);
-    void statusBarEolFormatChanged(const QString& format);
-    void statusBarUnicodeTypeChanged(const QString& unicodeType);
-    
-    // File change notification
-    void fileChangedOnDisk(const QString& filePath);
+	void minimizeDialogs();
+	void restoreMinimizeDialogs();
 
-    // Signals for Scintilla view configuration
-    void nppInternalSetCaretWidth(int width);
-    void nppInternalSetCaretBlinkRate(int rate);
-    void nppInternalEdgeMultiSetSize(int size);
-    void nppInternalSetMultiSelection(int flags);
+	void refreshDarkMode(bool resetStyle = false);
 
-protected:
-    // Qt event handlers
-    void closeEvent(QCloseEvent* event) override;
-    void dragEnterEvent(QDragEnterEvent* event) override;
-    void dropEvent(QDropEvent* event) override;
-    void keyPressEvent(QKeyEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
-    bool eventFilter(QObject* watched, QEvent* event) override;
-    
-    // Focus handling
-    void focusInEvent(QFocusEvent* event) override;
+	void refreshInternalPanelIcons();
+
+	void changeReadOnlyUserModeForAllOpenedTabs(const bool ro);
 
 private:
-    Notepad_plus_Window* _pPublicInterface = nullptr;
-    QWidget* _pMainWindow = nullptr;
-    
-    // Dock manager
-    DockingManager _dockingManager;
-    std::vector<int> _internalFuncIDs;
+	Notepad_plus_Window* _pPublicInterface = nullptr;
+    Window* _pMainWindow = nullptr;
+	DockingManager _dockingManager;
+	std::vector<int> _internalFuncIDs;
 
-    // Auto completion
-    AutoCompletion _autoCompleteMain;
-    AutoCompletion _autoCompleteSub;
+	AutoCompletion _autoCompleteMain;
+	AutoCompletion _autoCompleteSub; // each Scintilla has its own autoComplete
 
-    // Smart highlighter
-    SmartHighlighter _smartHighlighter;
-    
-    // Language support
+	SmartHighlighter _smartHighlighter;
     NativeLangSpeaker _nativeLangSpeaker;
-    LocalizationSwitcher _localizationSwitcher;
-
-    // Document tabs
     DocTabView _mainDocTab;
     DocTabView _subDocTab;
     DocTabView* _pDocTab = nullptr;
-    DocTabView* _pNonDocTab = nullptr;
+	DocTabView* _pNonDocTab = nullptr;
 
-    // Scintilla editors
-    // View identifiers (defined in Notepad_plus_msgs.h via PluginInterface.h)
-#define MAIN_VIEW 0
-#define SUB_VIEW 1
-
-    ScintillaEditView _mainEditView;
-    ScintillaEditView _subEditView;
-    ScintillaEditView _invisibleEditView;
-    ScintillaEditView _fileEditView;
+    ScintillaEditView _subEditView = ScintillaEditView(MAIN_EDIT_ZONE);  // only _mainEditView and _subEditView are MAIN_EDIT_ZONE comparing with other Scintilla controls
+    ScintillaEditView _mainEditView = ScintillaEditView(MAIN_EDIT_ZONE); // only _mainEditView and _subEditView are MAIN_EDIT_ZONE comparing with other Scintilla controls
+	ScintillaEditView _invisibleEditView; // for searches
+	ScintillaEditView _fileEditView;      // for FileManager
     ScintillaEditView* _pEditView = nullptr;
-    ScintillaEditView* _pNonEditView = nullptr;
-    int _activeView = 0;
+	ScintillaEditView* _pNonEditView = nullptr;
 
-    // View accessors
-    ScintillaEditView* getCurrentEditView() const { return (_activeView == MAIN_VIEW) ? const_cast<ScintillaEditView*>(&_mainEditView) : const_cast<ScintillaEditView*>(&_subEditView); }
-    ScintillaEditView* getNonCurrentEditView() const { return (_activeView == MAIN_VIEW) ? const_cast<ScintillaEditView*>(&_subEditView) : const_cast<ScintillaEditView*>(&_mainEditView); }
-    ScintillaEditView& getMainEditView() { return _mainEditView; }
-    ScintillaEditView& getSubEditView() { return _subEditView; }
-
-    // Splitters
     SplitterContainer* _pMainSplitter = nullptr;
     SplitterContainer _subSplitter;
 
-    // Context menus
     ContextMenu _tabPopupMenu;
-    ContextMenu _tabPopupDropMenu;
-    ContextMenu _fileSwitcherMultiFilePopupMenu;
+	ContextMenu _tabPopupDropMenu;
+	ContextMenu _fileSwitcherMultiFilePopupMenu;
 
-    // Toolbar
-    QToolBar* _pToolBar = nullptr;
-    
-    // Status bar
-    QStatusBar* _pStatusBar = nullptr;
+	ToolBar	_toolBar;
 
-    // ReBar (toolbar bands)
-    void* _pRebarTop = nullptr;
-    void* _pRebarBottom = nullptr;
+    StatusBar _statusBar;
+	ReBar _rebarTop;
+	ReBar _rebarBottom;
 
-    // Dialogs
-    FindReplaceDlg _findReplaceDlg;
-    FindReplaceDlg _findInFinderDlg;
-    FindReplaceDlg _incrementFindDlg;
+	// Dialog
+	FindReplaceDlg _findReplaceDlg;
+	FindInFinderDlg _findInFinderDlg;
+
+	FindIncrementDlg _incrementFindDlg;
     AboutDlg _aboutDlg;
-    void* _debugInfoDlg = nullptr;
-    void* _cmdLineArgsDlg = nullptr;
-    RunDlg _runDlg;
-    void* _md5FromFilesDlg = nullptr;
-    void* _md5FromTextDlg = nullptr;
-    void* _sha2FromFilesDlg = nullptr;
-    void* _sha2FromTextDlg = nullptr;
-    void* _sha1FromFilesDlg = nullptr;
-    void* _sha1FromTextDlg = nullptr;
-    void* _sha512FromFilesDlg = nullptr;
-    void* _sha512FromTextDlg = nullptr;
+	DebugInfoDlg _debugInfoDlg;
+	CmdLineArgsDlg _cmdLineArgsDlg;
+	RunDlg _runDlg;
+	HashFromFilesDlg _md5FromFilesDlg;
+	HashFromTextDlg _md5FromTextDlg;
+	HashFromFilesDlg _sha2FromFilesDlg;
+	HashFromTextDlg _sha2FromTextDlg;
+	HashFromFilesDlg _sha1FromFilesDlg;
+	HashFromTextDlg _sha1FromTextDlg;
+	HashFromFilesDlg _sha512FromFilesDlg;
+	HashFromTextDlg _sha512FromTextDlg;
     GoToLineDlg _goToLineDlg;
-    ColumnEditorDlg _colEditorDlg;
-    WordStyleDlg _configStyleDlg;
-    PreferenceDlg _preference;
-    void* _findCharsInRangeDlg = nullptr;
-    PluginsAdminDlg _pluginsAdminDlg;
-    DocumentPeeker _documentPeeker;
+	ColumnEditorDlg _colEditorDlg;
+	WordStyleDlg _configStyleDlg;
+	PreferenceDlg _preference;
+	FindCharsInRangeDlg _findCharsInRangeDlg;
+	PluginsAdminDlg _pluginsAdminDlg;
+	DocumentPeeker _documentPeeker;
 
-    // List of open dialogs
-    std::vector<QWidget*> _modelessDlgs;
+	// a handle list of all the Notepad++ dialogs
+	std::vector<HWND> _hModelessDlgs;
 
-    // Recent files
-    LastRecentFileList _lastRecentFileList;
+	LastRecentFileList _lastRecentFileList;
 
-    // Windows menu
-    void* _pWindowsMenu = nullptr;
-    QMenu* _pMainMenu = nullptr;
+	WindowsMenu _windowsMenu;
+	HMENU _mainMenuHandle = NULL;
 
-    bool _sysMenuEntering = false;
-    bool _isAttemptingCloseOnQuit = false;
+	bool _sysMenuEntering = false;
 
-    // FullScreen/PostIt/DistractionFree
-    VisibleGUIConf _beforeSpecialView;
-    void fullScreenToggle();
-    void postItToggle();
-    void distractionFreeToggle();
+	// make sure we don't recursively call doClose when closing the last file with -quitOnEmpty
+	bool _isAttemptingCloseOnQuit = false;
 
-    // Macro recording
-    Macro _macro;
-    bool _recordingMacro = false;
-    bool _playingBackMacro = false;
-    bool _recordingSaved = false;
-    RunMacroDlg _runMacroDlg;
+	// For FullScreen/PostIt/DistractionFree features
+	VisibleGUIConf	_beforeSpecialView;
+	void fullScreenToggle();
+	void postItToggle();
+	void distractionFreeToggle();
 
-    // Shortcut mapper
-    ShortcutMapper* _pShortcutMapper = nullptr;
+	// Keystroke macro recording and playback
+	Macro _macro;
+	bool _recordingMacro = false;
+	bool _playingBackMacro = false;
+	bool _recordingSaved = false;
+	RunMacroDlg _runMacroDlg;
 
-    // Selection tracking
-    bool _linkTriggered = true;
-    bool _isFolding = false;
-    void* _prevSelectedRange = nullptr;
+	// For conflict detection when saving Macros or RunCommands
+	ShortcutMapper* _pShortcutMapper = nullptr;
 
-    // Synchronized scrolling
-    struct SyncInfo {
-        intptr_t _line = 0;
-        intptr_t _column = 0;
-        bool _isSynScrollV = false;
-        bool _isSynScrollH = false;
-        bool doSync() const { return _isSynScrollV || _isSynScrollH; }
-    } _syncInfo;
+	// For hotspot
+	bool _linkTriggered = true;
+	bool _isFolding = false;
 
-    bool _isUDDocked = false;
+	//For Dynamic selection highlight
+	Sci_CharacterRangeFull _prevSelectedRange;
 
-    // System tray
-    void* _pTrayIco = nullptr;
-    intptr_t _zoomOriginalValue = 0;
+	//Synchronized Scrolling
+	struct SyncInfo final
+	{
+		intptr_t _line = 0;
+		intptr_t _column = 0;
+		bool _isSynScrollV = false;
+		bool _isSynScrollH = false;
 
-    // Accelerators
-    Accelerator _accelerator;
-    ScintillaAccelerator _scintaccelerator;
+		bool doSync() const {return (_isSynScrollV || _isSynScrollH); }
+	}
+	_syncInfo;
 
-    // Plugin manager
-    PluginsManager _pluginsManager;
-    void* _pRestoreButton = nullptr;
+	bool _isUDDocked = false;
 
-    bool _isFileOpening = false;
-    bool _isAdministrator = false;
-    bool _isSyncingZoom = false;
-    bool _isNppSessionSavedAtExit = false;
+	trayIconControler* _pTrayIco = nullptr;
+	intptr_t _zoomOriginalValue = 0;
 
-    // Scintilla controls for plugins
-    ScintillaCtrls _scintillaCtrls4Plugins;
+	Accelerator _accelerator;
+	ScintillaAccelerator _scintaccelerator;
 
-    std::vector<std::pair<int, int>> _hideLinesMarks;
-    StyleArray _hotspotStyles;
+	PluginsManager _pluginsManager;
+    ButtonDlg _restoreButton;
 
-    // Panels
-    void* _pAnsiCharPanel = nullptr;
-    void* _pClipboardHistoryPanel = nullptr;
-    void* _pDocumentListPanel = nullptr;
-    void* _pProjectPanel_1 = nullptr;
-    void* _pProjectPanel_2 = nullptr;
-    void* _pProjectPanel_3 = nullptr;
-    void* _pFileBrowser = nullptr;
-    DocumentMap* _pDocMap = nullptr;
-    void* _pFuncList = nullptr;
+	bool _isFileOpening = false;
+	bool _isAdministrator = false;
+	bool _isSyncingZoom = false;
 
-    // File system watcher for monitoring
-    QFileSystemWatcher* _pFileWatcher = nullptr;
+	bool _isNppSessionSavedAtExit = false; // guard flag, it prevents emptying of the Notepad++ session.xml in case of multiple WM_ENDSESSION or WM_CLOSE messages
 
-    // Internal state
-    uint8_t _mainWindowStatus = 0;
-    int _multiSelectFlag = 0;
+	ScintillaCtrls _scintillaCtrls4Plugins;
 
-    // Document management private methods
-    void dockUserDlg();
+	std::vector<std::pair<int, int> > _hideLinesMarks;
+	StyleArray _hotspotStyles;
+
+	AnsiCharPanel* _pAnsiCharPanel = nullptr;
+	ClipboardHistoryPanel* _pClipboardHistoryPanel = nullptr;
+	VerticalFileSwitcher* _pDocumentListPanel = nullptr;
+	ProjectPanel* _pProjectPanel_1 = nullptr;
+	ProjectPanel* _pProjectPanel_2 = nullptr;
+	ProjectPanel* _pProjectPanel_3 = nullptr;
+
+	FileBrowser* _pFileBrowser = nullptr;
+
+	DocumentMap* _pDocMap = nullptr;
+	FunctionListPanel* _pFuncList = nullptr;
+
+	std::vector<HWND> _sysTrayHiddenHwnd;
+
+	BOOL notify(SCNotification *notification);
+	void command(int id);
+
+//Document management
+	UCHAR _mainWindowStatus = 0; //For 2 views and user dialog if docked
+	int _activeView = MAIN_VIEW;
+
+	int _multiSelectFlag = 0; // For skipping current Multi-select comment 
+
+	//User dialog docking
+	void dockUserDlg();
     void undockUserDlg();
-    
-    void showView(int whichOne);
-    bool viewVisible(int whichOne);
-    void hideView(int whichOne);
-    void hideCurrentView();
-    bool bothActive() { return (_mainWindowStatus & static_cast<uint8_t>(WindowStatus::WindowBothActive)) == static_cast<uint8_t>(WindowStatus::WindowBothActive); }
-    bool reloadLang();
-    bool loadStyles();
 
-    int currentView() { return _activeView; }
-    int otherView() { return (_activeView == MAIN_VIEW) ? SUB_VIEW : MAIN_VIEW; }
-    int otherFromView(int whichOne) { return (whichOne == MAIN_VIEW) ? SUB_VIEW : MAIN_VIEW; }
-    bool canHideView(int whichOne);
-    bool isEmpty();
-    int switchEditViewTo(int gid);
-    void docGotoAnotherEditView(FileTransferMode mode);
-    void docOpenInNewInstance(FileTransferMode mode, int x = 0, int y = 0);
+	//View visibility
+	void showView(int whichOne);
+	bool viewVisible(int whichOne);
+	void hideView(int whichOne);
+	void hideCurrentView();
+	bool bothActive() { return (_mainWindowStatus & WindowBothActive) == WindowBothActive; }
+	bool reloadLang();
+	bool loadStyles();
 
-    void loadBufferIntoView(BufferID id, int whichOne, bool dontClose = false);
-    bool removeBufferFromView(BufferID id, int whichOne);
-    bool activateBuffer(BufferID id, int whichOne, bool forceApplyHilite = false);
-    void notifyBufferActivated(BufferID bufid, int view);
-    void performPostReload(int whichOne);
+	int currentView() {
+		return _activeView;
+	}
 
-    // Save dialogs
-    int doSaveOrNot(const wchar_t* fn, bool isMulti = false);
-    int doReloadOrNot(const wchar_t* fn, bool dirty);
-    int doCloseOrNot(const wchar_t* fn);
-    int doDeleteOrNot(const wchar_t* fn);
-    int doSaveAll();
+	int otherView() {
+		return (_activeView == MAIN_VIEW?SUB_VIEW:MAIN_VIEW);
+	}
 
-    // Menu state management
-    void enableMenu(int cmdID, bool doEnable) const;
-    void enableCommand(int cmdID, bool doEnable, int which) const;
-    void checkClipboard();
-    void checkDocState();
-    void checkUndoState();
-    void checkMacroState();
-    void checkSyncState();
-    void syncZoom();
-    void setupColorSampleBitmapsOnMainMenuItems();
-    void dropFiles(const QList<QUrl>& urls);
-    void checkModifiedDocument(bool bCheckOnlyCurrentBuffer);
+	int otherFromView(int whichOne) {
+		return (whichOne == MAIN_VIEW?SUB_VIEW:MAIN_VIEW);
+	}
 
-    void getMainClientRect(QRect& rc) const;
-    void staticCheckMenuAndTB() const;
-    void dynamicCheckMenuAndTB() const;
-    void enableConvertMenuItems(int f) const;
-    void checkUnicodeMenuItems() const;
+	bool canHideView(int whichOne);	//true if view can safely be hidden (no open docs etc)
 
-    // Language operations
-    std::wstring getLangDesc(int langType, bool getName = false);
-    void setLangStatus(int langType);
-    void setDisplayFormat(int f);
-    void setUniModeText();
-    void checkLangsMenu(int id) const;
-    void setLanguage(int langType);
-    int menuID2LangType(int cmdID);
+	bool isEmpty(); // true if we have 1 view with 1 clean, untitled doc
 
-    // Selection and search
-    bool processIncrFindAccel(const QKeyEvent* event);
-    bool processFindAccel(const QKeyEvent* event);
-    bool processTabSwitchAccel(const QKeyEvent* event);
+	int switchEditViewTo(int gid);	//activate other view (set focus etc)
 
-    void checkMenuItem(int itemID, bool willBeChecked);
-    bool isConditionExprLine(intptr_t lineNumber);
-    intptr_t findMachedBracePos(size_t startPos, size_t endPos, char targetSymbol, char matchedSymbol);
-    void maintainIndentation(QChar ch);
+	void docGotoAnotherEditView(FileTransferMode mode);	//TransferMode
+	void docOpenInNewInstance(FileTransferMode mode, int x = 0, int y = 0);
 
-    void addHotSpot(ScintillaEditView* view = nullptr);
-    void removeAllHotSpot();
+	void loadBufferIntoView(BufferID id, int whichOne, bool dontClose = false);		//Doesn't _activate_ the buffer
+	bool removeBufferFromView(BufferID id, int whichOne);	//Activates alternative of possible, or creates clean document if not clean already
 
-    // Bookmark operations
-    void bookmarkAdd(intptr_t lineno = -1);
-    void bookmarkDelete(size_t lineno = static_cast<size_t>(-1));
-    bool bookmarkPresent(intptr_t lineno = -1);
-    void bookmarkToggle(intptr_t lineno = -1);
+	bool activateBuffer(BufferID id, int whichOne, bool forceApplyHilite = false);			//activate buffer in that view if found
+	void notifyBufferActivated(BufferID bufid, int view);
+	void performPostReload(int whichOne);
+//END: Document management
+
+	int doSaveOrNot(const wchar_t *fn, bool isMulti = false);
+	int doReloadOrNot(const wchar_t *fn, bool dirty);
+	int doCloseOrNot(const wchar_t *fn);
+	int doDeleteOrNot(const wchar_t *fn);
+	int doSaveAll();
+
+	void enableMenu(int cmdID, bool doEnable) const;
+	void enableCommand(int cmdID, bool doEnable, int which) const;
+	void checkClipboard();
+	void checkDocState();
+	void checkUndoState();
+	void checkMacroState();
+	void checkSyncState();
+	void syncZoom();
+	void setupColorSampleBitmapsOnMainMenuItems();
+	void dropFiles(HDROP hdrop);
+	void checkModifiedDocument(bool bCheckOnlyCurrentBuffer);
+
+    void getMainClientRect(RECT & rc) const;
+	void staticCheckMenuAndTB() const;
+	void dynamicCheckMenuAndTB() const;
+	void enableConvertMenuItems(EolType f) const;
+	void checkUnicodeMenuItems() const;
+
+	std::wstring getLangDesc(LangType langType, bool getName = false);
+
+	void setLangStatus(LangType langType);
+
+	void setDisplayFormat(EolType f);
+	void setUniModeText();
+	void checkLangsMenu(int id) const ;
+    void setLanguage(LangType langType);
+	LangType menuID2LangType(int cmdID);
+
+	BOOL processIncrFindAccel(MSG *msg) const;
+	BOOL processFindAccel(MSG *msg) const;
+	BOOL processTabSwitchAccel(MSG* msg) const;
+
+	void checkMenuItem(int itemID, bool willBeChecked) const {
+		::CheckMenuItem(_mainMenuHandle, itemID, MF_BYCOMMAND | (willBeChecked?MF_CHECKED:MF_UNCHECKED));
+	}
+
+	bool isConditionExprLine(intptr_t lineNumber);
+	intptr_t findMachedBracePos(size_t startPos, size_t endPos, char targetSymbol, char matchedSymbol);
+	void maintainIndentation(wchar_t ch);
+
+	void addHotSpot(ScintillaEditView* view = nullptr);
+	void removeAllHotSpot();
+
+    void bookmarkAdd(intptr_t lineno) const {
+		if (lineno == -1)
+			lineno = _pEditView->getCurrentLineNumber();
+		if (!bookmarkPresent(lineno))
+			_pEditView->execute(SCI_MARKERADD, lineno, MARK_BOOKMARK);
+	}
+
+    void bookmarkDelete(size_t lineno) const {
+		if (lineno == static_cast<size_t>(-1))
+			lineno = _pEditView->getCurrentLineNumber();
+		while (bookmarkPresent(lineno))
+			_pEditView->execute(SCI_MARKERDELETE, lineno, MARK_BOOKMARK);
+	}
+
+    bool bookmarkPresent(intptr_t lineno) const {
+		if (lineno == -1)
+			lineno = _pEditView->getCurrentLineNumber();
+		LRESULT state = _pEditView->execute(SCI_MARKERGET, lineno);
+		return ((state & (1 << MARK_BOOKMARK)) != 0);
+	}
+
+    void bookmarkToggle(intptr_t lineno) const {
+		if (lineno == -1)
+			lineno = _pEditView->getCurrentLineNumber();
+
+		if (bookmarkPresent(lineno))
+			bookmarkDelete(lineno);
+		else
+			bookmarkAdd(lineno);
+	}
+
     void bookmarkNext(bool forwardScan);
-    void bookmarkClearAll();
+	void bookmarkClearAll() const {
+		_pEditView->execute(SCI_MARKERDELETEALL, MARK_BOOKMARK);
+	}
 
-    // Line operations
-    void copyMarkedLines();
-    void cutMarkedLines();
-    void deleteMarkedLines(bool isMarked);
-    void pasteToMarkedLines();
-    void deleteMarkedline(size_t ln);
-    void inverseMarks();
-    void replaceMarkedline(size_t ln, const wchar_t* str);
-    std::wstring getMarkedLine(size_t ln);
+	void copyMarkedLines();
+	void cutMarkedLines();
+	void deleteMarkedLines(bool isMarked);
+	void pasteToMarkedLines();
+	void deleteMarkedline(size_t ln);
+	void inverseMarks();
+	void replaceMarkedline(size_t ln, const wchar_t *str);
+	std::wstring getMarkedLine(size_t ln);
     void findMatchingBracePos(intptr_t& braceAtCaret, intptr_t& braceOpposite);
     bool braceMatch();
 
-    // Document navigation
     void activateNextDoc(bool direction);
-    void activateDoc(size_t pos);
+	void activateDoc(size_t pos);
 
-    // Status bar updates
-    void updateStatusBar();
-    size_t getSelectedCharNumber(int uniMode);
-    size_t getCurrentDocCharCount(int u);
-    size_t getSelectedAreas();
-    size_t getSelectedBytes();
-    bool isFormatUnicode(int uniMode);
-    int getBOMSize(int uniMode);
+	void updateStatusBar();
+	size_t getSelectedCharNumber(UniMode);
+	size_t getCurrentDocCharCount(UniMode u);
+	size_t getSelectedAreas();
+	size_t getSelectedBytes();
+	bool isFormatUnicode(UniMode);
+	int getBOMSize(UniMode);
 
-    // Auto-completion
-    void showAutoComp();
-    void autoCompFromCurrentFile(bool autoInsert = true);
-    void showFunctionComp();
-    void showPathCompletion();
-    void showFunctionNextHint(bool isNext = true);
+	void showAutoComp();
+	void autoCompFromCurrentFile(bool autoInsert = true);
+	void showFunctionComp();
+	void showPathCompletion();
+	void showFunctionNextHint(bool isNext = true);
 
-    // File operations
-    void setCodePageForInvisibleView(const Buffer* pBuffer);
-    bool replaceInOpenedFiles();
-    bool findInOpenedFiles();
-    bool findInCurrentFile(bool isEntireDoc);
+	//void changeStyleCtrlsLang(HWND hDlg, int *idArray, const char **translatedText);
+	void setCodePageForInvisibleView(Buffer const* pBuffer);
+	bool replaceInOpenedFiles();
+	bool findInOpenedFiles();
+	bool findInCurrentFile(bool isEntireDoc);
 
-    void getMatchedFileNames(const wchar_t* dir, size_t level, 
-                             const std::vector<std::wstring>& patterns,
-                             std::vector<std::wstring>& fileNames,
-                             bool isRecursive, bool isInHiddenDir);
-    void doSynScroll(QWidget* hW);
-    void setWorkingDir(const wchar_t* dir);
+	void getMatchedFileNames(const wchar_t *dir, size_t level, const std::vector<std::wstring> & patterns, std::vector<std::wstring> & fileNames, bool isRecursive, bool isInHiddenDir);
+	void doSynScroll(HWND hW);
+	void setWorkingDir(const wchar_t *dir);
 
-    // UI helpers
-    bool getIntegralDockingData(DockedWidgetData& dockData, int& iCont, bool& isVisible);
-    int getLangFromMenuName(const wchar_t* langName);
-    std::wstring getLangFromMenu(const Buffer* buf);
+	bool getIntegralDockingData(DockedWidgetData & dockData, int & iCont, bool & isVisible);
+	int getLangFromMenuName(const wchar_t * langName);
+	std::wstring getLangFromMenu(const Buffer * buf);
 
-    std::wstring exts2Filters(const std::wstring& exts, int maxExtsLen = -1);
-    int setFileOpenSaveDlgFilters(CustomFileDialog& fDlg, bool showAllExt, int langType = -1);
-    Style* getStyleFromName(const wchar_t* styleName);
-    bool dumpFiles(const wchar_t* outdir, const wchar_t* fileprefix = L"");
-    void drawTabbarColoursFromStylerArray();
-    void drawAutocompleteColoursFromTheme(COLORREF fgColor, COLORREF bgColor);
-    void drawDocumentMapColoursFromStylerArray();
+    std::wstring exts2Filters(const std::wstring& exts, int maxExtsLen = -1) const; // maxExtsLen default value -1 makes no limit of whole exts length
+	int setFileOpenSaveDlgFilters(CustomFileDialog & fDlg, bool showAllExt, int langType = -1); // showAllExt should be true if it's used for open file dialog - all set exts should be used for filtering files
+	Style * getStyleFromName(const wchar_t *styleName);
+	bool dumpFiles(const wchar_t * outdir, const wchar_t * fileprefix = L"");	//helper func
+	void drawTabbarColoursFromStylerArray();
+	void drawAutocompleteColoursFromTheme(COLORREF fgColor, COLORREF bgColor);
+	void drawDocumentMapColoursFromStylerArray();
 
-    std::vector<std::wstring> loadCommandlineParams(const wchar_t* commandLine, 
-                                                     const void* pCmdParams);
-    bool noOpenedDoc();
-    bool goToPreviousIndicator(int indicID2Search, bool isWrap = true) const;
-    bool goToNextIndicator(int indicID2Search, bool isWrap = true) const;
-    int wordCount();
+	std::vector<std::wstring> loadCommandlineParams(const wchar_t * commandLine, const CmdLineParams * pCmdParams) {
+		const CmdLineParamsDTO dto = CmdLineParamsDTO::FromCmdLineParams(*pCmdParams);
+		return loadCommandlineParams(commandLine, &dto);
+	}
+	std::vector<std::wstring> loadCommandlineParams(const wchar_t * commandLine, const CmdLineParamsDTO * pCmdParams);
+	bool noOpenedDoc() const;
+	bool goToPreviousIndicator(int indicID2Search, bool isWrap = true) const;
+	bool goToNextIndicator(int indicID2Search, bool isWrap = true) const;
+	int wordCount();
 
-    // Whitespace operations
-    void wsTabConvert(SpaceTab whichWay);
-    void doTrim(TrimOp whichPart);
-    void eol2ws();
-    void removeEmptyLine(bool isBlankContained);
-    void removeDuplicateLines();
+	void wsTabConvert(spaceTab whichWay);
+	void doTrim(trimOp whichPart);
+	void eol2ws();
+	void removeEmptyLine(bool isBlankContained);
+	void removeDuplicateLines();
+	void launchAnsiCharPanel();
+	void launchClipboardHistoryPanel();
+	void launchDocumentListPanel(bool changeFromBtnCmd = false);
+	void changeDocumentListIconSet(bool changeFromBtnCmd);
+	void checkProjectMenuItem();
+	void launchProjectPanel(int cmdID, ProjectPanel ** pProjPanel, int panelID);
+	void launchDocMap();
+	void launchFunctionList();
+	void launchFileBrowser(const std::vector<std::wstring> & folders, const std::wstring& selectedItemPath, bool fromScratch = false);
+	void showAllQuotes() const;
+	static DWORD WINAPI threadTextPlayer(void *text2display);
+	static DWORD WINAPI threadTextTroller(void *params);
+	static int getRandomAction(int ranNum);
+	static bool deleteBack(ScintillaEditView *pCurrentView, BufferID targetBufID);
+	static bool deleteForward(ScintillaEditView *pCurrentView, BufferID targetBufID);
+	static bool selectBack(ScintillaEditView *pCurrentView, BufferID targetBufID);
 
-    // Panel launchers
-    void launchAnsiCharPanel();
-    void launchClipboardHistoryPanel();
-    void launchDocumentListPanel(bool changeFromBtnCmd = false);
-    void changeDocumentListIconSet(bool changeFromBtnCmd);
-    void checkProjectMenuItem();
-    void launchProjectPanel(int cmdID, void** ppProjPanel, int panelID);
-    void launchDocMap();
-    void launchFunctionList();
-    void launchFileBrowser(const std::vector<std::wstring>& folders, 
-                          const std::wstring& selectedItemPath, 
-                          bool fromScratch = false);
-    void showAllQuotes();
+	static int getRandomNumber(int rangeMax = -1) {
+		int randomNumber = rand();
+		if (rangeMax == -1)
+			return randomNumber;
+		return (rand() % rangeMax);
+	}
 
-    // Background threads
-    static DWORD WINAPI threadTextPlayer(void* text2display);
-    static DWORD WINAPI threadTextTroller(void* params);
-    static int getRandomAction(int ranNum);
-    static bool deleteBack(ScintillaEditView* pCurrentView, BufferID targetBufID);
-    static bool deleteForward(ScintillaEditView* pCurrentView, BufferID targetBufID);
-    static bool selectBack(ScintillaEditView* pCurrentView, BufferID targetBufID);
-    static int getRandomNumber(int rangeMax = -1);
+	static DWORD WINAPI backupDocument(void *params);
 
-    // Backup thread
-    // File monitoring is handled via QFileSystemWatcher (see _pFileWatcher member)
-    // The old Win32 CreateThread/monitorFileOnChange approach is deprecated
-    struct MonitorInfo {
-        MonitorInfo(Buffer* buf, QWidget* nppHandle);
-        Buffer* _buffer = nullptr;
-        QWidget* _nppHandle = nullptr;
-    };
+	static DWORD WINAPI monitorFileOnChange(void * params);
+	struct MonitorInfo final {
+		MonitorInfo(Buffer *buf, HWND nppHandle) :
+			_buffer(buf), _nppHandle(nppHandle) {}
+		Buffer *_buffer = nullptr;
+		HWND _nppHandle = nullptr;
+	};
 
-    void monitoringStartOrStopAndUpdateUI(Buffer* pBuf, bool isStarting);
-    void createMonitoringThread(Buffer* pBuf);
-    void updateCommandShortcuts();
+	void monitoringStartOrStopAndUpdateUI(Buffer* pBuf, bool isStarting);
+	void createMonitoringThread(Buffer* pBuf);
+	void updateCommandShortcuts();
 
-    // Icon generation
-    QPixmap generateSolidColourMenuItemIcon(COLORREF colour);
+	HBITMAP generateSolidColourMenuItemIcon(COLORREF colour);
 
-    // History operations
-    void clearChangesHistory(int iView);
-    void changedHistoryGoTo(int idGoTo);
+	void clearChangesHistory(int iView);
+	void changedHistoryGoTo(int idGoTo);
 
-    // Menu creation
-    QMenu* createMenuFromMenu(QMenu* hSourceMenu, const std::vector<int>& commandIds);
-    bool notifyTBShowMenu(void* lpnmtb, const char* menuPosId);
-    bool notifyTBShowMenu(void* lpnmtb, const char* menuPosId, 
-                          const std::vector<int>& cmdIDs);
+	HMENU createMenuFromMenu(HMENU hSourceMenu, const std::vector<int>& commandIds);
+	BOOL notifyTBShowMenu(LPNMTOOLBARW lpnmtb, const char* menuPosId);
+	BOOL notifyTBShowMenu(LPNMTOOLBARW lpnmtb, const char* menuPosId, const std::vector<int>& cmdIDs);
 
-    int getIcoID(void* panel);
-    void loadPanelIcon(void* hInst, void* panel, void* phIcon);
-    void refreshPanelIcon(void* hInst, void* panel);
-
-    // Scintilla notification handler
-    bool notify(void* notification);
-    
-    // Command handler (from menu/toolbar)
-    void command(int id);
-    
-    // Menu bar and toolbar setup
-    void setupMenuBar();
-    void setupToolBar();
-    void setupStatusBar();
-    
-    // Restore saved session
-    void loadBufferIntoView(BufferID id, int whichOne);
+	int getIcoID(DockingDlgInterface* panel);
+	void loadPanelIcon(HINSTANCE hInst, DockingDlgInterface* panel, HICON* phIcon);
+	void refreshPanelIcon(HINSTANCE hInst, DockingDlgInterface* panel);
 };
-
-
-// Stub definitions for remaining incomplete types to allow compilation
-#ifndef STUB_CLASSES_DEFINED
-#define STUB_CLASSES_DEFINED
-class PluginsAdminDlg : public QDialog {
-    Q_OBJECT
-public:
-    PluginsAdminDlg(QWidget* p = nullptr) : QDialog(p) {}
-};
-#endif  // STUB_CLASSES_DEFINED
-

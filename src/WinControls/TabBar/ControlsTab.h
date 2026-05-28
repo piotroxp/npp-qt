@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "TabBar.h"
-#include "Window.h"
+#include "WinControls/Window.h"
 
 struct DlgInfo
 {

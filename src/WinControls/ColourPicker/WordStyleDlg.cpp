@@ -29,18 +29,18 @@
 #include <vector>
 
 #include "ColourPicker.h"
-#include "Common.h"
-#include "Notepad_plus_msgs.h"
-#include "NppConstants.h"
+#include "MISC/Common/Common.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
+#include "MISC/Common/NppConstants.h"
 #include "../NppDarkMode.h"
 #include "../Parameters.h"
-#include "StaticDialog.h"
-#include "TabBar.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
+#include "WinControls/TabBar/TabBar.h"
 #include "WordStyleDlgRes.h"
-#include "documentMap.h"
+#include "WinControls/DocumentMap/documentMap.h"
 #include "dpiManagerV2.h"
 #include "localization.h"
-#include "preference_rc.h"
+#include "WinControls/Preference/preference_rc.h"
 #include "resource.h"
 
 // The following parameters are for apply() method which will re-initialize the followings GUI with modified styler:

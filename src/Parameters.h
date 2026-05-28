@@ -34,6 +34,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <unordered_set>
+#include <unordered_map>
 
 #include "scintilla/include/ILexer.h"
 #include <Lexilla.h>
@@ -42,8 +44,7 @@
 
 #include "WinControls/ContextMenu/ContextMenu.h"
 #include "WinControls/DockingWnd/DockingCont.h"
-#include "Notepad_plus_msgs.h"
-#include "NppConstants.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "../NppDarkMode.h"
 #include "NppXml.h"
 #include "WinControls/ToolBar/ToolBar.h"

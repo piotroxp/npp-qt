@@ -17,6 +17,7 @@
 
 
 #include "VerticalFileSwitcher.h"
+#include "MISC/Common/WindowsCompat.h"
 #include "menuCmdID.h"
 #include "../Parameters.h"
 #include "resource.h"
@@ -24,7 +25,7 @@
 
 #include "MISC/Common/WindowsStubs.h"
 
-#include "NppConstants.h"
+#include "MISC/Common/NppConstants.h"
 
 using namespace std;
 

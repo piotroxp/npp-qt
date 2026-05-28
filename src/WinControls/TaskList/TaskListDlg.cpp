@@ -17,7 +17,8 @@
 
 #include "TaskListDlg.h"
 
-#include "Notepad_plus_msgs.h"
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "../Parameters.h"
 #include "TaskListDlg_rc.h"
 

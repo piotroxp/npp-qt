@@ -17,9 +17,10 @@
 
 #include "documentMap.h"
 
+#include "MISC/Common/WindowsCompat.h"
 #include "MISC/Common/WindowsStubs.h"
 
-#include "NppConstants.h"
+#include "MISC/Common/NppConstants.h"
 #include "ScintillaComponent/ScintillaEditView.h"
 
 
