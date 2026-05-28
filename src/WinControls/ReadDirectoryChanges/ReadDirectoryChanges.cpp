@@ -1,135 +1,105 @@
-// This file is part of Notepad++ project
-// Copyright (C)2021 Don HO <don.h@free.fr>
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// at your option any later version.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
+//	The MIT License
 //
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//	Copyright (c) 2010 James E Beveridge
+//
+//	Permission is hereby granted, free of charge, to any person obtaining a copy
+//	of this software and associated documentation files (the "Software"), to deal
+//	in the Software without restriction, including without limitation the rights
+//	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//	copies of the Software, and to permit persons to whom the Software is
+//	furnished to do so, subject to the following conditions:
+//
+//	The above copyright notice and this permission notice shall be included in
+//	all copies or substantial portions of the Software.
+//
+//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+//	THE SOFTWARE.
 
+
+//	This sample code is for my blog entry titled, "Understanding ReadDirectoryChangesW"
+//	http://qualapps.blogspot.com/2010/05/understanding-readdirectorychangesw.html
+//	See ReadMe.txt for overview information.
+
+#include <process.h>
 #include "ReadDirectoryChanges.h"
+#include "ReadDirectoryChangesPrivate.h"
 
-#include <QFileInfo>
-#include <QDateTime>
+using namespace ReadDirectoryChangesPrivate;
 
-CReadDirectoryChanges::CReadDirectoryChanges(QObject* parent)
-    : QObject(parent)
-    , _watcher(nullptr)
-    , _notifyFilter(0)
-    , _watchSubtree(false)
+///////////////////////////////////////////////////////////////////////////
+// CReadDirectoryChanges
+
+CReadDirectoryChanges::CReadDirectoryChanges(): m_Notifications()
 {
+	m_pServer	= new CReadChangesServer(this);
 }
 
 CReadDirectoryChanges::~CReadDirectoryChanges()
 {
-    Terminate();
+	Terminate();
+	delete m_pServer;
 }
 
 void CReadDirectoryChanges::Init()
 {
-    if (!_watcher) {
-        _watcher = new QFileSystemWatcher(this);
-        connect(_watcher, &QFileSystemWatcher::directoryChanged,
-                this, &CReadDirectoryChanges::onDirectoryChanged);
-    }
+	//
+	// Kick off the worker thread, which will be
+	// managed by CReadChangesServer.
+	//
+	m_hThread = (HANDLE)_beginthreadex(NULL,
+		0,
+		CReadChangesServer::ThreadStartProc,
+		m_pServer,
+		0,
+		&m_dwThreadId
+		);
 }
 
 void CReadDirectoryChanges::Terminate()
 {
-    if (_watcher) {
-        _watcher->deleteLater();
-        _watcher = nullptr;
-    }
-    _watchedDirectories.clear();
-    _notifications.clear();
+	if (m_hThread)
+	{
+		::QueueUserAPC(CReadChangesServer::TerminateProc, m_hThread, (ULONG_PTR)m_pServer);
+		::WaitForSingleObjectEx(m_hThread, 10000, true);
+		::CloseHandle(m_hThread);
+
+		m_hThread = NULL;
+		m_dwThreadId = 0;
+	}
 }
 
-void CReadDirectoryChanges::AddDirectory(const QString& directory, bool watchSubtree, unsigned int notifyFilter, unsigned int bufferSize)
+void CReadDirectoryChanges::AddDirectory( LPCTSTR szDirectory, BOOL bWatchSubtree, DWORD dwNotifyFilter, DWORD dwBufferSize )
 {
-    Q_UNUSED(bufferSize);
-    
-    if (!_watcher) {
-        Init();
-    }
-    
-    _watchedDirectories.insert(directory);
-    _watchSubtree = watchSubtree;
-    _notifyFilter = notifyFilter;
-    
-    _watcher->addPath(directory);
+	if (!m_hThread)
+		Init();
+
+	if (!m_hThread)
+		return;
+
+	CReadChangesRequest* pRequest = new CReadChangesRequest(m_pServer, szDirectory, bWatchSubtree, dwNotifyFilter, dwBufferSize);
+	QueueUserAPC(CReadChangesServer::AddDirectoryProc, m_hThread, (ULONG_PTR)pRequest);
 }
 
-bool CReadDirectoryChanges::Pop(unsigned int& dwAction, QString& wstrFilename)
+void CReadDirectoryChanges::Push(DWORD dwAction, std::wstring& wstrFilename)
 {
-    QMutexLocker locker(&_mutex);
-    
-    if (_notifications.isEmpty()) {
-        return false;
-    }
-    
-    auto item = _notifications.dequeue();
-    dwAction = item.first;
-    wstrFilename = item.second;
-    
-    return true;
+	TDirectoryChangeNotification dirChangeNotif = TDirectoryChangeNotification(dwAction, wstrFilename);
+	m_Notifications.push(dirChangeNotif);
 }
 
-void CReadDirectoryChanges::onDirectoryChanged(const QString& path)
+bool  CReadDirectoryChanges::Pop(DWORD& dwAction, std::wstring& wstrFilename)
 {
-    processChanges(path);
-}
+	TDirectoryChangeNotification pair;
+	if (!m_Notifications.pop(pair))
+		return false;
 
-void CReadDirectoryChanges::processChanges(const QString& path)
-{
-    QDir dir(path);
-    
-    // Check what changed based on notify filter
-    if (_notifyFilter & FILE_NOTIFY_CHANGE_ATTRIBUTES ||
-        _notifyFilter & FILE_NOTIFY_CHANGE_SIZE ||
-        _notifyFilter & FILE_NOTIFY_CHANGE_LAST_WRITE) {
-        
-        // Scan directory for changes
-        QFileInfoList entries = dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
-        
-        for (const QFileInfo& info : entries) {
-            QString fullPath = info.absoluteFilePath();
-            unsigned int action = FILE_ACTION_MODIFIED;
-            
-            if (!info.exists()) {
-                action = FILE_ACTION_REMOVED;
-            } else {
-                // Check if it's a new file/directory
-                if (!_watchedDirectories.contains(fullPath)) {
-                    action = FILE_ACTION_ADDED;
-                }
-            }
-            
-            {
-                QMutexLocker locker(&_mutex);
-                _notifications.enqueue(qMakePair(action, info.fileName()));
-            }
-            
-            emit directoryChanged(fullPath, action);
-        }
-    }
-    
-    // Handle new files specifically
-    if (_notifyFilter & FILE_NOTIFY_CHANGE_FILENAME) {
-        QFileInfoList entries = dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
-        
-        for (const QFileInfo& info : entries) {
-            {
-                QMutexLocker locker(&_mutex);
-                _notifications.enqueue(qMakePair(FILE_ACTION_ADDED, info.fileName()));
-            }
-            emit directoryChanged(info.absoluteFilePath(), FILE_ACTION_ADDED);
-        }
-    }
+	dwAction = pair.first;
+	wstrFilename = pair.second;
+
+	return true;
 }

@@ -14,52 +14,51 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #pragma once
 
-#include <QTableWidget>
-#include <QListWidget>
-#include <QString>
-#include <QVector>
-#include <QRect>
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
+#include "Window.h"
 
-#include "../Window.h"
+#ifndef WM_MOUSEWHEEL
+#define WM_MOUSEWHEEL 0x020A
+#endif //WM_MOUSEWHEEL
 
-// TaskList - Task list panel
-// Replaces MFC ListView-based task list with Qt QTableWidget
 class TaskList : public Window
 {
-    Q_OBJECT
-
 public:
-    TaskList();
-    ~TaskList() override;
+	TaskList() : Window() {
+		_rc.left = 0;
+		_rc.top = 0;
+		_rc.right = 150;
+		_rc.bottom = 0;
+	}
 
-    void init(QWidget* parent, int nbItem, int index2set);
-    void destroy() override;
+	~TaskList() override = default;
+	using Window::init;
+	void init(HINSTANCE hInst, HWND parent, HIMAGELIST hImaLst, int nbItem, int index2set);
+	void destroy() override;
+	void setFont(int fontSize, const wchar_t* fontName = nullptr);
+	void destroyFont();
+	RECT adjustSize();
+	int getCurrentIndex() const {return _currentIndex;}
+	int updateCurrentIndex();
 
-    void setFont(int fontSize, const QString& fontName = QString());
-    void destroyFont();
-    QRect adjustSize();
+	HIMAGELIST getImgLst() const {
+		return ListView_GetImageList(_hSelf, LVSIL_SMALL);
+	}
 
-    int getCurrentIndex() const { return _currentIndex; }
-    int updateCurrentIndex();
-
-signals:
-    void taskSelected(int index);
-    void taskActivated(int index);
+	HFONT GetFontSelected() const { return _hFontSelected; }
 
 protected:
-    void keyPressEvent(QKeyEvent* event) override;
-    void mousePressEvent(QMouseEvent* event) override;
+	HFONT _hFont = nullptr;
+	HFONT _hFontSelected = nullptr;
+	int _nbItem = 0;
+	int _currentIndex = 0;
+	RECT _rc = {};
 
 private:
-    void moveSelection(int direction);
-
-    QListWidget* _pListWidget = nullptr;
-    int _nbItem = 0;
-    int _currentIndex = 0;
-    QRect _rc;
-    
-    QFont _font;
-    QFont _fontSelected;
+	void moveSelection(int direction);
+	static LRESULT CALLBACK TaskListSelectProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 };

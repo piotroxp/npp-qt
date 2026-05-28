@@ -28,12 +28,12 @@
 
 #include "scintilla/include/Scintilla.h"
 
-#include "Common.h"
+#include "../MISC/Common/Common.h"
 #include "NppConstants.h"
-#include "NppDarkMode.h"
+#include "../NppDarkMode.h"
 #include "../Parameters.h"
-#include "ScintillaEditView.h"
-#include "Window.h"
+#include "ScintillaComponent/ScintillaEditView.h"
+#include "WinControls/Window.h"
 #include "columnEditor_rc.h"
 #include "resource.h"
 

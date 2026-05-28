@@ -14,63 +14,41 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #pragma once
 
-#include <QWidget>
-#include <QPushButton>
-#include <QColorDialog>
-#include <QRgb>
-#include <QColor>
+#include "Window.h"
 
-// Colour picker control - color button
+class ColourPopup;
+
 #define CPN_COLOURPICKED (BN_CLICKED)
 
-// ColourPicker - Button that shows current color and opens color picker
-class ColourPicker : public QPushButton
+class ColourPicker : public Window
 {
-    Q_OBJECT
-    Q_PROPERTY(QRgb colour READ colour WRITE setColour)
-    Q_PROPERTY(bool enabled READ isPickerEnabled WRITE setPickerEnabled)
-
 public:
-    explicit ColourPicker(QWidget* parent = nullptr);
-    ~ColourPicker() override;
+	ColourPicker() = default;
+	~ColourPicker() override = default;
+	void init(HINSTANCE hInst, HWND parent) override;
+	void destroy() override;
+	void setColour(COLORREF c) {
+		_currentColour = c;
+	}
 
-    void init(QWidget* parent);
-    void destroy();
-
-    QRgb colour() const { return _currentColour; }
-    void setColour(QRgb c) {
-        _currentColour = c;
-        updateColorDisplay();
-    }
-
-    bool isPickerEnabled() const { return _isEnabled; }
-    void setPickerEnabled(bool enabled) {
-        _isEnabled = enabled;
-        setDisabled(!enabled);
-        update();
-    }
-    
-    void disableRightClick() { _disableRightClick = true; }
-
-signals:
-    void colorChanged(QRgb color);
-    void colorPicked(QRgb color);
-
-protected:
-    void mouseDoubleClickEvent(QMouseEvent* event) override;
-    void mousePressEvent(QMouseEvent* event) override;
-    void paintEvent(QPaintEvent* event) override;
+	COLORREF getColour() const { return _currentColour; }
+	bool isEnabled() const { return _isEnabled; }
+	void setEnabled(bool enabled) { _isEnabled = enabled; }
+	void disableRightClick() { _disableRightClick = true; }
 
 private:
-    void updateColorDisplay();
-    void showColorPopup();
-    void destroyColorPopup();
+	void destroyColorPopup();
 
-    QRgb _currentColour = qRgb(0xFF, 0x00, 0x00);
-    bool _isEnabled = true;
-    bool _disableRightClick = false;
-    
-    QColorDialog* _pColorDialog = nullptr;
+	ColourPopup* _pColourPopup = nullptr;
+	COLORREF _currentColour = RGB(0xFF, 0x00, 0x00);
+	bool _isEnabled = true;
+	bool _disableRightClick = false;
+
+	void drawForeground(HDC hDC) const;
+	void drawBackground(HDC hDC) const;
+
+	static LRESULT CALLBACK staticProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 };

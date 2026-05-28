@@ -14,36 +14,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #pragma once
 
-#include <QDialog>
-#include <QSizeGrip>
+#include "WindowsDlgRc.h"
+#include "WinMgr.h"
+#include "StaticDialog.h"
 
-#include "../StaticDialog/StaticDialog.h"
-
-// SizeableDlg - Sizeable dialog base with resize grip
-class SizeableDlg : public StaticDialog
-{
-    Q_OBJECT
-
+class SizeableDlg : public StaticDialog {
+	typedef StaticDialog MyBaseClass;
 public:
-    SizeableDlg();
-    ~SizeableDlg() override = default;
-
-    void setInfo(int idd, const QString& info) {
-        _dlgID = idd;
-        _info = info;
-    }
-
-    bool isLargeMode() const { return _isLargeMode; }
+	explicit SizeableDlg(WINRECT* pWinMap);
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
+	CWinMgr _winMgr;	  // window manager
 
-private:
-    int _dlgID = 0;
-    QString _info;
-    bool _isLargeMode = false;
-    
-    QSizeGrip* _pSizeGrip = nullptr;
+	virtual intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam);
+	virtual BOOL onInitDialog();
+	virtual void onSize(UINT nType, int cx, int cy);
+	virtual void onGetMinMaxInfo(MINMAXINFO* lpMMI);
+	virtual LRESULT onWinMgr(WPARAM wp, LPARAM lp);
 };
+

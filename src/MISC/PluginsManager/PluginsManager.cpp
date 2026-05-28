@@ -19,7 +19,7 @@
 
 #include "MISC/Common/WindowsCompat.h"
 
-#include <dbghelp.h>
+#include "MISC/Common/WindowsStubs.h"
 #include "MISC/Common/WindowsStubs.h"
 
 #include <cinttypes>
@@ -40,7 +40,7 @@
 #include "Notepad_plus_msgs.h"
 #include "NppConstants.h"
 #include "NppXml.h"
-#include "Parameters.h"
+#include "../Parameters.h"
 #include "PluginInterface.h"
 #include "menuCmdID.h"
 #include "pluginsAdmin.h"

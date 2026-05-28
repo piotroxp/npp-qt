@@ -14,80 +14,66 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "SizeableDlg.h"
 
-// Win32 macro stubs for Linux Qt6 port
-#ifndef WM_INITDIALOG
-#define WM_INITDIALOG 0x0110
-#endif
-#ifndef WM_SIZE
-#define WM_SIZE 0x0005
-#endif
-#ifndef WM_COMMAND
-#define WM_COMMAND 0x0111
-#endif
-#ifndef WM_NOTIFY
-#define WM_NOTIFY 0x004E
-#endif
-#ifndef WM_DESTROY
-#define WM_DESTROY 0x0002
-#endif
-#ifndef TRUE
-#define TRUE 1
-#endif
-#ifndef FALSE
-#define FALSE 0
-#endif
-#ifndef IDOK
-#define IDOK 1
-#endif
-#ifndef IDCANCEL
-#define IDCANCEL 2
-#endif
-#ifndef LOWORD
-#define LOWORD(l) ((uint16_t)((uintptr_t)(l) & 0xFFFF))
-#endif
-#ifndef HIWORD
-#define HIWORD(l) ((uint16_t)(((uintptr_t)(l) >> 16) & 0xFFFF))
-#endif
+#include "WindowsDlg.h"
+#include "WindowsDlgRc.h"
 
-#include <QVBoxLayout>
-
-SizeableDlg::SizeableDlg()
-    : StaticDialog()
+SizeableDlg::SizeableDlg(WINRECT* pWinMap)
+	: MyBaseClass(), _winMgr(pWinMap)
 {
-    // Allow resizing
-    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setMinimumSize(200, 150);
 }
 
-intptr_t SizeableDlg::run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam)
+BOOL SizeableDlg::onInitDialog()
 {
-    switch (message) {
-        case WM_INITDIALOG: {
-            // Add size grip in bottom-right corner
-            _pSizeGrip = new QSizeGrip(this);
-            
-            // Get minimum size for initial sizing
-            resize(400, 300);
-            return TRUE;
-        }
-        
-        case WM_COMMAND:
-            switch (wParam) {
-                case IDOK:
-                    accept();
-                    return TRUE;
-                    
-                case IDCANCEL:
-                    reject();
-                    return TRUE;
-            }
-            break;
-        
-        default:
-            break;
-    }
-    
-    return StaticDialog::run_dlgProc(message, wParam, lParam);
+	_winMgr.InitToFitSizeFromCurrent(_hSelf);
+	_winMgr.CalcLayout(_hSelf);
+	_winMgr.SetWindowPositions(_hSelf);
+	//getClientRect(_rc);
+	return TRUE;
+}
+
+void SizeableDlg::onSize(UINT, int cx, int cy)
+{
+	_winMgr.CalcLayout(cx,cy,_hSelf);
+	_winMgr.SetWindowPositions(_hSelf);
+}
+
+void SizeableDlg::onGetMinMaxInfo(MINMAXINFO* lpMMI)
+{
+	_winMgr.GetMinMaxInfo(_hSelf, lpMMI);
+}
+
+LRESULT SizeableDlg::onWinMgr(WPARAM, LPARAM)
+{
+	return 0;
+}
+
+intptr_t CALLBACK SizeableDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+		case WM_INITDIALOG:
+		{
+			return onInitDialog();
+		}
+		case WM_GETMINMAXINFO:
+		{
+			onGetMinMaxInfo((MINMAXINFO*)lParam);
+			return TRUE;
+		}
+		case WM_SIZE:
+		{
+			onSize(static_cast<UINT>(wParam), LOWORD(lParam), HIWORD(lParam));
+			return TRUE;
+		}
+
+		default:
+		{
+			if (message == WM_WINMGR)
+				return (BOOL)onWinMgr(wParam, lParam);
+
+			break;
+		}
+	}
+	return FALSE;
 }

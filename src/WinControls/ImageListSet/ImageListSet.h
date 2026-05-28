@@ -14,103 +14,157 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #pragma once
 
-#include <QHash>
-#include <QIcon>
-#include <QPixmap>
-#include <QString>
-#include <QVector>
+#include "MISC/Common/WindowsCompat.h"
 
-// IconList - Image list management
-// Replaces Win32 ImageList with Qt QHash<int, QIcon>
+#include "MISC/Common/WindowsStubs.h"
+
+#include <vector>
+#include <utility>
+
 class IconList
 {
-public:
-    IconList() = default;
-    ~IconList() = default;
+public :
+	IconList() = default;
+	void init(HINSTANCE hInst, int iconSize);
+	void create(int iconSize, HINSTANCE hInst, const int* iconIDArray, int iconIDArraySize);
 
-    void init(int iconSize);
-    void create(int iconSize, const QVector<int>& iconIDArray);
-    
-    void destroy();
-    void removeAll();
+	void destroy() {
+		ImageList_Destroy(_hImglst);
+	}
 
-    QIcon getIcon(int index) const;
-    int getCount() const { return _icons.size(); }
-    
-    void addIcon(int iconID, int cx = 16, int cy = 16, int failIconID = -1);
-    void addIcon(const QIcon& icon);
-    bool changeIcon(size_t index, const QString& iconLocation);
+	void removeAll() {
+		ImageList_RemoveAll(_hImglst);
+	}
 
-private:
-    int _iconSize = 16;
-    QVector<QPixmap> _icons;
-    QHash<int, QPixmap> _iconMap;  // Maps icon ID to pixmap
+	HIMAGELIST getHandle() const { return _hImglst; }
+	void addIcon(int iconID, int cx = 16, int cy = 16, int failIconID = -1, bool isToolbarNormal = false) const;
+	void addIcon(HICON hIcon) const;
+
+	bool changeIcon(size_t index, const wchar_t *iconLocation) const;
+
+private :
+	HIMAGELIST _hImglst = nullptr;
+	HINSTANCE _hInst = nullptr;
+	const int* _pIconIDArray = nullptr;
+	int _iconIDArraySize = 0;
+	int _iconSize = 0;
+
+	bool changeFluentIconColor(HICON* phIcon, const std::vector<std::pair<COLORREF, COLORREF>>& colorMappings, int tolerance = 3) const;
+	bool changeFluentIconColor(HICON* phIcon) const;
 };
 
-// ToolBar button unit
-struct ToolBarButtonUnit {
-    int _cmdID = 0;
-    int _defaultIcon = -1;
-    int _grayIcon = -1;
-    int _defaultIcon2 = -1;
-    int _grayIcon2 = -1;
-    int _defaultDarkModeIcon = -1;
-    int _grayDarkModeIcon = -1;
-    int _defaultDarkModeIcon2 = -1;
-    int _grayDarkModeIcon2 = -1;
-    int _stdIcon = -1;
+struct ToolBarButtonUnit
+{
+	int _cmdID;
+
+	int _defaultIcon;
+	int _grayIcon;
+
+	int _defaultIcon2;
+	int _grayIcon2;
+
+	int _defaultDarkModeIcon;
+	int _grayDarkModeIcon;
+
+	int _defaultDarkModeIcon2;
+	int _grayDarkModeIcon2;
+
+	int _stdIcon;
 };
 
-// Dynamic command icon bitmap
 struct DynamicCmdIcoBmp {
-    int _message = 0;
-    QPixmap _hBmp;
-    QIcon _hIcon;
-    QIcon _hIcon_DM;
+	UINT _message = 0;         // identification of icon in tool bar (menu ID)
+	HBITMAP _hBmp = nullptr;   // bitmap for toolbar
+	HICON _hIcon = nullptr;    // icon for toolbar
+	HICON _hIcon_DM = nullptr; // dark mode icon for toolbar
 };
 
-typedef QVector<ToolBarButtonUnit> ToolBarIconIDs;
+typedef std::vector<ToolBarButtonUnit> ToolBarIconIDs;
 
-enum ToolbarIconList {
-    HLIST_DEFAULT,
-    HLIST_DISABLE,
-    HLIST_DEFAULT2,
-    HLIST_DISABLE2,
-    HLIST_DEFAULT_DM,
-    HLIST_DISABLE_DM,
-    HLIST_DEFAULT_DM2,
-    HLIST_DISABLE_DM2
+enum ToolbarIconList
+{
+	// Light Mode list
+
+	HLIST_DEFAULT,
+	HLIST_DISABLE,
+	HLIST_DEFAULT2,
+	HLIST_DISABLE2,
+
+	// Dark Mode list
+
+	HLIST_DEFAULT_DM,
+	HLIST_DISABLE_DM,
+	HLIST_DEFAULT_DM2,
+	HLIST_DISABLE_DM2
 };
 
-// ToolBarIcons - Toolbar icon management
 class ToolBarIcons
 {
 public:
-    ToolBarIcons() = default;
-    ~ToolBarIcons() { destroy(); }
+	ToolBarIcons() = default;
 
-    void init(const QVector<ToolBarButtonUnit>& buttonUnitArray, const QVector<DynamicCmdIcoBmp>& cmds2add);
-    void create(int iconSize);
-    void destroy();
-    void resizeIcon(int size);
+	void init(const ToolBarButtonUnit* buttonUnitArray, int arraySize, const std::vector<DynamicCmdIcoBmp>& cmds2add);
+	void create(HINSTANCE hInst, int iconSize);
+	void destroy();
 
-    QIcon getDefaultIcon(size_t index) const;
-    QIcon getDisableIcon(size_t index) const;
-    QIcon getDefaultLstDM(size_t index) const;
-    QIcon getDisableLstDM(size_t index) const;
+	HIMAGELIST getDefaultLst() const {
+		return _iconListVector[HLIST_DEFAULT].getHandle();
+	}
 
-    bool replaceIcon(size_t whichList, size_t iconIndex, const QString& iconLocation);
+	HIMAGELIST getDisableLst() const {
+		return _iconListVector[HLIST_DISABLE].getHandle();
+	}
 
-    int getStdIconAt(int i) const;
+	HIMAGELIST getDefaultLstSet2() const {
+		return _iconListVector[HLIST_DEFAULT2].getHandle();
+	}
+
+	HIMAGELIST getDisableLstSet2() const {
+		return _iconListVector[HLIST_DISABLE2].getHandle();
+	}
+
+	HIMAGELIST getDefaultLstDM() const {
+		return _iconListVector[HLIST_DEFAULT_DM].getHandle();
+	}
+
+	HIMAGELIST getDisableLstDM() const {
+		return _iconListVector[HLIST_DISABLE_DM].getHandle();
+	}
+
+	HIMAGELIST getDefaultLstSetDM2() const {
+		return _iconListVector[HLIST_DEFAULT_DM2].getHandle();
+	}
+
+	HIMAGELIST getDisableLstSetDM2() const {
+		return _iconListVector[HLIST_DISABLE_DM2].getHandle();
+	}
+
+	void resizeIcon(int size) {
+		reInit(size);
+	}
+
+	void reInit(int size);
+
+	int getStdIconAt(int i) const {
+		return _tbiis[i]._stdIcon;
+	}
+
+	bool replaceIcon(size_t witchList, size_t iconIndex, const wchar_t *iconLocation) const {
+		if ((witchList != HLIST_DEFAULT) && (witchList != HLIST_DISABLE) && 
+			(witchList != HLIST_DEFAULT2) && (witchList != HLIST_DISABLE2) &&
+			(witchList != HLIST_DEFAULT_DM) && (witchList != HLIST_DISABLE_DM) && 
+			(witchList != HLIST_DEFAULT_DM2) && (witchList != HLIST_DISABLE_DM2))
+			return false;
+
+		return _iconListVector[witchList].changeIcon(iconIndex, iconLocation);
+	}
 
 private:
-    void reInit(int size);
+	ToolBarIconIDs _tbiis;
+	std::vector<DynamicCmdIcoBmp> _moreCmds;
 
-    QVector<ToolBarButtonUnit> _tbiis;
-    QVector<DynamicCmdIcoBmp> _moreCmds;
-    
-    QVector<IconList> _iconListVector;
-    int _iconSize = 16;
+	std::vector<IconList> _iconListVector;
 };

@@ -1,4 +1,4 @@
-#include "Buffer.h"
+#include "ScintillaComponent/Buffer.h"
 
 void FileManager::init(Notepad_plus* pNotepadPlus, ScintillaEditView* pscratchTilla)
 {

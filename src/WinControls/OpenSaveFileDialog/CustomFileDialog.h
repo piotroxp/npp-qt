@@ -1,5 +1,5 @@
 // This file is part of Notepad++ project
-// Copyright (C)2021 Don HO <don.h@free.fr>
+// Copyright (C) 2021 The Notepad++ Contributors.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,83 +14,45 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #pragma once
 
-#include <QDialog>
-#include <QFileDialog>
-#include <QString>
-#include <QCheckBox>
-#include <QSettings>
+#include "Common.h"
 #include <memory>
 
-// CustomFileDialog - Customizable file dialog
-// Replaces COM-based IFileDialog with Qt QFileDialog
-// Filter entry for file dialogs
-struct FilterEntry {
-    QString name;
-    QStringList extensions;
-};
-
+// Customizable file dialog.
+// It allows adding custom controls like checkbox to the dialog.
+// This class loosely follows the interface of the FileDialog class.
+// However, the implementation is different.
 class CustomFileDialog
 {
 public:
-    explicit CustomFileDialog(QWidget* parent);
-    ~CustomFileDialog();
+	explicit CustomFileDialog(HWND hwnd);
+	~CustomFileDialog();
+	void setTitle(const wchar_t* title);
+	void setExtFilter(const wchar_t* text, const wchar_t* ext);
+	void setExtFilter(const wchar_t* text, std::initializer_list<const wchar_t*> exts);
+	void setDefExt(const wchar_t* ext);
+	void setDefFileName(const wchar_t *fn);
+	void setFolder(const wchar_t* folder);
+	void setCheckbox(const wchar_t* text, bool isActive = true);
+	void setExtIndex(int extTypeIndex);
+	void setSaveAsCopy(bool isSavingAsCopy);
+	bool getOpenTheCopyAfterSaveAsCopy();
 
-    void setTitle(const QString& title);
-    void setExtFilter(const QString& text, const QString& ext);
-    void setExtFilter(const QString& text, std::initializer_list<const QString> exts);
-    void setDefExt(const QString& ext);
-    void setDefFileName(const QString& fn);
-    void setFolder(const QString& folder);
-    void setCheckbox(const QString& text, bool isActive = true);
-    void setExtIndex(int extTypeIndex);
-    void setSaveAsCopy(bool isSavingAsCopy);
-    bool getOpenTheCopyAfterSaveAsCopy() const;
+	void enableFileTypeCheckbox(const std::wstring& text, bool value);
+	bool getFileTypeCheckboxValue() const;
 
-    void enableFileTypeCheckbox(const QString& text, bool value);
-    bool getFileTypeCheckboxValue() const;
+	// Empty string is not a valid file name and may signal that the dialog was canceled.
+	std::wstring doSaveDlg();
+	std::wstring pickFolder();
+	std::wstring doOpenSingleFileDlg();
+	std::vector<std::wstring> doOpenMultiFilesDlg();
 
-    // Execute dialogs
-    QString doSaveDlg();
-    QString pickFolder();
-    QString doOpenSingleFileDlg();
-    QList<QString> doOpenMultiFilesDlg();
-
-    bool getCheckboxState() const;
-    bool isReadOnly() const;
+	bool getCheckboxState() const;
+	bool isReadOnly() const;
 
 private:
-    QWidget* _parent = nullptr;
-    QString _title;
-    QString _defExt;
-    QString _defFileName;
-    QString _folder;
-    QString _checkboxText;
-    bool _checkboxState = true;
-    bool _saveAsCopy = false;
-    
-    QVector<FilterEntry> _filters;
-    int _currentFilterIndex = 0;
+	class Impl;
+	std::unique_ptr<Impl> _impl;
 };
-
-// Helper function to convert filter to Qt format
-inline QString convertToQtFilter(const QString& name, const QStringList& exts)
-{
-    QString extStr;
-    for (const QString& ext : exts) {
-        if (!extStr.isEmpty()) extStr += " ";
-        extStr += ext;
-    }
-    return QString("%1 (*.%2)").arg(name).arg(extStr);
-}
-
-// Helper function to convert all filters to Qt format
-inline QString convertAllFilters(const QVector<FilterEntry>& filters)
-{
-    QStringList result;
-    for (const auto& f : filters) {
-        result << convertToQtFilter(f.name, f.extensions);
-    }
-    return result.join(";;");
-}

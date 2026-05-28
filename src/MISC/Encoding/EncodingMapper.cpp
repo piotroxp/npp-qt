@@ -1,4 +1,5 @@
 // MISC/Encoding/EncodingMapper.cpp - Qt6 port of encoding mapping
+#include "MISC/Common/QTextCodecCompat.h"
 #include "EncodingMapper.h"
 #include <QTextCodec>
 #include <QtCore5Compat/QTextCodec>

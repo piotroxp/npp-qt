@@ -14,78 +14,47 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #include "trayIconControler.h"
 
-#include <QWidget>
-
-trayIconControler::trayIconControler(QWidget* hwnd, unsigned int uID, unsigned int uCBMsg, 
-                                      const QIcon& icon, const QString& tip)
-    : QSystemTrayIcon(icon, hwnd)
-    , _uID(uID)
-    , _uCBMsg(uCBMsg)
-    , _isIconShown(false)
-    , _parentWindow(hwnd)
+trayIconControler::trayIconControler(HWND hwnd, UINT uID, UINT uCBMsg, HICON hicon, const wchar_t *tip)
 {
-    setToolTip(tip);
-    
-    // Connect activation signal
-    connect(this, &QSystemTrayIcon::activated, this, &trayIconControler::onActivated);
+  _nid.cbSize = sizeof(_nid);
+  _nid.hWnd = hwnd;
+  _nid.uID = uID;
+  _nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+  _nid.uCallbackMessage = uCBMsg;
+  _nid.hIcon = hicon;
+  wcscpy_s(_nid.szTip, tip);
+  
+  _isIconShown = false;
 }
 
-trayIconControler::~trayIconControler()
+int trayIconControler::doTrayIcon(DWORD op)
 {
-    // Remove icon if still shown
-    if (_isIconShown) {
-        hide();
-    }
-}
+  if (op != ADD && op != REMOVE)
+      return INCORRECT_OPERATION;
 
-int trayIconControler::doTrayIcon(unsigned int op)
-{
-    if (op != ADD && op != REMOVE) {
-        return INCORRECT_OPERATION;
-    }
+  if ((_isIconShown && op == ADD) || (!_isIconShown && op == REMOVE))
+    return OPERATION_INCOHERENT;
 
-    if ((_isIconShown && op == ADD) || (!_isIconShown && op == REMOVE)) {
-        return OPERATION_INCOHERENT;
-    }
+  ::Shell_NotifyIcon(op, &_nid);
+  _isIconShown = !_isIconShown;
 
-    if (op == ADD) {
-        show();
-        _isIconShown = true;
-    } else {
-        hide();
-        _isIconShown = false;
-    }
-
-    return 0;
+  return 0;
 }
 
 int trayIconControler::reAddTrayIcon()
 {
-    if (!_isIconShown) {
+    if (!_isIconShown)
         return -1;
-    }
 
-    // Hide first to ensure no duplication
-    hide();
+    // we only re-add the tray icon when it has been lost and no longer exists,
+    // but we still delete it first to ensure it's not duplicated 
+    // due to an incorrect call or something
+    ::Shell_NotifyIcon(NIM_DELETE, &_nid);
+
+    // reset state and re-add tray icon
     _isIconShown = false;
-    
-    // Re-add the tray icon
     return doTrayIcon(ADD);
-}
-
-void trayIconControler::onActivated(QSystemTrayIcon::ActivationReason reason)
-{
-    switch (reason) {
-        case QSystemTrayIcon::Trigger:
-        case QSystemTrayIcon::MiddleClick:
-            emit trayIconClicked(reason);
-            break;
-        case QSystemTrayIcon::DoubleClick:
-            emit trayIconDoubleClicked();
-            break;
-        default:
-            break;
-    }
 }

@@ -1,83 +1,68 @@
-// RunDlg.h — Qt6 translation of Run dialog
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 #pragma once
 
-#include <QDialog>
-#include <QLineEdit>
-#include <QComboBox>
-#include <QPushButton>
-#include <QLabel>
+#include "Common.h"
+#include "RunDlg_rc.h"
 
-class RunDlg : public QDialog
-{
-    Q_OBJECT
+#define CURRENTWORD_MAXLENGTH 2048
 
-public:
-    explicit RunDlg(QWidget* parent = nullptr);
-    ~RunDlg() override;
+const wchar_t fullCurrentPath[] = L"FULL_CURRENT_PATH";
+const wchar_t currentDirectory[] = L"CURRENT_DIRECTORY";
+const wchar_t onlyFileName[] = L"FILE_NAME";
+const wchar_t fileNamePart[] = L"NAME_PART";
+const wchar_t fileExtPart[] = L"EXT_PART";
+const wchar_t currentWord[] = L"CURRENT_WORD";
+const wchar_t nppDir[] = L"NPP_DIRECTORY";
+const wchar_t nppFullFilePath[] = L"NPP_FULL_FILE_PATH";
+const wchar_t currentLine[] = L"CURRENT_LINE";
+const wchar_t currentColumn[] = L"CURRENT_COLUMN";
+const wchar_t currentLineStr[] = L"CURRENT_LINESTR";
 
-    void doDialog(bool isRTL = false);
+int whichVar(wchar_t *str);
+void expandNppEnvironmentStrs(const wchar_t *strSrc, wchar_t *stringDest, size_t strDestLen, HWND hWnd);
 
-    // Insert variable like $(FULL_CURRENT_PATH)
-    void insertVariable(unsigned char id);
+class Command {
+public :
+	Command() = default;
+	explicit Command(const wchar_t* cmd) : _cmdLine(cmd) {}
+	explicit Command(const std::wstring& cmd) : _cmdLine(cmd) {}
+	HINSTANCE run(HWND hWnd);
+	HINSTANCE run(HWND hWnd, const wchar_t* cwd);
 
-    QString getCommand() const;
-    void addToHistory(const QString& cmd);
-    void removeFromHistory(const QString& cmd);
-
-signals:
-    void commandRun(const QString& cmd);
-
-protected:
-    int run_dlgProc(QEvent* event);
-    bool event(QEvent* event) override;
-
-private slots:
-    void onBrowseClicked();
-    void onVariablesClicked();
-    void onSaveClicked();
-    void onRunClicked();
-    void onCancelClicked();
-
-private:
-    QComboBox* _cmdCombo = nullptr;
-    QLabel* _mainTextLabel = nullptr;
-    QString _currentCommand;
+protected :
+	std::wstring _cmdLine;
+private :
+	void extractArgs(wchar_t *cmd2Exec, size_t cmd2ExecLen, wchar_t *args, size_t argsLen, const wchar_t *cmdEntier);
 };
 
-// Run variable IDs
-enum RunVarID {
-    FULL_CURRENT_PATH = 0,
-    CURRENT_DIRECTORY = 1,
-    FILE_NAME = 2,
-    NAME_PART = 3,
-    EXT_PART = 4,
-    CURRENT_WORD = 5,
-    NPP_DIRECTORY = 6,
-    NPP_FULL_FILE_PATH = 7,
-    CURRENT_LINE = 8,
-    CURRENT_COLUMN = 9,
-    CURRENT_LINESTR = 10,
-    VAR_NOT_RECOGNIZED = -1
-};
-
-// Find which variable a string represents
-int whichVar(const QString& str);
-
-// Expand $(VARIABLE) patterns
-void expandNppEnvironmentStrs(const QString& src, QString& dest, QWidget* editor);
-
-// Command execution
-class Command
+class RunDlg : public Command, public StaticDialog
 {
-public:
-    Command() = default;
-    explicit Command(const QString& cmd);
+public :
+	RunDlg() = default;
 
-    bool run(QWidget* parent, const QString& cwd = QString());
-    QString commandLine() const { return _cmdLine; }
+	void doDialog(bool isRTL = false);
+	void destroy() override {}
 
-private:
-    void extractArgs(QString& cmdExec, QStringList& args, const QString& cmdEntier) const;
+protected :
+	void insertVariable(unsigned char id);
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 
-    QString _cmdLine;
+private :
+	void addTextToCombo(const wchar_t *txt2Add) const;
+	void removeTextFromCombo(const wchar_t *txt2Remove) const;
 };

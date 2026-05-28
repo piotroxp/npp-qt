@@ -1,199 +1,267 @@
-// TabBar.h — Qt6 translation of CTabCtrl → QTabWidget / custom QTabBar
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 #pragma once
 
-#include <QTabWidget>
-#include <QTabBar>
-#include <QMouseEvent>
-#include <QTimer>
-#include <QVector>
-#include <QMap>
-#include <QIcon>
-#include <QPoint>
-#include <QAction>
+#include "MISC/Common/WindowsCompat.h"
 
-// Tab bar notification messages
-#define TCN_TABDROPPED (QEvent::Type(QEvent::User + 100))
-#define TCN_TABDROPPEDOUTSIDE (QEvent::Type(QEvent::User + 101))
-#define TCN_TABDELETE         (QEvent::Type(QEvent::User + 102))
-#define TCN_MOUSEHOVERING     (QEvent::Type(QEvent::User + 103))
-#define TCN_MOUSELEAVING      (QEvent::Type(QEvent::User + 104))
-#define TCN_TABPINNED         (QEvent::Type(QEvent::User + 105))
+#include "MISC/Common/WindowsStubs.h"
 
-struct TabBarNotification
+#include "Window.h"
+#include "dpiManagerV2.h"
+
+//Notification message
+#define TCN_TABDROPPED (TCN_FIRST - 10)
+#define TCN_TABDROPPEDOUTSIDE (TCN_FIRST - 11)
+#define TCN_TABDELETE (TCN_FIRST - 12)
+#define TCN_MOUSEHOVERING (TCN_FIRST - 13)
+#define TCN_MOUSELEAVING (TCN_FIRST - 14)
+#define TCN_MOUSEHOVERSWITCHING (TCN_FIRST - 15)
+#define TCN_TABPINNED (TCN_FIRST - 16)
+
+#define WM_TABSETSTYLE	(WM_APP + 0x024)
+
+inline constexpr int nbCtrlMax = 10;
+
+struct TBHDR
 {
-    int tabIndex = -1;
-    int tabOrigin = 0;
-    QPoint globalPos;
+	NMHDR _hdr{};
+	int _tabOrigin = 0;
 };
 
-// Tab button zone info
-struct TabButtonZone
+
+
+class TabBar : public Window
 {
-    void init(QWidget* parent, int order)
-    {
-        _parent = parent;
-        _order = order;
+public:
+	TabBar() = default;
+	~TabBar() override = default;
+	void destroy() override;
+	virtual void init(HINSTANCE hInst, HWND parent, bool isVertical, bool isMultiLine);
+	void reSizeTo(RECT& rc2Adjust) override;
+	int insertAtEnd(const wchar_t *subTabName);
+	void activateAt(int index) const;
+	void getCurrentTitle(wchar_t *title, int titleLen);
+
+	int getCurrentTabIndex() const {
+		return static_cast<int>(SendMessage(_hSelf, TCM_GETCURSEL, 0, 0));
+	}
+
+	int getItemCount() const {
+		return static_cast<int>(::SendMessage(_hSelf, TCM_GETITEMCOUNT, 0, 0));
+	}
+
+	void deletItemAt(size_t index);
+
+	void deletAllItem() {
+		::SendMessage(_hSelf, TCM_DELETEALLITEMS, 0, 0);
+		_nbItem = 0;
+	}
+
+	void setImageList(HIMAGELIST himl);
+
+    size_t nbItem() const {
+        return _nbItem;
     }
 
-    bool isHit(int x, int y, const QRect& tabRect, bool isVertical) const;
-    QRect getButtonRectFrom(const QRect& tabRect, bool isVertical) const;
-    void setOrder(int newOrder) { _order = newOrder; }
+	void destroyFonts();
 
-    QWidget* _parent = nullptr;
-    int _width = 0;
-    int _height = 0;
-    int _order = -1; // from right to left: 0, 1
-};
+	void setFont();
 
-// Base tab bar
-class TabBar : public QTabBar
-{
-    Q_OBJECT
+	HFONT& getFont(bool isReduced = true) {
+		return isReduced ? _hFont : _hLargeFont;
+	}
 
-public:
-    explicit TabBar(QWidget* parent = nullptr);
-    ~TabBar() override;
+	int getNextOrPrevTabIdx(bool isNext) const;
 
-    // Insert tab at end
-    int insertAtEnd(const QString& tabName);
-
-    // Activate/select tab
-    void activateAt(int index);
-    int getCurrentTabIndex() const { return currentIndex(); }
-
-    // Get/set tab count
-    int getItemCount() const { return count(); }
-    size_t nbItem() const { return static_cast<size_t>(count()); }
-
-    // Delete tab
-    void deleteItemAt(size_t index);
-
-    // Delete all tabs
-    void deleteAllItems();
-
-    // Set image list (icons per tab)
-    void setImageList(const QVector<QIcon>& icons);
-
-    // Set custom close button icons
-    void setCloseBtnImageList(const QVector<QIcon>& normalIcons);
-    void setPinBtnImageList(const QVector<QIcon>& pinIcons);
-
-    // Tab navigation
-    int getNextOrPrevTabIdx(bool isNext) const;
-
-    // DPI
-    void resizeIconsDpi(int dpi);
-    int getCurrentIconSize() const { return _iconSize; }
-
-signals:
-    void tabDropped(int tabIndex);
-    void tabDroppedOutside(int tabIndex);
-    void tabDelete(int tabIndex);
-    void tabPinned(int tabIndex);
-    void tabMouseHovering(int tabIndex);
-    void tabMouseLeaving();
-    void tabReordered(int from, int to);
+	DPIManagerV2& dpiManager() { return _dpiManager; }
 
 protected:
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-    void wheelEvent(QWheelEvent* event) override;
-    void mouseDoubleClickEvent(QMouseEvent* event) override;
-    void leaveEvent(QEvent* event) override;
-    bool eventFilter(QObject* obj, QEvent* event) override;
+	size_t _nbItem = 0;
+	bool _hasImgLst = false;
 
-    void startDrag(int tabIndex);
-    void handleDrag(int tabIndex, const QPoint& globalPos);
-    void endDrag();
+	HFONT _hFont = nullptr;
+	HFONT _hLargeFont = nullptr;
+	HFONT _hVerticalFont = nullptr;
+	HFONT _hVerticalLargeFont = nullptr;
 
-    int _nbItem = 0;
-    int _iconSize = 16;
-    bool _hasImgLst = false;
 
-    // Drag state
-    bool _mightBeDragging = false;
-    int _dragCount = 0;
-    bool _isDragging = false;
-    int _srcTab = -1;
+	DPIManagerV2 _dpiManager;
 
-    QVector<QIcon> _closeBtnIcons;
-    QVector<QIcon> _pinBtnIcons;
+	long getRowCount() const {
+		return static_cast<long>(::SendMessage(_hSelf, TCM_GETROWCOUNT, 0, 0));
+	}
 
-    TabButtonZone _closeButtonZone;
-    TabButtonZone _pinButtonZone;
-
-    int _currentHoverTab = -1;
-    QRect _currentHoverTabRect;
-    bool _isCloseHover = false;
-    bool _isPinHover = false;
-    int _whichCloseClickDown = -1;
-    int _whichPinClickDown = -1;
+	using Window::init;
 };
 
 
-// ControlsTab is defined in ControlsTab.h
-#include "ControlsTab.h"
+struct TabButtonZone
+{
+	void init(HWND parent, int order) {
+		_parent = parent;
+		_order = order;
+	}
 
-// Tab bar for document windows with close buttons, pin buttons, drag-and-drop
+	bool isHit(int x, int y, const RECT & tabRect, bool isVertical) const;
+	RECT getButtonRectFrom(const RECT & tabRect, bool isVertical) const;
+	void setOrder(int newOrder) { _order = newOrder; }
+
+	HWND _parent = nullptr;
+	int _width = 0;
+	int _height = 0;
+	int _order = -1; // from right to left: 0, 1
+};
+
+
+
 class TabBarPlus : public TabBar
 {
-    Q_OBJECT
+public :
+	TabBarPlus() = default;
+	enum tabColourIndex {
+		activeText, activeFocusedTop, activeUnfocusedTop, inactiveText, inactiveBg
+	};
 
-public:
-    TabBarPlus(QWidget* parent = nullptr);
-    ~TabBarPlus() override;
+	enum individualTabColourId {
+		id0, id1, id2, id3, id4, id5, id6, id7, id8, id9
+	};
 
-    // Colors
-    enum class ColorIndex { ActiveText, ActiveTopFocused, ActiveTopUnfocused,
-                            InactiveText, InactiveBg };
+	void init(HINSTANCE hInst, HWND parent, bool isVertical, bool isMultiLine, unsigned char buttonsStatus = 0);
 
-    static void setColor(QRgb color, ColorIndex index);
+	void destroy() override;
 
-    // Init with close/pin button options
-    void init(bool isVertical, bool isMultiLine, unsigned char buttonsStatus = 0);
+	POINT getDraggingPoint() const {
+		return _draggingPoint;
+	}
 
-    // Tab drag-to-reorder
-    void tabToStart(int index = -1);
-    void tabToEnd(int index = -1);
+	void resetDraggingPoint() {
+		_draggingPoint.x = 0;
+		_draggingPoint.y = 0;
+	}
 
-    // Refresh tabs (after width change)
-    void refresh();
+	static void triggerOwnerDrawTabbar(DPIManagerV2* pDPIManager);
+	static void doVertical();
+	static void doMultiLine();
 
-    // Set close/pin button order
-    void setTabCloseButtonOrder(int order) { _closeButtonZone.setOrder(order); }
-    void setTabPinButtonOrder(int order) { _pinButtonZone.setOrder(order); }
+	static void setColour(COLORREF colour2Set, tabColourIndex i, DPIManagerV2* pDPIManager);
+	virtual int getIndividualTabColourId(int tabIndex) = 0;
 
-    // Theme changes
-    void triggerOwnerDraw();
-    void doVertical(bool enabled);
-    void doMultiLine(bool enabled);
+	void tabToStart(int index = -1);
+	void tabToEnd(int index = -1);
 
-    // Colors
-    static QRgb activeTextColor();
-    static QRgb activeTopBarFocusedColor();
-    static QRgb activeTopBarUnfocusedColor();
-    static QRgb inactiveTextColor();
-    static QRgb inactiveBgColor();
+	void setCloseBtnImageList();
+	void setPinBtnImageList();
+
+	void setTabPinButtonOrder(int newOrder) {
+		_pinButtonZone.setOrder(newOrder);
+	}
+
+	void setTabCloseButtonOrder(int newOrder) {
+		_closeButtonZone.setOrder(newOrder);
+	}
+
+	// Hack for forcing the tab width change
+	// ref: https://github.com/notepad-plus-plus/notepad-plus-plus/pull/15781#issuecomment-2469387409
+	void refresh() {
+		int index = insertAtEnd(L"");
+		deletItemAt(index);
+	}
 
 protected:
-    void paintEvent(QPaintEvent* event) override;
+	// drag & drop members
+	bool _mightBeDragging = false;
+	int _dragCount = 0;
+	bool _isDragging = false;
+	bool _isDraggingInside = false;
+    int _nSrcTab = -1;
+	int _nTabDragged = -1;
+	int _previousTabSwapped = -1;
+	POINT _draggingPoint{}; // coordinate of Screen
 
-private:
-    bool _isCloseHover = false;
-    bool _isPinHover = false;
+	RECT _currentHoverTabRect{};
+	int _currentHoverTabItem = -1; // -1 : no mouse on any tab
 
-    static QVector<QRgb> _colors;
-};
+	TabButtonZone _closeButtonZone;
+	TabButtonZone _pinButtonZone;
 
-// Custom tab bar subclass for owner-drawn tabs
-class OwnerDrawTabBar : public TabBarPlus
-{
-    Q_OBJECT
+	HIMAGELIST _hCloseBtnImgLst = nullptr;
+	const int _closeTabIdx = 0;
+	const int _closeTabInactIdx = 1;
+	const int _closeTabHoverInIdx = 2; // hover inside of box
+	const int _closeTabHoverOnTabIdx = 3; // hover on the tab, but outside of box
+	const int _closeTabPushIdx = 4;
 
-public:
-    explicit OwnerDrawTabBar(QWidget* parent = nullptr);
+	HIMAGELIST _hPinBtnImgLst = nullptr;
+	const int _unpinnedIdx = 0;
+	const int _unpinnedInactIdx = 1;
+	const int _unpinnedHoverInIdx = 2; // hover inside of box
+	const int _unpinnedHoverOnTabIdx = 3; // hover on the tab, but outside of box
+	const int _pinnedIdx = 4;
+	const int _pinnedHoverIdx = 5;
+	const int _unpinnedEmptyIdx = 6;
 
-    // Override to provide per-tab color
-    virtual int getIndividualTabColorId(int /*tabIndex*/) { return -1; }
+	bool _isCloseHover = false;
+	bool _isPinHover = false;
+	int _whichCloseClickDown = -1;
+	int _whichPinClickDown = -1;
+	bool _lmbdHit = false; // Left Mouse Button Down Hit
+	HWND _tooltips = nullptr;
+
+	LRESULT runProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
+	static LRESULT CALLBACK TabBarPlusProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+
+	void setActiveTab(int tabIndex);
+	bool exchangeTabItemData(int oldTab, int newTab, bool setToActive = true);
+	void exchangeItemData(POINT point);
+
+	static COLORREF _activeTextColour;
+	static COLORREF _activeTopBarFocusedColour;
+	static COLORREF _activeTopBarUnfocusedColour;
+	static COLORREF _inactiveTextColour;
+	static COLORREF _inactiveBgColour;
+
+	static int _nbCtrl;
+	static HWND _tabbrPlusInstanceHwndArray[nbCtrlMax];
+
+	void drawItem(DRAWITEMSTRUCT *pDrawItemStruct, bool isDarkMode = false);
+	void draggingCursor(POINT screenPoint);
+
+	int getTabIndexAt(const POINT & p) const {
+		return getTabIndexAt(p.x, p.y);
+	}
+
+	int getTabIndexAt(int x, int y) const {
+		TCHITTESTINFO hitInfo{};
+		hitInfo.pt.x = x;
+		hitInfo.pt.y = y;
+		return static_cast<int>(::SendMessage(_hSelf, TCM_HITTEST, 0, reinterpret_cast<LPARAM>(&hitInfo)));
+	}
+
+	bool isPointInParentZone(POINT screenPoint) const {
+		RECT parentZone{};
+        ::GetWindowRect(_hParent, &parentZone);
+	    return (((screenPoint.x >= parentZone.left) && (screenPoint.x <= parentZone.right)) &&
+			    (screenPoint.y >= parentZone.top) && (screenPoint.y <= parentZone.bottom));
+    }
+
+	void notify(int notifyCode, int tabIndex);
+	void trackMouseEvent(DWORD event2check);
+
+	using Window::init;
+	using TabBar::init;
 };

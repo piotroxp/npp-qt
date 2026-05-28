@@ -14,77 +14,89 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #pragma once
 
-#include <QDialog>
-#include <QTreeWidget>
-#include <QKeySequenceEdit>
-#include <QString>
-#include <QVector>
-#include <QFont>
-
-#include "../StaticDialog/StaticDialog.h"
 #include "BabyGridWrapper.h"
-#include "../ContextMenu/ContextMenu.h"
+#include "ShortcutMapper_rc.h"
+#include "shortcut.h"
+#include "ContextMenu.h"
 
-// Resource IDs
-#define IDD_SHORTCUTMAPPER_DLG 2600
-#define IDC_BABYGRID_TABBAR (IDD_SHORTCUTMAPPER_DLG + 4)
-#define IDC_BABYGRID_INFO (IDD_SHORTCUTMAPPER_DLG + 5)
-#define IDC_BABYGRID_FILTER (IDD_SHORTCUTMAPPER_DLG + 8)
-#define IDC_BABYGRID_FILTER_CLEAR (IDD_SHORTCUTMAPPER_DLG + 9)
+enum GridState {STATE_MENU, STATE_MACRO, STATE_USER, STATE_PLUGIN, STATE_SCINTILLA};
 
-enum GridState { STATE_MENU, STATE_MACRO, STATE_USER, STATE_PLUGIN, STATE_SCINTILLA };
-
-// ShortcutMapper - Keyboard shortcut mapping dialog
-class ShortcutMapper : public StaticDialog
-{
-    Q_OBJECT
-
+class ShortcutMapper : public StaticDialog {
 public:
-    ShortcutMapper();
-    ~ShortcutMapper() override;
+	ShortcutMapper() : StaticDialog(), _currentState(STATE_MENU) {
+		_shortcutFilter = std::vector<std::wstring>();
+		_dialogInitDone = false;
+	}
+	~ShortcutMapper() override = default;
 
-    void init(QWidget* parent, GridState initState = STATE_MENU);
-    void destroy();
-    void doDialog(bool isRTL = false);
+	void init(HINSTANCE hInst, HWND parent, GridState initState = STATE_MENU) {
+		Window::init(hInst, parent);
+		_currentState = initState;
+	}
 
-    bool findKeyConflicts(QString* keyConflictLocation, const QString& itemKeyCombo, size_t itemIndex);
+	void destroy() override {}
+	void doDialog(bool isRTL = false) {
+		StaticDialog::myCreateDialogBoxIndirectParam(IDD_SHORTCUTMAPPER_DLG, isRTL);
+	}
+	void getClientRect(RECT & rc) const override;
 
-signals:
-    void shortcutChanged();
+	bool findKeyConflicts(__inout_opt std::wstring * const keyConflictLocation,
+							const KeyCombo & itemKeyCombo, const size_t & itemIndex) const;
+
+	std::wstring getTextFromCombo(HWND hCombo);
+	bool isFilterValid(Shortcut sc);
+	bool isFilterValid(PluginCmdShortcut sc);
+	bool isFilterValid(ScintillaKeyMap sc);
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
-
-private slots:
-    void onTabChanged(int index);
-    void onFilterChanged(const QString& text);
-    void onClearFilter();
-    void onGridItemDoubleClicked(QTreeWidgetItem* item, int column);
-    void onContextMenuRequested(const QPoint& pos);
+	void resizeDialogElements();
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 
 private:
-    void initTabs();
-    void initBabyGrid();
-    void fillOutBabyGrid();
-    void resizeDialogElements();
-    void getClientRect(QRect& rc) const;
+	BabyGridWrapper _babygrid;
+	ContextMenu _rightClickMenu;
 
-    BabyGridWrapper _babygrid;
-    ContextMenu _rightClickMenu;
-    GridState _currentState;
-    
-    QTabWidget* _pTabCtrl = nullptr;
-    QLineEdit* _pFilterEdit = nullptr;
-    QTreeWidget* _pGrid = nullptr;
-    
-    QVector<QString> _tabNames;
-    QVector<QString> _shortcutFilter;
-    
-    int _nbTab = 5;
-    bool _dialogInitDone = false;
-    
-    QFont _headerFont;
-    QFont _rowFont;
+	GridState _currentState;
+	HWND _hTabCtrl = nullptr;
+
+	const static int _nbTab = 5;
+	std::wstring _tabNames[_nbTab];
+	std::vector<std::wstring> _shortcutFilter;
+	std::vector<size_t> _shortcutIndex;
+
+	//save/restore the last view
+	std::vector<size_t> _lastHomeRow;
+	std::vector<size_t> _lastCursorRow;
+
+	std::wstring _conflictInfoOk;
+	std::wstring _conflictInfoEditing;
+
+	std::vector<HFONT> _hGridFonts;
+
+	enum GridFonts : uint_fast8_t
+	{
+		GFONT_HEADER,
+		GFONT_ROWS,
+		MAX_GRID_FONTS
+	};
+
+	SIZE _szMinDialog{};
+	SIZE _szBorder{};
+	bool _dialogInitDone = false;
+
+	void initTabs();
+	void initBabyGrid();
+	void fillOutBabyGrid();
+	std::wstring getTabString(size_t i) const;
+
+	bool isConflict(const KeyCombo & lhs, const KeyCombo & rhs) const
+	{
+		return ( (lhs._isCtrl  == rhs._isCtrl ) &&
+				 (lhs._isAlt   == rhs._isAlt  ) &&
+				 (lhs._isShift == rhs._isShift) &&
+				 (lhs._key	   == rhs._key	  ) );
+	}
 };

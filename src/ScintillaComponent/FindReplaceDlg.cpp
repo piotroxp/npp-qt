@@ -16,15 +16,15 @@
 
 
 #include "FindReplaceDlg.h"
-#include "ScintillaEditView.h"
+#include "ScintillaComponent/ScintillaEditView.h"
 #include "Notepad_plus_msgs.h"
 #include "localization.h"
-#include "Common.h"
+#include "../MISC/Common/Common.h"
 #include "Utf8.h"
 
 #include "../MISC/Common/WindowsCompat.h"
 
-#include <commctrl.h>
+#include "MISC/Common/WindowsStubs.h"
 
 #include <cstring>
 #include <memory>

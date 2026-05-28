@@ -14,50 +14,38 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #pragma once
 
-#include <QWidget>
-#include <QDialog>
-#include <QGridLayout>
-#include <QRgb>
-#include <QPoint>
+#include "MISC/Common/WindowsCompat.h"
+
+#include "StaticDialog.h"
+#include "resource.h"
 
 #define WM_PICKUP_COLOR (COLOURPOPUP_USER + 1)
 
-// Resource IDs
-#define IDD_COLOUR_POPUP 2100
-#define IDC_COLOUR_LIST (IDD_COLOUR_POPUP + 1)
-
-// ColourPopup - Popup color grid dialog
-class ColourPopup : public QDialog
+class ColourPopup : public StaticDialog
 {
-    Q_OBJECT
-
 public:
-    ColourPopup();
-    explicit ColourPopup(QRgb defaultColor);
-    ~ColourPopup() override;
+	ColourPopup() = default;
+	explicit ColourPopup(COLORREF defaultColor) : _colour(defaultColor) {}
+	~ColourPopup() override {}
 
-    void createColorPopup();
-    void doDialog(QPoint p);
+	void createColorPopup();
+	void doDialog(POINT p);
 
-    void destroy() {
-        reject();
-    }
-
-signals:
-    void colorSelected(QRgb color);
+	void destroy() override {
+		if (_hSelf != nullptr)
+		{
+			::DestroyWindow(_hSelf);
+			_hSelf = nullptr;
+		}
+	}
 
 private:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
-    
-    static const int NUM_COLORS = 40;
-    static const QRgb g_ColourArray[NUM_COLORS];
+	COLORREF _colour = RGB(0xFF, 0xFF, 0xFF);
 
-    QRgb _colour = qRgb(0xFF, 0xFF, 0xFF);
-    
-    QVector<QPushButton*> _colorButtons;
-    QGridLayout* _pGridLayout = nullptr;
-    
-    static QColor getColorFromArray(int index);
+	static intptr_t CALLBACK dlgClrPopupProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
+	static UINT_PTR CALLBACK chooseColorDlgProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 };

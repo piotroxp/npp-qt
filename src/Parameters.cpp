@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-#include "Parameters.h"
+#include "../Parameters.h"
 
 #include "MISC/Common/WindowsCompat.h"
 
-#include <shlobj.h>
+#include "MISC/Common/WindowsStubs.h"
 #include "MISC/Common/WindowsStubs.h"
 
 #include <algorithm>
@@ -44,14 +44,14 @@
 #include "scintilla/include/Scintilla.h"
 
 #include "Common.h"
-#include "ContextMenu.h"
+#include "WinControls/ContextMenu/ContextMenu.h"
 #include "Notepad_plus_Window.h"
 #include "Notepad_plus_msgs.h"
 #include "NppConstants.h"
-#include "NppDarkMode.h"
+#include "../NppDarkMode.h"
 #include "NppXml.h"
-#include "ScintillaEditView.h"
-#include "ToolBar.h"
+#include "ScintillaComponent/ScintillaEditView.h"
+#include "WinControls/ToolBar/ToolBar.h"
 #include "UserDefineDialog.h"
 #include "keys.h"
 #include "localization.h"

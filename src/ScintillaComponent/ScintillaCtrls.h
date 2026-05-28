@@ -18,7 +18,7 @@
 #pragma once
 
 #include <vector>
-#include "../MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsCompat.h"
 
 class ScintillaEditView;
 

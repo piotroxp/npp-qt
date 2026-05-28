@@ -16,99 +16,130 @@
 
 #pragma once
 
-#include <QTreeWidget>
-#include <QTreeWidgetItem>
-#include <QString>
-#include <QVector>
-#include <QPoint>
-#include <QPixmap>
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
+#include "Window.h"
+#include "Common.h"
+#include "../NppDarkMode.h"
 
-#include "../Window.h"
+struct TreeStateNode {
+	std::wstring _label;
+	std::wstring _extraData;
+	bool _isExpanded = false;
+	bool _isSelected = false;
+	std::vector<TreeStateNode> _children;
+};
 
-// TreeView - Tree view control
-// Replaces MFC CTreeCtrl with Qt QTreeWidget
-class TreeView : public QTreeWidget
-{
-    Q_OBJECT
 
+class TreeView : public Window {
 public:
-    TreeView(QWidget* parent = nullptr);
-    ~TreeView() override = default;
+	TreeView() = default;
+	~TreeView() override = default;
 
-    void init(QWidget* parent, int treeViewID);
-    void destroy();
+	virtual void init(HINSTANCE hInst, HWND parent, int treeViewID);
+	void destroy() override;
+	HTREEITEM addItem(const wchar_t *itemName, HTREEITEM hParentItem, int iImage, LPARAM lParam = 0);
+	bool setItemParam(HTREEITEM Item2Set, LPARAM param);
+	LPARAM getItemParam(HTREEITEM Item2Get) const;
+	std::wstring getItemDisplayName(HTREEITEM Item2Set) const;
+	HTREEITEM searchSubItemByName(const wchar_t *itemName, HTREEITEM hParentItem);
+	void removeItem(HTREEITEM hTreeItem);
+	void removeAllItems();
+	bool renameItem(HTREEITEM Item2Set, const wchar_t *newName);
+	void makeLabelEditable(bool toBeEnabled);
 
-    // Item operations
-    QTreeWidgetItem* addItem(const QString& itemName, QTreeWidgetItem* hParentItem, int iImage, intptr_t lParam = 0);
-    bool setItemParam(QTreeWidgetItem* item, intptr_t param);
-    intptr_t getItemParam(QTreeWidgetItem* item) const;
-    QString getItemDisplayName(QTreeWidgetItem* item) const;
-    QTreeWidgetItem* searchSubItemByName(const QString& itemName, QTreeWidgetItem* hParentItem);
-    void removeItem(QTreeWidgetItem* hTreeItem);
-    void removeAllItems();
-    bool renameItem(QTreeWidgetItem* item, const QString& newName);
-    void makeLabelEditable(bool toBeEnabled);
+	HTREEITEM getChildFrom(HTREEITEM hTreeItem) const {
+		return TreeView_GetChild(_hSelf, hTreeItem);
+	}
+	HTREEITEM getSelection() const {
+		return TreeView_GetSelection(_hSelf);
+	}
+	bool selectItem(HTREEITEM hTreeItem2Select) const {
+		return TreeView_SelectItem(_hSelf, hTreeItem2Select) == TRUE;
+	}
+	HTREEITEM getRoot() const {
+		return TreeView_GetRoot(_hSelf);
+	}
+	HTREEITEM getParent(HTREEITEM hItem) const {
+		return TreeView_GetParent(_hSelf, hItem);
+	}
+	HTREEITEM getNextSibling(HTREEITEM hItem) const {
+		return TreeView_GetNextSibling(_hSelf, hItem);
+	}
+	HTREEITEM getPrevSibling(HTREEITEM hItem) const {
+		return TreeView_GetPrevSibling(_hSelf, hItem);
+	}
 
-    // Navigation
-    QTreeWidgetItem* getChildFrom(QTreeWidgetItem* hTreeItem) const;
-    QTreeWidgetItem* getSelection() const;
-    bool selectItem(QTreeWidgetItem* hTreeWidgetItem2Select);
-    QTreeWidgetItem* getRoot() const;
-    QTreeWidgetItem* getParent(QTreeWidgetItem* hItem) const;
-    QTreeWidgetItem* getNextSibling(QTreeWidgetItem* hItem) const;
-    QTreeWidgetItem* getPrevSibling(QTreeWidgetItem* hItem) const;
+	void expand(HTREEITEM hItem) const {
+		TreeView_Expand(_hSelf, hItem, TVE_EXPAND);
+	}
 
-    // Expansion
-    void expand(QTreeWidgetItem* hItem) const;
-    void fold(QTreeWidgetItem* hItem) const;
-    void foldExpandRecursively(QTreeWidgetItem* hItem, bool isFold) const;
-    void foldExpandAll(bool isFold) const;
-    void foldAll() const;
-    void expandAll() const;
-    void toggleExpandCollapse(QTreeWidgetItem* hItem) const;
+	void fold(HTREEITEM hItem) const {
+		TreeView_Expand(_hSelf, hItem, TVE_COLLAPSE);
+	}
 
-    // Images
-    void setItemImage(QTreeWidgetItem* hTreeItem, int iImage, int iSelectedImage);
+	void foldExpandRecursively(HTREEITEM hItem, bool isFold) const;
+	void foldExpandAll(bool isFold) const;
+	
+	void foldAll() const {
+		foldExpandAll(true);
+	}
 
-    // Drag and drop
-    void beginDrag();
-    void dragItem(const QPoint& pos);
-    bool isDragging() const { return _isItemDragged; }
-    bool dropItem();
-    void setDropTarget(QTreeWidgetItem* target);
+	void expandAll() const {
+		foldExpandAll(false);
+	}
 
-    void addCanNotDropInList(int val2set);
-    void addCanNotDragOutList(int val2set);
+	void toggleExpandCollapse(HTREEITEM hItem) const {
+		TreeView_Expand(_hSelf, hItem, TVE_TOGGLE);
+	}
+	void setItemImage(HTREEITEM hTreeItem, int iImage, int iSelectedImage);
 
-    // Moving items
-    bool moveDown(QTreeWidgetItem* itemToMove);
-    bool moveUp(QTreeWidgetItem* itemToMove);
+	// Drag and Drop operations
+	void beginDrag(NMTREEVIEW* tv);
+	void dragItem(HWND parentHandle, int x, int y);
+	bool isDragging() const {
+		return _isItemDragged;
+	}
+	bool dropItem();
+	void addCanNotDropInList(int val2set) {
+		_canNotDropInList.push_back(val2set);
+	}
 
-    // Image list
-    void setImageList(const QVector<int>& imageIds, int imgSize = 0);
+	void addCanNotDragOutList(int val2set) {
+		_canNotDragOutList.push_back(val2set);
+	}
 
-signals:
-    void itemExpanded(QTreeWidgetItem* item);
-    void itemCollapsed(QTreeWidgetItem* item);
-    void itemRightClicked(QTreeWidgetItem* item, const QPoint& pos);
+	bool moveDown(HTREEITEM itemToMove);
+	bool moveUp(HTREEITEM itemToMove);
+	bool swapTreeViewItem(HTREEITEM itemGoDown, HTREEITEM itemGoUp);
+	bool restoreFoldingStateFrom(const TreeStateNode & treeState2Compare, HTREEITEM treeviewNode);
+	bool retrieveFoldingStateTo(TreeStateNode & treeState2Construct, HTREEITEM treeviewNode);
+	bool searchLeafAndBuildTree(const TreeView & tree2Build, const std::wstring & text2Search, int index2Search);
+	void sort(HTREEITEM hTreeItem, bool isRecusive);
+	void customSorting(HTREEITEM hTreeItem, PFNTVCOMPARE sortingCallbackFunc, LPARAM lParam, bool isRecursive);
+	bool setImageList(const std::vector<int>& imageIds, int imgSize = 0);
+	std::vector<int> getImageIds(std::vector<int> stdIds, std::vector<int>darkIds, std::vector<int> lightIds);
 
 protected:
-    void dragEnterEvent(QDragEnterEvent* event) override;
-    void dragMoveEvent(QDragMoveEvent* event) override;
-    void dropEvent(QDropEvent* event) override;
-    void mousePressEvent(QMouseEvent* event) override;
+	HIMAGELIST _hImaLst = nullptr;
+	NppDarkMode::TreeViewStyle _tvStyleType = NppDarkMode::TreeViewStyle::classic;
 
-private:
-    void cleanSubEntries(QTreeWidgetItem* hTreeItem);
-    bool canBeDropped(QTreeWidgetItem* draggedItem, QTreeWidgetItem* targetItem);
-    bool isParent(QTreeWidgetItem* targetItem, QTreeWidgetItem* draggedItem);
+	static LRESULT CALLBACK staticProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 
-    QIcon _iconList;
-    QVector<QPixmap> _imageList;
-    QVector<int> _canNotDropInList;
-    QVector<int> _canNotDragOutList;
-    
-    bool _isItemDragged = false;
-    QTreeWidgetItem* _draggedItem = nullptr;
-    QTreeWidgetItem* _dropTarget = nullptr;
+	void cleanSubEntries(HTREEITEM hTreeItem);
+	void dupTree(HTREEITEM hTree2Dup, HTREEITEM hParentItem);
+	bool searchLeafRecusivelyAndBuildTree(HTREEITEM tree2Build, const std::wstring & text2Search, int index2Search, HTREEITEM tree2Search);
+
+	// Drag and Drop operations
+	HTREEITEM _draggedItem = nullptr;
+	HIMAGELIST _draggedImageList = nullptr;
+	bool _isItemDragged = false;
+	std::vector<int> _canNotDragOutList;
+	std::vector<int> _canNotDropInList;
+	bool canBeDropped(HTREEITEM draggedItem, HTREEITEM targetItem);
+	void moveTreeViewItem(HTREEITEM draggedItem, HTREEITEM targetItem);
+	bool isParent(HTREEITEM targetItem, HTREEITEM draggedItem);
+	bool isDescendant(HTREEITEM targetItem, HTREEITEM draggedItem);
+	bool canDragOut(HTREEITEM targetItem);
+	bool canDropIn(HTREEITEM targetItem);
 };

@@ -16,7 +16,7 @@
 
 
 #include "ScintillaCtrls.h"
-#include "ScintillaEditView.h"
+#include "ScintillaComponent/ScintillaEditView.h"
 
 HWND ScintillaCtrls::createSintilla(HWND hParent) 
 {

@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-#include "ScintillaEditView.h"
+#include "ScintillaComponent/ScintillaEditView.h"
 
 #include "../MISC/Common/WindowsCompat.h"
 
-#include <commctrl.h>
+#include "MISC/Common/WindowsStubs.h"
 #include <windowsx.h>
 
 #include <algorithm>
@@ -44,14 +44,14 @@
 #include <Sci_Position.h>
 #include "scintilla/include/Scintilla.h"
 
-#include "Buffer.h"
-#include "Common.h"
+#include "ScintillaComponent/Buffer.h"
+#include "../MISC/Common/Common.h"
 #include "NppConstants.h"
-#include "NppDarkMode.h"
+#include "../NppDarkMode.h"
 #include "../Parameters.h"
 #include "Sorters.h"
 #include "UserDefineDialog.h"
-#include "Window.h"
+#include "WinControls/Window.h"
 #include "dpiManagerV2.h"
 #include "localization.h"
 #include "resource.h"

@@ -14,67 +14,52 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #pragma once
 
-#include <QWidget>
-#include <QListWidget>
-#include <QVector>
-#include <QString>
-#include <QButtonGroup>
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
 
-#include "DockingWnd/DockingDlgInterface.h"
+#include "DockingDlgInterface.h"
+#include "ansiCharPanel_rc.h"
+#include "asciiListView.h"
 
-// Resource IDs
-#define IDD_ANSIASCII_PANEL 2700
-#define IDC_LIST_ANSICHAR (IDD_ANSIASCII_PANEL + 1)
+#define AI_PROJECTPANELTITLE		L"ASCII Codes Insertion Panel"
 
-// Forward declarations
 class ScintillaEditView;
 
-#define AI_PROJECTPANELTITLE "ASCII Codes Insertion Panel"
-
-// AnsiCharPanel - ASCII/ANSI character insertion panel
-// Displays a grid of characters for easy insertion into documents
-class AnsiCharPanel : public DockingDlgInterface
-{
-    Q_OBJECT
-
+class AnsiCharPanel : public DockingDlgInterface {
 public:
-    AnsiCharPanel();
-    ~AnsiCharPanel() override = default;
+	AnsiCharPanel(): DockingDlgInterface(IDD_ANSIASCII_PANEL) {}
 
-    void init(QWidget* parent, ScintillaEditView** ppEditView);
-    void setParent(QWidget* parent2set);
+	void init(HINSTANCE hInst, HWND hPere, ScintillaEditView **ppEditView) {
+		DockingDlgInterface::init(hInst, hPere);
+		_ppEditView = ppEditView;
+	}
 
-    void switchEncoding();
-    void insertChar(unsigned char char2insert);
-    void insertString(const QString& string2insert);
+	void setParent(HWND parent2set) {
+		_hParent = parent2set;
+	}
 
-    void setBackgroundColor(QRgb bgColour) override;
-    void setForegroundColor(QRgb fgColour) override;
+	void switchEncoding();
+	void insertChar(unsigned char char2insert) const;
+	void insertString(LPWSTR string2insert) const;
 
-signals:
-    void insertCharacter(QChar ch);
-    void insertText(const QString& text);
+	void setBackgroundColor(COLORREF bgColour) override {
+		ListView_SetBkColor(_listView.getHSelf(), bgColour);
+		ListView_SetTextBkColor(_listView.getHSelf(), bgColour);
+		_listView.redraw(true);
+	}
+
+	void setForegroundColor(COLORREF fgColour) override {
+		ListView_SetTextColor(_listView.getHSelf(), fgColour);
+		_listView.redraw(true);
+	}
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
-
-private slots:
-    void onItemDoubleClicked(QListWidgetItem* item);
-    void onItemClicked(QListWidgetItem* item);
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 
 private:
-    void setupCharGrid();
-    void updateCharDisplay();
-
-    ScintillaEditView** _ppEditView = nullptr;
-    
-    QListWidget* _pCharList = nullptr;
-    QButtonGroup* _pCharButtons = nullptr;
-    QWidget* _pCharGrid = nullptr;
-    
-    int _currentCodepage = 0;
-    QRgb _backgroundColor = 0xFFFFFFFF;
-    QRgb _foregroundColor = 0xFF000000;
+	ScintillaEditView **_ppEditView = nullptr;
+	AsciiListView _listView;
 };

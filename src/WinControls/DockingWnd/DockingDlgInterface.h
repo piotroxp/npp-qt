@@ -1,65 +1,157 @@
-// DockingDlgInterface.h — Qt6 translation
+// This file is part of Notepad++ project
+// Copyright (C)2006 Jens Lorenz <jens.plugin.npp@gmx.de>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 #pragma once
 
-#include <QDialog>
-#include <QByteArray>
-#include <QVector>
-#include <QString>
-#include <QIcon>
-#include <QRect>
+#include "MISC/Common/WindowsCompat.h"
 
-// Forward declaration - DockedWidgetData is defined in Docking.h
-struct DockedWidgetData;
+#include "MISC/Common/WindowsStubs.h"
 
-class DockingDlgInterface : public QDialog
+#include <array>
+#include <cassert>
+#include <string>
+
+#include "Docking.h"
+#include "Notepad_plus_msgs.h"
+#include "../NppDarkMode.h"
+#include "StaticDialog.h"
+#include "dockingResource.h"
+
+class DockingDlgInterface : public StaticDialog
 {
-    Q_OBJECT
-
 public:
-    DockingDlgInterface(QWidget* parent = nullptr);
-    explicit DockingDlgInterface(int dlgID, QWidget* parent = nullptr);
+	DockingDlgInterface() = default;
+	explicit DockingDlgInterface(int dlgID): _dlgID(dlgID) {}
 
-    // Create with docking data
-    virtual void create(DockedWidgetData* data, bool isRTL = false);
-    virtual void create(DockedWidgetData* data, QVector<int> iconIDs, bool isRTL = false);
-    
-    // Dialog procedure (WinForms → Qt6 shim)
-    virtual intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) { Q_UNUSED(message); Q_UNUSED(wParam); Q_UNUSED(lParam); return 0; }
+	void init(HINSTANCE hInst, HWND parent) override {
+		StaticDialog::init(hInst, parent);
+		wchar_t temp[MAX_PATH];
+		::GetModuleFileName(hInst, temp, MAX_PATH);
+		_moduleName = ::PathFindFileName(temp);
+	}
 
-    // Update display info
-    virtual void updateDockingDlg();
+	virtual void create(DockedWidgetData* data, bool isRTL = false) {
+		assert(data != nullptr);
+		StaticDialog::create(_dlgID, isRTL);
+		wchar_t temp[MAX_PATH];
+		::GetWindowText(_hSelf, temp, MAX_PATH);
+		_pluginName = temp;
 
-    // Colors
-    virtual void setBackgroundColor(QRgb color) { Q_UNUSED(color); }
-    virtual void setForegroundColor(QRgb color) { Q_UNUSED(color); }
+		// user information
+		data->hClient = _hSelf;
+		data->pszName = _pluginName.c_str();
 
-    // Display state
-    void display(bool toShow = true);
+		// supported features by plugin
+		data->uMask = 0;
 
-    // Initialize (for backward compat)
-    void init(QWidget* parent) { _hParent = parent; }
+		// additional info
+		data->pszAddInfo = nullptr;
+	}
 
-    // Parent window access
-    QWidget* getParent2Set() const { return _hParent; }
+	virtual void create(DockedWidgetData* data, std::array<int, 3> iconIDs, bool isRTL = false) {
+		create(data, isRTL);
+		_iconIDs = iconIDs;
+	}
 
-    // Plugin info
-    bool isClosed() const { return _isClosed; }
-    void setClosed(bool closed) { _isClosed = closed; }
-    QString getPluginFileName() const { return _moduleName; }
+	virtual void updateDockingDlg() {
+		::SendMessage(_hParent, NPPM_DMMUPDATEDISPINFO, 0, reinterpret_cast<LPARAM>(_hSelf));
+	}
 
-signals:
-    void closeRequested();
-    void floatRequested();
-    void dockRequested(int position);
+	virtual void setBackgroundColor(COLORREF) {}
+	virtual void setForegroundColor(COLORREF) {}
 
-protected:
-    int _dlgID = -1;
-    QWidget* _hParent = nullptr;
-    QString _moduleName;
-    QString _pluginName;
-    bool _isFloating = true;
-    bool _isClosed = false;
-    int _dockedPosition = 0;
+	void display(bool toShow = true) const override {
+		::SendMessage(_hParent, toShow ? NPPM_DMMSHOW : NPPM_DMMHIDE, 0, reinterpret_cast<LPARAM>(_hSelf));
+	}
 
-    bool event(QEvent* event) override;
+	bool isClosed() const {
+		return _isClosed;
+	}
+
+	void setClosed(bool toClose) {
+		_isClosed = toClose;
+	}
+
+	const wchar_t * getPluginFileName() const {
+		return _moduleName.c_str();
+	}
+
+	const std::array<int, 3>& getIconIDs() const {
+		return _iconIDs;
+	}
+
+protected :
+	int	_dlgID = -1;
+	int _iDockedPos = 0;
+	std::wstring _moduleName;
+	std::wstring _pluginName;
+	std::array<int, 3> _iconIDs{};
+	bool _isFloating = true;
+	bool _isClosed = false;
+
+	using StaticDialog::create;
+
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override {
+		switch (message)
+		{
+			case WM_ERASEBKGND:
+			{
+				if (!NppDarkMode::isEnabled())
+				{
+					break;
+				}
+
+				RECT rc{};
+				getClientRect(rc);
+				::FillRect(reinterpret_cast<HDC>(wParam), &rc, NppDarkMode::getDlgBackgroundBrush());
+				return TRUE;
+			}
+			case WM_NOTIFY:
+			{
+				auto* pnmh = reinterpret_cast<LPNMHDR>(lParam);
+
+				if (pnmh->hwndFrom == _hParent)
+				{
+					switch (LOWORD(pnmh->code))
+					{
+						case DMN_CLOSE:
+						{
+							break;
+						}
+						case DMN_FLOAT:
+						{
+							_isFloating = true;
+							break;
+						}
+						case DMN_DOCK:
+						{
+							_iDockedPos = HIWORD(pnmh->code);
+							_isFloating = false;
+							break;
+						}
+						default:
+							break;
+					}
+				}
+				break;
+			}
+			default:
+				break;
+		}
+		return FALSE;
+	}
 };

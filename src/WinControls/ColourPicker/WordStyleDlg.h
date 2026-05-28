@@ -14,68 +14,114 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #pragma once
 
-#include <QDialog>
-#include <QCheckBox>
-#include <QComboBox>
-#include <QSpinBox>
-#include <QFontComboBox>
-#include <QLabel>
-#include <QColorDialog>
-#include <QRgb>
+#include "MISC/Common/WindowsCompat.h"
 
-#include "../StaticDialog/StaticDialog.h"
+#include <memory>
+#include <string>
+#include <utility>
 
-// WordStyleDlg - Word style configuration dialog
+#include "ColourPicker.h"
+#include "URLCtrl.h"
+#include "../Parameters.h"
+#include "StaticDialog.h"
+#include "resource.h"
+
+#define WM_UPDATESCINTILLAS      (WORDSTYLE_USER + 1) // WM_UPDATESCINTILLAS (BOOL doChangePanel, 0)
+#define WM_UPDATEMAINMENUBITMAPS (WORDSTYLE_USER + 2)
+
+enum fontStyleType {BOLD_STATUS, ITALIC_STATUS, UNDERLINE_STATUS};
+
 class WordStyleDlg : public StaticDialog
 {
-    Q_OBJECT
+public :
+	WordStyleDlg() = default;
+	~WordStyleDlg() override {
+		if (_globalOverrideTip)
+			::DestroyWindow(_globalOverrideTip);
+	}
 
-public:
-    WordStyleDlg();
-    ~WordStyleDlg() override = default;
+	void create(int dialogID, bool isRTL = false, bool msgDestParent = true, WORD fontSize = 8) override;
+	void doDialog(bool isRTL = false);
+	void destroy() override;
+	void prepare2Cancel();
+	void redraw(bool forceUpdate = false) const override;
+	void restoreGlobalOverrideValues() const;
+	void addLastThemeEntry() const;
+	bool selectThemeByName(const wchar_t* themeName);
+	void syncWithSelFgSingleColorCtrl();
+	bool goToSection(const wchar_t* sectionNames); // sectionNames is formed as following: "Language name:Style name"
+	                                               // ex: "Global Styles:EOL custom color" will set Language on "Global Styles", then set Style on "EOL custom color" if both are found.
 
-    void init(QWidget* parent);
-    void destroy();
-    void doDialog();
+private :
+	std::unique_ptr<ColourPicker> _pFgColour = nullptr;
+	std::unique_ptr<ColourPicker> _pBgColour = nullptr;
 
-    void setValues(const QString& styleName,  bool isCaseSensitive, const QFont& font, QRgb fgColor, QRgb bgColor, int fontStyle);
-    void getValues(QString* styleName, bool* isCaseSensitive, QFont* font, QRgb* fgColor, QRgb* bgColor, int* fontStyle);
+    int _currentLexerIndex = 0;
+	int _currentThemeIndex = 0;
 
-signals:
-    void styleApplied();
+    HWND _hCheckBold = nullptr;
+    HWND _hCheckItalic = nullptr;
+	HWND _hCheckUnderline = nullptr;
+    HWND _hFontNameCombo = nullptr;
+    HWND _hFontSizeCombo = nullptr;
+	HWND _hSwitch2ThemeCombo = nullptr;
 
-protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
+	HWND _hFgColourStaticText = nullptr;
+	HWND _hBgColourStaticText = nullptr;
+	HWND _hFontNameStaticText = nullptr;
+	HWND _hFontSizeStaticText = nullptr;
+	HWND _hStyleInfoStaticText = nullptr;
 
-private slots:
-    void onForegroundColorClicked();
-    void onBackgroundColorClicked();
+	URLCtrl _goToSettings;
+	URLCtrl _globalOverrideLinkTip;
+	HWND _globalOverrideTip = nullptr;
 
-private:
-    QString _styleName;
-    bool _isCaseSensitive = true;
-    QFont _font;
-    QRgb _fgColor = qRgb(0, 0, 0);
-    QRgb _bgColor = qRgb(255, 255, 255);
-    int _fontStyle = 0;
-    
-    // Qt widgets
-    QLineEdit* _pStyleNameEdit = nullptr;
-    QCheckBox* _pCaseSensitiveCheck = nullptr;
-    QFontComboBox* _pFontCombo = nullptr;
-    QSpinBox* _pFontSizeSpin = nullptr;
-    QPushButton* _pFgColorBtn = nullptr;
-    QPushButton* _pBgColorBtn = nullptr;
-    QComboBox* _pFontStyleCombo = nullptr;
+	LexerStylerArray _lsArray;
+    StyleArray _globalStyles;
+	std::wstring _themeName;
+
+	LexerStylerArray _styles2restored;
+	StyleArray _gstyles2restored;
+	GlobalOverride _gOverride2restored;
+	bool _restoreInvalid = false;
+
+	bool _isDirty = false;
+	bool _isThemeDirty = false;
+	bool _isShownGOCtrls = false;
+	bool _isThemeChanged = false;
+
+	std::pair<intptr_t, intptr_t> goToPreferencesSettings();
+
+	intptr_t CALLBACK run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
+
+	Style& getCurrentStyler();
+
+	bool getStyleName(std::wstring& styleName, const size_t styleNameLenLimit = 128) const;
+
+	int whichTabColourIndex() const;
+	int whichIndividualTabColourId();
+	int whichFindDlgStatusMsgColourIndex();
+	void apply(int applicationInfo);
+	int getApplicationInfo() const;
+	bool isDocumentMapStyle();
+	void move2CtrlRight(int ctrlID, HWND handle2Move, int handle2MoveWidth, int handle2MoveHeight);
+	void updateColour(bool which);
+	void updateFontStyleStatus(fontStyleType whitchStyle);
+	void updateExtension();
+	void updateFontName();
+	void updateFontSize();
+	void updateUserKeywords();
+	void switchToTheme();
+	static void updateThemeName(const std::wstring& themeName);
+	void loadLangListFromNppParam();
+	void enableFontStyle(bool isEnable) const;
+	long notifyDataModified();
+	void setStyleListFromLexer(int index);
+    void setVisualFromStyleList();
+	void updateGlobalOverrideCtrls();
+	void showGlobalOverrideCtrls(bool show);
+	void applyCurrentSelectedThemeAndUpdateUI();
 };
-
-namespace WordStyleFontStyles {
-    enum {
-        Normal = 0,
-        Bold = 1,
-        Italic = 2,
-        BoldItalic = 3
-    };
-}

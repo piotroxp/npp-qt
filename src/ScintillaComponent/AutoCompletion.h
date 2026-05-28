@@ -1,92 +1,136 @@
-// AutoCompletion.h - Qt6 port
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 #pragma once
-#include <QWidget>
-#include "ScintillaEditBase.h"
-#include <vector>
-#include <string>
+
 #include "FunctionCallTip.h"
+
+#include "MISC/Common/WindowsCompat.h"
+
+#include <string>
+#include <vector>
+
+#include "Notepad_plus_msgs.h"
+#include "NppXml.h"
+#include "../Parameters.h"
 
 class ScintillaEditView;
 
-// Matched character pair support
 struct MatchedCharInserted {
-    MatchedCharInserted() = delete;
-    char _c;
-    size_t _pos;
-    MatchedCharInserted(char c, size_t pos) : _c(c), _pos(pos) {}
-};
-
-struct MatchedPairConf {
-    char _matchChar;
-    bool _doInsert;
-    char _closeChar;
-    int _priority;
+	MatchedCharInserted() = delete;
+	char _c;
+	size_t _pos;
+	MatchedCharInserted(char c, size_t pos) : _c(c), _pos(pos) {}
 };
 
 class InsertedMatchedChars {
 public:
-    void init(ScintillaEditView* pEditView) { _pEditView = pEditView; }
-    void removeInvalidElements(MatchedCharInserted mci) { Q_UNUSED(mci); }
-    void add(MatchedCharInserted mci) { _insertedMatchedChars.push_back(mci); }
-    bool isEmpty() const { return _insertedMatchedChars.empty(); }
-    intptr_t search(char startChar, char endChar, size_t posToDetect) { Q_UNUSED(startChar); Q_UNUSED(endChar); Q_UNUSED(posToDetect); return -1; }
+	void init(ScintillaEditView* pEditView) { _pEditView = pEditView; }
+	void removeInvalidElements(MatchedCharInserted mci);
+	void add(MatchedCharInserted mci);
+	bool isEmpty() const { return _insertedMatchedChars.size() == 0; }
+	intptr_t search(char startChar, char endChar, size_t posToDetect);
+
 private:
-    std::vector<MatchedCharInserted> _insertedMatchedChars;
-    ScintillaEditView* _pEditView = nullptr;
+	std::vector<MatchedCharInserted> _insertedMatchedChars;
+	ScintillaEditView* _pEditView = nullptr;
 };
 
 class AutoCompletion {
 public:
-    explicit AutoCompletion(ScintillaEditView* pEditView) : _pEditView(pEditView), _funcCalltip(pEditView) {
-        _insertedMatchedChars.init(_pEditView);
-    }
-    ~AutoCompletion() {}
+	explicit AutoCompletion(ScintillaEditView * pEditView): _pEditView(pEditView), _funcCalltip(pEditView) {
+		//Do not load any language yet
+		_insertedMatchedChars.init(_pEditView);
+	}
 
-    enum class AutocompleteColorIndex {
-        autocompleteText, autocompleteBg,
-        selectedText, selectedBg,
-        calltipBg, calltipText, calltipHighlight
-    };
+	~AutoCompletion(){
+		delete _pXmlFile;
+	}
 
-    bool setLanguage(LangType language) { _curLang = language; return true; }
-    bool showApiComplete() { return false; }
-    bool showWordComplete(bool autoInsert) { Q_UNUSED(autoInsert); return false; }
-    bool showApiAndWordComplete() { return false; }
-    bool showFunctionComplete() { return false; }
-    void showPathCompletion() {}
-    void insertMatchedChars(int character, const MatchedPairConf& matchedPairConf) { Q_UNUSED(character); Q_UNUSED(matchedPairConf); }
-    void update(int character) { Q_UNUSED(character); }
-    void callTipClick(size_t direction) { Q_UNUSED(direction); }
-    void getCloseTag(char* closeTag, size_t closeTagLen, size_t caretPos, bool isHTML) const { Q_UNUSED(closeTag); Q_UNUSED(closeTagLen); Q_UNUSED(caretPos); Q_UNUSED(isHTML); }
-    static void setColour(QRgb colour2Set, AutocompleteColorIndex i) { Q_UNUSED(colour2Set); Q_UNUSED(i); }
-    static void drawAutocomplete(const ScintillaEditView* pEditView) { Q_UNUSED(pEditView); }
+	enum class AutocompleteColorIndex {
+		autocompleteText,
+		autocompleteBg,
+		selectedText,
+		selectedBg,
+		calltipBg,
+		calltipText,
+		calltipHighlight
+	};
+
+	bool setLanguage(LangType language);
+
+	//AutoComplete from the list
+	bool showApiComplete();
+	//WordCompletion from the current file
+	bool showWordComplete(bool autoInsert);	//autoInsert true if completion should fill in the word on a single match
+	// AutoComplete from both the list and the current file
+	bool showApiAndWordComplete();
+	//Parameter display from the list
+	bool showFunctionComplete();
+	// Autocomplete from path.
+	void showPathCompletion();
+
+	void insertMatchedChars(int character, const MatchedPairConf & matchedPairConf);
+	void update(int character);
+	void callTipClick(size_t direction);
+	void getCloseTag(char* closeTag, size_t closeTagLen, size_t caretPos, bool isHTML) const;
+
+	static void setColour(COLORREF colour2Set, AutocompleteColorIndex i);
+	static void drawAutocomplete(const ScintillaEditView* pEditView);
 
 protected:
-    static QRgb _autocompleteBg;
-    static QRgb _autocompleteText;
-    static QRgb _selectedBg;
-    static QRgb _selectedText;
-    static QRgb _calltipBg;
-    static QRgb _calltipText;
-    static QRgb _calltipHighlight;
+	static COLORREF _autocompleteBg;
+	static COLORREF _autocompleteText;
+	static COLORREF _selectedBg;
+	static COLORREF _selectedText;
+	static COLORREF _calltipBg;
+	static COLORREF _calltipText;
+	static COLORREF _calltipHighlight;
 
 private:
-    bool _funcCompletionActive = false;
-    ScintillaEditView* _pEditView = nullptr;
-    LangType _curLang = LangType::L_USER;
-    void* _pXmlFile = nullptr;
-    std::string _xmlKeyword;
-    bool _isFxImageRegistered = false;
-    bool _isFxImageRegisteredDark = false;
-    InsertedMatchedChars _insertedMatchedChars;
-    bool _ignoreCase = true;
-    std::vector<std::string> _keyWordArray;
-    std::string _keyWords;
-    size_t _keyWordMaxLen = 0;
-    FunctionCallTip _funcCalltip;
+	bool _funcCompletionActive = false;
+	ScintillaEditView* _pEditView = nullptr;
+	LangType _curLang = L_TEXT;
+	NppXml::Document _pXmlFile = nullptr;
+	NppXml::Element _xmlKeyword{};
+	bool _isFxImageRegistered = false;
+	bool _isFxImageRegisteredDark = false;
 
-    const wchar_t* getApiFileName();
-    void getWordArray(std::vector<std::string>& wordArray, const char* beginChars, const char* excludeChars) const;
-    enum AutocompleteType { autocFunc, autocFuncAndWord, autocFuncBrief, autocWord };
-    bool showAutoComplete(AutocompleteType autocType, bool autoInsert);
+	InsertedMatchedChars _insertedMatchedChars;
+
+	bool _ignoreCase = true;
+
+	std::vector<std::string> _keyWordArray;
+	std::string _keyWords;
+	size_t _keyWordMaxLen = 0;
+
+	FunctionCallTip _funcCalltip;
+
+	const wchar_t* getApiFileName();
+	void getWordArray(std::vector<std::string>& wordArray, const char* beginChars, const char* excludeChars) const;
+
+	// Type of autocomplete function
+	enum AutocompleteType {
+		autocFunc,
+		autocFuncAndWord,
+		autocFuncBrief,
+		autocWord
+	};
+
+	// AutoComplete code merged into 1 function 
+	bool showAutoComplete(AutocompleteType autocType, bool autoInsert);
 };

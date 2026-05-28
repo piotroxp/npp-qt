@@ -1,85 +1,126 @@
-// Splitter.h — Qt6 translation: Splitter window
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 #pragma once
 
-#include <QSplitter>
-#include <QWidget>
+#include "MISC/Common/WindowsCompat.h"
 
-enum class SplitterMode { Dynamic, LeftFix, RightFix };
+#include <cstdint>
 
-class Splitter : public QSplitter
+#include "Window.h"
+#include "resource.h"
+
+
+#define SV_HORIZONTAL		0x00000001
+#define SV_VERTICAL			0x00000002
+#define SV_FIXED			0x00000004
+#define SV_ENABLERDBLCLK	0x00000008
+#define SV_ENABLELDBLCLK	0x00000010
+#define SV_RESIZEWTHPERCNT	0x00000020
+
+
+#define WM_GETSPLITTER_X		(SPLITTER_USER + 1)
+#define WM_GETSPLITTER_Y		(SPLITTER_USER + 2)
+#define WM_DOPOPUPMENU			(SPLITTER_USER + 3)
+#define WM_RESIZE_CONTAINER		(SPLITTER_USER + 4)
+
+enum class Arrow { left, up, right, down };
+
+enum class WH { height, width };
+
+enum class ZONE_TYPE { bottomRight, topLeft };
+
+enum class SplitterMode: std::uint8_t
 {
-    Q_OBJECT
-
-public:
-    Splitter(QWidget* parent = nullptr);
-    Splitter(Qt::Orientation orientation, QWidget* parent = nullptr);
-
-    void init(int splitterSize, double splitRatio = 50.0, unsigned flags = 0);
-
-    // Enable double-click to reset to 50/50
-    void setEnableResetOnDblClick(bool enable) { _resetOnDblClick = enable; }
-
-    // Set fixed side
-    void setMode(SplitterMode mode) { _mode = mode; }
-    SplitterMode mode() const { return _mode; }
-
-    // Rotation
-    void rotate();
-
-    // Arrow click zones
-    enum class ArrowZone { None, TopLeft, BottomRight };
-    ArrowZone hitTest(const QPoint& pos) const;
-    void gotoTopLeft();
-    void gotoBottomRight();
-
-signals:
-    void splitterMoved(int newPos);
-
-protected:
-    void mouseDoubleClickEvent(QMouseEvent* event) override;
-    void wheelEvent(QWheelEvent* event) override;
-
-private:
-    SplitterMode _mode = SplitterMode::Dynamic;
-    bool _resetOnDblClick = true;
-    int _splitterSize = 4;
-    double _splitRatio = 50.0;
+	DYNAMIC, LEFT_FIX, RIGHT_FIX
 };
 
-// Splitter container manages two windows with a splitter
-class SplitterContainer : public QWidget
+class Splitter : public Window
 {
-    Q_OBJECT
-
 public:
-    SplitterContainer(QWidget* parent = nullptr);
-    ~SplitterContainer() override;
+	Splitter() = default;
+	~Splitter() override = default;
 
-    void create(QWidget* win0, QWidget* win1, int splitterSize = 4,
-               SplitterMode mode = SplitterMode::Dynamic,
-               int ratio = 50, bool isVertical = true);
+	void destroy() override;
 
-    void setWin0(QWidget* win) { _win0 = win; }
-    void setWin1(QWidget* win) { _win1 = win; }
+	void resizeSpliter(RECT *pRect = NULL);
+	void init(HINSTANCE hInst, HWND hPere, int splitterSize, double iSplitRatio, DWORD dwFlags);
+	void rotate();
 
-    bool isVertical() const { return _splitter && _splitter->orientation() == Qt::Vertical; }
-    void rotateToLeft();
-    void rotateToRight();
+	int getPhisicalSize() const
+	{
+		return _splitterSize;
+	}
 
-    void resizeSplitter(const QRect& rect);
-
-signals:
-    void splitterMoved(int pos);
-    void popupMenuRequested(const QPoint& pos);
-
-protected:
-    void contextMenuEvent(QContextMenuEvent* event) override;
 
 private:
-    QWidget* _win0 = nullptr;
-    QWidget* _win1 = nullptr;
-    QSplitter* _splitter = nullptr;
-    SplitterMode _mode = SplitterMode::Dynamic;
-    int _ratio = 50;
-    int _splitterSize = 4;
+	RECT _rect = {};
+	double _splitPercent = 0.;
+	int _splitterSize = 0;
+	bool _isDraged = false;
+	bool _isLeftButtonDown = false;
+	DWORD _dwFlags = 0;
+	bool _isFixed = false;
+	static bool _isHorizontalRegistered;
+	static bool _isVerticalRegistered;
+	static bool _isHorizontalFixedRegistered;
+	static bool _isVerticalFixedRegistered;
+
+	RECT _clickZone2TL = {};
+	RECT _clickZone2BR = {};
+
+	using Window::init;
+
+	static LRESULT CALLBACK staticWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	LRESULT CALLBACK spliterWndProc(UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+	int getClickZone(WH which);
+	void adjustZoneToDraw(RECT & rc2def, ZONE_TYPE whichZone);
+	void drawSplitter();
+	bool isVertical() const { return (_dwFlags & SV_VERTICAL) != 0; }
+	void paintArrow(HDC hdc, const RECT &rect, Arrow arrowDir);
+	void gotoTopLeft();
+	void gotoRightBottom();
+
+	bool isInLeftTopZone(const POINT& p) const
+	{
+		return ((p.x >= _clickZone2TL.left)
+			&& (p.x <= _clickZone2TL.left + _clickZone2TL.right)
+			&& (p.y >= _clickZone2TL.top)
+			&& (p.y <= _clickZone2TL.top + _clickZone2TL.bottom));
+	}
+
+	bool isInRightBottomZone(const POINT& p) const
+	{
+		return ((p.x >= _clickZone2BR.left)
+			&& (p.x <= _clickZone2BR.left + _clickZone2BR.right)
+			&& (p.y >= _clickZone2BR.top)
+			&& (p.y <= _clickZone2BR.top + _clickZone2BR.bottom));
+	}
+
+	int getSplitterFixPosX() const
+	{
+		long result = long(::SendMessage(_hParent, WM_GETSPLITTER_X, 0, 0));
+		return (LOWORD(result) - ((HIWORD(result) == static_cast<std::uint8_t>(SplitterMode::RIGHT_FIX)) ? _splitterSize : 0));
+	}
+
+	int getSplitterFixPosY() const
+	{
+		long result = long(::SendMessage(_hParent, WM_GETSPLITTER_Y, 0, 0));
+		return (LOWORD(result) - ((HIWORD(result) == static_cast<std::uint8_t>(SplitterMode::RIGHT_FIX)) ? _splitterSize : 0));
+	}
 };

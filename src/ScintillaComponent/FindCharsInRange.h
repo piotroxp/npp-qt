@@ -4,7 +4,7 @@
 #include <QLineEdit>
 #include <QSpinBox>
 #include <QPushButton>
-#include "ScintillaEditView.h"
+#include "ScintillaComponent/ScintillaEditView.h"
 // Forward declaration - define intPtr_t if not available
 #ifndef intPtr_t
 using intPtr_t = qintptr;

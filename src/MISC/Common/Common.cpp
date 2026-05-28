@@ -19,8 +19,8 @@
 
 #include "MISC/Common/WindowsCompat.h"
 
-#include <commctrl.h>
-#include <excpt.h>
+#include "MISC/Common/WindowsStubs.h"
+#include "MISC/Common/WindowsStubs.h"
 #include "MISC/Common/WindowsStubs.h"
 
 #include <algorithm>
@@ -40,11 +40,11 @@
 #include <string>
 #include <vector>
 
-#include "Buffer.h"
+#include "ScintillaComponent/Buffer.h"
 #include "CustomFileDialog.h"
 #include "FileInterface.h"
 #include "NppConstants.h"
-#include "NppDarkMode.h"
+#include "../NppDarkMode.h"
 #include "Utf8.h"
 #include "dpiManagerV2.h"
 

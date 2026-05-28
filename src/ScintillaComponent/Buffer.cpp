@@ -19,13 +19,13 @@
 #include <time.h>
 #include <locale>
 #include <sys/stat.h>
-#include "Buffer.h"
+#include "ScintillaComponent/Buffer.h"
 #include "Scintilla.h"
 #include "ILexer.h"
 #include "Lexilla.h"
 #include "../Parameters.h"
 #include "Notepad_plus.h"
-#include "ScintillaEditView.h"
+#include "ScintillaComponent/ScintillaEditView.h"
 #include "EncodingMapper.h"
 #include "uchardet.h"
 #include "FileInterface.h"

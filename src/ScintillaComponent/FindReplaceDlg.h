@@ -19,7 +19,7 @@
 
 #include <map>
 #include "FindReplaceDlg_rc.h"
-#include "ScintillaEditView.h"
+#include "ScintillaComponent/ScintillaEditView.h"
 #include "DockingDlgInterface.h"
 #include "BoostRegexSearch.h"
 #include "StatusBar.h"

@@ -24,7 +24,7 @@
 #include "MISC/Common/WindowsCompat.h"
 
 #include <wintrust.h>
-#include <softpub.h>
+#include "MISC/Common/WindowsStubs.h"
 #include <wincrypt.h>
 #include <sensapi.h>
 

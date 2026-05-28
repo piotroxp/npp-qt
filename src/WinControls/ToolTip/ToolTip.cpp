@@ -14,84 +14,56 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
+#include <iostream>
+#include <stdexcept>
 #include "ToolTip.h"
+#include "../NppDarkMode.h"
 
-#include <QFont>
-#include <QStyle>
-#include <QApplication>
-#include <QScreen>
-
-ToolTip::ToolTip(QWidget* parent)
-    : QLabel(parent)
+void ToolTip::init(HINSTANCE hInst, HWND hParent)
 {
-    setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
-    setAttribute(Qt::WA_TransparentForMouseEvents, false);
-    setTextFormat(Qt::PlainText);
-    setAlignment(Qt::AlignLeft | Qt::AlignTop);
-    setMargin(3);
-    
-    // Style similar to Windows tooltips
-    setStyleSheet(R"(
-        QLabel {
-            background-color: #FFFFE1;
-            color: #000000;
-            border: 1px solid #808080;
-            padding: 2px;
-            font: 8pt 'MS Shell Dlg 2';
-        }
-    )");
+	if (_hSelf == NULL)
+	{
+		Window::init(hInst, hParent);
+
+		_hSelf = CreateWindowEx( 0, TOOLTIPS_CLASS, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP, 
+             CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL, NULL, NULL );
+		if (!_hSelf)
+		{
+			throw std::runtime_error("ToolTip::init : CreateWindowEx() function return null");
+		}
+
+		NppDarkMode::setDarkTooltips(_hSelf, NppDarkMode::ToolTipsType::tooltip);
+	}
 }
 
-void ToolTip::init(QWidget* parent)
-{
-    _hParent = parent;
-    
-    // Inherit font from parent
-    if (parent) {
-        setFont(parent->font());
-    }
-}
 
-void ToolTip::destroy()
+void ToolTip::Show(RECT rectTitle, const wchar_t * pszTitle, int iXOff, int iWidthOff)
 {
-    hide();
-    deleteLater();
-}
+	if (isVisible())
+		destroy();
 
-void ToolTip::show(const QRect& rectTitle, const QString& pszTitleText, int iXOff, int iWidthOff)
-{
-    if (isVisible()) {
-        hide();
-    }
-    
-    if (pszTitleText.isEmpty()) return;
-    
-    setText(pszTitleText);
-    
-    // Position the tooltip below the title area
-    int x = rectTitle.left() + iXOff;
-    int y = rectTitle.top() + rectTitle.height() + iWidthOff;
-    
-    // Ensure tooltip stays on screen
-    QPoint pos(x, y);
-    QScreen* screen = QApplication::screenAt(pos);
-    if (!screen) screen = QApplication::primaryScreen();
-    QRect screenRect = screen->geometry();
-    
-    // Adjust if tooltip would go off-screen
-    QSize tipSize = sizeHint();
-    if (pos.x() + tipSize.width() > screenRect.right()) {
-        pos.setX(screenRect.right() - tipSize.width());
-    }
-    if (pos.y() + tipSize.height() > screenRect.bottom()) {
-        pos.setY(rectTitle.top() - tipSize.height());
-    }
-    
-    move(pos);
-    QLabel::show();
-}
+	if (lstrlen(pszTitle) == 0)
+		return;
 
-void ToolTip::hide()
-{
-    QLabel::hide();
+	// INITIALIZE MEMBERS OF THE TOOLINFO STRUCTURE
+	_ti.cbSize		= sizeof(TOOLINFO);
+	_ti.uFlags		= TTF_TRACK | TTF_ABSOLUTE;
+	_ti.hwnd		= ::GetParent(_hParent);
+	_ti.hinst		= _hInst;
+	_ti.uId			= 0;
+
+	_ti.rect.left	= rectTitle.left;
+	_ti.rect.top	= rectTitle.top;
+	_ti.rect.right	= rectTitle.right;
+	_ti.rect.bottom	= rectTitle.bottom;
+
+	HFONT	_hFont = (HFONT)::SendMessage(_hParent, WM_GETFONT, 0, 0);	
+	::SendMessage(_hSelf, WM_SETFONT, reinterpret_cast<WPARAM>(_hFont), TRUE);
+
+	// Bleuargh...  const_cast.  Will have to do for now.
+	_ti.lpszText  = const_cast<wchar_t *>(pszTitle);
+	::SendMessage(_hSelf, TTM_ADDTOOL, 0, reinterpret_cast<LPARAM>(&_ti));
+	::SendMessage(_hSelf, TTM_TRACKPOSITION, 0, MAKELONG(_ti.rect.left + iXOff, _ti.rect.top + iWidthOff));
+	::SendMessage(_hSelf, TTM_TRACKACTIVATE, true, reinterpret_cast<LPARAM>(&_ti));
 }

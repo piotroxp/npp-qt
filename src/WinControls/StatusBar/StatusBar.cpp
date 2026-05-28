@@ -1,173 +1,380 @@
-// StatusBar.cpp — Qt6 translation of CStatusBar → QStatusBar
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 #include "StatusBar.h"
-#include <QResizeEvent>
-#include <QLabel>
-#include <QHBoxLayout>
-#include <QWidget>
-#include <QPalette>
-#include <QStyle>
-#include <QApplication>
 
-StatusBar::StatusBar(QWidget* parent)
-    : QStatusBar(parent)
+#include "MISC/Common/WindowsCompat.h"
+
+#include "MISC/Common/WindowsStubs.h"
+#include <vsstyle.h>
+
+#include <algorithm>
+#include <cassert>
+#include <cstdlib>
+#include <stdexcept>
+#include <string>
+
+#include "DoubleBuffer/DoubleBuffer.h"
+#include "NppConstants.h"
+#include "../NppDarkMode.h"
+#include "Window.h"
+#include "dpiManagerV2.h"
+
+//#define IDC_STATUSBAR 789
+
+
+enum
 {
-    setSizeGripEnabled(true);
-    setContentsMargins(0, 0, 0, 0);
+	defaultPartWidth = 5,
+};
 
-    // Default styling
-    setStyleSheet(R"(
-        QStatusBar {
-            background: palette(window);
-            border-top: 1px solid palette(dark);
-        }
-        QLabel {
-            background: transparent;
-            padding: 2px 4px;
-            border: none;
-        }
-    )");
+
+StatusBar::~StatusBar()
+{
+	delete[] _lpParts;
 }
 
-StatusBar::~StatusBar() = default;
 
-void StatusBar::init(int nbParts)
+void StatusBar::init(HINSTANCE, HWND)
 {
-    // Remove old labels
-    for (QLabel* lbl : _partLabels)
-        delete lbl;
-    _partLabels.clear();
-
-    _partWidthArray.clear();
-    _partWidthArray.resize(nbParts, 5); // default width
-
-    setupLabels(nbParts);
+	assert(false and "should never be called");
 }
 
-void StatusBar::setupLabels(int nbParts)
+
+struct StatusBarSubclassInfo
 {
-    // Create a container widget for horizontal layout
-    QWidget* container = new QWidget(this);
-    QHBoxLayout* layout = new QHBoxLayout(container);
-    layout->setSpacing(0);
-    layout->setContentsMargins(0, 0, 0, 0);
+	HTHEME hTheme = nullptr;
+	HFONT _hFont = nullptr;
 
-    for (int i = 0; i < nbParts; ++i)
-    {
-        QLabel* label = new QLabel(container);
-        label->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
-        label->setTextInteractionFlags(Qt::NoTextInteraction);
-        label->setCursor(Qt::ArrowCursor);
-        label->setStyleSheet(R"(
-            QLabel {
-                border-right: 1px solid palette(dark);
-                padding-right: 4px;
-            }
-        )");
+	StatusBarSubclassInfo() = default;
+	explicit StatusBarSubclassInfo(const HFONT& hFont) noexcept
+		: _hFont(hFont) {}
 
-        // Connect click signal
-        label->installEventFilter(this);
+	~StatusBarSubclassInfo()
+	{
+		closeTheme();
+		destroyFont();
+	}
 
-        _partLabels.append(label);
-        layout->addWidget(label);
-    }
+	bool ensureTheme(HWND hwnd)
+	{
+		if (!hTheme)
+		{
+			hTheme = ::OpenThemeData(hwnd, VSCLASS_STATUS);
+		}
+		return hTheme != nullptr;
+	}
 
-    layout->addStretch(); // Fill remaining space
-    addPermanentWidget(container, 1); // stretch = 1
+	void closeTheme()
+	{
+		if (hTheme)
+		{
+			CloseThemeData(hTheme);
+			hTheme = nullptr;
+		}
+	}
 
-    adjustParts(width());
+	void setFont(const HFONT& hFont)
+	{
+		destroyFont();
+		_hFont = hFont;
+	}
+
+	void destroyFont()
+	{
+		if (_hFont != nullptr)
+		{
+			::DeleteObject(_hFont);
+			_hFont = nullptr;
+		}
+	}
+};
+
+
+static LRESULT CALLBACK StatusBarSubclass(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	StatusBarSubclassInfo* pStatusBarInfo = reinterpret_cast<StatusBarSubclassInfo*>(dwRefData);
+
+	switch (uMsg)
+	{
+		case WM_ERASEBKGND:
+		{
+			if (!NppDarkMode::isEnabled())
+			{
+				break;  // Let the control paint background the default way
+			}
+
+			RECT rc{};
+			::GetClientRect(hWnd, &rc);
+			::FillRect(reinterpret_cast<HDC>(wParam), &rc, NppDarkMode::getBackgroundBrush());
+			return TRUE;
+		}
+
+		case WM_PAINT:
+		case WM_PRINTCLIENT:
+		{
+			if (!NppDarkMode::isEnabled())
+			{
+				break;  // Let the control paint itself the default way
+			}
+
+			PAINTSTRUCT ps{};
+			HDC hdc = (uMsg == WM_PAINT) ? ::BeginPaint(hWnd, &ps) : reinterpret_cast<HDC>(wParam);
+
+			struct {
+				int horizontal = 0;
+				int vertical = 0;
+				int between = 0;
+			} borders{};
+
+			::SendMessage(hWnd, SB_GETBORDERS, 0, reinterpret_cast<LPARAM>(&borders));
+
+			const auto style = ::GetWindowLongPtr(hWnd, GWL_STYLE);
+			bool isSizeGrip = style & SBARS_SIZEGRIP;
+
+			auto holdPen = static_cast<HPEN>(::SelectObject(hdc, NppDarkMode::getEdgePen()));
+
+			auto holdFont = static_cast<HFONT>(::SelectObject(hdc, pStatusBarInfo->_hFont));
+
+			int nParts = static_cast<int>(SendMessage(hWnd, SB_GETPARTS, 0, 0));
+			std::wstring str;
+			for (int i = 0; i < nParts; ++i)
+			{
+				RECT rcPart{};
+				::SendMessage(hWnd, SB_GETRECT, i, reinterpret_cast<LPARAM>(&rcPart));
+				if (!::RectVisible(hdc, &rcPart))
+				{
+					continue;
+				}
+
+				if (nParts > 2) //to not apply on status bar in find dialog
+				{
+					POINT edges[] = {
+						{rcPart.right - 2, rcPart.top + 1},
+						{rcPart.right - 2, rcPart.bottom - 3}
+					};
+					Polyline(hdc, edges, _countof(edges));
+				}
+
+				RECT rcDivider = { rcPart.right - borders.vertical, rcPart.top, rcPart.right, rcPart.bottom };
+
+				DWORD cchText = 0;
+				cchText = LOWORD(SendMessage(hWnd, SB_GETTEXTLENGTH, i, 0));
+				str.resize(size_t{ cchText } + 1); // technically the std::wstring might not have an internal null character at the end of the buffer, so add one
+				LRESULT lr = ::SendMessage(hWnd, SB_GETTEXT, i, reinterpret_cast<LPARAM>(str.data()));
+				str.resize(cchText); // remove the extra NULL character
+				bool ownerDraw = false;
+				if (cchText == 0 && (lr & ~(SBT_NOBORDERS | SBT_POPOUT | SBT_RTLREADING)) != 0)
+				{
+					// this is a pointer to the text
+					ownerDraw = true;
+				}
+				SetBkMode(hdc, TRANSPARENT);
+				SetTextColor(hdc, NppDarkMode::getTextColor());
+
+				rcPart.left += borders.between;
+				rcPart.right -= borders.vertical;
+
+				if (ownerDraw)
+				{
+					UINT id = GetDlgCtrlID(hWnd);
+					DRAWITEMSTRUCT dis = {
+						0
+						, 0
+						, static_cast<UINT>(i)
+						, ODA_DRAWENTIRE
+						, id
+						, hWnd
+						, hdc
+						, rcPart
+						, static_cast<ULONG_PTR>(lr)
+					};
+
+					SendMessage(GetParent(hWnd), WM_DRAWITEM, id, (LPARAM)&dis);
+				}
+				else
+				{
+					DrawText(hdc, str.c_str(), static_cast<int>(str.size()), &rcPart, DT_SINGLELINE | DT_VCENTER | DT_LEFT);
+				}
+
+				if (!isSizeGrip && i < (nParts - 1))
+				{
+					FillRect(hdc, &rcDivider, NppDarkMode::getCtrlBackgroundBrush());
+				}
+			}
+
+			if (isSizeGrip)
+			{
+				pStatusBarInfo->ensureTheme(hWnd);
+				SIZE gripSize{};
+				RECT rc{};
+				::GetClientRect(hWnd, &rc);
+				GetThemePartSize(pStatusBarInfo->hTheme, hdc, SP_GRIPPER, 0, &rc, TS_DRAW, &gripSize);
+				rc.left = rc.right - gripSize.cx;
+				rc.top = rc.bottom - gripSize.cy;
+				DrawThemeBackground(pStatusBarInfo->hTheme, hdc, SP_GRIPPER, 0, &rc, nullptr);
+			}
+
+			::SelectObject(hdc, holdFont);
+			::SelectObject(hdc, holdPen);
+
+			if (uMsg == WM_PAINT)
+			{
+				::EndPaint(hWnd, &ps);
+			}
+			return 0;
+		}
+
+		case WM_NCDESTROY:
+		{
+			::RemoveWindowSubclass(hWnd, StatusBarSubclass, uIdSubclass);
+			break;
+		}
+
+		case WM_DPICHANGED:
+		case WM_DPICHANGED_AFTERPARENT:
+		case WM_THEMECHANGED:
+		{
+			pStatusBarInfo->closeTheme();
+			LOGFONT lf{ DPIManagerV2::getDefaultGUIFontForDpi(::GetParent(hWnd), DPIManagerV2::FontType::status) };
+			pStatusBarInfo->setFont(::CreateFontIndirect(&lf));
+			
+			if (uMsg != WM_THEMECHANGED)
+			{
+				return 0;
+			}
+			break;
+		}
+	}
+	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
+
+
+void StatusBar::init(HINSTANCE hInst, HWND hPere, int nbParts)
+{
+	Window::init(hInst, hPere);
+	InitCommonControls();
+
+	// _hSelf = CreateStatusWindow(WS_CHILD | WS_CLIPSIBLINGS, NULL, _hParent, IDC_STATUSBAR);
+	_hSelf = ::CreateWindowEx(
+		0,
+		STATUSCLASSNAME,
+		L"",
+		WS_CHILD | SBARS_SIZEGRIP ,
+		0, 0, 0, 0,
+		_hParent, nullptr, _hInst, 0);
+
+	if (!_hSelf)
+		throw std::runtime_error("StatusBar::init : CreateWindowEx() function return null");
+
+	LOGFONT lf{ DPIManagerV2::getDefaultGUIFontForDpi(_hParent, DPIManagerV2::FontType::status) };
+	StatusBarSubclassInfo* pStatusBarInfo = new StatusBarSubclassInfo(::CreateFontIndirect(&lf));
+	_pStatusBarInfo = pStatusBarInfo;
+
+	SetWindowSubclass(_hSelf, StatusBarSubclass, static_cast<UINT_PTR>(SubclassID::first), reinterpret_cast<DWORD_PTR>(pStatusBarInfo));
+
+	DoubleBuffer::subclass(_hSelf);
+
+	_partWidthArray.clear();
+	if (nbParts > 0)
+		_partWidthArray.resize(nbParts, defaultPartWidth);
+
+	// Allocate an array for holding the right edge coordinates.
+	if (_partWidthArray.size())
+		_lpParts = new int[_partWidthArray.size()];
+
+	RECT rc{};
+	::GetClientRect(_hParent, &rc);
+	adjustParts(rc.right);
+}
+
 
 bool StatusBar::setPartWidth(int whichPart, int width)
 {
-    if (whichPart < 0 || whichPart >= _partWidthArray.size())
-        return false;
-
-    _partWidthArray[whichPart] = width;
-    return true;
+	if ((size_t) whichPart < _partWidthArray.size())
+	{
+		_partWidthArray[whichPart] = width;
+		return true;
+	}
+	assert(false and "invalid status bar index");
+	return false;
 }
 
-bool StatusBar::setText(const QString& str, int whichPart)
+
+void StatusBar::destroy()
 {
-    if (whichPart < 0 || whichPart >= _partLabels.size())
-        return false;
-
-    _lastSetText = str;
-    _partLabels[whichPart]->setText(str);
-    return true;
+	::DestroyWindow(_hSelf);
+	delete _pStatusBarInfo;
 }
 
-bool StatusBar::setOwnerDrawText(const QString& str)
+
+void StatusBar::reSizeTo(RECT& rc)
 {
-    _lastSetText = str;
-    // Owner draw would require custom paint — simplified here
-    // Full implementation would draw directly via paintEvent
-    for (auto* lbl : _partLabels)
-    {
-        if (lbl->text().isEmpty())
-        {
-            lbl->setText(str);
-            return true;
-        }
-    }
-    return false;
+	::MoveWindow(_hSelf, rc.left, rc.top, rc.right, rc.bottom, TRUE);
+	adjustParts(rc.right);
+	redraw();
 }
 
-void StatusBar::adjustParts(int clientWidth)
-{
-    // Calculate right-edge positions for each part
-    int nWidth = qMax(clientWidth - 20, 0);
-
-    // Compute positions in reverse
-    QVector<int> rightEdges(_partWidthArray.size());
-    for (int i = _partWidthArray.size() - 1; i >= 0; --i)
-    {
-        rightEdges[i] = nWidth;
-        nWidth -= _partWidthArray[i];
-    }
-
-    // Apply to labels
-    for (int i = 0; i < _partLabels.size() && i < rightEdges.size(); ++i)
-    {
-        // Set minimum width for each label
-        _partLabels[i]->setMinimumWidth(_partWidthArray[i] > 5 ? _partWidthArray[i] : 50);
-    }
-}
 
 int StatusBar::getHeight() const
 {
-    return QStatusBar::sizeHint().height();
+	return (FALSE != ::IsWindowVisible(_hSelf)) ? Window::getHeight() : 0;
 }
 
-void StatusBar::setDarkMode(bool enabled)
+
+void StatusBar::adjustParts(int clientWidth)
 {
-    _isDarkMode = enabled;
-    if (enabled)
-    {
-        setStyleSheet(R"(
-            QStatusBar {
-                background: #2d2d30;
-                color: #cccccc;
-                border-top: 1px solid #3e3e42;
-            }
-            QLabel {
-                color: #cccccc;
-            }
-        )");
-    }
-    else
-    {
-        setStyleSheet(R"(
-            QStatusBar {
-                background: palette(window);
-                color: palette(window-text);
-                border-top: 1px solid palette(dark);
-            }
-        )");
-    }
+	// Calculate the right edge coordinate for each part, and
+	// copy the coordinates to the array.
+	int nWidth = std::max<int>(clientWidth - 20, 0);
+
+	for (int i = static_cast<int>(_partWidthArray.size()) - 1; i >= 0; i--)
+	{
+		_lpParts[i] = nWidth;
+		nWidth -= _partWidthArray[i];
+	}
+
+	// Tell the status bar to create the window parts.
+	::SendMessage(_hSelf, SB_SETPARTS, _partWidthArray.size(), reinterpret_cast<LPARAM>(_lpParts));
 }
 
-void StatusBar::resizeEvent(QResizeEvent* event)
+
+bool StatusBar::setText(const wchar_t* str, int whichPart)
 {
-    QStatusBar::resizeEvent(event);
-    adjustParts(event->size().width());
+	if ((size_t) whichPart < _partWidthArray.size())
+	{
+		if (str != nullptr)
+			_lastSetText = str;
+		else
+			_lastSetText.clear();
+
+		return (TRUE == ::SendMessage(_hSelf, SB_SETTEXT, whichPart, reinterpret_cast<LPARAM>(_lastSetText.c_str())));
+	}
+	assert(false and "invalid status bar index");
+	return false;
+}
+
+
+bool StatusBar::setOwnerDrawText(const wchar_t* str)
+{
+	if (str != nullptr)
+		_lastSetText = str;
+	else
+		_lastSetText.clear();
+
+	return (::SendMessage(_hSelf, SB_SETTEXT, SBT_OWNERDRAW, reinterpret_cast<LPARAM>(_lastSetText.c_str())) == TRUE);
 }

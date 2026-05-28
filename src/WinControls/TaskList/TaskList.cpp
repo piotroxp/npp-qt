@@ -14,132 +14,278 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include <stdexcept>
 #include "TaskList.h"
+#include "TaskListDlg_rc.h"
+#include "colors.h"
 
-#include <QVBoxLayout>
-#include <QKeyEvent>
-#include <QMouseEvent>
+#include "MISC/Common/WindowsStubs.h"
 
-TaskList::TaskList()
-    : Window()
+#include <cwchar>
+
+#include "NppConstants.h"
+#include "../NppDarkMode.h"
+#include "dpiManagerV2.h"
+
+void TaskList::init(HINSTANCE hInst, HWND parent, HIMAGELIST hImaLst, int nbItem, int index2set)
 {
-    _rc.setRect(0, 0, 150, 0);
-}
+	Window::init(hInst, parent);
 
-TaskList::~TaskList()
-{
-    destroyFont();
-}
+	_currentIndex = index2set;
 
-void TaskList::init(QWidget* parent, int nbItem, int index2set)
-{
-    Window::init(parent);
-    _nbItem = nbItem;
-    _currentIndex = index2set;
+	INITCOMMONCONTROLSEX icex{};
     
-    _pListWidget = new QListWidget(parent);
-    _pListWidget->setSelectionMode(QAbstractItemView::SingleSelection);
-    _pListWidget->setAlternatingRowColors(true);
+    // Ensure that the common control DLL is loaded. 
+    icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+    icex.dwICC  = ICC_LISTVIEW_CLASSES;
+    InitCommonControlsEx(&icex);
+
+	_nbItem = nbItem;
     
-    // Populate with placeholder items
-    for (int i = 0; i < nbItem; ++i) {
-        _pListWidget->addItem(QString("Document %1").arg(i + 1));
-    }
-    
-    if (index2set >= 0 && index2set < nbItem) {
-        _pListWidget->setCurrentRow(index2set);
-    }
-    
-    // Connect signals
-    connect(_pListWidget, &QListWidget::itemClicked, this, [this]() {
-        emit taskSelected(_pListWidget->currentRow());
-    });
-    connect(_pListWidget, &QListWidget::itemDoubleClicked, this, [this]() {
-        emit taskActivated(_pListWidget->currentRow());
-    });
+    // Create the list-view window in report view with label editing enabled.
+	int listViewStyles = LVS_REPORT | LVS_OWNERDATA | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER\
+						| /*LVS_NOSCROLL |*/ LVS_SINGLESEL | LVS_AUTOARRANGE | LVS_OWNERDRAWFIXED\
+						| LVS_SHAREIMAGELISTS/* | WS_BORDER*/;
+
+	_hSelf = ::CreateWindow(WC_LISTVIEW, 
+                                L"", 
+                                WS_CHILD | listViewStyles,
+                                0,
+                                0, 
+                                0,
+                                0,
+                                _hParent, 
+                                NULL, 
+                                hInst,
+                                NULL);
+	if (!_hSelf)
+	{
+		throw std::runtime_error("TaskList::init : CreateWindowEx() function return null");
+	}
+
+	::SetWindowSubclass(_hSelf, TaskListSelectProc, static_cast<UINT_PTR>(SubclassID::first), reinterpret_cast<DWORD_PTR>(this));
+
+	DWORD exStyle = ListView_GetExtendedListViewStyle(_hSelf);
+	exStyle |= LVS_EX_FULLROWSELECT | LVS_EX_BORDERSELECT | LVS_EX_DOUBLEBUFFER;
+	ListView_SetExtendedListViewStyle(_hSelf, exStyle);
+
+
+	LVCOLUMN lvColumn{};
+	lvColumn.mask = LVCF_WIDTH;
+
+	lvColumn.cx = 500;
+
+	ListView_InsertColumn(_hSelf, 0, &lvColumn);
+
+	ListView_SetItemCountEx(_hSelf, _nbItem, LVSICF_NOSCROLL);
+	ListView_SetImageList(_hSelf, hImaLst, LVSIL_SMALL);
+
+	ListView_SetItemState(_hSelf, _currentIndex, LVIS_SELECTED|LVIS_FOCUSED, LVIS_SELECTED|LVIS_FOCUSED);
+	ListView_SetBkColor(_hSelf, NppDarkMode::isEnabled() ? NppDarkMode::getBackgroundColor() : lightYellow);
 }
 
 void TaskList::destroy()
 {
-    destroyFont();
-    if (_pListWidget) {
-        _pListWidget->deleteLater();
-        _pListWidget = nullptr;
-    }
+	TaskList::destroyFont();
+	::DestroyWindow(_hSelf);
+	_hSelf = nullptr;
 }
 
-void TaskList::setFont(int fontSize, const QString& fontName)
+RECT TaskList::adjustSize()
 {
-    QString name = fontName.isEmpty() ? "MS Sans Serif" : fontName;
-    _font = QFont(name, fontSize);
-    _fontSelected = QFont(name, fontSize, QFont::Bold);
-    
-    if (_pListWidget) {
-        _pListWidget->setFont(_font);
-    }
+	RECT rc{};
+	ListView_GetItemRect(_hSelf, 0, &rc, LVIR_ICON);
+	const int imgWidth = rc.right - rc.left;
+	const int aSpaceWidth = ListView_GetStringWidth(_hSelf, L" ");
+	const int paddedBorder = ::GetSystemMetrics(SM_CXPADDEDBORDER);
+	const int leftMarge = (::GetSystemMetrics(SM_CXFRAME) + paddedBorder) * 2 + aSpaceWidth * 4;
+
+	// Temporary set "selected" font to get the worst case widths
+	::SendMessage(_hSelf, WM_SETFONT, reinterpret_cast<WPARAM>(_hFontSelected), 0);
+	int maxwidth = -1;
+
+	_rc = { 0, 0, 0, 0 };
+	wchar_t buf[MAX_PATH] = { '\0' };
+	for (int i = 0 ; i < _nbItem ; ++i)
+	{
+		ListView_GetItemText(_hSelf, i, 0, buf, MAX_PATH);
+		int width = ListView_GetStringWidth(_hSelf, buf);
+		if (width > maxwidth)
+			maxwidth = width;
+		_rc.bottom += rc.bottom - rc.top;
+	}
+
+	_rc.right = maxwidth + imgWidth + leftMarge;
+	ListView_SetColumnWidth(_hSelf, 0, _rc.right);
+	::SendMessage(_hSelf, WM_SETFONT, reinterpret_cast<WPARAM>(_hFont), 0);
+
+	//if the tasklist exceeds the height of the display, leave some space at the bottom
+	const LONG maxHeight = ::GetSystemMetrics(SM_CYSCREEN) - 120L;
+	if (_rc.bottom > maxHeight)
+	{
+		_rc.bottom = maxHeight;
+	}
+	reSizeToWH(_rc);
+
+	// Task List's border is 1px smaller than ::GetSystemMetrics(SM_CYFRAME) returns
+	_rc.bottom += (::GetSystemMetrics(SM_CYFRAME) + paddedBorder - 1) * 2;
+	return _rc;
+}
+
+void TaskList::setFont(int fontSize, const wchar_t* fontName)
+{
+	TaskList::destroyFont();
+
+	auto lf = LOGFONT{ DPIManagerV2::getDefaultGUIFontForDpi(_hParent) };
+
+	static const int fontSizeFactor = DPIManagerV2::scaleFontForFactor(fontSize);
+	lf.lfHeight = DPIManagerV2::scaleFont(fontSizeFactor, _hParent);
+
+	if (fontName != nullptr && std::wcslen(fontName) < LF_FACESIZE)
+	{
+		::ZeroMemory(lf.lfFaceName, LF_FACESIZE);
+		::wcsncpy_s(lf.lfFaceName, fontName, LF_FACESIZE);
+	}
+
+	_hFont = ::CreateFontIndirectW(&lf);
+
+	lf.lfWeight = FW_BOLD;
+
+	_hFontSelected = ::CreateFontIndirectW(&lf);
+
+	if (_hFont)
+		::SendMessage(_hSelf, WM_SETFONT, reinterpret_cast<WPARAM>(_hFont), 0);
 }
 
 void TaskList::destroyFont()
 {
-    _font = QFont();
-    _fontSelected = QFont();
-}
+	if (_hFont != nullptr)
+	{
+		::DeleteObject(_hFont);
+		_hFont = nullptr;
+	}
 
-QRect TaskList::adjustSize()
-{
-    if (!_pListWidget) return _rc;
-    
-    // Calculate required size based on content
-    int maxWidth = 150;
-    QRect rect = _pListWidget->visualRect(_pListWidget->model()->index(0, 0));
-    
-    _rc.setRect(0, 0, maxWidth, _nbItem * rect.height());
-    
-    return _rc;
+	if (_hFontSelected != nullptr)
+	{
+		::DeleteObject(_hFontSelected);
+		_hFontSelected = nullptr;
+	}
 }
 
 int TaskList::updateCurrentIndex()
 {
-    if (_pListWidget) {
-        _currentIndex = _pListWidget->currentRow();
-    }
-    return _currentIndex;
+	for (int i = 0 ; i < _nbItem ; ++i)
+	{
+		int isSelected = ListView_GetItemState(_hSelf, i, LVIS_SELECTED);
+		if (isSelected == LVIS_SELECTED)
+		{
+			_currentIndex = i;
+			return _currentIndex;
+		}
+	}
+	return _currentIndex;
 }
 
 void TaskList::moveSelection(int direction)
 {
-    if (!_pListWidget) return;
-    
-    int newIndex = _currentIndex + direction;
-    if (newIndex < 0) newIndex = _nbItem - 1;
-    if (newIndex >= _nbItem) newIndex = 0;
-    
-    _pListWidget->setCurrentRow(newIndex);
-    _currentIndex = newIndex;
+	auto getNextIndex = [&]() -> int
+	{
+		const int next = _currentIndex + direction;
+		if (next < 0)
+			return _nbItem - 1;
+		if (next >= _nbItem)
+			return 0;
+		return next;
+	};
+
+	const int newIndex = getNextIndex();
+
+	// Clear current
+	ListView_SetItemState(_hSelf, _currentIndex, 0, LVIS_SELECTED | LVIS_FOCUSED);
+	ListView_RedrawItems(_hSelf, _currentIndex, _currentIndex);
+
+	// Set new
+	ListView_SetItemState(_hSelf, newIndex, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+	ListView_RedrawItems(_hSelf, newIndex, newIndex);
+	::UpdateWindow(_hSelf);
+
+	_currentIndex = newIndex;
+	ListView_EnsureVisible(_hSelf, _currentIndex, TRUE);
 }
 
-void TaskList::keyPressEvent(QKeyEvent* event)
+LRESULT CALLBACK TaskList::TaskListSelectProc(
+	HWND hWnd,
+	UINT uMsg,
+	WPARAM wParam,
+	LPARAM lParam,
+	UINT_PTR uIdSubclass,
+	DWORD_PTR dwRefData
+)
 {
-    switch (event->key()) {
-        case Qt::Key_Up:
-            moveSelection(-1);
-            event->accept();
-            break;
-        case Qt::Key_Down:
-            moveSelection(1);
-            event->accept();
-            break;
-        case Qt::Key_Return:
-        case Qt::Key_Enter:
-            emit taskActivated(_currentIndex);
-            event->accept();
-            break;
-        default:
-            QWidget::keyPressEvent(event);
-    }
-}
+	auto* pRefData = reinterpret_cast<TaskList*>(dwRefData);
 
-void TaskList::mousePressEvent(QMouseEvent* event)
-{
-    QWidget::mousePressEvent(event);
+	switch (uMsg)
+	{
+		case WM_NCDESTROY:
+		{
+			::RemoveWindowSubclass(hWnd, TaskList::TaskListSelectProc, uIdSubclass);
+			break;
+		}
+
+		case WM_KEYUP:
+		{
+			if (wParam == VK_CONTROL)
+			{
+				::SendMessage(pRefData->_hParent, WM_COMMAND, ID_PICKEDUP, pRefData->_currentIndex);
+			}
+			return 0;
+		}
+
+		case WM_MOUSEWHEEL:
+		{
+			const auto zDelta = static_cast<short>(HIWORD(wParam));
+			pRefData->moveSelection(zDelta > 0 ? -1 : 1);
+			return 0;
+		}
+
+		case WM_KEYDOWN:
+		{
+			return 0;
+		}
+
+		case WM_GETDLGCODE:
+		{
+			const auto* msg = reinterpret_cast<MSG*>(lParam);
+
+			if (msg != nullptr)
+			{
+				if ((msg->message == WM_KEYDOWN) && (0x80 & GetKeyState(VK_CONTROL)))
+				{
+					// Shift+Tab is cool but I think VK_UP and VK_LEFT are also cool :-)
+					if (((msg->wParam == VK_TAB) && (0x80 & GetKeyState(VK_SHIFT)))
+						|| (msg->wParam == VK_UP)
+						|| (msg->wParam == VK_LEFT))
+					{
+						pRefData->moveSelection(-1);
+					}
+					// VK_DOWN and VK_RIGHT do the same as VK_TAB does
+					else if ((msg->wParam == VK_TAB)
+						|| (msg->wParam == VK_DOWN)
+						|| (msg->wParam == VK_RIGHT))
+					{
+						pRefData->moveSelection(1);
+					}
+				}
+				else
+				{
+					return 0;
+				}
+			}
+			return DLGC_WANTALLKEYS;
+		}
+
+		default:
+			break;
+	}
+	return ::DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }

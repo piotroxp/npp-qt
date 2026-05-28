@@ -14,30 +14,30 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #pragma once
 
-#include <QLabel>
-#include <QWidget>
-#include <QString>
-#include <QRect>
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
+#include "Window.h"
 
-// ToolTip - Custom tooltip control
-// Replaces Win32 tooltip with Qt-based custom tooltip
-class ToolTip : public QLabel
+class ToolTip : public Window
 {
-    Q_OBJECT
-
 public:
-    ToolTip(QWidget* parent = nullptr);
-    ~ToolTip() override = default;
+	ToolTip() = default;
 
-    void init(QWidget* parent);
-    void destroy();
+	void destroy() override {
+		if (_hSelf != nullptr)
+		{
+			::DestroyWindow(_hSelf);
+			_hSelf = nullptr;
+		}
+	}
 
-    void show(const QRect& rectTitle, const QString& pszTitleText, int iXOff = 0, int iWidthOff = 0);
-    void hide();
+	void init(HINSTANCE hInst, HWND hParent) override;
+	void Show(RECT rectTitle, const wchar_t* pszTitleText, int iXOff = 0, int iWidthOff = 0);
 
-private:
-    bool _bTrackMouse = false;
-    QWidget* _hParent = nullptr;
+protected:
+	BOOL		_bTrackMouse = FALSE;
+	TOOLINFO	_ti = {};
 };

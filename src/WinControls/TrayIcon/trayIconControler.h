@@ -14,48 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #pragma once
 
-#include <QSystemTrayIcon>
-#include <QString>
-#include <QIcon>
-#include <QMenu>
-#include <QAction>
+#include "MISC/Common/WindowsCompat.h"
 
-// trayIconControler - System tray icon management
-// Replaces Win32 Shell_NotifyIcon with Qt QSystemTrayIcon
-class trayIconControler : public QSystemTrayIcon
+#define ADD     NIM_ADD
+#define REMOVE  NIM_DELETE
+
+// code d'erreur
+#define INCORRECT_OPERATION     1
+#define OPERATION_INCOHERENT    2
+
+class trayIconControler
 {
-    Q_OBJECT
-
 public:
-    trayIconControler(QWidget* hwnd, unsigned int uID, unsigned int uCBMsg, const QIcon& icon, const QString& tip);
-    ~trayIconControler() override;
-
-    int doTrayIcon(unsigned int op);
-    bool isInTray() const { return _isIconShown; }
-    int reAddTrayIcon();
-
-signals:
-    void trayIconClicked(QSystemTrayIcon::ActivationReason reason);
-    void trayIconDoubleClicked();
-
-public slots:
-    void onActivated(QSystemTrayIcon::ActivationReason reason);
+  trayIconControler(HWND hwnd, UINT uID, UINT uCBMsg, HICON hicon, const wchar_t *tip);
+  int doTrayIcon(DWORD op);
+  bool isInTray() const { return _isIconShown; }
+  int reAddTrayIcon();
 
 private:
-    unsigned int _uID = 0;
-    unsigned int _uCBMsg = 0;
-    bool _isIconShown = false;
-    QWidget* _parentWindow = nullptr;
-    
-    // Error codes
-    enum {
-        INCORRECT_OPERATION = 1,
-        OPERATION_INCOHERENT = 2
-    };
+  NOTIFYICONDATA _nid;
+  bool _isIconShown = false;
 };
-
-// Add/Remove operations
-#define ADD 0x00000000  // NIM_ADD
-#define REMOVE 0x00000002  // NIM_DELETE

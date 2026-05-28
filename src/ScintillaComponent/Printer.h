@@ -1,31 +1,51 @@
-// Printer.h - Qt port
-#pragma once
-#include <QPrinter>
-#include <QPrintPreviewWidget>
-#include <QPrintDialog>
-#include <QPainter>
-#include "ScintillaEditView.h"
-// Forward declarations
-#ifndef intPtr_t
-using intPtr_t = qintptr;
-#endif
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
 
-class Printer : public QWidget {
-    Q_OBJECT
-public:
-    Printer() : QWidget() {}
-    void init(void* hInst, void* hwndApp, ScintillaEditView** ppEditView) { Q_UNUSED(hInst); _hParent = hwndApp; _ppEditView = ppEditView; }
-    bool filePrint();
-    bool filePrintPreview();
-    bool filePrintAgain();
-    bool hasPrintableFiles();
-    void printPixelPage(QPainter* dc, void* hWnd, intPtr_t* nbPrintedPages, intPtr_t* totalPrintedLines, bool oneBased = true);
-    void printAllPage(QPainter* dc, intPtr_t* nbPages);
-    void doPrint(bool isMain = true);
-    bool render(int page);
-private:
-    void* _hParent = nullptr;
-    ScintillaEditView** _ppEditView = nullptr;
-    QPrinter _printer;
-    std::vector<bool> _pagesPrinted;
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+#pragma once
+
+#include "ScintillaComponent/ScintillaEditView.h"
+
+
+struct NPP_RangeToFormat {
+	HDC hdc = nullptr;
+	HDC hdcTarget = nullptr;
+	RECT rc = {};
+	RECT rcPage = {};
+	Sci_CharacterRangeFull chrg = {};
+};
+
+class Printer
+{
+public :
+	Printer() = default;
+
+	void init(HINSTANCE hInst, HWND hwnd, ScintillaEditView *pSEView, bool showDialog, size_t startPos, size_t endPos, bool isRTL = false);
+	size_t doPrint() {
+		if (!::PrintDlg(&_pdlg))
+				return 0;
+
+		return doPrint(true);
+	}
+	size_t doPrint(bool justDoIt);
+
+private :
+	PRINTDLG _pdlg = {};
+	ScintillaEditView *_pSEView = nullptr;
+	size_t _startPos = 0;
+	size_t _endPos = 0;
+	bool _isRTL = false;
 };

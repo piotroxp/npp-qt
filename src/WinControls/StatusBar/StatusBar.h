@@ -1,58 +1,57 @@
-// StatusBar.h — Qt6 translation of CStatusBar → QStatusBar
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 #pragma once
 
-#include <QStatusBar>
-#include <QLabel>
-#include <QTimer>
-#include <QVector>
-#include <QMap>
+#include "MISC/Common/WindowsCompat.h"
 
-class StatusBar : public QStatusBar
+#include <string>
+#include <vector>
+
+#include "Window.h"
+
+struct StatusBarSubclassInfo;
+
+
+class StatusBar final : public Window
 {
-    Q_OBJECT
-
 public:
-    explicit StatusBar(QWidget* parent = nullptr);
-    ~StatusBar() override;
+	virtual ~StatusBar();
 
-    // Initialize with N parts (like SB_SETPARTS)
-    void init(int nbParts);
+	void init(HINSTANCE hInst, HWND hPere, int nbParts);
 
-    // Set width of a specific part
-    bool setPartWidth(int whichPart, int width);
+	bool setPartWidth(int whichPart, int width);
 
-    // Set text in a part
-    bool setText(const QString& str, int whichPart);
+	void destroy() override;
+	void reSizeTo(RECT& rc) override;
 
-    // Owner-draw text (for custom rendering like color highlights)
-    bool setOwnerDrawText(const QString& str);
+	int getHeight() const override;
 
-    // Adjust part widths based on client width
-    void adjustParts(int clientWidth);
+	bool setText(const wchar_t* str, int whichPart);
+	bool setOwnerDrawText(const wchar_t* str);
+	void adjustParts(int clientWidth);
 
-    // Get total height
-    int getHeight() const;
-
-    // Dark mode
-    void setDarkMode(bool enabled);
-    bool isDarkMode() const { return _isDarkMode; }
-
-    // Get/set last text
-    QString getLastText() const { return _lastSetText; }
-
-signals:
-    void partClicked(int whichPart);
-    void segmentClicked(int whichPart);
-
-protected:
-    // Override to handle resize
-    void resizeEvent(QResizeEvent* event) override;
 
 private:
-    void setupLabels(int nbParts);
+	void init(HINSTANCE hInst, HWND hPere) override;
 
-    QVector<int> _partWidthArray;
-    QVector<QLabel*> _partLabels;
-    QString _lastSetText;
-    bool _isDarkMode = false;
+private:
+	std::vector<int> _partWidthArray;
+	int *_lpParts = nullptr;
+	std::wstring _lastSetText;
+	StatusBarSubclassInfo* _pStatusBarInfo = nullptr;
 };

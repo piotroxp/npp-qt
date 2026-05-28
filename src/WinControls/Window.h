@@ -1,164 +1,114 @@
-// Window.h — Qt6 translation of Window utilities
+// This file is part of Notepad++ project
+// Copyright (C)2024 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 #pragma once
+#include "MISC/Common/WindowsCompat.h"
 
-#include <QWidget>
-#include <QRect>
-#include <QSize>
-#include <QPoint>
-#include <QColor>
-#include <QApplication>
-
-// Base Window class for WinForms → Qt6 translation
-class Window : public QWidget
+class Window
 {
-    Q_OBJECT
 public:
-    Window() : QWidget() {}
-    virtual ~Window() {}
+	//! \name Constructors & Destructor
+	//@{
+	Window() = default;
+	Window(const Window&) = delete;
+	virtual ~Window() = default;
+	//@}
 
-    virtual void init(QWidget* parent) { Q_UNUSED(parent); }
-    virtual void display(bool toShow = true) { toShow ? show() : hide(); }
-    virtual void destroy() { close(); deleteLater(); }
+
+	virtual void init(HINSTANCE hInst, HWND parent) {
+		_hInst = hInst;
+		_hParent = parent;
+	}
+
+	virtual void destroy() = 0;
+
+	virtual void display(bool toShow = true) const {
+		::ShowWindow(_hSelf, toShow ? SW_SHOW : SW_HIDE);
+	}
+
+
+	virtual void reSizeTo(RECT & rc) { // should NEVER be const !!!
+		::MoveWindow(_hSelf, rc.left, rc.top, rc.right, rc.bottom, TRUE);
+		redraw();
+	}
+
+
+	virtual void reSizeToWH(RECT& rc) { // should NEVER be const !!!
+		::MoveWindow(_hSelf, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, TRUE);
+		redraw();
+	}
+
+
+	virtual void redraw(bool forceUpdate = false) const {
+		::InvalidateRect(_hSelf, nullptr, TRUE);
+		if (forceUpdate)
+			::UpdateWindow(_hSelf);
+	}
+
+
+    virtual void getClientRect(RECT & rc) const {
+		::GetClientRect(_hSelf, &rc);
+	}
+
+	virtual void getWindowRect(RECT & rc) const {
+		::GetWindowRect(_hSelf, &rc);
+	}
+
+	virtual int getWidth() const {
+		RECT rc;
+		::GetClientRect(_hSelf, &rc);
+		return (rc.right - rc.left);
+	}
+
+	virtual int getHeight() const {
+		RECT rc;
+		::GetClientRect(_hSelf, &rc);
+		if (::IsWindowVisible(_hSelf) == TRUE)
+			return (rc.bottom - rc.top);
+		return 0;
+	}
+
+	virtual bool isVisible() const
+	{
+    	return (::IsWindowVisible(_hSelf)?true:false);
+	}
+
+	HWND getHSelf() const {
+		return _hSelf;
+	}
+
+	HWND getHParent() const {
+		return _hParent;
+	}
+
+	void grabFocus() const {
+		::SetFocus(_hSelf);
+	}
+
+    HINSTANCE getHinst() const {
+		return _hInst;
+	}
+
+
+	Window& operator = (const Window&) = delete;
+
 
 protected:
-    void keyPressEvent(QKeyEvent* event) override { QWidget::keyPressEvent(event); }
-    void closeEvent(QCloseEvent* event) override { QWidget::closeEvent(event); }
+	HINSTANCE _hInst = NULL;
+	HWND _hParent = NULL;
+	HWND _hSelf = NULL;
 };
-
-// Common window utilities shim for Win32 → Qt6
-
-// ─── Rect helpers ────────────────────────────────────────────────
-
-inline QRect makeRect(int left, int top, int right, int bottom)
-{
-    return QRect(left, top, right - left, bottom - top);
-}
-
-inline void setRect(QRect& r, int x1, int y1, int x2, int y2)
-{
-    r = QRect(x1, y1, x2 - x1, y2 - y1);
-}
-
-inline void setRectEmpty(QRect& r) { r = QRect(); }
-inline bool isRectEmpty(const QRect& r) { return r.isEmpty(); }
-
-inline void copyRect(QRect& dest, const QRect& src) { dest = src; }
-
-inline QRect intersectRect(const QRect& a, const QRect& b)
-{
-    return a.intersected(b);
-}
-
-// ─── Point helpers ───────────────────────────────────────────────
-
-inline QPoint makePoint(long x, long y) { return QPoint(x, y); }
-
-// ─── Color helpers ──────────────────────────────────────────────
-
-inline QRgb RGB(int r, int g, int b) { return qRgb(r, g, b); }
-inline int GetRValue(QRgb c) { return qRed(c); }
-inline int GetGValue(QRgb c) { return qGreen(c); }
-inline int GetBValue(QRgb c) { return qBlue(c); }
-
-// ─── HICON → QIcon ───────────────────────────────────────────
-
-inline QIcon iconFromResource(int id, int size = 16)
-{
-    // Load from Qt resource system
-    Q_UNUSED(id);
-    Q_UNUSED(size);
-    return QIcon();
-}
-
-inline QPixmap pixmapFromResource(int id, int width = 16, int height = 16)
-{
-    Q_UNUSED(id);
-    Q_UNUSED(width);
-    Q_UNUSED(height);
-    return QPixmap();
-}
-
-// ─── Window style helpers ──────────────────────────────────────
-
-inline Qt::WindowFlags makeWindowFlags(unsigned long style)
-{
-    Qt::WindowFlags flags = Qt::Widget;
-    if (style & 0x10000000) flags |= Qt::Window; // WS_VISIBLE
-    if (style & 0x08000000) flags |= Qt::Window; // Not disabled - handled separately
-    if (style & 0x00C00000) flags |= Qt::WindowTitleHint; // Has caption
-    if (style & 0x00800000) flags |= Qt::FramelessWindowHint; // Border
-    if (style & 0x00080000) flags |= Qt::WindowSystemMenuHint; // Sys menu
-    if (style & 0x00040000) flags |= Qt::MSWindowsFixedSizeDialogHint; // Thick frame (resize)
-    if (style & 0x00020000) flags |= Qt::WindowMinimizeButtonHint;
-    if (style & 0x00010000) flags |= Qt::WindowMaximizeButtonHint;
-    return flags;
-}
-
-// ─── Client/Window rect ────────────────────────────────────────
-
-inline QRect getClientRect(QWidget* w)
-{
-    return w->rect();
-}
-
-inline QRect getWindowRect(QWidget* w)
-{
-    return QRect(w->mapToGlobal(QPoint(0, 0)), w->size());
-}
-
-// ─── Move/Resize ──────────────────────────────────────────────
-
-inline void moveWindow(QWidget* w, int x, int y, int cx = -1, int cy = -1)
-{
-    if (cx < 0 || cy < 0)
-        w->move(x, y);
-    else
-        w->setGeometry(x, y, cx, cy);
-}
-
-inline void resizeTo(QWidget* w, const QRect& rc)
-{
-    w->setGeometry(rc);
-}
-
-// ─── Visibility ────────────────────────────────────────────────
-
-inline bool isWindowVisible(QWidget* w) { return w->isVisible(); }
-inline bool isWindowEnabled(QWidget* w) { return w->isEnabled(); }
-inline void enableWindow(QWidget* w, bool enable) { w->setEnabled(enable); }
-inline void showWindow(QWidget* w, int cmd)
-{
-    switch (cmd)
-    {
-        case 0: w->hide(); break; // SW_HIDE
-        case 1: w->show(); break; // SW_SHOWNORMAL
-        case 3: w->showMaximized(); break; // SW_SHOWMAXIMIZED
-        case 6: w->showMinimized(); break; // SW_MINIMIZE
-        case 9: w->showNormal(); break; // SW_RESTORE
-        default: w->show(); break;
-    }
-}
-
-// ─── Focus ───────────────────────────────────────────────────
-
-// Duplicated in WindowsCompat.h: setFocus
-// Duplicated in WindowsCompat.h: getFocus
-// getActiveWindow() defined in Win32QtShim.h - no need to redefine
-
-// ─── Cursor ──────────────────────────────────────────────────
-
-inline Qt::CursorShape loadCursor(int id)
-{
-    switch (id)
-    {
-        case 1: case 32512: return Qt::ArrowCursor;
-        case 32513: return Qt::CrossCursor;
-        case 32514: return Qt::SizeAllCursor;
-        case 32515: return Qt::WaitCursor;
-        case 32516: return Qt::IBeamCursor;
-        case 32645: return Qt::SizeAllCursor;
-        case 32649: return Qt::ForbiddenCursor;
-        case 32648: return Qt::PointingHandCursor;
-        default: return Qt::ArrowCursor;
-    }
-}

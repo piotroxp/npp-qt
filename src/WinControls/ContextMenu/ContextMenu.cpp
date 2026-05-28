@@ -17,7 +17,7 @@
 
 #include "ContextMenu.h"
 #include "menuCmdID.h"
-#include "Parameters.h"
+#include "../Parameters.h"
 #include "localization.h"
 
 MenuItemUnit::MenuItemUnit(unsigned long cmdID, const wchar_t* itemName, const wchar_t* parentFolderName) : _cmdID(cmdID)

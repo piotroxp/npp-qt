@@ -15,19 +15,19 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-#include "NppDarkMode.h"
+#include "../NppDarkMode.h"
 
 #include "DarkMode/DarkMode.h"
 #include "DarkMode/UAHMenuBar.h"
 
-#include <dwmapi.h>
 #include "MISC/Common/WindowsStubs.h"
-#include <uxtheme.h>
+#include "MISC/Common/WindowsStubs.h"
+#include "MISC/Common/WindowsStubs.h"
 #include <vssym32.h>
 
 #include <memory>
 
-#include "Parameters.h"
+#include "../Parameters.h"
 #include "dpiManagerV2.h"
 #include "resource.h"
 

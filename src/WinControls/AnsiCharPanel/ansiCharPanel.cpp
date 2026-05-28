@@ -14,203 +14,196 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #include "ansiCharPanel.h"
-#include "ListView.h"
+#include "ScintillaComponent/ScintillaEditView.h"
+#include "localization.h"
 
-#include <QVBoxLayout>
-#include <QGridLayout>
-#include <QPushButton>
-#include <QLabel>
-#include <QScrollArea>
-#include <QHeaderView>
-
-// Win32 macro stubs for Linux Qt6 port
-#ifndef WM_INITDIALOG
-#define WM_INITDIALOG 0x0110
-#endif
-#ifndef WM_SIZE
-#define WM_SIZE 0x0005
-#endif
-#ifndef WM_COMMAND
-#define WM_COMMAND 0x0111
-#endif
-#ifndef WM_NOTIFY
-#define WM_NOTIFY 0x004E
-#endif
-#ifndef WM_DESTROY
-#define WM_DESTROY 0x0002
-#endif
-#ifndef TRUE
-#define TRUE 1
-#endif
-#ifndef FALSE
-#define FALSE 0
-#endif
-#ifndef LOWORD
-#define LOWORD(l) ((uint16_t)((uintptr_t)(l) & 0xFFFF))
-#endif
-#ifndef HIWORD
-#define HIWORD(l) ((uint16_t)(((uintptr_t)(l) >> 16) & 0xFFFF))
-#endif
-
-AnsiCharPanel::AnsiCharPanel()
-    : DockingDlgInterface(IDD_ANSIASCII_PANEL)
-{
-    setWindowTitle(AI_PROJECTPANELTITLE);
-}
-
-void AnsiCharPanel::init(QWidget* parent, ScintillaEditView** ppEditView)
-{
-    _hParent = parent;
-    _ppEditView = ppEditView;
-    setParent(parent);
-}
-
-void AnsiCharPanel::setParent(QWidget* parent2set)
-{
-    _hParent = parent2set;
-    QDialog::setParent(parent2set);
-}
+using namespace std;
 
 void AnsiCharPanel::switchEncoding()
 {
-    // Get current encoding from scintilla and update display
-    // if (_ppEditView && *_ppEditView) {
-    //     _currentCodepage = (*_ppEditView)->getCurrentBuffer()->getEncoding();
-    // }
-    updateCharDisplay();
+	int codepage = (*_ppEditView)->getCurrentBuffer()->getEncoding();
+	_listView.resetValues(codepage);
 }
 
-void AnsiCharPanel::insertChar(unsigned char char2insert) // removed const
+intptr_t CALLBACK AnsiCharPanel::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-    QString ch = QString(QChar(char2insert));
-    insertString(ch);
-    
-    if (_ppEditView && *_ppEditView) {
-        //(*_ppEditView)->execute(SCI_REPLACESEL, 0, reinterpret_cast<LPARAM>(ch.toUtf8().constData()));
-    }
-    
-    emit insertCharacter(QChar(char2insert));
+	switch (message)
+	{
+		case WM_INITDIALOG :
+		{
+			NppParameters& nppParam = NppParameters::getInstance();
+			NativeLangSpeaker *pNativeSpeaker = nppParam.getNativeLangSpeaker();
+			wstring valStr = pNativeSpeaker->getAttrNameStr(L"Value", "AsciiInsertion", "ColumnVal");
+			wstring hexStr = pNativeSpeaker->getAttrNameStr(L"Hex", "AsciiInsertion", "ColumnHex");
+			wstring charStr = pNativeSpeaker->getAttrNameStr(L"Character", "AsciiInsertion", "ColumnChar");
+			wstring htmlNameStr = pNativeSpeaker->getAttrNameStr(L"HTML Name", "AsciiInsertion", "ColumnHtmlName");
+			wstring htmlNumberStr = pNativeSpeaker->getAttrNameStr(L"HTML Decimal", "AsciiInsertion", "ColumnHtmlNumber");
+			wstring htmlHexNbStr = pNativeSpeaker->getAttrNameStr(L"HTML Hexadecimal", "AsciiInsertion", "ColumnHtmlHexNb");
+
+			StaticDialog::setDpi();
+
+			_listView.addColumn(columnInfo(valStr, _dpiManager.scale(45)));
+			_listView.addColumn(columnInfo(hexStr, _dpiManager.scale(45)));
+			_listView.addColumn(columnInfo(charStr, _dpiManager.scale(70)));
+			_listView.addColumn(columnInfo(htmlNameStr, _dpiManager.scale(90)));
+			_listView.addColumn(columnInfo(htmlNumberStr, _dpiManager.scale(100)));
+			_listView.addColumn(columnInfo(htmlHexNbStr, _dpiManager.scale(120)));
+
+			_listView.init(_hInst, _hSelf);
+			int codepage = (*_ppEditView)->getCurrentBuffer()->getEncoding();
+			_listView.setValues(codepage==-1?0:codepage);
+			_listView.display();
+
+			NppDarkMode::autoSubclassAndThemeChildControls(_hSelf);
+			NppDarkMode::autoSubclassAndThemeWindowNotify(_hSelf);
+
+			return TRUE;
+		}
+
+		case NPPM_INTERNAL_REFRESHDARKMODE:
+		{
+			NppDarkMode::autoThemeChildControls(_hSelf);
+			return TRUE;
+		}
+
+		case WM_NOTIFY:
+		{
+			switch (reinterpret_cast<LPNMHDR>(lParam)->code)
+			{
+				case DMN_CLOSE:
+				{
+					::SendMessage(_hParent, WM_COMMAND, IDM_EDIT_CHAR_PANEL, 0);
+
+					return TRUE;
+				}
+
+				case NM_DBLCLK:
+				{
+					LPNMITEMACTIVATE lpnmitem = (LPNMITEMACTIVATE) lParam;
+					LVHITTESTINFO pInfo{};
+					pInfo.pt = lpnmitem->ptAction;
+					ListView_SubItemHitTest(_listView.getHSelf(), &pInfo);
+
+					int i = pInfo.iItem;
+					int j = pInfo.iSubItem;
+					wchar_t buffer[10]{};
+					LVITEM item{};
+					item.mask = LVIF_TEXT | LVIF_PARAM;
+					item.iItem = i;
+					item.iSubItem = j;
+					item.cchTextMax = 10;
+					item.pszText = buffer;
+					ListView_GetItem(_listView.getHSelf(), &item);
+
+					if (i == -1)
+						return TRUE;
+
+					if (j != 2)
+						insertString(item.pszText);
+					else
+						insertChar(static_cast<unsigned char>(i));
+					
+					return TRUE;
+				}
+
+				case LVN_KEYDOWN:
+				{
+					switch (((LPNMLVKEYDOWN)lParam)->wVKey)
+					{
+						case VK_RETURN:
+						{
+							int i = _listView.getSelectedIndex();
+
+							if (i == -1)
+								return TRUE;
+
+							insertChar(static_cast<unsigned char>(i));
+							return TRUE;
+						}
+						default:
+							break;
+					}
+				}
+				break;
+
+				default:
+					break;
+			}
+		}
+		return TRUE;
+
+		case WM_SIZE:
+		{
+			int width = LOWORD(lParam);
+			int height = HIWORD(lParam);
+			::MoveWindow(_listView.getHSelf(), 0, 0, width, height, TRUE);
+			break;
+		}
+
+		default :
+			return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
+	}
+	return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
 }
 
-void AnsiCharPanel::insertString(const QString& string2insert) // removed const
+void AnsiCharPanel::insertChar(unsigned char char2insert) const
 {
-    if (_ppEditView && *_ppEditView) {
-        //(*_ppEditView)->execute(SCI_REPLACESEL, 0, reinterpret_cast<LPARAM>(string2insert.toUtf8().constData()));
-    }
-    
-    emit insertText(string2insert);
+	char charStr[2]{};
+	charStr[0] = char2insert;
+	charStr[1] = '\0';
+	wchar_t wCharStr[10]{};
+	char multiByteStr[10]{};
+	int codepage = (*_ppEditView)->getCurrentBuffer()->getEncoding();
+	if (codepage == -1)
+	{
+		bool isUnicode = ((*_ppEditView)->execute(SCI_GETCODEPAGE) == SC_CP_UTF8);
+		if (isUnicode)
+		{
+			MultiByteToWideChar(0, 0, charStr, -1, wCharStr, _countof(wCharStr));
+			WideCharToMultiByte(CP_UTF8, 0, wCharStr, -1, multiByteStr, sizeof(multiByteStr), NULL, NULL);
+		}
+		else // ANSI
+		{
+			multiByteStr[0] = charStr[0];
+			multiByteStr[1] = charStr[1];
+		}
+	}
+	else
+	{
+		MultiByteToWideChar(codepage, 0, charStr, -1, wCharStr, _countof(wCharStr));
+		WideCharToMultiByte(CP_UTF8, 0, wCharStr, -1, multiByteStr, sizeof(multiByteStr), NULL, NULL);
+	}
+	(*_ppEditView)->execute(SCI_REPLACESEL, 0, reinterpret_cast<LPARAM>(""));
+	size_t len = (char2insert < 128) ? 1 : strlen(multiByteStr);
+	(*_ppEditView)->execute(SCI_ADDTEXT, len, reinterpret_cast<LPARAM>(multiByteStr));
+	(*_ppEditView)->grabFocus();
 }
 
-void AnsiCharPanel::setBackgroundColor(QRgb bgColour)
+void AnsiCharPanel::insertString(LPWSTR string2insert) const
 {
-    _backgroundColor = bgColour;
-    if (_pCharList) {
-        QPalette pal = _pCharList->palette();
-        pal.setColor(QPalette::Base, QColor::fromRgb(bgColour));
-        _pCharList->setPalette(pal);
-    }
-}
+	char multiByteStr[10]{};
+	int codepage = (*_ppEditView)->getCurrentBuffer()->getEncoding();
+	if (codepage == -1)
+	{
+		bool isUnicode = ((*_ppEditView)->execute(SCI_GETCODEPAGE) == SC_CP_UTF8);
+		if (isUnicode)
+		{
+			WideCharToMultiByte(CP_UTF8, 0, string2insert, -1, multiByteStr, sizeof(multiByteStr), NULL, NULL);
+		}
+		else // ANSI
+		{
+			wcstombs(multiByteStr, string2insert, 10);
+		}
+	}
+	else
+	{
+		WideCharToMultiByte(CP_UTF8, 0, string2insert, -1, multiByteStr, sizeof(multiByteStr), NULL, NULL);
+	}
 
-void AnsiCharPanel::setForegroundColor(QRgb fgColour)
-{
-    _foregroundColor = fgColour;
-    if (_pCharList) {
-        QPalette pal = _pCharList->palette();
-        pal.setColor(QPalette::Text, QColor::fromRgb(fgColour));
-        _pCharList->setPalette(pal);
-    }
-}
-
-void AnsiCharPanel::setupCharGrid()
-{
-    // Create a list widget for character display
-    _pCharList = new QListWidget(this);
-    _pCharList->setViewMode(QListWidget::IconMode);
-    _pCharList->setGridSize(QSize(50, 60));
-    _pCharList->setResizeMode(QListWidget::Adjust);
-    _pCharList->setSelectionMode(QAbstractItemView::SingleSelection);
-    
-    connect(_pCharList, &QListWidget::itemDoubleClicked, this, &AnsiCharPanel::onItemDoubleClicked);
-    connect(_pCharList, &QListWidget::itemClicked, this, &AnsiCharPanel::onItemClicked);
-    
-    updateCharDisplay();
-}
-
-void AnsiCharPanel::updateCharDisplay()
-{
-    if (!_pCharList) return;
-    
-    _pCharList->clear();
-    
-    // Add all printable ASCII characters (32-126)
-    for (unsigned char c = 32; c < 127; ++c) {
-        QString label = QString("%1\n0x%2\n%3")
-            .arg(c)
-            .arg(c, 2, 16, QChar('0')).toUpper()
-            .arg(QChar(c).isPrint() ? QString(QChar(c)) : ".");
-        
-        auto* item = new QListWidgetItem(label, _pCharList);
-        item->setData(Qt::UserRole, c);
-        item->setTextAlignment(Qt::AlignCenter);
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(Qt::Unchecked);
-    }
-    
-    // Add extended ASCII (128-255) in a separate section
-    for (unsigned char c = 128; c < 255; ++c) {
-        QString label = QString("%1\n0x%2\n%3")
-            .arg(c)
-            .arg(c, 2, 16, QChar('0')).toUpper()
-            .arg(".");
-        
-        auto* item = new QListWidgetItem(label, _pCharList);
-        item->setData(Qt::UserRole, c);
-        item->setTextAlignment(Qt::AlignCenter);
-    }
-}
-
-void AnsiCharPanel::onItemDoubleClicked(QListWidgetItem* item)
-{
-    if (!item) return;
-    
-    unsigned char charValue = static_cast<unsigned char>(item->data(Qt::UserRole).toInt());
-    
-    // Insert the character
-    insertChar(charValue);
-}
-
-void AnsiCharPanel::onItemClicked(QListWidgetItem* item)
-{
-    Q_UNUSED(item);
-    // Could show character info in status bar
-}
-
-intptr_t AnsiCharPanel::run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam)
-{
-    switch (message) {
-        case WM_INITDIALOG: {
-            setupCharGrid();
-            return TRUE;
-        }
-        
-        case WM_SIZE: {
-            if (_pCharList) {
-                int width = LOWORD(lParam);
-                int height = HIWORD(lParam);
-                _pCharList->resize(width, height);
-            }
-            return TRUE;
-        }
-        
-        case WM_NOTIFY: {
-            // Handle dock close notification
-            return TRUE;
-        }
-        
-        default:
-            break;
-    }
-    
-    return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
+	(*_ppEditView)->execute(SCI_REPLACESEL, 0, reinterpret_cast<LPARAM>(""));
+	size_t len = strlen(multiByteStr);
+	(*_ppEditView)->execute(SCI_ADDTEXT, len, reinterpret_cast<LPARAM>(multiByteStr));
+	(*_ppEditView)->grabFocus();
 }

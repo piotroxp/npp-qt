@@ -14,64 +14,63 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #pragma once
 
-#include <QDialog>
-#include <QListWidget>
-#include <QPushButton>
-#include <QVBoxLayout>
+#include "MISC/Common/WindowsCompat.h"
 
-#include "../StaticDialog/StaticDialog.h"
+#include <string>
+#include <vector>
+
+#include "Window.h"
+#include "StaticDialog.h"
 #include "TaskList.h"
 
-// Resource IDs
-#define IDD_TASKLIST_DLG 2450
-#define ID_PICKUP (IDD_TASKLIST_DLG + 1)
+#define	TASKLIST_USER    (WM_USER + 8000)
+#define WM_GETTASKLISTINFO (TASKLIST_USER + 01)
 
-#define WM_GETTASKLISTINFO (0xBABA)
-
-// Task list function status
 struct TaskLstFnStatus {
-    int _iView = -1;
-    int _docIndex = 0;
-    QString _fn;
-    int _status = 0;
-    void* _bufID = nullptr;
-    int _docColor = -1;
+	int _iView = -1;
+	int _docIndex = 0;
+	std::wstring _fn;
+	int _status = 0;
+	void *_bufID = nullptr;
+	int _docColor = -1;
+	TaskLstFnStatus(const std::wstring& str, int status) : _fn(str), _status(status) {}
+	TaskLstFnStatus(int iView, int docIndex, std::wstring str, int status, void* bufID, int docColor)
+		: _iView(iView), _docIndex(docIndex), _fn(str), _status(status), _bufID(bufID), _docColor(docColor)
+	{}
 };
 
-// Task list info
 struct TaskListInfo {
-    QVector<TaskLstFnStatus> _tlfsLst;
-    int _currentIndex = -1;
+	std::vector<TaskLstFnStatus> _tlfsLst;
+	int _currentIndex = -1;
 };
 
-// TaskListDlg - Task list dialog
 class TaskListDlg : public StaticDialog
 {
-    Q_OBJECT
+public :
+	TaskListDlg() : StaticDialog() { _instanceCount++; }
+	using Window::init;
+	void init(HINSTANCE hInst, HWND parent, HIMAGELIST hImgLst, bool dir) {
+		Window::init(hInst, parent);
+		_hImalist = hImgLst;
+		_initDir = dir;
+	}
+	int doDialog(bool isRTL = false);
+	void destroy() override {}
 
+protected :
+	intptr_t CALLBACK run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
+
+private :
+	TaskList _taskList;
+	TaskListInfo _taskListInfo;
+	HIMAGELIST _hImalist = nullptr;
+	bool _initDir = false;
+	HHOOK _hHooker = nullptr;
+
+	void drawItem(LPDRAWITEMSTRUCT lpDrawItemStruct);
 public:
-    TaskListDlg();
-    ~TaskListDlg() override = default;
-
-    void init(QWidget* parent, bool dir);
-    int doDialog(bool isRTL = false);
-    void destroy();
-
-signals:
-    void taskPicked(int index);
-
-protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
-
-private:
-    TaskList _taskList;
-    TaskListInfo _taskListInfo;
-    bool _initDir = false;
-    static int _instanceCount;
-    
-    QListWidget* _pTaskList = nullptr;
+	static int _instanceCount;
 };
-
-int TaskListDlg::_instanceCount = 0;

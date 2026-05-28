@@ -17,7 +17,7 @@
 #include <locale>
 #include "MISC/Common/WindowsStubs.h"
 #include "FileInterface.h"
-#include "Parameters.h"
+#include "../Parameters.h"
 
 using namespace std;
 

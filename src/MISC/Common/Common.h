@@ -19,8 +19,8 @@
 
 #include "MISC/Common/WindowsCompat.h"
 
-#include <commctrl.h>
-#include <tchar.h>
+#include "MISC/Common/WindowsStubs.h"
+#include "MISC/Common/WindowsStubs.h"
 
 #include <algorithm>
 #include <locale>

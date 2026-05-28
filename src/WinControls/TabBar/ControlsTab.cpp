@@ -1,70 +1,78 @@
-// ControlsTab.cpp — Qt6 translation of ControlsTab
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 #include "ControlsTab.h"
-#include <QResizeEvent>
 
-ControlsTab::ControlsTab(QWidget* parent)
-    : QTabWidget(parent)
+void ControlsTab::createTabs(WindowVector & winVector)
 {
-    setMovable(true);
-    setTabsClosable(false);
-    connect(this, &QTabWidget::currentChanged, this, &ControlsTab::clickedUpdate);
-}
+	_pWinVector = &winVector;
 
-ControlsTab::~ControlsTab() = default;
+	for (size_t i = 0, len = winVector.size(); i < len; ++i)
+		TabBar::insertAtEnd(winVector[i]._name.c_str());
 
-void ControlsTab::createTabs(const QVector<QPair<QString, QWidget*>>& tabs)
-{
-    _tabs = tabs;
-
-    for (const auto& tab : tabs)
-    {
-        addTab(tab.second, tab.first);
-    }
-
-    activateWindowAt(0);
+	TabBar::activateAt(0);
+	activateWindowAt(0);
 }
 
 void ControlsTab::activateWindowAt(int index)
 {
-    if (index == _current)
-        return;
-
-    if (_current >= 0 && _current < _tabs.size())
-        _tabs[_current].second->hide();
-
-    _current = index;
-
-    if (_current >= 0 && _current < _tabs.size())
-    {
-        _tabs[_current].second->show();
-        // Re-size child widget
-        QRect r = contentsRect();
-        r.adjust(8, 8, -20, -55);
-        _tabs[_current].second->setGeometry(r);
-    }
+    if (index == _current)  return;
+	(*_pWinVector)[_current]._dlg->display(false);
+	(*_pWinVector)[index]._dlg->display(true);
+	_current = index;
 }
 
-bool ControlsTab::renameTab(const QString& internalName, const QString& newName)
+void ControlsTab::reSizeTo(RECT & rc)
 {
-    Q_UNUSED(internalName);
-    Q_UNUSED(newName);
-    // Tab name lookup by internal name not yet implemented in this port
-    return false;
+	TabBar::reSizeTo(rc);
+	rc.left += 8;
+	rc.top += 8;
+	rc.bottom -= 55;
+	rc.right -= 20;
+
+	(*_pWinVector)[_current]._dlg->reSizeTo(rc);
+	(*_pWinVector)[_current]._dlg->redraw();
+
 }
 
-void ControlsTab::renameTab(size_t index, const QString& newName)
+bool ControlsTab::renameTab(const wchar_t *internalName, const wchar_t *newName)
 {
-    if (index < static_cast<size_t>(count()))
-        setTabText(static_cast<int>(index), newName);
+	bool foundIt = false;
+	size_t i = 0;
+	for (size_t len = _pWinVector->size(); i < len; ++i)
+	{
+		if ((*_pWinVector)[i]._internalName == internalName)
+		{
+			foundIt = true;
+			break;
+		}
+	}
+
+	if (!foundIt)
+		return false;
+
+	renameTab(i, newName);
+	return true;
 }
 
-void ControlsTab::resizeEvent(QResizeEvent* event)
+void ControlsTab::renameTab(size_t index, const wchar_t *newName)
 {
-    QTabWidget::resizeEvent(event);
-
-    QRect childRect = contentsRect();
-    childRect.adjust(8, 8, -20, -55);
-
-    if (_current >= 0 && _current < _tabs.size())
-        _tabs[_current].second->setGeometry(childRect);
+	TCITEM tie{};
+	tie.mask = TCIF_TEXT;
+	tie.pszText = const_cast<wchar_t*>(newName);
+	TabCtrl_SetItem(_hSelf, index, &tie);
 }

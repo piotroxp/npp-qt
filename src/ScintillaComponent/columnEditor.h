@@ -17,14 +17,14 @@
 
 #pragma once
 
-#include "../MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsCompat.h"
 
 #include <string>
 
 #include "NppConstants.h"
 #include "../Parameters.h"
-#include "StaticDialog.h"
-#include "Window.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
+#include "WinControls/Window.h"
 #include "columnEditor_rc.h"
 
 class ScintillaEditView;

@@ -1,3 +1,6 @@
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -11,133 +14,216 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef IDOK
-#define IDOK 1
-#endif
 
 #include "TaskListDlg.h"
 
-// Win32 macro stubs for Linux Qt6 port
-#ifndef WM_INITDIALOG
-#define WM_INITDIALOG 0x0110
-#endif
-#ifndef WM_SIZE
-#define WM_SIZE 0x0005
-#endif
-#ifndef WM_COMMAND
-#define WM_COMMAND 0x0111
-#endif
-#ifndef WM_NOTIFY
-#define WM_NOTIFY 0x004E
-#endif
-#ifndef WM_DESTROY
-#define WM_DESTROY 0x0002
-#endif
-#ifndef TRUE
-#define TRUE 1
-#endif
-#ifndef FALSE
-#define FALSE 0
-#endif
-#ifndef LOWORD
-#define LOWORD(l) ((uint16_t)((uintptr_t)(l) & 0xFFFF))
-#endif
-#ifndef HIWORD
-#define HIWORD(l) ((uint16_t)(((uintptr_t)(l) >> 16) & 0xFFFF))
-#endif
+#include "Notepad_plus_msgs.h"
+#include "../Parameters.h"
+#include "TaskListDlg_rc.h"
 
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
+int TaskListDlg::_instanceCount = 0;
 
-TaskListDlg::TaskListDlg()
-    : StaticDialog()
-    , _initDir(false)
+static HWND hWndServer = nullptr;
+static HHOOK hook = nullptr;
+static winVer windowsVersion = WV_UNKNOWN;
+
+static LRESULT CALLBACK hookProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
-    _instanceCount++;
-}
+	if ((nCode >= 0) && (wParam == WM_RBUTTONUP))
+    {
+		::PostMessage(hWndServer, WM_RBUTTONUP, 0, 0);
+    }
+	else if ((nCode >= 0) && (wParam == WM_MOUSEWHEEL) && windowsVersion >= WV_WIN10)
+	{
+		auto* pMD = reinterpret_cast<MSLLHOOKSTRUCT*>(lParam);
+		RECT rCtrl{};
+		GetWindowRect(hWndServer, &rCtrl);
+		//to avoid duplicate messages, only send this message to the list control if it comes from outside the control window. if the message occurs whilst the mouse is inside the control, the control will have receive the mouse wheel message itself
+		if (false == PtInRect(&rCtrl, pMD->pt))
+		{
+			::PostMessage(hWndServer, WM_MOUSEWHEEL, WPARAM{ pMD->mouseData }, MAKELPARAM(pMD->pt.x, pMD->pt.y));
+		}
+	}
 
-void TaskListDlg::init(QWidget* parent, bool dir)
-{
-    StaticDialog::init(parent);
-    _initDir = dir;
+	return ::CallNextHookEx(hook, nCode, wParam, lParam);
 }
 
 int TaskListDlg::doDialog(bool isRTL)
 {
-    Q_UNUSED(isRTL);
-    
-    if (!isCreated()) {
-        create(IDD_TASKLIST_DLG);
-        setWindowTitle("Task List");
-        
-        QVBoxLayout* mainLayout = new QVBoxLayout(this);
-        
-        QLabel* label = new QLabel("Select a document:", this);
-        mainLayout->addWidget(label);
-        
-        _pTaskList = new QListWidget(this);
-        _pTaskList->setSelectionMode(QAbstractItemView::SingleSelection);
-        
-        // Populate with items from _taskListInfo
-        for (const auto& item : _taskListInfo._tlfsLst) {
-            _pTaskList->addItem(item._fn);
-        }
-        
-        if (_taskListInfo._currentIndex >= 0 && _taskListInfo._currentIndex < _pTaskList->count()) {
-            _pTaskList->setCurrentRow(_taskListInfo._currentIndex);
-        }
-        
-        connect(_pTaskList, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem* item) {
-            Q_UNUSED(item);
-            int index = _pTaskList->currentRow();
-            emit taskPicked(index);
-            display(false);
-        });
-        
-        mainLayout->addWidget(_pTaskList);
-        
-        QHBoxLayout* btnLayout = new QHBoxLayout();
-        btnLayout->addStretch();
-        
-        QPushButton* okBtn = new QPushButton("OK", this);
-        connect(okBtn, &QPushButton::clicked, this, [this]() {
-            int index = _pTaskList->currentRow();
-            emit taskPicked(index);
-            display(false);
-        });
-        btnLayout->addWidget(okBtn);
-        
-        QPushButton* cancelBtn = new QPushButton("Cancel", this);
-        connect(cancelBtn, &QPushButton::clicked, this, [this]() {
-            display(false);
-        });
-        btnLayout->addWidget(cancelBtn);
-        
-        mainLayout->addLayout(btnLayout);
-    }
-    
-    display(true);
-    return IDOK;
+	return static_cast<int>(StaticDialog::myCreateDialogBoxIndirectParam(IDD_TASKLIST_DLG, isRTL));
 }
 
-intptr_t TaskListDlg::run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam)
+intptr_t CALLBACK TaskListDlg::run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam)
 {
-    switch (message) {
-        case WM_INITDIALOG:
-            return TRUE;
-            
-        case WM_GETTASKLISTINFO:
-            // Return task list info
-            return TRUE;
-            
-        case WM_COMMAND:
-            if (wParam == IDOK) {
-                display(false);
-                return TRUE;
-            }
-            break;
-    }
-    
-    return StaticDialog::run_dlgProc(message, wParam, lParam);
+	switch (Message)
+	{
+		case WM_INITDIALOG :
+		{
+			NppDarkMode::autoSubclassAndThemeChildControls(_hSelf);
+
+			::SendMessage(_hParent, WM_GETTASKLISTINFO, reinterpret_cast<WPARAM>(&_taskListInfo), 0);
+			const int nbTotal = static_cast<int>(_taskListInfo._tlfsLst.size());
+
+			int i2set = _taskListInfo._currentIndex + (_initDir == dirDown?1:-1);
+			
+			if (i2set < 0)
+				i2set = nbTotal - 1;
+
+			if (i2set > (nbTotal - 1))
+				i2set = 0;
+
+			_taskList.init(_hInst, _hSelf, _hImalist, nbTotal, i2set);
+			_taskList.setFont(10);
+			_rc = _taskList.adjustSize();
+
+			reSizeTo(_rc);
+			goToCenter();
+
+			_taskList.display(true);
+			hWndServer = _hSelf;
+			windowsVersion = NppParameters::getInstance().getWinVersion();
+
+			_hHooker = ::SetWindowsHookEx(WH_MOUSE_LL, hookProc, _hInst, 0);
+			hook = _hHooker;
+			return FALSE;
+		}
+
+		case WM_CTLCOLORDLG:
+		case WM_CTLCOLORSTATIC:
+		{
+			return NppDarkMode::onCtlColorDlg(reinterpret_cast<HDC>(wParam));
+		}
+
+		case WM_PRINTCLIENT:
+		{
+			if (NppDarkMode::isEnabled())
+			{
+				return TRUE;
+			}
+			break;
+		}
+
+		case WM_DESTROY :
+		{
+			_taskList.destroy();
+			::UnhookWindowsHookEx(_hHooker);
+			_instanceCount--;
+			return TRUE;
+		}
+
+
+		case WM_RBUTTONUP:
+		{
+			::SendMessage(_hSelf, WM_COMMAND, ID_PICKEDUP, _taskList.getCurrentIndex());
+			return TRUE;
+		}
+		
+		case WM_MOUSEWHEEL:
+		{
+			::SendMessage(_taskList.getHSelf(), WM_MOUSEWHEEL, wParam, lParam);
+			return TRUE;
+		}
+
+		case WM_DRAWITEM :
+		{
+			drawItem(reinterpret_cast<DRAWITEMSTRUCT*>(lParam));
+			return TRUE;
+		}
+
+		case WM_NOTIFY:
+		{
+			switch (reinterpret_cast<LPNMHDR>(lParam)->code)
+			{
+				case LVN_GETDISPINFO:
+				{
+					auto& lvItem = reinterpret_cast<NMLVDISPINFOW*>(lParam)->item;
+
+					TaskLstFnStatus & fileNameStatus = _taskListInfo._tlfsLst[lvItem.iItem];
+
+					lvItem.pszText = fileNameStatus._fn.data();
+					lvItem.iImage = fileNameStatus._status;
+
+					return TRUE;
+				}
+		
+				case NM_CLICK :
+				case NM_RCLICK :
+				{
+					::SendMessage(_hSelf, WM_COMMAND, ID_PICKEDUP, _taskList.updateCurrentIndex());
+					return TRUE;
+				}
+
+				default:
+					break;
+			}
+			break;
+		}
+
+		case WM_COMMAND : 
+		{
+			switch (wParam)
+			{
+				case ID_PICKEDUP :
+				{
+					auto listIndex = lParam;
+					int view2set = _taskListInfo._tlfsLst[listIndex]._iView;
+					int index2Switch = _taskListInfo._tlfsLst[listIndex]._docIndex;
+					::SendMessage(_hParent, NPPM_ACTIVATEDOC, view2set, index2Switch);
+					::EndDialog(_hSelf, -1);
+					return TRUE;
+				}
+
+				default:
+					return FALSE;
+			}
+		}
+
+		default :
+			return FALSE;
+	}
+
+	return FALSE;
+}
+
+void TaskListDlg::drawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
+{
+	RECT rect = lpDrawItemStruct->rcItem;
+	HDC hDC = lpDrawItemStruct->hDC;
+	int nItem = lpDrawItemStruct->itemID;
+	const wchar_t *label = _taskListInfo._tlfsLst[nItem]._fn.c_str();
+	int iImage = _taskListInfo._tlfsLst[nItem]._status;
+
+	const int aSpaceWidth = ListView_GetStringWidth(_taskList.getHSelf(), L" ");
+
+	COLORREF textColor = NppDarkMode::isEnabled() ? NppDarkMode::getDarkerTextColor() : darkGrey;
+	int imgStyle = ILD_SELECTED;
+
+	if (lpDrawItemStruct->itemState & ODS_SELECTED)
+	{
+		imgStyle = ILD_TRANSPARENT;
+		textColor = NppDarkMode::isEnabled() ? NppDarkMode::getTextColor() : black;
+		::SelectObject(hDC, _taskList.GetFontSelected());
+	}
+	
+	//
+	// DRAW IMAGE
+	//
+	HIMAGELIST hImgLst = _taskList.getImgLst();
+
+	IMAGEINFO info{};
+	::ImageList_GetImageInfo(hImgLst, iImage, &info);
+
+	RECT & imageRect = info.rcImage;
+	// center icon position, prefer bottom orientation
+	imageRect.top = ((rect.bottom - rect.top) - (imageRect.bottom - imageRect.top) + 1) / 2;
+
+	rect.left += aSpaceWidth;
+	::ImageList_Draw(hImgLst, iImage, hDC, rect.left, rect.top + imageRect.top, imgStyle);
+	rect.left += imageRect.right - imageRect.left + aSpaceWidth * 2;
+
+	//
+	// DRAW TEXT
+	//
+	::SetTextColor(hDC, textColor);
+	::DrawText(hDC, label, -1, &rect, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
 }

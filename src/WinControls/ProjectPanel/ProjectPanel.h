@@ -14,97 +14,158 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
 #pragma once
 
-#include <QDialog>
-#include <QTreeWidget>
+#include "MISC/Common/WindowsCompat.h"
 
-#include "../StaticDialog/StaticDialog.h"
-#include <QMenu>
-#include <QString>
-#include <QVector>
+#include <memory>
+#include <string>
+#include <vector>
 
-#include "DockingWnd/DockingDlgInterface.h"
-#include "../TreeView/TreeView.h"
+#include "DockingDlgInterface.h"
+#include "NppXml.h"
+#include "ProjectPanel_rc.h"
+#include "StaticDialog.h"
+#include "TreeView.h"
 
-// Resource IDs
-#define IDD_PROJECTPANEL 3100
-#define IDD_FILERELOCALIZER_DIALOG 3200
+#define PM_PROJECTPANELTITLE       L"Project Panel"
+#define PM_WORKSPACEROOTNAME       L"Workspace"
+#define PM_NEWFOLDERNAME           L"Folder Name"
+#define PM_NEWPROJECTNAME          L"Project Name"
 
-#define PM_PROJECTPANELTITLE "Project Panel"
-#define PM_WORKSPACEROOTNAME "Workspace"
-#define PM_NEWFOLDERNAME "Folder Name"
-#define PM_NEWPROJECTNAME "Project Name"
+#define PM_NEWWORKSPACE            L"New Workspace"
+#define PM_OPENWORKSPACE           L"Open Workspace"
+#define PM_RELOADWORKSPACE         L"Reload Workspace"
+#define PM_SAVEWORKSPACE           L"Save"
+#define PM_SAVEASWORKSPACE         L"Save As..."
+#define PM_SAVEACOPYASWORKSPACE    L"Save a Copy As..."
+#define PM_NEWPROJECTWORKSPACE     L"Add New Project"
+#define PM_FINDINFILESWORKSPACE    L"Find in Projects..."
 
-// ProjectPanel - Project/workspace panel
-class ProjectPanel : public DockingDlgInterface
-{
-    Q_OBJECT
+#define PM_EDITRENAME              L"Rename"
+#define PM_EDITNEWFOLDER           L"Add Folder"
+#define PM_EDITADDFILES            L"Add Files..."
+#define PM_EDITADDFILESRECUSIVELY  L"Add Files from Directory..."
+#define PM_EDITREMOVE              L"Remove\tDEL"
+#define PM_EDITMODIFYFILE          L"Modify File Path"
 
-public:
-    ProjectPanel();
-    ~ProjectPanel() override = default;
+#define PM_WORKSPACEMENUENTRY      L"Workspace"
+#define PM_EDITMENUENTRY           L"Edit"
 
-    void init(QWidget* parent, int panelID);
-    void setParent(QWidget* parent2set);
+#define PM_MOVEUPENTRY             L"Move Up\tCtrl+Up"
+#define PM_MOVEDOWNENTRY           L"Move Down\tCtrl+Down"
 
-    void setPanelTitle(const QString& title);
-    QString getPanelTitle() const;
-
-    void newWorkSpace();
-    bool saveWorkspaceRequest();
-    bool openWorkSpace(const QString& projectFileName, bool force = false);
-    bool saveWorkSpace();
-    bool saveWorkSpaceAs(bool saveCopyAs);
-    void setWorkSpaceFilePath(const QString& projectFileName);
-    QString getWorkSpaceFilePath() const;
-    bool isDirty() const { return _isDirty; }
-    bool checkIfNeedSave();
-
-    void setBackgroundColor(QRgb bgColour) override;
-    void setForegroundColor(QRgb fgColour) override;
-
-protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
-
-private slots:
-    void onItemDoubleClicked(QTreeWidgetItem* item, int column);
-    void onContextMenuRequested(const QPoint& pos);
-
-private:
-    void initMenus();
-    void showContextMenu(const QPoint& pos);
-    QMenu* getMenuHandler(QTreeWidgetItem* selectedItem);
-    void popupMenuCmd(int cmdID);
-
-    TreeView* _pTreeView = nullptr;
-    QMenu* _hWorkSpaceMenu = nullptr;
-    QMenu* _hProjectMenu = nullptr;
-    QMenu* _hFolderMenu = nullptr;
-    QMenu* _hFileMenu = nullptr;
-    QString _panelTitle;
-    QString _workSpaceFilePath;
-    bool _isDirty = false;
-    int _panelID = 0;
+enum NodeType {
+	nodeType_root = 0, nodeType_project = 1, nodeType_folder = 2, nodeType_file = 3
 };
 
-// FileRelocalizerDlg - Modify file path dialog
-class FileRelocalizerDlg : public StaticDialog
-{
-    Q_OBJECT
+class CustomFileDialog;
 
+class ProjectPanel : public DockingDlgInterface {
 public:
-    FileRelocalizerDlg();
-    ~FileRelocalizerDlg() override = default;
+	ProjectPanel() : DockingDlgInterface(IDD_PROJECTPANEL) {}
+	~ProjectPanel() override = default;
 
-    int doDialog(const QString& fn, bool isRTL = false);
-    void destroy() {};
-    QString getFullFilePath() const { return _fullFilePath; }
+	void init(HINSTANCE hInst, HWND hPere, int panelID) {
+		DockingDlgInterface::init(hInst, hPere);
+		_panelID = panelID;
+	}
+
+	void setParent(HWND parent2set) {
+		_hParent = parent2set;
+	}
+
+	void setPanelTitle(const std::wstring& title) {
+		_panelTitle = title;
+	}
+	const wchar_t* getPanelTitle() const {
+		return _panelTitle.c_str();
+	}
+
+	void newWorkSpace();
+	bool saveWorkspaceRequest();
+	bool openWorkSpace(const wchar_t* projectFileName, bool force = false);
+	bool saveWorkSpace();
+	bool saveWorkSpaceAs(bool saveCopyAs);
+	void setWorkSpaceFilePath(const wchar_t* projectFileName) {
+		_workSpaceFilePath = projectFileName;
+	}
+	const wchar_t* getWorkSpaceFilePath() const {
+		return _workSpaceFilePath.c_str();
+	}
+	bool isDirty() const {
+		return _isDirty;
+	}
+	bool checkIfNeedSave();
+
+	void setBackgroundColor(COLORREF bgColour) override {
+		TreeView_SetBkColor(_treeView.getHSelf(), bgColour);
+	}
+	void setForegroundColor(COLORREF fgColour) override {
+		TreeView_SetTextColor(_treeView.getHSelf(), fgColour);
+	}
+	bool enumWorkSpaceFiles(HTREEITEM tvFrom, const std::vector<std::wstring>& patterns, std::vector<std::wstring>& fileNames);
 
 protected:
-    intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
+	TreeView _treeView;
+	HIMAGELIST _hImaLst = nullptr;
+	HWND _hToolbarMenu = nullptr;
+	HMENU _hWorkSpaceMenu = nullptr;
+	HMENU _hProjectMenu = nullptr;
+	HMENU _hFolderMenu = nullptr;
+	HMENU _hFileMenu = nullptr;
+	std::wstring _panelTitle;
+	std::wstring _workSpaceFilePath;
+	std::wstring _selDirOfFilesFromDirDlg;
+	bool _isDirty = false;
+	int _panelID = 0;
+
+	void initMenus();
+	void destroyMenus() const;
+	void addFiles(HTREEITEM hTreeItem);
+	void addFilesFromDirectory(HTREEITEM hTreeItem);
+	void recursiveAddFilesFrom(const wchar_t* folderPath, HTREEITEM hTreeItem);
+	HTREEITEM addFolder(HTREEITEM hTreeItem, const wchar_t* folderName);
+
+	bool writeWorkSpace(const wchar_t* projectFileName = nullptr, bool doUpdateGUI = true);
+	std::wstring getRelativePath(const std::wstring& filePath, const wchar_t* workSpaceFileName);
+	void buildProjectXml(NppXml::Element& root, HTREEITEM hItem, const wchar_t* fn2write);
+	NodeType getNodeType(HTREEITEM hItem);
+	void setWorkSpaceDirty(bool isDirty);
+	void popupMenuCmd(int cmdID);
+	POINT getMenuDisplayPoint(int iButton) const;
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
+	bool buildTreeFrom(const NppXml::Element& projectRoot, HTREEITEM hParentItem);
+	void notified(LPNMHDR notification);
+	void showContextMenu(int x, int y);
+	void showContextMenuFromMenuKey(HTREEITEM selectedItem, int x, int y);
+	HMENU getMenuHandler(HTREEITEM selectedItem);
+	std::wstring getAbsoluteFilePath(const wchar_t* relativePath);
+	void openSelectFile();
+	void setFileExtFilter(CustomFileDialog& fDlg);
+	std::vector<std::unique_ptr<std::wstring>> _fullPathStrs;
 
 private:
-    QString _fullFilePath;
-    QLineEdit* _pPathEdit = nullptr;
+	using DockingDlgInterface::init;
+};
+
+class FileRelocalizerDlg : public StaticDialog
+{
+public:
+	FileRelocalizerDlg() = default;
+
+	int doDialog(const wchar_t* fn, bool isRTL = false);
+
+	void destroy() override {}
+
+	const std::wstring& getFullFilePath() const {
+		return _fullFilePath;
+	}
+
+protected:
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
+
+private:
+	std::wstring _fullFilePath;
 };

@@ -40,15 +40,15 @@
 #include "lexilla/include/SciLexer.h"
 #include "scintilla/include/Scintilla.h"
 
-#include "ContextMenu.h"
-#include "DockingCont.h"
+#include "WinControls/ContextMenu/ContextMenu.h"
+#include "WinControls/DockingWnd/DockingCont.h"
 #include "Notepad_plus_msgs.h"
 #include "NppConstants.h"
-#include "NppDarkMode.h"
+#include "../NppDarkMode.h"
 #include "NppXml.h"
-#include "ToolBar.h"
-#include "colors.h"
-#include "shortcut.h"
+#include "WinControls/ToolBar/ToolBar.h"
+#include "ScintillaComponent/colors.h"
+#include "WinControls/shortcut/shortcut.h"
 
 #ifdef _WIN64
 

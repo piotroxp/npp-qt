@@ -1,4 +1,4 @@
-#include "Docking.h"
+#include "DockingWnd/Docking.h"
 #include <QResizeEvent>
 
 DockingPanel::DockingPanel(const QString& title, QWidget* container, QMainWindow* parent)

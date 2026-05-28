@@ -17,7 +17,7 @@
 
 #pragma once
 #include "resource.h"
-#include "ScintillaEditView.h"
+#include "ScintillaComponent/ScintillaEditView.h"
 
 class GoToLineDlg : public StaticDialog
 {

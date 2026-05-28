@@ -1,76 +1,156 @@
-// This file is part of Notepad++ project
-// Copyright (C)2021 Don HO <don.h@free.fr>
+//
+//	The MIT License
+//
+//	Copyright (c) 2010 James E Beveridge
+//
+//	Permission is hereby granted, free of charge, to any person obtaining a copy
+//	of this software and associated documentation files (the "Software"), to deal
+//	in the Software without restriction, including without limitation the rights
+//	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//	copies of the Software, and to permit persons to whom the Software is
+//	furnished to do so, subject to the following conditions:
+//
+//	The above copyright notice and this permission notice shall be included in
+//	all copies or substantial portions of the Software.
+//
+//	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+//	THE SOFTWARE.
 
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// at your option any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+//	This sample code is for my blog entry titled, "Understanding ReadDirectoryChangesW"
+//	http://qualapps.blogspot.com/2010/05/understanding-readdirectorychangesw.html
+//	See ReadMe.txt for overview information.
+
 
 #pragma once
 
-#include <QFileSystemWatcher>
-#include <QString>
-#include <QThread>
-#include <QQueue>
-#include <QMutex>
-#include <QWaitCondition>
-#include <QDir>
+#define _CRT_SECURE_NO_DEPRECATE
 
-// CReadDirectoryChanges - Directory change monitoring
-// Replaces Win32 ReadDirectoryChangesW with Qt QFileSystemWatcher
-class CReadDirectoryChanges : public QObject
+#include "targetver.h"
+
+#include <stdio.h>
+
+#ifndef VC_EXTRALEAN
+#define VC_EXTRALEAN            // Exclude rarely-used stuff from Windows headers
+#endif
+
+#include "MISC/Common/WindowsCompat.h"
+#include <string>
+#include <vector>
+#include <list>
+
+using namespace std;
+
+#include "ThreadSafeQueue.h"
+
+typedef pair<DWORD, std::wstring> TDirectoryChangeNotification;
+
+namespace ReadDirectoryChangesPrivate
 {
-    Q_OBJECT
+	class CReadChangesServer;
+}
 
+///////////////////////////////////////////////////////////////////////////
+
+
+/// <summary>
+/// Track changes to filesystem directories and report them
+/// to the caller via a thread-safe queue.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This sample code is based on my blog entry titled, "Understanding ReadDirectoryChangesW"
+///	http://qualapps.blogspot.com/2010/05/understanding-readdirectorychangesw.html
+/// </para><para>
+/// All functions in CReadDirectoryChangesServer run in
+/// the context of the calling thread.
+/// </para>
+/// <example><code>
+/// 	CReadDirectoryChanges changes;
+/// 	changes.AddDirectory(L"C:\\", false, dwNotificationFlags);
+///
+///		const HANDLE handles[] = { hStopEvent, changes.GetWaitHandle() };
+///
+///		while (!bTerminate)
+///		{
+///			::MsgWaitForMultipleObjectsEx(
+///				_countof(handles),
+///				handles,
+///				INFINITE,
+///				QS_ALLINPUT,
+///				MWMO_INPUTAVAILABLE | MWMO_ALERTABLE);
+///			switch (rc)
+///			{
+///			case WAIT_OBJECT_0 + 0:
+///				bTerminate = true;
+///				break;
+///			case WAIT_OBJECT_0 + 1:
+///				// We've received a notification in the queue.
+///				{
+///					DWORD dwAction;
+///					std::wstring wstrFilename;
+///					while (changes.Pop(dwAction, wstrFilename))
+///						wprintf(L"%s %s\n", ExplainAction(dwAction), wstrFilename);
+///				}
+///				break;
+///			case WAIT_OBJECT_0 + _countof(handles):
+///				// Get and dispatch message
+///				break;
+///			case WAIT_IO_COMPLETION:
+///				// APC complete.No action needed.
+///				break;
+///			}
+///		}
+/// </code></example>
+/// </remarks>
+class CReadDirectoryChanges
+{
 public:
-    CReadDirectoryChanges(QObject* parent = nullptr);
-    ~CReadDirectoryChanges();
+	CReadDirectoryChanges();
+	~CReadDirectoryChanges();
 
-    void Init();
-    void Terminate();
+	void Init();
+	void Terminate();
 
-    void AddDirectory(const QString& directory, bool watchSubtree, unsigned int notifyFilter, unsigned int bufferSize = 16384);
+	/// <summary>
+	/// Add a new directory to be monitored.
+	/// </summary>
+	/// <param name="wszDirectory">Directory to monitor.</param>
+	/// <param name="bWatchSubtree">True to also monitor subdirectories.</param>
+	/// <param name="dwNotifyFilter">The types of file system events to monitor, such as FILE_NOTIFY_CHANGE_ATTRIBUTES.</param>
+	/// <param name="dwBufferSize">The size of the buffer used for overlapped I/O.</param>
+	/// <remarks>
+	/// <para>
+	/// This function will make an APC call to the worker thread to issue a new
+	/// ReadDirectoryChangesW call for the given directory with the given flags.
+	/// </para>
+	/// </remarks>
+	void AddDirectory( LPCTSTR wszDirectory, BOOL bWatchSubtree, DWORD dwNotifyFilter, DWORD dwBufferSize=16384 );
 
-    bool Pop(unsigned int& dwAction, QString& wstrFilename);
+	/// <summary>
+	/// Return a handle for the Win32 Wait... functions that will be
+	/// signaled when there is a queue entry.
+	/// </summary>
+	HANDLE GetWaitHandle() { return m_Notifications.GetWaitHandle(); }
 
-signals:
-    void directoryChanged(const QString& path, unsigned int action);
+	bool Pop(DWORD& dwAction, std::wstring& wstrFilename);
 
-public slots:
-    void onDirectoryChanged(const QString& path);
+	// "Push" is for usage by ReadChangesRequest.  Not intended for external usage.
+	void Push(DWORD dwAction, std::wstring& wstrFilename);
 
-private:
-    void processChanges(const QString& path);
+	unsigned int GetThreadId() { return m_dwThreadId; }
 
-    QFileSystemWatcher* _watcher = nullptr;
-    QSet<QString> _watchedDirectories;
-    bool _watchSubtree = false;
-    unsigned int _notifyFilter = 0;
-    
-    // Notification queue
-    QQueue<QPair<unsigned int, QString>> _notifications;
-    QMutex _mutex;
+protected:
+	ReadDirectoryChangesPrivate::CReadChangesServer* m_pServer = nullptr;
+
+	HANDLE m_hThread = nullptr;
+
+	unsigned int m_dwThreadId = 0;
+
+	CThreadSafeQueue<TDirectoryChangeNotification> m_Notifications;
 };
-
-// Action types for directory changes (Windows FILE_NOTIFY_INFORMATION values)
-#define FILE_ACTION_ADDED           0x00000001
-#define FILE_ACTION_REMOVED         0x00000002
-#define FILE_ACTION_MODIFIED        0x00000003
-#define FILE_ACTION_RENAMED_OLD_NAME 0x00000004
-#define FILE_ACTION_RENAMED_NEW_NAME 0x00000005
-
-// Common notify filter flags
-#define FILE_NOTIFY_CHANGE_ATTRIBUTES    0x00000004
-#define FILE_NOTIFY_CHANGE_DIRNAME        0x00000100
-#define FILE_NOTIFY_CHANGE_FILENAME       0x00000001
-#define FILE_NOTIFY_CHANGE_LAST_WRITE     0x00000010
-#define FILE_NOTIFY_CHANGE_SIZE           0x00000008
-#define FILE_NOTIFY_CHANGE_SECURITY       0x00000100

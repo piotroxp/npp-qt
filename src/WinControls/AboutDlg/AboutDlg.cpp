@@ -14,480 +14,1018 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+
+#include <format>
 #include "AboutDlg.h"
-
-// Win32 macro stubs for Linux Qt6 port
-#ifndef WM_INITDIALOG
-#define WM_INITDIALOG 0x0110
+#include "../Parameters.h"
+#include "localization.h"
+#include "json.hpp"
+#if defined __has_include
+#if __has_include ("NppLibsVersion.h")
+#include "NppLibsVersion.h"
 #endif
-#ifndef WM_SIZE
-#define WM_SIZE 0x0005
-#endif
-#ifndef WM_COMMAND
-#define WM_COMMAND 0x0111
-#endif
-#ifndef WM_NOTIFY
-#define WM_NOTIFY 0x004E
-#endif
-#ifndef WM_DESTROY
-#define WM_DESTROY 0x0002
-#endif
-#ifndef TRUE
-#define TRUE 1
-#endif
-#ifndef FALSE
-#define FALSE 0
-#endif
-#ifndef IDOK
-#define IDOK 1
-#endif
-#ifndef IDCANCEL
-#define IDCANCEL 2
-#endif
-#ifndef IDYES
-#define IDYES 6
-#endif
-#ifndef IDNO
-#define IDNO 7
-#endif
-#ifndef IDD_ABOUTBOX
-#define IDD_ABOUTBOX 100
-#endif
-#ifndef NOTEPAD_PLUS_VERSION
-#define NOTEPAD_PLUS_VERSION "8.9.4"
-#endif
-#ifndef NPP_SCINTILLA_VERSION
-#define NPP_SCINTILLA_VERSION "5.4.0"
-#endif
-#ifndef NPP_LEXILLA_VERSION
-#define NPP_LEXILLA_VERSION "5.3.0"
-#endif
-#ifndef LOWORD
-#define LOWORD(l) ((uint16_t)((uintptr_t)(l) & 0xFFFF))
-#endif
-#ifndef HIWORD
-#define HIWORD(l) ((uint16_t)(((uintptr_t)(l) >> 16) & 0xFFFF))
 #endif
 
-#include <QLayout>
-#include <QTextEdit>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGroupBox>
-#include <QApplication>
-#include <QClipboard>
-#include <QMessageBox>
-#include <QFile>
-#include <QTextStream>
-#include <QDateTime>
+using namespace std;
 
-AboutDlg::AboutDlg()
+#ifdef _MSC_VER
+#pragma warning(disable : 4996) // for GetVersion()
+#endif
+
+
+// local DebugInfo helper
+void AppendDisplayAdaptersInfo(wstring& strOut, const unsigned int maxAdaptersIn)
 {
-    setWindowTitle("About Notepad++");
-    setMinimumSize(450, 350);
-    
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
-    mainLayout->setSpacing(10);
-    mainLayout->setContentsMargins(15, 15, 15, 15);
-    
-    // Logo area - use QLabel with QPixmap
-    _pLogoLabel = new QLabel(this);
-    _pLogoLabel->setAlignment(Qt::AlignCenter);
-    _pLogoLabel->setMinimumSize(80, 80);
-    _pLogoLabel->setMaximumSize(120, 120);
-    _pLogoLabel->setStyleSheet("background-color: #333333; border: 1px solid #555555;");
-    mainLayout->addWidget(_pLogoLabel, 0, Qt::AlignCenter);
-    
-    // Version info
-    _pVersionLabel = new QLabel(this);
-    _pVersionLabel->setAlignment(Qt::AlignCenter);
-    _pVersionLabel->setStyleSheet("font-weight: bold; font-size: 14pt;");
-    mainLayout->addWidget(_pVersionLabel, 0, Qt::AlignCenter);
-    
-    _pBitnessLabel = new QLabel(this);
-    _pBitnessLabel->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(_pBitnessLabel, 0, Qt::AlignCenter);
-    
-    _pBuildTimeLabel = new QLabel(this);
-    _pBuildTimeLabel->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(_pBuildTimeLabel, 0, Qt::AlignCenter);
-    
-    // Home page link
-    _pHomeAddrLabel = new QLabel(this);
-    _pHomeAddrLabel->setAlignment(Qt::AlignCenter);
-    _pHomeAddrLabel->setOpenExternalLinks(true);
-    mainLayout->addWidget(_pHomeAddrLabel, 0, Qt::AlignCenter);
-    
-    // Licence text
-    QGroupBox* licenceGroup = new QGroupBox("License", this);
-    QVBoxLayout* licenceLayout = new QVBoxLayout(licenceGroup);
-    
-    _pLicenceEdit = new QTextEdit(this);
-    _pLicenceEdit->setReadOnly(true);
-    _pLicenceEdit->setPlainText(LICENCE_TXT);
-    _pLicenceEdit->setMaximumHeight(120);
-    licenceLayout->addWidget(_pLicenceEdit);
-    
-    mainLayout->addWidget(licenceGroup);
-    
-    // Close button
-    QPushButton* closeBtn = new QPushButton("Close", this);
-    connect(closeBtn, &QPushButton::clicked, this, [this]() { display(false); });
-    mainLayout->addWidget(closeBtn, 0, Qt::AlignRight);
-    
-    refreshLogo();
+	strOut += L"\r\n    installed Display Class adapters: ";
+
+	const wchar_t wszRegDisplayClassWinNT[] = L"SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E968-E325-11CE-BFC1-08002BE10318}";
+	HKEY hkDisplayClass = nullptr;
+	LSTATUS lStatus = ::RegOpenKeyExW(HKEY_LOCAL_MACHINE, wszRegDisplayClassWinNT, 0,
+		KEY_ENUMERATE_SUB_KEYS | KEY_QUERY_VALUE, &hkDisplayClass);
+	if ((lStatus != ERROR_SUCCESS) || !hkDisplayClass)
+	{
+		strOut += L"\r\n    - error, failed to open the Registry Display Class key!";
+		return;
+	}
+
+	DWORD dwSubkeysCount = 0;
+	lStatus = ::RegQueryInfoKeyW(hkDisplayClass, nullptr, nullptr, nullptr, &dwSubkeysCount,
+		nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+	if ((lStatus == ERROR_SUCCESS) && (dwSubkeysCount > 0))
+	{
+		DWORD dwAdapterSubkeysFound = 0;
+		for (DWORD i = 0; i < dwSubkeysCount; ++i)
+		{
+			if (dwAdapterSubkeysFound >= maxAdaptersIn)
+			{
+				strOut += L"\r\n    - warning, search has been limited to maximum number of adapter records: "
+					+ std::to_wstring(maxAdaptersIn);
+				break;
+			}
+
+			wstring strAdapterNo = std::format(L"{:#04d}", i); // 0000, 0001, 0002, etc...
+			wstring strAdapterSubKey = wszRegDisplayClassWinNT;
+			strAdapterSubKey += L'\\' + strAdapterNo;
+			HKEY hkAdapterSubKey = nullptr;
+			lStatus = ::RegOpenKeyExW(HKEY_LOCAL_MACHINE, strAdapterSubKey.c_str(), 0, KEY_READ, &hkAdapterSubKey);
+			if ((lStatus == ERROR_SUCCESS) && hkAdapterSubKey)
+			{
+				strAdapterNo.insert(0, L"\r\n        "); // doubling the output indentation
+				const unsigned int nKeyValMaxLen = 127;
+				const DWORD dwKeyValMaxSize = nKeyValMaxLen * sizeof(wchar_t);
+				wchar_t wszKeyVal[nKeyValMaxLen + 1]{}; // +1 ... to ensure NUL termination
+				DWORD dwType = REG_SZ;
+				DWORD dwSize = dwKeyValMaxSize;
+				if (::RegQueryValueExW(hkAdapterSubKey, L"DriverDesc", nullptr, &dwType, (LPBYTE)wszKeyVal, &dwSize)
+					== ERROR_SUCCESS)
+				{
+					dwAdapterSubkeysFound++;
+					strOut += strAdapterNo + L": Description - ";
+					strOut += wszKeyVal;
+				}
+				// for exact HW identification, query about the "MatchingDeviceId"
+				dwSize = dwKeyValMaxSize;
+				if (::RegQueryValueExW(hkAdapterSubKey, L"DriverVersion", nullptr, &dwType, (LPBYTE)wszKeyVal, &dwSize)
+					== ERROR_SUCCESS)
+				{
+					strOut += strAdapterNo + L": DriverVersion - ";
+					strOut += wszKeyVal;
+				}
+				// to obtain also the above driver date, query about the "DriverDate"
+				::RegCloseKey(hkAdapterSubKey);
+				hkAdapterSubKey = nullptr;
+			}
+		}
+	}
+
+	::RegCloseKey(hkDisplayClass);
+	hkDisplayClass = nullptr;
 }
 
-void AboutDlg::refreshLogo()
+
+intptr_t CALLBACK AboutDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-    // Load logo - would normally load from resources
-    QPixmap logo(80, 80);
-    logo.fill(Qt::darkBlue);
-    _pLogoLabel->setPixmap(logo);
+	switch (message)
+	{
+		case WM_INITDIALOG:
+		{
+			NppDarkMode::autoSubclassAndThemeChildControls(_hSelf);
+
+			HWND compileDateHandle = ::GetDlgItem(_hSelf, IDC_BUILD_DATETIME);
+			wstring buildTime = L"Build time: ";
+
+			WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
+			buildTime +=  wmc.char2wchar(__DATE__, CP_ACP);
+			buildTime += L" - ";
+			buildTime +=  wmc.char2wchar(__TIME__, CP_ACP);
+
+			NppParameters& nppParam = NppParameters::getInstance();
+			LPCTSTR bitness = nppParam.archType() == IMAGE_FILE_MACHINE_I386 ? L"(32-bit)" : nppParam.archType() == IMAGE_FILE_MACHINE_AMD64 ? L"(64-bit)" : L"(ARM 64-bit)";
+			::SetDlgItemText(_hSelf, IDC_VERSION_BIT, bitness);
+
+			::SendMessage(compileDateHandle, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(buildTime.c_str()));
+			::EnableWindow(compileDateHandle, FALSE);
+
+            HWND licenceEditHandle = ::GetDlgItem(_hSelf, IDC_LICENCE_EDIT);
+			::SendMessage(licenceEditHandle, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(LICENCE_TXT));
+
+            //_emailLink.init(_hInst, _hSelf);
+			//_emailLink.create(::GetDlgItem(_hSelf, IDC_AUTHOR_NAME), L"mailto:don.h@free.fr";
+			//_emailLink.create(::GetDlgItem(_hSelf, IDC_AUTHOR_NAME), L"https://notepad-plus-plus.org/news/v781-free-uyghur-edition/";
+			//_emailLink.create(::GetDlgItem(_hSelf, IDC_AUTHOR_NAME), L"https://notepad-plus-plus.org/news/v792-stand-with-hong-kong/";
+			//_emailLink.create(::GetDlgItem(_hSelf, IDC_AUTHOR_NAME), L"https://notepad-plus-plus.org/news/v791-pour-samuel-paty/";
+			//_pageLink.create(::GetDlgItem(_hSelf, IDC_HOME_ADDR), L"https://notepad-plus-plus.org/news/v843-unhappy-users-edition/";
+			//_pageLink.create(::GetDlgItem(_hSelf, IDC_HOME_ADDR), L"https://notepad-plus-plus.org/news/v844-happy-users-edition/";
+            //_pageLink.create(::GetDlgItem(_hSelf, IDC_HOME_ADDR), L"https://notepad-plus-plus.org/news/v86-20thyearanniversary";
+            //_pageLink.create(::GetDlgItem(_hSelf, IDC_AUTHOR_NAME), L"https://notepad-plus-plus.org/news/v87-about-taiwan/");
+			//_pageLink.create(::GetDlgItem(_hSelf, IDC_AUTHOR_NAME), L"https://notepad-plus-plus.org/news/v881-we-are-with-ukraine/");
+            
+			_pageLink.init(_hInst, _hSelf);
+            _pageLink.create(::GetDlgItem(_hSelf, IDC_HOME_ADDR), L"https://notepad-plus-plus.org/");
+
+			return TRUE;
+		}
+
+		case WM_CTLCOLORDLG:
+		case WM_CTLCOLORSTATIC:
+		{
+			return NppDarkMode::onCtlColorDlg(reinterpret_cast<HDC>(wParam));
+		}
+
+		case WM_PRINTCLIENT:
+		{
+			if (NppDarkMode::isEnabled())
+			{
+				return TRUE;
+			}
+			break;
+		}
+
+		case NPPM_INTERNAL_REFRESHDARKMODE:
+		{
+			NppDarkMode::autoThemeChildControls(_hSelf);
+			if (_hIcon != nullptr)
+			{
+				::DestroyIcon(_hIcon);
+				_hIcon = nullptr;
+			}
+			return TRUE;
+		}
+
+		case WM_DPICHANGED:
+		{
+			_dpiManager.setDpiWP(wParam);
+			destroy();
+			//setPositionDpi(lParam);
+			getWindowRect(_rc);
+
+			return TRUE;
+		}
+
+		case WM_DRAWITEM:
+		{
+			const int iconSize = _dpiManager.scale(80);
+			if (_hIcon == nullptr)
+			{
+				DPIManagerV2::loadIcon(_hInst, MAKEINTRESOURCE(NppDarkMode::isEnabled() ? IDI_CHAMELEON_DM : IDI_CHAMELEON), iconSize, iconSize, &_hIcon);
+				//DPIManagerV2::loadIcon(_hInst, MAKEINTRESOURCE(IDI_WITHUKRAINE), iconSize, iconSize, &_hIcon);
+				//DPIManagerV2::loadIcon(_hInst, MAKEINTRESOURCE(NppDarkMode::isEnabled() ? IDI_TAIWANSSOVEREIGNTY_DM : IDI_TAIWANSSOVEREIGNTY), iconSize, iconSize, &_hIcon);
+			}
+
+			//HICON hIcon = (HICON)::LoadImage(_hInst, MAKEINTRESOURCE(IDI_JESUISCHARLIE), IMAGE_ICON, 64, 64, LR_DEFAULTSIZE);
+			//HICON hIcon = (HICON)::LoadImage(_hInst, MAKEINTRESOURCE(IDI_GILETJAUNE), IMAGE_ICON, 64, 64, LR_DEFAULTSIZE);
+			//HICON hIcon = (HICON)::LoadImage(_hInst, MAKEINTRESOURCE(IDI_SAMESEXMARRIAGE), IMAGE_ICON, 64, 64, LR_DEFAULTSIZE);
+
+			auto pdis = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
+			::DrawIconEx(pdis->hDC, 0, 0, _hIcon, iconSize, iconSize, 0, nullptr, DI_NORMAL);
+
+			return TRUE;
+		}
+
+		case WM_COMMAND:
+		{
+			switch (wParam)
+			{
+				case IDCANCEL :
+				case IDOK :
+					display(false);
+					return TRUE;
+
+				default :
+					break;
+			}
+			break;
+		}
+
+		case WM_DESTROY:
+		{
+			destroy();
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 void AboutDlg::doDialog()
 {
-    if (!isCreated()) {
-        create(IDD_ABOUTBOX);
-    }
-    
-    // Set version info
-    QString version = "Notepad++ v8.x.x"; // Would get from NppParameters
-    _pVersionLabel->setText(version);
-    _pBitnessLabel->setText("(32-bit)"); // or "(64-bit)"
-    
-    QString buildTime = QString("Build time: %1 - %2")
-        .arg(__DATE__)
-        .arg(__TIME__);
-    _pBuildTimeLabel->setText(buildTime);
-    
-    _pHomeAddrLabel->setText("<a href='https://notepad-plus-plus.org/'>https://notepad-plus-plus.org/</a>");
-    
-    display(true);
+	if (!isCreated())
+		create(IDD_ABOUTBOX);
+
+	// Adjust the position of AboutBox
+	moveForDpiChange();
+	goToCenter(SWP_SHOWWINDOW | SWP_NOSIZE);
 }
 
-void AboutDlg::destroy()
+intptr_t CALLBACK DebugInfoDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-    //_emailLink.destroy();
-    // Nothing to clean up - pixmap is auto-managed
-}
+	switch (message)
+	{
+		case WM_INITDIALOG:
+		{
+			NppParameters& nppParam = NppParameters::getInstance();
+			NppGUI& nppGui = nppParam.getNppGUI();
 
-intptr_t AboutDlg::run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam)
-{
-    Q_UNUSED(wParam);
-    Q_UNUSED(lParam);
-    
-    switch (message) {
-        case WM_INITDIALOG:
-            // Apply dark mode styling if enabled
-            //NppDarkMode::autoSubclassAndThemeChildControls(_hSelf);
-            return TRUE;
-            
-        case WM_COMMAND:
-            switch (wParam) {
-                case IDCANCEL:
-                case IDOK:
-                    display(false);
-                    return TRUE;
-            }
-            break;
-            
-        case WM_DESTROY:
-            destroy();
-            return TRUE;
-    }
-    
-    return StaticDialog::run_dlgProc(message, wParam, lParam);
-}
+			NppDarkMode::autoSubclassAndThemeChildControls(_hSelf);
 
-// =====================================================
-// DebugInfoDlg implementation
-// =====================================================
+			// Notepad++ version
+			_debugInfoStr = NOTEPAD_PLUS_VERSION;
+			_debugInfoStr += nppParam.archType() == IMAGE_FILE_MACHINE_I386 ? L"   (32-bit)" : nppParam.archType() == IMAGE_FILE_MACHINE_AMD64 ? L"   (64-bit)" : L"   (ARM 64-bit)";
+			_debugInfoStr += L"\r\n";
 
-void DebugInfoDlg::init(QWidget* parent, bool isAdmin, const QString& loadedPlugins)
-{
-    StaticDialog::init(parent);
-    _isAdmin = isAdmin;
-    _loadedPlugins = loadedPlugins;
+			// Build time
+			_debugInfoStr += L"Build time: ";
+			wstring buildTime;
+			WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
+			buildTime += wmc.char2wchar(__DATE__, CP_ACP);
+			buildTime += L" - ";
+			buildTime += wmc.char2wchar(__TIME__, CP_ACP);
+			_debugInfoStr += buildTime;
+			_debugInfoStr += L"\r\n";
+
+#if defined(__clang__)
+			_debugInfoStr += L"Built with: Clang ";
+			_debugInfoStr += wmc.char2wchar(__clang_version__, CP_ACP);
+			_debugInfoStr += L"\r\n";
+#elif defined(__GNUC__)
+			_debugInfoStr += L"Built with: GCC ";
+			_debugInfoStr += wmc.char2wchar(__VERSION__, CP_ACP);
+			_debugInfoStr += L"\r\n";
+#elif !defined(_MSC_VER)
+			_debugInfoStr += L"Built with: (unknown)\r\n";
+#endif
+
+			// Scintilla/Lexilla version
+			_debugInfoStr += L"Scintilla/Lexilla included: ";
+			{
+				string strSciLexVer = NPP_SCINTILLA_VERSION;
+				strSciLexVer += "/";
+				strSciLexVer += NPP_LEXILLA_VERSION;
+				_debugInfoStr += wmc.char2wchar(strSciLexVer.c_str(), CP_ACP);
+			}
+			_debugInfoStr += L"\r\n";
+
+			// Boost Regex version
+			_debugInfoStr += L"Boost Regex included: ";
+			_debugInfoStr += wmc.char2wchar(NPP_BOOST_REGEX_VERSION, CP_ACP);
+			_debugInfoStr += L"\r\n";
+
+#if defined(PUGIXML_VERSION)
+			// pugixml version
+			_debugInfoStr += L"pugixml included: ";
+			_debugInfoStr += std::to_wstring(PUGIXML_VERSION / 1000) + L"." + std::to_wstring((PUGIXML_VERSION % 1000) / 10);
+			_debugInfoStr += L"\r\n";
+#endif
+
+			// JSON version
+			_debugInfoStr += L"nlohmann JSON included: ";
+			_debugInfoStr += to_wstring(NLOHMANN_JSON_VERSION_MAJOR) + L"." + to_wstring(NLOHMANN_JSON_VERSION_MINOR) + L"." + to_wstring(NLOHMANN_JSON_VERSION_PATCH);
+			_debugInfoStr += L"\r\n";
+
+			// Binary path
+			_debugInfoStr += L"Path: ";
+			wchar_t nppFullPath[MAX_PATH]{};
+			::GetModuleFileName(NULL, nppFullPath, MAX_PATH);
+			_debugInfoStr += nppFullPath;
+			_debugInfoStr += L"\r\n";
+
+			// Command line as specified for program launch
+			// The _cmdLinePlaceHolder will be replaced later by refreshDebugInfo()
+			_debugInfoStr += L"Command Line: ";
+			_debugInfoStr += _cmdLinePlaceHolder;
+			_debugInfoStr += L"\r\n";
+
+			// Administrator mode
+			_debugInfoStr += L"Admin mode: ";
+			_debugInfoStr += _isAdmin ? L"ON" : L"OFF";
+			_debugInfoStr += L"\r\n";
+
+			// local conf
+			_debugInfoStr += L"Local Conf mode: ";
+			bool doLocalConf = (NppParameters::getInstance()).isLocal();
+			_debugInfoStr += doLocalConf ? L"ON" : L"OFF";
+			_debugInfoStr += L"\r\n";
+
+			// Cloud config directory
+			_debugInfoStr += L"Cloud Config: ";
+			const wstring& cloudPath = nppParam.getNppGUI()._cloudPath;
+			_debugInfoStr += cloudPath.empty() ? L"OFF" : cloudPath;
+			_debugInfoStr += L"\r\n";
+
+			//  Auto-Update:
+			// 
+			//  WinGUp  | disableNppAutoUpdate.xml || Auto-Update status
+			//  ========================================================
+			//  present |         present          ||      OFF
+			//  --------------------------------------------------------
+			//  absent  |         present          ||      OFF
+			//  --------------------------------------------------------
+			//  present |         absent           ||      ON
+			//  --------------------------------------------------------
+			//  absent  |         absent           ||      OFF
+			//
+			_debugInfoStr += L"WinGUp: ";
+			_debugInfoStr += nppGui._doesExistUpdater ? L"present" : L"absent";
+			_debugInfoStr += L"\r\n";
+			_debugInfoStr += L"disableNppAutoUpdate.xml: ";
+			_debugInfoStr += nppParam.isNppAutoUpdateDisabled() ? L"present" : L"absent";
+			_debugInfoStr += L"\r\n";
+
+			// Periodic Backup
+			_debugInfoStr += L"Periodic Backup: ";
+			_debugInfoStr += nppGui.isSnapshotMode() ? L"ON" : L"OFF";
+			_debugInfoStr += L"\r\n";
+
+			// Placeholders
+			_debugInfoStr += L"Placeholders: ";
+			_debugInfoStr += nppGui._keepSessionAbsentFileEntries ? L"ON" : L"OFF";
+			_debugInfoStr += L"\r\n";
+
+			// SC_TECHNOLOGY
+			_debugInfoStr += L"Scintilla Rendering Mode: ";
+			switch (nppGui._writeTechnologyEngine)
+			{
+				case defaultTechnology:
+					_debugInfoStr += L"SC_TECHNOLOGY_DEFAULT (0)";
+					break;
+				case directWriteTechnology:
+					_debugInfoStr += L"SC_TECHNOLOGY_DIRECTWRITE (1)";
+					break;
+				case directWriteRetainTechnology:
+					_debugInfoStr += L"SC_TECHNOLOGY_DIRECTWRITERETAIN (2)";
+					break;
+				case directWriteDcTechnology:
+					_debugInfoStr += L"SC_TECHNOLOGY_DIRECTWRITEDC (3)";
+					break;
+				case directWriteDX11Technology:
+					_debugInfoStr += L"SC_TECHNOLOGY_DIRECT_WRITE_1 (4)";
+					break;
+				case directWriteTechnologyUnavailable:
+					_debugInfoStr += L"DirectWrite Technology Unavailable (5, same as SC_TECHNOLOGY_DEFAULT)";
+					break;
+				default:
+					_debugInfoStr += L"unknown (" + std::to_wstring(nppGui._writeTechnologyEngine) + L")";
+			}
+			_debugInfoStr += L"\r\n";
+
+			// Multi-instance
+			_debugInfoStr += L"Multi-instance Mode: ";
+			switch (nppGui._multiInstSetting)
+			{
+				case monoInst:
+					_debugInfoStr += L"monoInst";
+					break;
+				case multiInstOnSession:
+					_debugInfoStr += L"multiInstOnSession";
+					break;
+				case multiInst:
+					_debugInfoStr += L"multiInst";
+					break;
+				default:
+					_debugInfoStr += L"unknown(" + std::to_wstring(nppGui._multiInstSetting) + L")";
+			}
+			_debugInfoStr += L"\r\n";
+
+			// asNotepad
+			_debugInfoStr += L"asNotepad: ";
+			_debugInfoStr += nppParam.isAsNotepadStyle() ? L"ON" : L"OFF";
+			_debugInfoStr += L"\r\n";
+
+			// File Status Auto-Detection
+			_debugInfoStr += L"File Status Auto-Detection: ";
+			if (nppGui._fileAutoDetection == cdDisabled)
+			{
+				_debugInfoStr += L"cdDisabled";
+			}
+			else
+			{
+				if (nppGui._fileAutoDetection & cdEnabledOld)
+					_debugInfoStr += L"cdEnabledOld (for all opened files/tabs)";
+				else if (nppGui._fileAutoDetection & cdEnabledNew)
+					_debugInfoStr += L"cdEnabledNew (for current file/tab only)";
+				else
+					_debugInfoStr += L"cdUnknown (?!)";
+
+				if (nppGui._fileAutoDetection & cdAutoUpdate)
+					_debugInfoStr += L" + cdAutoUpdate";
+				if (nppGui._fileAutoDetection & cdGo2end)
+					_debugInfoStr += L" + cdGo2end";
+			}
+			_debugInfoStr += L"\r\n";
+
+			// Dark Mode
+			_debugInfoStr += L"Dark Mode: ";
+			_debugInfoStr += nppGui._darkmode._isEnabled ? L"ON" : L"OFF";
+			_debugInfoStr += L"\r\n";
+
+			// Display Info
+			_debugInfoStr += L"Display Info:";
+			{
+				HDC hdc = ::GetDC(nullptr); // desktop DC
+				if (hdc)
+				{
+					_debugInfoStr += L"\r\n    primary monitor: " + std::to_wstring(::GetDeviceCaps(hdc, HORZRES));
+					_debugInfoStr += L"x" + std::to_wstring(::GetDeviceCaps(hdc, VERTRES));
+					_debugInfoStr += L", scaling " + std::to_wstring(::GetDeviceCaps(hdc, LOGPIXELSX) * 100 / 96);
+					_debugInfoStr += L"%";
+					::ReleaseDC(nullptr, hdc);
+				}
+				_debugInfoStr += L"\r\n    visible monitors count: " + std::to_wstring(::GetSystemMetrics(SM_CMONITORS));
+				AppendDisplayAdaptersInfo(_debugInfoStr, 4); // survey up to 4 potential graphics card Registry records
+			}
+			_debugInfoStr += L"\r\n";
+
+			// OS information
+			HKEY hKey = nullptr;
+			DWORD dataSize = 0;
+
+			constexpr size_t bufSize = 96;
+			wchar_t szProductName[bufSize] = {'\0'};
+			constexpr size_t bufSizeBuildNumber = 32;
+			wchar_t szCurrentBuildNumber[bufSizeBuildNumber] = {'\0'};
+			wchar_t szReleaseId[32] = {'\0'};
+			DWORD dwUBR = 0;
+			constexpr size_t bufSizeUBR = 12;
+			wchar_t szUBR[bufSizeUBR] = L"0";
+
+			// NOTE: RegQueryValueExW is not guaranteed to return null-terminated strings
+			if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+			{
+				dataSize = sizeof(szProductName);
+				RegQueryValueExW(hKey, L"ProductName", NULL, NULL, reinterpret_cast<LPBYTE>(szProductName), &dataSize);
+				szProductName[sizeof(szProductName) / sizeof(wchar_t) - 1] = '\0';
+
+				dataSize = sizeof(szReleaseId);
+				if(RegQueryValueExW(hKey, L"DisplayVersion", NULL, NULL, reinterpret_cast<LPBYTE>(szReleaseId), &dataSize) != ERROR_SUCCESS)
+				{
+					dataSize = sizeof(szReleaseId);
+					RegQueryValueExW(hKey, L"ReleaseId", NULL, NULL, reinterpret_cast<LPBYTE>(szReleaseId), &dataSize);
+				}
+				szReleaseId[sizeof(szReleaseId) / sizeof(wchar_t) - 1] = '\0';
+
+				dataSize = sizeof(szCurrentBuildNumber);
+				RegQueryValueExW(hKey, L"CurrentBuildNumber", NULL, NULL, reinterpret_cast<LPBYTE>(szCurrentBuildNumber), &dataSize);
+				szCurrentBuildNumber[sizeof(szCurrentBuildNumber) / sizeof(wchar_t) - 1] = '\0';
+
+				dataSize = sizeof(DWORD);
+				if (RegQueryValueExW(hKey, L"UBR", NULL, NULL, reinterpret_cast<LPBYTE>(&dwUBR), &dataSize) == ERROR_SUCCESS)
+				{
+					swprintf(szUBR, bufSizeUBR, L"%u", dwUBR);
+				}
+
+				RegCloseKey(hKey);
+			}
+
+			// Get alternative OS information
+			if (szProductName[0] == '\0')
+			{
+				swprintf(szProductName, bufSize, L"%s", (NppParameters::getInstance()).getWinVersionStr().c_str());
+			}
+			else if (NppDarkMode::isWindows11())
+			{
+				wstring tmpProductName = szProductName;
+				constexpr size_t strLen = 10U;
+				const wchar_t strWin10[strLen + 1U] = L"Windows 10";
+				const size_t pos = tmpProductName.find(strWin10);
+				if (pos < (bufSize - strLen - 1U))
+				{
+					tmpProductName.replace(pos, strLen, L"Windows 11");
+					swprintf(szProductName, bufSize, L"%s", tmpProductName.c_str());
+				}
+			}
+
+			if (szCurrentBuildNumber[0] == '\0')
+			{
+				DWORD dwVersion = GetVersion();
+				if (dwVersion < 0x80000000)
+				{
+					swprintf(szCurrentBuildNumber, bufSizeBuildNumber, L"%u", HIWORD(dwVersion));
+				}
+			}
+
+			_debugInfoStr += L"OS Name: ";
+			_debugInfoStr += szProductName;
+			_debugInfoStr += L" (";
+			_debugInfoStr += (NppParameters::getInstance()).getWinVerBitStr();
+			_debugInfoStr += L")";
+			_debugInfoStr += L"\r\n";
+
+			if (szReleaseId[0] != '\0')
+			{
+				_debugInfoStr += L"OS Version: ";
+				_debugInfoStr += szReleaseId;
+				_debugInfoStr += L"\r\n";
+			}
+
+			if (szCurrentBuildNumber[0] != '\0')
+			{
+				_debugInfoStr += L"OS Build: ";
+				_debugInfoStr += szCurrentBuildNumber;
+				_debugInfoStr += L".";
+				_debugInfoStr += szUBR;
+				_debugInfoStr += L"\r\n";
+			}
+
+			{
+				constexpr size_t bufSizeACP = 32;
+				wchar_t szACP[bufSizeACP] = { '\0' };
+				swprintf(szACP, bufSizeACP, L"%u", nppParam.currentSystemCodepage());
+				_debugInfoStr += L"Current ANSI codepage: ";
+ 				_debugInfoStr += szACP;
+				_debugInfoStr += L"\r\n";
+			}
+
+			// Detect WINE
+			PWINEGETVERSION pWGV = nullptr;
+			HMODULE hNtdllModule = GetModuleHandle(L"ntdll.dll");
+			if (hNtdllModule)
+			{
+				pWGV = reinterpret_cast<PWINEGETVERSION>(GetProcAddress(hNtdllModule, "wine_get_version"));
+			}
+
+			if (pWGV != nullptr)
+			{
+				constexpr size_t bufSizeWineVer = 32;
+				wchar_t szWINEVersion[bufSizeWineVer] = { '\0' };
+				swprintf(szWINEVersion, bufSizeWineVer, L"%hs", pWGV());
+
+				_debugInfoStr += L"WINE : ";
+				_debugInfoStr += szWINEVersion;
+				_debugInfoStr += L"\r\n";
+			}
+
+			// Plugins
+			_debugInfoStr += L"Plugins: ";
+			_debugInfoStr += _loadedPlugins.length() == 0 ? L"none" : _loadedPlugins;
+			_debugInfoStr += L"\r\n";
+
+			return TRUE;
+		}
+
+		case WM_CTLCOLORDLG:
+		case WM_CTLCOLORSTATIC:
+		{
+			return NppDarkMode::onCtlColorDlg(reinterpret_cast<HDC>(wParam));
+		}
+
+		case WM_PRINTCLIENT:
+		{
+			if (NppDarkMode::isEnabled())
+			{
+				return TRUE;
+			}
+			break;
+		}
+
+		case NPPM_INTERNAL_REFRESHDARKMODE:
+		{
+			NppDarkMode::autoThemeChildControls(_hSelf);
+			return TRUE;
+		}
+
+		case WM_DPICHANGED:
+		{
+			_dpiManager.setDpiWP(wParam);
+			setPositionDpi(lParam);
+			getWindowRect(_rc);
+
+			return TRUE;
+		}
+
+		case WM_COMMAND:
+		{
+			switch (wParam)
+			{
+				case IDCANCEL:
+				case IDOK:
+					display(false);
+					return TRUE;
+
+				case IDC_DEBUGINFO_COPYLINK:
+				{
+					// Visual effect
+					::SendDlgItemMessage(_hSelf, IDC_DEBUGINFO_EDIT, EM_SETSEL, 0, _debugInfoDisplay.length() - 1);
+
+					// Copy to clipboard
+					str2Clipboard(_debugInfoDisplay, _hSelf);
+
+					// Set focus to edit control
+					::SendMessage(_hSelf, WM_NEXTDLGCTL, reinterpret_cast<WPARAM>(::GetDlgItem(_hSelf, IDC_DEBUGINFO_EDIT)), TRUE);
+
+					return TRUE;
+				}
+				default:
+					break;
+			}
+			break;
+		}
+
+		case WM_DESTROY:
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 void DebugInfoDlg::doDialog()
 {
-    if (!isCreated()) {
-        create(0); // No specific dialog ID needed
-        setWindowTitle("Debug Info");
-    }
-    refreshDebugInfo();
-    display(true);
+	if (!isCreated())
+		create(IDD_DEBUGINFOBOX);
+
+	// Refresh the Debug Information.
+	// For example, the command line parameters may have changed since this dialog was last opened during this session.
+	refreshDebugInfo();
+
+	// Adjust the position of DebugBox
+	moveForDpiChange();
+	goToCenter(SWP_SHOWWINDOW | SWP_NOSIZE);
 }
 
 void DebugInfoDlg::refreshDebugInfo()
 {
-    QString info;
-    
-    // Notepad++ version
-    info += "Notepad++ version: " + QString(NOTEPAD_PLUS_VERSION) + "\n";
-    info += "Build time: " + QString(__DATE__) + " - " + QString(__TIME__) + "\n\n";
-    
-    // Scintilla version
-    info += "Scintilla/Lexilla included: " + QString(NPP_SCINTILLA_VERSION) + "/" + QString(NPP_LEXILLA_VERSION) + "\n\n";
-    
-    // Plugin info
-    if (!_loadedPlugins.isEmpty()) {
-        info += "Loaded plugins:\n" + _loadedPlugins + "\n\n";
-    }
-    
-    // Admin mode
-    info += QString("Administrator mode: %1\n").arg(_isAdmin ? "Yes" : "No");
-    
-    _debugInfoStr = info;
-    _debugInfoDisplay = info;
-    
-    if (_pDebugInfoEdit) {
-        _pDebugInfoEdit->setPlainText(_debugInfoDisplay);
-    }
+	_debugInfoDisplay = _debugInfoStr;
+
+	size_t replacePos = _debugInfoDisplay.find(_cmdLinePlaceHolder);
+	if (replacePos != std::string::npos)
+	{
+		_debugInfoDisplay.replace(replacePos, _cmdLinePlaceHolder.length(), NppParameters::getInstance().getCmdLineString());
+	}
+
+	// Set Debug Info text and leave the text in selected state
+	::SetDlgItemText(_hSelf, IDC_DEBUGINFO_EDIT, _debugInfoDisplay.c_str());
+	::SendDlgItemMessage(_hSelf, IDC_DEBUGINFO_EDIT, EM_SETSEL, 0, _debugInfoDisplay.length() - 1);
+	::SetFocus(::GetDlgItem(_hSelf, IDC_DEBUGINFO_EDIT));
 }
 
-intptr_t DebugInfoDlg::run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam)
-{
-    switch (message) {
-        case WM_INITDIALOG: {
-            QVBoxLayout* layout = new QVBoxLayout(this);
-            
-            _pDebugInfoEdit = new QTextEdit(this);
-            _pDebugInfoEdit->setReadOnly(true);
-            _pDebugInfoEdit->setFont(QFont("Courier New", 8));
-            layout->addWidget(_pDebugInfoEdit);
-            
-            QPushButton* copyBtn = new QPushButton("Copy to Clipboard", this);
-            connect(copyBtn, &QPushButton::clicked, this, [this]() {
-                QApplication::clipboard()->setText(_debugInfoDisplay);
-                QMessageBox::information(this, "Copied", "Debug info copied to clipboard.");
-            });
-            layout->addWidget(copyBtn);
-            
-            QPushButton* closeBtn = new QPushButton("Close", this);
-            connect(closeBtn, &QPushButton::clicked, this, [this]() { display(false); });
-            layout->addWidget(closeBtn);
-            
-            refreshDebugInfo();
-            return TRUE;
-        }
-        
-        case WM_COMMAND:
-            if (wParam == IDOK || wParam == IDCANCEL) {
-                display(false);
-                return TRUE;
-            }
-            break;
-    }
-    
-    return StaticDialog::run_dlgProc(message, wParam, lParam);
-}
 
-// =====================================================
-// CmdLineArgsDlg implementation
-// =====================================================
+const wchar_t COMMAND_ARG_HELP[] = L"Usage:\r\n\
+\r\n\
+notepad++ [--help] [-multiInst] [-noPlugin] [-lLanguage] [-udl=\"My UDL Name\"]\r\n\
+[-LlangCode] [-nLineNumber] [-cColumnNumber] [-pPosition] [-xLeftPos] [-yTopPos]\r\n\
+[-monitor] [-nosession] [-notabbar] [-systemtray] [-loadingTime] [-alwaysOnTop]\r\n\
+[-ro] [-fullReadOnly] [-fullReadOnlySavingForbidden] [-openSession] [-r]\r\n\
+[-qn=\"Easter egg name\" | -qt=\"a text to display.\" | -qf=\"D:\\my quote.txt\"]\r\n\
+[-qSpeed1|2|3] [-quickPrint] [-settingsDir=\"d:\\your settings dir\\\"]\r\n\
+[-openFoldersAsWorkspace]  [-titleAdd=\"additional title bar text\"]\r\n\
+[filePath]\r\n\
+\r\n\
+--help: This help message\r\n\
+-multiInst: Launch another Notepad++ instance\r\n\
+-noPlugin: Launch Notepad++ without loading any plugin\r\n\
+-l: Open file or Ghost type with syntax highlighting of choice\r\n\
+-udl=\"My UDL Name\": Open file by applying User Defined Language\r\n\
+-L: Apply indicated localization, langCode is browser language code\r\n\
+-n: Scroll to indicated line on filePath\r\n\
+-c: Scroll to indicated column on filePath\r\n\
+-p: Scroll to indicated position on filePath\r\n\
+-x: Move Notepad++ to indicated left side position on the screen\r\n\
+-y: Move Notepad++ to indicated top position on the screen\r\n\
+-monitor: Open file with file monitoring enabled\r\n\
+-nosession: Launch Notepad++ without previous session\r\n\
+-notabbar: Launch Notepad++ without tab bar\r\n\
+-ro: Make the filePath read-only\r\n\
+-fullReadOnly: Open all files read-only by default, toggling the R/O off and saving is allowed\r\n\
+-fullReadOnlySavingForbidden: Open all files read-only by default, toggling the R/O off and saving is disabled\r\n\
+-systemtray: Launch Notepad++ directly in system tray\r\n\
+-loadingTime: Display Notepad++ loading time\r\n\
+-alwaysOnTop: Make Notepad++ always on top\r\n\
+-openSession: Open a session. filePath must be a session file\r\n\
+-r: Open files recursively. This argument will be ignored if filePath contains no wildcard character\r\n\
+-qn=\"Easter egg name\": Ghost type easter egg via its name\r\n\
+-qt=\"text to display.\": Ghost type the given text\r\n\
+-qf=\"D:\\my quote.txt\": Ghost type a file content via the file path\r\n\
+-qSpeed: Ghost typing speed. Value from 1 to 3 for slow, fast and fastest\r\n\
+-quickPrint: Print the file given as argument then quit Notepad++\r\n\
+-settingsDir=\"d:\\your settings dir\\\": Override the default settings dir\r\n\
+-openFoldersAsWorkspace: open filePath of folder(s) as workspace\r\n\
+-titleAdd=\"string\": add string to Notepad++ title bar\r\n\
+filePath: file or folder name to open (absolute or relative path name)\r\n\
+";
 
 void CmdLineArgsDlg::doDialog()
 {
-    if (!isCreated()) {
-        create(0);
-        setWindowTitle("Command Line Arguments");
-    }
-    display(true);
+	if (!isCreated())
+		create(IDD_COMMANDLINEARGSBOX);
+
+	::SetDlgItemText(_hSelf, IDC_COMMANDLINEARGS_EDIT, COMMAND_ARG_HELP);
+
+	// Create DPI-aware monospace font
+	NONCLIENTMETRICS ncm{};
+	ncm.cbSize = sizeof(NONCLIENTMETRICS);
+	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0);
+
+	// Use the system font height but change to monospace
+	hCmdLineEditFont = CreateFont(
+		ncm.lfMessageFont.lfHeight,  // DPI-aware height from system
+		0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+		DEFAULT_QUALITY, FIXED_PITCH | FF_MODERN,
+		L"Lucida Console");
+
+	if (hCmdLineEditFont)
+		SendDlgItemMessage(_hSelf, IDC_COMMANDLINEARGS_EDIT, WM_SETFONT, (WPARAM)hCmdLineEditFont, TRUE);
+
+	moveForDpiChange();
+	goToCenter(SWP_SHOWWINDOW | SWP_NOSIZE);
 }
 
-intptr_t CmdLineArgsDlg::run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam)
+intptr_t CALLBACK CmdLineArgsDlg::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-    switch (message) {
-        case WM_INITDIALOG: {
-            QVBoxLayout* layout = new QVBoxLayout(this);
-            
-            QLabel* label = new QLabel("Enter command line arguments:", this);
-            layout->addWidget(label);
-            
-            _pArgsEdit = new QTextEdit(this);
-            _pArgsEdit->setFont(QFont(_fontFamily, _fontSize));
-            _pArgsEdit->setAcceptDrops(false);
-            layout->addWidget(_pArgsEdit);
-            
-            QHBoxLayout* btnLayout = new QHBoxLayout();
-            btnLayout->addStretch();
-            
-            QPushButton* okBtn = new QPushButton("OK", this);
-            connect(okBtn, &QPushButton::clicked, this, [this]() { display(false); });
-            btnLayout->addWidget(okBtn);
-            
-            QPushButton* cancelBtn = new QPushButton("Cancel", this);
-            connect(cancelBtn, &QPushButton::clicked, this, [this]() { display(false); });
-            btnLayout->addWidget(cancelBtn);
-            
-            layout->addLayout(btnLayout);
-            return TRUE;
-        }
-    }
-    
-    return StaticDialog::run_dlgProc(message, wParam, lParam);
-}
+	switch (message)
+	{
+		case WM_INITDIALOG:
+		{
+			NppDarkMode::autoSubclassAndThemeChildControls(_hSelf);
+			return TRUE;
+		}
 
-// =====================================================
-// DoSaveOrNotBox implementation
-// =====================================================
+		case WM_CTLCOLORDLG:
+		case WM_CTLCOLORSTATIC:
+		{
+			return NppDarkMode::onCtlColorDlg(reinterpret_cast<HDC>(wParam));
+		}
 
-void DoSaveOrNotBox::init(QWidget* parent, const QString& filename, bool isMulti)
-{
-    StaticDialog::init(parent);
-    _filename = filename;
-    _isMulti = isMulti;
+		case WM_PRINTCLIENT:
+		{
+			if (NppDarkMode::isEnabled())
+			{
+				return TRUE;
+			}
+			break;
+		}
+
+		case NPPM_INTERNAL_REFRESHDARKMODE:
+		{
+			NppDarkMode::autoThemeChildControls(_hSelf);
+			return TRUE;
+		}
+
+		case WM_DPICHANGED:
+		{
+			_dpiManager.setDpiWP(wParam);
+			setPositionDpi(lParam);
+			getWindowRect(_rc);
+
+			return TRUE;
+		}
+
+		case WM_COMMAND:
+		{
+			switch (wParam)
+			{
+				case IDCANCEL:
+				case IDOK:
+					display(false);
+					return TRUE;
+
+				default:
+					break;
+			}
+			break;
+		}
+
+		case WM_DESTROY:
+		{
+			if (hCmdLineEditFont)
+			{
+				DeleteObject(hCmdLineEditFont);
+				hCmdLineEditFont = nullptr;
+			}
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 void DoSaveOrNotBox::doDialog(bool isRTL)
 {
-    Q_UNUSED(isRTL);
-    
-    if (!isCreated()) {
-        create(0);
-    }
-    
-    QString msg;
-    if (_isMulti) {
-        msg = "Do you want to save changes to multiple files?";
-    } else {
-        msg = QString("Do you want to save changes to \"%1\"?").arg(_filename);
-    }
-    
-    if (_pMessageLabel) {
-        _pMessageLabel->setText(msg);
-    }
-    
-    display(true);
+	StaticDialog::myCreateDialogBoxIndirectParam(IDD_DOSAVEORNOTBOX, isRTL);
 }
 
 void DoSaveOrNotBox::changeLang()
 {
-    // Would update button text based on localization
+	wstring msg;
+	wstring defaultMessage = L"Save file \"$STR_REPLACE$\" ?";
+	NativeLangSpeaker* nativeLangSpeaker = NppParameters::getInstance().getNativeLangSpeaker();
+
+	if (nativeLangSpeaker->changeDlgLang(_hSelf, "DoSaveOrNot"))
+	{
+		constexpr unsigned char len = 255;
+		wchar_t text[len]{};
+		::GetDlgItemText(_hSelf, IDC_DOSAVEORNOTTEXT, text, len);
+		msg = text;
+	}
+
+	if (msg.empty())
+		msg = defaultMessage;
+
+	msg = stringReplace(msg, L"$STR_REPLACE$", _fn);
+	::SetDlgItemText(_hSelf, IDC_DOSAVEORNOTTEXT, msg.c_str());
 }
 
-intptr_t DoSaveOrNotBox::run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam)
+intptr_t CALLBACK DoSaveOrNotBox::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-    switch (message) {
-        case WM_INITDIALOG: {
-            QVBoxLayout* layout = new QVBoxLayout(this);
-            layout->setContentsMargins(20, 20, 20, 20);
-            
-            _pMessageLabel = new QLabel(this);
-            _pMessageLabel->setWordWrap(true);
-            layout->addWidget(_pMessageLabel);
-            
-            QHBoxLayout* btnLayout = new QHBoxLayout();
-            btnLayout->addStretch();
-            
-            _pYesButton = new QPushButton("&Yes", this);
-            connect(_pYesButton, &QPushButton::clicked, this, [this]() {
-                _clickedButtonId = IDYES;
-                display(false);
-            });
-            btnLayout->addWidget(_pYesButton);
-            
-            _pNoButton = new QPushButton("&No", this);
-            connect(_pNoButton, &QPushButton::clicked, this, [this]() {
-                _clickedButtonId = IDNO;
-                display(false);
-            });
-            btnLayout->addWidget(_pNoButton);
-            
-            QPushButton* cancelBtn = new QPushButton("Cancel", this);
-            connect(cancelBtn, &QPushButton::clicked, this, [this]() {
-                _clickedButtonId = IDCANCEL;
-                display(false);
-            });
-            btnLayout->addWidget(cancelBtn);
-            
-            layout->addLayout(btnLayout);
-            
-            changeLang();
-            return TRUE;
-        }
-        
-        case WM_COMMAND:
-            if (wParam == IDYES || wParam == IDNO || wParam == IDCANCEL) {
-                _clickedButtonId = static_cast<int>(wParam);
-                display(false);
-                return TRUE;
-            }
-            break;
-    }
-    
-    return StaticDialog::run_dlgProc(message, wParam, lParam);
+	switch (message)
+	{
+		case WM_INITDIALOG :
+		{
+			NppDarkMode::autoSubclassAndThemeChildControls(_hSelf);
+
+			changeLang();
+			::EnableWindow(::GetDlgItem(_hSelf, IDRETRY), _isMulti);
+			::EnableWindow(::GetDlgItem(_hSelf, IDIGNORE), _isMulti);
+			goToCenter(SWP_SHOWWINDOW | SWP_NOSIZE);
+			return TRUE;
+		}
+
+		case WM_CTLCOLORDLG:
+		case WM_CTLCOLORSTATIC:
+		{
+			return NppDarkMode::onCtlColorDlg(reinterpret_cast<HDC>(wParam));
+		}
+
+		case WM_PRINTCLIENT:
+		{
+			if (NppDarkMode::isEnabled())
+			{
+				return TRUE;
+			}
+			break;
+		}
+
+		case WM_DPICHANGED:
+		{
+			_dpiManager.setDpiWP(wParam);
+			setPositionDpi(lParam);
+
+			return TRUE;
+		}
+
+		case WM_COMMAND:
+		{
+			switch (LOWORD(wParam))
+			{
+				case IDCANCEL:
+				{
+					::EndDialog(_hSelf, -1);
+					clickedButtonId = IDCANCEL;
+					return TRUE;
+				}
+
+				case IDYES:
+				{
+					::EndDialog(_hSelf, 0);
+					clickedButtonId = IDYES;
+					return TRUE;
+				}
+
+				case IDNO:
+				{
+					::EndDialog(_hSelf, 0);
+					clickedButtonId = IDNO;
+					return TRUE;
+				}
+
+				case IDIGNORE:
+				{
+					::EndDialog(_hSelf, 0);
+					clickedButtonId = IDIGNORE;
+					return TRUE;
+				}
+
+				case IDRETRY:
+				{
+					::EndDialog(_hSelf, 0);
+					clickedButtonId = IDRETRY;
+					return TRUE;
+				}
+			}
+			break;
+		}
+		default:
+			return FALSE;
+	}
+	return FALSE;
 }
 
-// =====================================================
-// DoSaveAllBox implementation
-// =====================================================
 
 void DoSaveAllBox::doDialog(bool isRTL)
 {
-    Q_UNUSED(isRTL);
-    
-    if (!isCreated()) {
-        create(0);
-    }
-    
-    if (_pMessageLabel) {
-        _pMessageLabel->setText(QString("You have %1 files with unsaved changes.\nDo you want to save them?").arg(_unsavedCount));
-    }
-    
-    display(true);
+	StaticDialog::myCreateDialogBoxIndirectParam(IDD_DOSAVEALLBOX, isRTL);
 }
 
 void DoSaveAllBox::changeLang()
 {
-    // Would update button text based on localization
+	wstring msg;
+	wstring defaultMessage = L"Are you sure you want to save all modified documents?\r\rChoose \"Always Yes\" if you don't want to see this dialog again.\rYou can re-activate this dialog in Preferences later.";
+	NativeLangSpeaker* nativeLangSpeaker = NppParameters::getInstance().getNativeLangSpeaker();
+
+	if (nativeLangSpeaker->changeDlgLang(_hSelf, "DoSaveAll"))
+	{
+		constexpr size_t len = 1024;
+		wchar_t text[len]{};
+		::GetDlgItemText(_hSelf, IDC_DOSAVEALLTEXT, text, len);
+		msg = text;
+	}
+
+	if (msg.empty())
+		msg = defaultMessage;
+
+	::SetDlgItemText(_hSelf, IDC_DOSAVEALLTEXT, msg.c_str());
 }
 
-intptr_t DoSaveAllBox::run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam)
+intptr_t CALLBACK DoSaveAllBox::run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
-    switch (message) {
-        case WM_INITDIALOG: {
-            QVBoxLayout* layout = new QVBoxLayout(this);
-            layout->setContentsMargins(20, 20, 20, 20);
-            
-            _pMessageLabel = new QLabel(this);
-            _pMessageLabel->setWordWrap(true);
-            layout->addWidget(_pMessageLabel);
-            
-            QHBoxLayout* btnLayout = new QHBoxLayout();
-            btnLayout->addStretch();
-            
-            _pYesButton = new QPushButton("Save All", this);
-            connect(_pYesButton, &QPushButton::clicked, this, [this]() {
-                _clickedButtonId = IDYES;
-                display(false);
-            });
-            btnLayout->addWidget(_pYesButton);
-            
-            _pNoButton = new QPushButton("Don't Save", this);
-            connect(_pNoButton, &QPushButton::clicked, this, [this]() {
-                _clickedButtonId = IDNO;
-                display(false);
-            });
-            btnLayout->addWidget(_pNoButton);
-            
-            QPushButton* cancelBtn = new QPushButton("Cancel", this);
-            connect(cancelBtn, &QPushButton::clicked, this, [this]() {
-                _clickedButtonId = IDCANCEL;
-                display(false);
-            });
-            btnLayout->addWidget(cancelBtn);
-            
-            layout->addLayout(btnLayout);
-            
-            changeLang();
-            return TRUE;
-        }
-    }
-    
-    return StaticDialog::run_dlgProc(message, wParam, lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG:
+	{
+		NppDarkMode::autoSubclassAndThemeChildControls(_hSelf);
+
+		changeLang();
+		goToCenter(SWP_SHOWWINDOW | SWP_NOSIZE);
+		return TRUE;
+	}
+
+	case WM_CTLCOLORDLG:
+	case WM_CTLCOLORSTATIC:
+	{
+		return NppDarkMode::onCtlColorDlg(reinterpret_cast<HDC>(wParam));
+	}
+
+	case WM_PRINTCLIENT:
+	{
+		if (NppDarkMode::isEnabled())
+		{
+			return TRUE;
+		}
+		break;
+	}
+
+	case WM_DPICHANGED:
+	{
+		_dpiManager.setDpiWP(wParam);
+		setPositionDpi(lParam);
+
+		return TRUE;
+	}
+
+	case WM_COMMAND:
+	{
+		switch (LOWORD(wParam))
+		{
+			case IDCANCEL:
+			{
+				::EndDialog(_hSelf, -1);
+				clickedButtonId = IDCANCEL;
+				return TRUE;
+			}
+
+			case IDYES:
+			{
+				::EndDialog(_hSelf, 0);
+				clickedButtonId = IDYES;
+				return TRUE;
+			}
+
+			case IDNO:
+			{
+				::EndDialog(_hSelf, 0);
+				clickedButtonId = IDNO;
+				return TRUE;
+			}
+
+			case IDRETRY:
+			{
+				::EndDialog(_hSelf, 0);
+				clickedButtonId = IDRETRY;
+				return TRUE;
+			}
+		}
+		break;
+	}
+	default:
+		return FALSE;
+	}
+	return FALSE;
 }
