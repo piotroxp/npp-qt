@@ -28,6 +28,20 @@ int Scintilla_ReleaseResources(void);
 // Include header that defines basic numeric types.
 #include <stdint.h>
 
+// Minimal Windows type stubs for Scintilla (full compatibility layer in WindowsCompat.h)
+#ifndef HWND
+typedef void* HWND;
+#endif
+#ifndef HINSTANCE
+typedef void* HINSTANCE;
+#endif
+#ifndef HDC
+typedef void* HDC;
+#endif
+#ifndef HMODULE
+typedef void* HMODULE;
+#endif
+
 // Define uptr_t, an unsigned integer type large enough to hold a pointer.
 typedef uintptr_t uptr_t;
 // Define sptr_t, a signed integer large enough to hold a pointer.

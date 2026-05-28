@@ -20,6 +20,7 @@
 #include <QListWidget>
 #include <QVector>
 #include <QString>
+#include <QButtonGroup>
 
 #include "DockingWnd/DockingDlgInterface.h"
 
@@ -46,8 +47,8 @@ public:
     void setParent(QWidget* parent2set);
 
     void switchEncoding();
-    void insertChar(unsigned char char2insert) const;
-    void insertString(const QString& string2insert) const;
+    void insertChar(unsigned char char2insert);
+    void insertString(const QString& string2insert);
 
     void setBackgroundColor(QRgb bgColour) override;
     void setForegroundColor(QRgb fgColour) override;

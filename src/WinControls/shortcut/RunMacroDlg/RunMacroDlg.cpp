@@ -4,6 +4,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QGroupBox>
+#include <QPushButton>
 
 RunMacroDlg::RunMacroDlg(QWidget* parent)
     : QDialog(parent)

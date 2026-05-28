@@ -16,6 +16,7 @@ public:
     Window() : QWidget() {}
     virtual ~Window() {}
 
+    virtual void init(QWidget* parent) { Q_UNUSED(parent); }
     virtual void display(bool toShow = true) { toShow ? show() : hide(); }
     virtual void destroy() { close(); deleteLater(); }
 

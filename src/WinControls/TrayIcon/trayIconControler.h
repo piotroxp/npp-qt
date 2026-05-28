@@ -57,5 +57,5 @@ private:
 };
 
 // Add/Remove operations
-#define ADD NIM_ADD
-#define REMOVE NIM_DELETE
+#define ADD 0x00000000  // NIM_ADD
+#define REMOVE 0x00000002  // NIM_DELETE

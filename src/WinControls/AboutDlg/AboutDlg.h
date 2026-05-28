@@ -21,6 +21,7 @@
 #include <QPushButton>
 #include <QPixmap>
 #include <QVersionNumber>
+#include <QTextEdit>
 
 #include "../StaticDialog/StaticDialog.h"
 #include "URLCtrl.h"
@@ -31,11 +32,11 @@ class AboutDlg : public StaticDialog
     Q_OBJECT
 
 public:
-    AboutDlg() = default;
+    AboutDlg();
 
     void doDialog();
     void refreshLogo();
-    void destroy() override;
+    void destroy();
 
     static constexpr const char* LICENCE_TXT = R"(
 This program is free software; you can redistribute it and/or 
@@ -79,7 +80,7 @@ public:
     void init(QWidget* parent, bool isAdmin, const QString& loadedPlugins);
     void doDialog();
     void refreshDebugInfo();
-    void destroy() override {}
+    void destroy() {}
 
 protected:
     intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam);
@@ -104,7 +105,7 @@ class CmdLineArgsDlg : public StaticDialog
 public:
     CmdLineArgsDlg() = default;
     void doDialog();
-    void destroy() override {}
+    void destroy() {}
 
     QString fontFamily() const { return _fontFamily; }
     void setFontFamily(const QString& f) { _fontFamily = f; }
@@ -132,7 +133,7 @@ public:
 
     void init(QWidget* parent, const QString& filename, bool isMulti);
     void doDialog(bool isRTL = false);
-    void destroy() override {}
+    void destroy() {}
 
     int getClickedButtonId() const { return _clickedButtonId; }
     void changeLang();
@@ -159,7 +160,7 @@ class DoSaveAllBox : public StaticDialog
 public:
     DoSaveAllBox() = default;
     void doDialog(bool isRTL = false);
-    void destroy() override {}
+    void destroy() {}
 
     int getClickedButtonId() const { return _clickedButtonId; }
     void changeLang();

@@ -7,6 +7,7 @@
 #include <QAction>
 #include <QIcon>
 #include <QPixmap>
+#include <QBoxLayout>
 #include <memory>
 
 class ToolBarButtonUnit

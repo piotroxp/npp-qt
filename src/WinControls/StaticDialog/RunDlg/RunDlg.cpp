@@ -8,6 +8,8 @@
 #include <QDir>
 #include <QProcess>
 #include <QDesktopServices>
+#include <QFileDialog>
+#include <QMenu>
 #include <QUrl>
 
 // ─── Variable expansion ───────────────────────────────────────────────

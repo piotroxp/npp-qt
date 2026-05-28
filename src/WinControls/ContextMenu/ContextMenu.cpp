@@ -79,7 +79,7 @@ void ContextMenu::create(QWidget* hParent, const QVector<MenuItemUnit>& menuItem
         }
 
         if (action) {
-            action->setData(item._cmdID);
+            action->setData(QVariant::fromValue(static_cast<int>(item._cmdID)));
             _actionMap[item._cmdID] = action;
 
             connect(action, &QAction::triggered, this, [this, item]() {
@@ -92,9 +92,4 @@ void ContextMenu::create(QWidget* hParent, const QVector<MenuItemUnit>& menuItem
     Q_UNUSED(copyLink);
 }
 
-void ContextMenu::display(const QPoint& p) const
-{
-    emit aboutToShow();
-    QMenu::exec(p);
-    emit aboutToHide();
-}
+// Note: display(const QPoint&) is defined inline in ContextMenu.h

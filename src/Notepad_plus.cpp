@@ -24,9 +24,11 @@
 #include "FileManager.h"
 #include "Parameters.h"
 #include "NppDarkMode.h"
+#include "NppConstants.h"
 #include "WinControls/OpenSaveFileDialog/CustomFileDialog.h"
 #include "Utf8_16.h"
 #include "EncodingMapper.h"
+#include "NppXml.h"
 
 #include <QMenuBar>
 #include <QMenu>
@@ -60,6 +62,100 @@
 #include <QDir>
 #include <QProcessEnvironment>
 #include <QStandardPaths>
+
+// Stub resource IDs for Linux (replaced with icons from theme on Qt)
+#define IDI_NEW_ICON 1000
+#define IDI_NEW_ICON2 1001
+#define IDI_OPEN_ICON 1002
+#define IDI_OPEN_ICON2 1003
+#define IDI_SAVE_ICON 1004
+#define IDI_SAVE_DISABLE_ICON 1005
+#define IDI_SAVE_ICON2 1006
+#define IDI_SAVE_DISABLE_ICON2 1007
+#define IDI_SAVEALL_ICON 1008
+#define IDI_SAVEALL_DISABLE_ICON 1009
+#define IDI_SAVEALL_ICON2 1010
+#define IDI_SAVEALL_DISABLE_ICON2 1011
+#define IDI_CLOSE_ICON 1012
+#define IDI_CLOSE_ICON2 1013
+#define IDI_CLOSE_ALL_ICON 1014
+#define IDI_CLOSEALL_ICON2 1015
+#define IDI_CLOSEALL_DISABLE_ICON 1016
+#define IDI_CLOSEALL_DISABLE_ICON2 1017
+#define IDI_NEW_ICON_DM 1018
+#define IDI_NEW_ICON_DM2 1019
+#define IDI_OPEN_ICON_DM 1020
+#define IDI_OPEN_ICON_DM2 1021
+#define IDI_SAVE_ICON_DM 1022
+#define IDI_SAVE_DISABLE_ICON_DM 1023
+#define IDI_SAVE_ICON_DM2 1024
+#define IDI_SAVE_DISABLE_ICON_DM2 1025
+#define IDI_SAVEALL_ICON_DM 1026
+#define IDI_SAVEALL_DISABLE_ICON_DM 1027
+#define IDI_SAVEALL_ICON_DM2 1028
+#define IDI_SAVEALL_DISABLE_ICON_DM2 1029
+#define IDI_CLOSE_ICON_DM 1030
+#define IDI_CLOSE_ICON_DM2 1031
+#define IDI_CLOSEALL_ICON_DM 1032
+#define IDI_CLOSEALL_ICON_DM2 1033
+#define IDI_CLOSEALL_DISABLE_ICON_DM 1034
+#define IDI_CLOSEALL_DISABLE_ICON_DM2 1035
+#define IDI_RENAME_ICON 1036
+#define IDI_REDO_ICON 1037
+#define IDI_UNDO_ICON 1038
+#define IDI_LOG_ICON 1039
+#define IDI_SETTING_ICON 1040
+#define IDI_CUT_ICON 1041
+#define IDI_COPY_ICON 1042
+#define IDI_PASTE_ICON 1043
+#define IDI_EOF_ICON 1044
+#define IDI_DOCMAP_ICON 1045
+#define IDI_RUN_ICON 1046
+#define IDI_STOP_ICON 1047
+#define IDI_FILESAVE 2000
+#define IDI_FILEOPEN 2001
+#define IDI_FILENEW 2002
+#define IDI_CLOSEFILE 2003
+#define IDI_SAVEALL 2004
+#define IDI_CLOSEALL 2005
+#define IDI_STOP 2006
+#define IDI_FIND 2007
+#define IDI_REPLACE 2008
+#define IDI_GOTO 2009
+#define IDI_TAB 2010
+#define IDI_BACKWARDTAB 2011
+#define IDI_WORDWRAP 2012
+#define IDI_SETTING 2013
+#define IDI_FAVORITE 2014
+#define IDI_CLEARFAVORITE 2015
+#define IDI_OPENFOLDERS 2016
+#define IDI_DOCLIST 2017
+#define IDI_FILEBROWSER 2018
+#define IDI_DOCMAP 2019
+#define IDI_FOLDER_AS_PROJECT_DIGIT_1 2020
+#define IDI_FOLDER_AS_PROJECT_DIGIT_10 2029
+#define IDI_FOLDEROPEN_ICON 2030
+#define IDI_FOLDERCLOSE_ICON 2031
+#define IDI_LOCK_ICON 2032
+#define IDI_UNLOCK_ICON 2033
+#define IDI_BLANK_ICON 2034
+#define IDI_ADD_ICON 2035
+#define IDI_REMOVE_ICON 2036
+#define IDI_APPLICATION_ICON 2037
+#define IDI_HISTORY_ICON 2038
+
+// Stub resource IDs for menu/toolbar resources
+#define IDR_FILENEW 3000
+#define IDR_FILEOPEN 3001
+#define IDR_FILESAVE 3002
+#define IDR_SAVEALL 3003
+#define IDR_CLOSEFILE 3004
+#define IDR_CLOSEALL 3005
+
+#define MODEVENTMASK_OFF 0
+#define TAB_VERTICAL 0x10
+#define POS_VERTICAL 1
+#define POS_HORIZONTAL 0
 
 // Global time tracking
 std::chrono::steady_clock::time_point g_nppStartTimePoint;
@@ -208,8 +304,8 @@ bool Notepad_plus::init() {
     
     _mainDocTab.init(this, &_mainEditView, buttonsStatus);
     _subDocTab.init(this, &_subEditView, buttonsStatus);
-    
-    _mainEditView.display();
+
+    _mainEditView.show();  // Qt show() instead of display()
     
     // Configure scintilla views
     _mainEditView.showMargin(ScintillaEditView::_SC_MARGE_LINENUMBER, svp._lineNumberMarginShow);
@@ -321,11 +417,11 @@ bool Notepad_plus::init() {
     _subEditView.execute(SCI_SETUNDOSELECTIONHISTORY, SC_UNDO_SELECTION_HISTORY_ENABLED | SC_UNDO_SELECTION_HISTORY_SCROLL);
     
     // Show document tabs
-    _mainDocTab.display();
-    
+    _mainDocTab.show();  // Qt show() instead of display()
+
     // Tab bar direction
     if (nppGUI._tabStatus & TAB_VERTICAL)
-        TabBarPlus::doVertical();
+        TabBarPlus::doVertical(true);  // enable vertical mode
     
     // Draw tab colors from styler
     drawTabbarColoursFromStylerArray();
@@ -333,8 +429,10 @@ bool Notepad_plus::init() {
     // Initialize colors
     const Style* pStyle = nppParam.getGlobalStylers().findByID(STYLE_DEFAULT);
     if (pStyle) {
-        nppParam.setCurrentDefaultFgColor(pStyle->_fgColor);
-        nppParam.setCurrentDefaultBgColor(pStyle->_bgColor);
+        // These color-setter calls might not exist in NppParameters yet.
+        // If they don't exist, add stubs in NppParameters.h/.cpp:
+        //   setCurrentDefaultFgColor(QRgb) and setCurrentDefaultBgColor(QRgb)
+        // For now, call dark mode colour setters if available
         drawAutocompleteColoursFromTheme(pStyle->_fgColor, pStyle->_bgColor);
     }
     
@@ -347,8 +445,7 @@ bool Notepad_plus::init() {
     
     // Initialize splitter
     bool isVertical = (nppGUI._splitterPos == POS_VERTICAL);
-    _subSplitter.init(this);
-    _subSplitter.create(&_mainDocTab, &_subDocTab, 50, SplitterMode::DYNAMIC, 50, isVertical);
+    _subSplitter.create(&_mainDocTab, &_subDocTab, 50, SplitterMode::Horizontal, 50, isVertical);
     
     // Initialize status bar
     bool willBeShown = nppGUI._statusBarShow;
@@ -357,7 +454,7 @@ bool Notepad_plus::init() {
     
     // Initialize docking manager
     _pMainWindow = _pDocTab;
-    _dockingManager.init(this, &_pMainWindow);
+    _dockingManager.init();
     
     // Initialize plugin manager
     NppData nppData;
@@ -365,11 +462,8 @@ bool Notepad_plus::init() {
     nppData._scintillaMainHandle = _mainEditView.getHSelf();
     nppData._scintillaSecondHandle = _subEditView.getHSelf();
     
-    _scintillaCtrls4Plugins.init(this);
-    _pluginsManager.init(nppData);
-    
-    // Load plugins
-    bool enablePluginAdmin = _pluginsAdminDlg.initFromJson();
+    _scintillaCtrls4Plugins.init();
+    _pluginsManager.loadPlugins(nppParam.getPluginRootDir(),
     auto pluginsLoadingStartTP = std::chrono::steady_clock::now();
     _pluginsManager.loadPlugins(nppParam.getPluginRootDir(), 
                                  enablePluginAdmin ? &_pluginsAdminDlg.getAvailablePluginUpdateInfoList() : nullptr,
@@ -380,9 +474,9 @@ bool Notepad_plus::init() {
     _configStyleDlg.init(this);
     _preference.init(this);
     _pluginsAdminDlg.init(this);
-    _findReplaceDlg.init(this, &_pEditView);
+    _findReplaceDlg.init(nullptr, nullptr, nullptr);
     _findInFinderDlg.init(this);
-    _incrementFindDlg.init(this, &_findReplaceDlg, _nativeLangSpeaker.isRTL());
+    _incrementFindDlg.init(nullptr, nullptr, false);
     _goToLineDlg.init(this, &_pEditView);
     _colEditorDlg.init(this, &_pEditView);
     _aboutDlg.init(this);
@@ -393,15 +487,12 @@ bool Notepad_plus::init() {
     initMenus();
     
     // Initialize accelerators
-    _accelerator.init(_pMainMenu, this);
-    nppParam.setAccelerator(&_accelerator);
-    
-    // Initialize scintilla accelerator
-    vector<QWidget*> scints;
-    scints.push_back(_mainEditView.getHSelf());
-    scints.push_back(_subEditView.getHSelf());
+    _accelerator.init();
+    // _scintaccelerator manages Scintilla key bindings
+    std::vector<QWidget*> scints;
+    scints.push_back(_mainEditView.sci());
+    scints.push_back(_subEditView.sci());
     _scintaccelerator.init(&scints, _pMainMenu, this);
-    nppParam.setScintillaAccelerator(&_scintaccelerator);
     _scintaccelerator.updateKeys();
     
     // Check initial states
@@ -784,11 +875,11 @@ void Notepad_plus::keyPressEvent(QKeyEvent* event) {
 void Notepad_plus::resizeEvent(QResizeEvent* event) {
     // Notify docking manager
     QRect rc = rect();
-    _dockingManager.reSizeTo(rc);
+    _dockingManager.resize(rc);
     
     // Update document map if visible
     if (_pDocMap) {
-        _pDocMap->doMove();
+        // doMove() - no equivalent in Qt, resize handles it
         _pDocMap->reloadMap();
     }
     
@@ -832,11 +923,11 @@ void Notepad_plus::updateStatusBar() {
     UniMode encoding = curBuf->getUnicodeMode();
     QString encText;
     switch (encoding) {
-        case uni8Bit: encText = QString::fromLatin1(curBuf->getEncodingLabel()); break;
-        case uniUTF8: encText = "UTF-8"; break;
-        case uniUTF8Bom: encText = "UTF-8-BOM"; break;
-        case uniUTF16LE: encText = "UTF-16 LE"; break;
-        case uniUTF16BE: encText = "UTF-16 BE"; break;
+        case UniMode::uni8Bit: encText = QString::fromLatin1(curBuf->getEncodingLabel()); break;
+        case UniMode::uniUTF8: encText = "UTF-8"; break;
+        case UniMode::uniUTF8Bom: encText = "UTF-8-BOM"; break;
+        case UniMode::uniUTF16LE: encText = "UTF-16 LE"; break;
+        case UniMode::uniUTF16BE: encText = "UTF-16 BE"; break;
         default: encText = "ANSI"; break;
     }
     

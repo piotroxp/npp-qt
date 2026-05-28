@@ -46,7 +46,7 @@ public:
     bool isValid() const;
 
     // Accessors
-    const KeyCombo& getKeyCombo() const { return _keyCombo; }
+    KeyCombo getKeyCombo() const { return _keyCombo; }
     const QString& getName() const { return _name; }
     const QString& getMenuName() const { return _menuName; }
 
@@ -60,14 +60,14 @@ public:
 
     // Set name
     void setName(const QString& menuName, const QString& shortcutName = QString());
+    void setKeyCombo(const KeyCombo& kc) { _keyCombo = kc; }
 
     // Clear shortcut
     void clear();
 
-    // Assign
-    Shortcut& operator=(const Shortcut& other);
+    // Assign by key combo copy
+    void assignFrom(const Shortcut& other);
 
-    // Equality
     friend bool operator==(const Shortcut& a, const Shortcut& b);
     friend bool operator!=(const Shortcut& a, const Shortcut& b);
 
@@ -88,7 +88,7 @@ class CommandShortcut : public Shortcut
     Q_OBJECT
 
 public:
-    CommandShortcut(const Shortcut& sc, int id, QObject* parent = nullptr);
+    explicit CommandShortcut(const Shortcut& sc, int id, QObject* parent = nullptr);
 
     int getID() const { return _id; }
     void setID(int id) { _id = id; }
@@ -117,6 +117,9 @@ public:
 private:
     QMap<int, QShortcut*> _shortcuts; // cmdID → shortcut
     QList<Shortcut> _shortcutList;
+
+public:
+    void addShortcut(const Shortcut& sc);
 };
 
 // ─── ScintillaKeyMap ─────────────────────────────────────────────

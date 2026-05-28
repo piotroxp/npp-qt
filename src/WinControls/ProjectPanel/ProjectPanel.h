@@ -18,6 +18,8 @@
 
 #include <QDialog>
 #include <QTreeWidget>
+
+#include "../StaticDialog/StaticDialog.h"
 #include <QMenu>
 #include <QString>
 #include <QVector>

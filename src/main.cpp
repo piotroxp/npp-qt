@@ -11,9 +11,6 @@
 #include "MainWindow.h"
 #include "NppApplication.h"
 
-#ifdef Q_OS_LINUX
-#include "X11Support.h"
-#endif
 
 int main(int argc, char* argv[])
 {

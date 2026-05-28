@@ -16,6 +16,59 @@
 
 #include "AboutDlg.h"
 
+// Win32 macro stubs for Linux Qt6 port
+#ifndef WM_INITDIALOG
+#define WM_INITDIALOG 0x0110
+#endif
+#ifndef WM_SIZE
+#define WM_SIZE 0x0005
+#endif
+#ifndef WM_COMMAND
+#define WM_COMMAND 0x0111
+#endif
+#ifndef WM_NOTIFY
+#define WM_NOTIFY 0x004E
+#endif
+#ifndef WM_DESTROY
+#define WM_DESTROY 0x0002
+#endif
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
+#ifndef IDOK
+#define IDOK 1
+#endif
+#ifndef IDCANCEL
+#define IDCANCEL 2
+#endif
+#ifndef IDYES
+#define IDYES 6
+#endif
+#ifndef IDNO
+#define IDNO 7
+#endif
+#ifndef IDD_ABOUTBOX
+#define IDD_ABOUTBOX 100
+#endif
+#ifndef NOTEPAD_PLUS_VERSION
+#define NOTEPAD_PLUS_VERSION "8.9.4"
+#endif
+#ifndef NPP_SCINTILLA_VERSION
+#define NPP_SCINTILLA_VERSION "5.4.0"
+#endif
+#ifndef NPP_LEXILLA_VERSION
+#define NPP_LEXILLA_VERSION "5.3.0"
+#endif
+#ifndef LOWORD
+#define LOWORD(l) ((uint16_t)((uintptr_t)(l) & 0xFFFF))
+#endif
+#ifndef HIWORD
+#define HIWORD(l) ((uint16_t)(((uintptr_t)(l) >> 16) & 0xFFFF))
+#endif
+
 #include <QLayout>
 #include <QTextEdit>
 #include <QVBoxLayout>

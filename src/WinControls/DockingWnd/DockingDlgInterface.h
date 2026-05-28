@@ -36,6 +36,12 @@ public:
     // Display state
     void display(bool toShow = true);
 
+    // Initialize (for backward compat)
+    void init(QWidget* parent) { _hParent = parent; }
+
+    // Parent window access
+    QWidget* getParent2Set() const { return _hParent; }
+
     // Plugin info
     bool isClosed() const { return _isClosed; }
     void setClosed(bool closed) { _isClosed = closed; }
@@ -48,6 +54,7 @@ signals:
 
 protected:
     int _dlgID = -1;
+    QWidget* _hParent = nullptr;
     QString _moduleName;
     QString _pluginName;
     bool _isFloating = true;

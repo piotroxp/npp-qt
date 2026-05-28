@@ -15,6 +15,50 @@
 
 #include "VerticalFileSwitcher.h"
 
+// Win32 macro stubs for Linux Qt6 port
+#ifndef WM_INITDIALOG
+#define WM_INITDIALOG 0x0110
+#endif
+#ifndef WM_SIZE
+#define WM_SIZE 0x0005
+#endif
+#ifndef WM_COMMAND
+#define WM_COMMAND 0x0111
+#endif
+#ifndef WM_NOTIFY
+#define WM_NOTIFY 0x004E
+#endif
+#ifndef WM_DESTROY
+#define WM_DESTROY 0x0002
+#endif
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
+#ifndef IDOK
+#define IDOK 1
+#endif
+#ifndef IDCANCEL
+#define IDCANCEL 2
+#endif
+#ifndef WM_ACTIVATE
+#define WM_ACTIVATE 0x0006
+#endif
+#ifndef WA_ACTIVE
+#define WA_ACTIVE 1
+#endif
+#ifndef WA_CLICKACTIVE
+#define WA_CLICKACTIVE 3
+#endif
+#ifndef LOWORD
+#define LOWORD(l) ((uint16_t)((uintptr_t)(l) & 0xFFFF))
+#endif
+#ifndef HIWORD
+#define HIWORD(l) ((uint16_t)(((uintptr_t)(l) >> 16) & 0xFFFF))
+#endif
+
 #include <QInputDialog>
 #include <QKeyEvent>
 

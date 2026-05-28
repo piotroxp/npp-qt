@@ -1,5 +1,6 @@
 // StatusBar.cpp — Qt6 translation of CStatusBar → QStatusBar
 #include "StatusBar.h"
+#include <QResizeEvent>
 #include <QLabel>
 #include <QHBoxLayout>
 #include <QWidget>

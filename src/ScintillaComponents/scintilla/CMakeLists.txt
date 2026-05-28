@@ -11,6 +11,10 @@ find_package(Qt6Core5Compat REQUIRED)
 # Scintilla core
 file(GLOB_RECURSE SCI_CORE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cxx")
 file(GLOB_RECURSE SCI_CORE_HDR "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
+
+# Include project directories (from parent CMakeLists.txt)
+include_directories(${CMAKE_SOURCE_DIR}/include)
+include_directories(${CMAKE_SOURCE_DIR}/src)
 # Qt platform
 file(GLOB SCI_PLAT_QT_SRC "${CMAKE_CURRENT_SOURCE_DIR}/qt/ScintillaEditBase/*.cpp")
 file(GLOB SCI_PLAT_QT_HDR "${CMAKE_CURRENT_SOURCE_DIR}/qt/ScintillaEditBase/*.h")

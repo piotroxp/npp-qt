@@ -130,7 +130,7 @@ class ISorter;
  * @brief Main editing widget wrapping Scintilla for Notepad++
  *
  * This class provides the core text editing functionality for Notepad++.
- * It wraps Scintilla (via QsciScintilla) and provides Notepad++ specific
+ * It wraps Scintilla (via bundled ScintillaEdit) and provides Notepad++ specific
  * features like buffer management, language styling, and editing commands.
  */
 class ScintillaEditView : public QWidget
@@ -163,19 +163,20 @@ public:
      * @param hParent Parent window
      */
     void init(HINSTANCE hInst, HWND hParent);
+    void init(QWidget* parent);
 
     /**
-     * @brief Get the underlying QsciScintilla pointer
-     * @return Pointer to QsciScintilla
+     * @brief Get the underlying ScintillaEdit pointer
+     * @return Pointer to ScintillaEdit
      */
-    QsciScintilla* sci() { return _scintillaEdit; }
-    const QsciScintilla* sci() const { return _scintillaEdit; }
+    ScintillaEdit* sci() { return _sci; }
+    const ScintillaEdit* sci() const { return _sci; }
 
     /**
      * @brief Get the native widget handle
      * @return QWidget pointer (HWND shim)
      */
-    HWND getHSelf() const { return const_cast<QWidget*>(static_cast<const QWidget*>(_scintillaEdit)); }
+    HWND getHSelf() const { return asHWND(_sci); }
 
     /**
      * @brief Execute a Scintilla message
@@ -435,7 +436,7 @@ public:
     void setElementColour(int element, COLORREF color) const { execute(SCI_SETELEMENTCOLOUR, element, color | 0xFF000000); }
 
     // Focus handling
-    void grabFocus() const { if (_scintillaEdit) _scintillaEdit->setFocus(); }
+    void grabFocus() const { if (_sci) _sci->setFocus(true); }
 
 public slots:
     void destroy();
@@ -450,7 +451,7 @@ protected:
     void handleNotification(SCNotification* scn);
 
 private:
-    QPointer<QsciScintilla> _scintillaEdit;
+    QPointer<ScintillaEdit> _sci;
 
     // Class-level initialization tracking
     static bool _SciInit;

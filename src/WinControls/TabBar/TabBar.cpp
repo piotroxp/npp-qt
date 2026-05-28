@@ -18,7 +18,6 @@ TabBar::TabBar(QWidget* parent)
 
     // Track hover state
     setMouseTracking(true);
-    viewport()->setMouseTracking(true);
 }
 
 TabBar::~TabBar() = default;
@@ -300,7 +299,6 @@ TabBarPlus::TabBarPlus(QWidget* parent)
 
     // Install hover tracking
     setMouseTracking(true);
-    viewport()->setMouseTracking(true);
 }
 
 TabBarPlus::~TabBarPlus() = default;
@@ -377,12 +375,12 @@ void TabBarPlus::refresh()
 
 void TabBarPlus::triggerOwnerDraw()
 {
-    update();
+    this->update();
 }
 
 void TabBarPlus::doVertical(bool enabled)
 {
-    setShape(enabled ? QTabBar::RoundedWest : QTabBar::RoundedNorth);
+    this->setShape(enabled ? QTabBar::RoundedWest : QTabBar::RoundedNorth);
 }
 
 void TabBarPlus::doMultiLine(bool enabled)
@@ -416,7 +414,8 @@ void TabBarPlus::paintEvent(QPaintEvent* event)
                                  QColor::fromRgb(inactiveTextColor()));
         }
 
-        QRect tabRect = style()->subElementRect(QStyle::SE_TabBarTabContents, &opt, this);
+        QRect tabRect = QTabBar::tabRect(index);  // Qt6 alternative
+        Q_UNUSED(tabRect);
         style()->drawControl(QStyle::CE_TabBarTabLabel, &opt, &p, this);
     }
 }

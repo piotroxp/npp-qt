@@ -18,6 +18,21 @@
 
 #include <QString>
 #include <QVector>
+#include <QSettings>
+#include <QProcessEnvironment>
+#include <QUrl>
+#include <QDesktopServices>
+#include <QPixmap>
+#include <QCoreApplication>
+#include <QLocale>
+
+// Win32 macro stubs
+#ifndef CF_TEXT
+#define CF_TEXT 1
+#endif
+#ifndef HKEY
+#define HKEY int
+#endif
 #include <QCoreApplication>
 
 // WinMgr - Window manager utilities (Windows-specific functions)

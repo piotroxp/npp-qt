@@ -128,6 +128,7 @@ enum class LangType {
     L_EXTERNAL_LANG = 200
 };
 
+
 // Saving status for file buffers
 enum class SavingStatus {
     SaveOK = 0,
@@ -135,6 +136,7 @@ enum class SavingStatus {
 };
 
 // Position structure
+#ifndef NPPPOSITION_DEFINED
 struct NppPosition {
     intptr_t _firstVisibleLine = 0;
     intptr_t _startPos = 0;
@@ -145,6 +147,8 @@ struct NppPosition {
     intptr_t _offset = 0;
     intptr_t _wrapCount = 0;
 };
+#define NPPPOSITION_DEFINED
+#endif
 
 // Session file info
 struct sessionFileInfo : public NppPosition {

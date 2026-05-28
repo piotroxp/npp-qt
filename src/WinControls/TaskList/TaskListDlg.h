@@ -18,6 +18,8 @@
 
 #include <QDialog>
 #include <QListWidget>
+#include <QPushButton>
+#include <QVBoxLayout>
 
 #include "../StaticDialog/StaticDialog.h"
 #include "TaskList.h"

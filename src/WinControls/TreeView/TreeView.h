@@ -52,7 +52,7 @@ public:
     // Navigation
     QTreeWidgetItem* getChildFrom(QTreeWidgetItem* hTreeItem) const;
     QTreeWidgetItem* getSelection() const;
-    bool selectItem(QTreeWidgetItem* hTreeItem2Select) const;
+    bool selectItem(QTreeWidgetItem* hTreeWidgetItem2Select);
     QTreeWidgetItem* getRoot() const;
     QTreeWidgetItem* getParent(QTreeWidgetItem* hItem) const;
     QTreeWidgetItem* getNextSibling(QTreeWidgetItem* hItem) const;

@@ -19,6 +19,7 @@
 #include <QFont>
 #include <QStyle>
 #include <QApplication>
+#include <QScreen>
 
 ToolTip::ToolTip(QWidget* parent)
     : QLabel(parent)
@@ -73,7 +74,9 @@ void ToolTip::show(const QRect& rectTitle, const QString& pszTitleText, int iXOf
     
     // Ensure tooltip stays on screen
     QPoint pos(x, y);
-    QRect screenRect = QApplication::screenAt(pos)->geometry();
+    QScreen* screen = QApplication::screenAt(pos);
+    if (!screen) screen = QApplication::primaryScreen();
+    QRect screenRect = screen->geometry();
     
     // Adjust if tooltip would go off-screen
     QSize tipSize = sizeHint();

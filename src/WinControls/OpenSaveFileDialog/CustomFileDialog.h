@@ -25,6 +25,12 @@
 
 // CustomFileDialog - Customizable file dialog
 // Replaces COM-based IFileDialog with Qt QFileDialog
+// Filter entry for file dialogs
+struct FilterEntry {
+    QString name;
+    QStringList extensions;
+};
+
 class CustomFileDialog
 {
 public:
@@ -64,10 +70,6 @@ private:
     bool _checkboxState = true;
     bool _saveAsCopy = false;
     
-    struct FilterEntry {
-        QString name;
-        QStringList extensions;
-    };
     QVector<FilterEntry> _filters;
     int _currentFilterIndex = 0;
 };
@@ -84,7 +86,7 @@ inline QString convertToQtFilter(const QString& name, const QStringList& exts)
 }
 
 // Helper function to convert all filters to Qt format
-inline QString convertAllFilters(const QVector<CustomFileDialog::FilterEntry>& filters)
+inline QString convertAllFilters(const QVector<FilterEntry>& filters)
 {
     QStringList result;
     for (const auto& f : filters) {

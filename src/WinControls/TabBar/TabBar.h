@@ -12,8 +12,8 @@
 #include <QAction>
 
 // Tab bar notification messages
-#define TCN_TABDROPPED        (QEvent::Type(QEvent::User + 100))
-#define TCN_TABDROPPEDOUTSIDE  (QEvent::Type(QEvent::User + 101))
+#define TCN_TABDROPPED (QEvent::Type(QEvent::User + 100))
+#define TCN_TABDROPPEDOUTSIDE (QEvent::Type(QEvent::User + 101))
 #define TCN_TABDELETE         (QEvent::Type(QEvent::User + 102))
 #define TCN_MOUSEHOVERING     (QEvent::Type(QEvent::User + 103))
 #define TCN_MOUSELEAVING      (QEvent::Type(QEvent::User + 104))
@@ -132,37 +132,8 @@ protected:
 };
 
 
-// Controls tab (tab bar for settings/preferences panels)
-class ControlsTab : public QTabWidget
-{
-    Q_OBJECT
-
-public:
-    ControlsTab(QWidget* parent = nullptr);
-    ~ControlsTab() override;
-
-    void createTabs(const QVector<QPair<QString, QWidget*>>& tabs);
-
-    void clickedUpdate()
-    {
-        activateWindowAt(currentIndex());
-    }
-
-    void renameTab(size_t index, const QString& newName);
-    bool renameTab(const QString& internalName, const QString& newName);
-
-signals:
-    void tabChanged(int index);
-
-protected:
-    void resizeEvent(QResizeEvent* event) override;
-
-private:
-    void activateWindowAt(int index);
-
-    QVector<QPair<QString, QWidget*>> _tabs;
-    int _current = 0;
-};
+// ControlsTab is defined in ControlsTab.h
+#include "ControlsTab.h"
 
 // Tab bar for document windows with close buttons, pin buttons, drag-and-drop
 class TabBarPlus : public TabBar
@@ -212,7 +183,7 @@ private:
     bool _isCloseHover = false;
     bool _isPinHover = false;
 
-    QVector<QRgb> _colors;
+    static QVector<QRgb> _colors;
 };
 
 // Custom tab bar subclass for owner-drawn tabs

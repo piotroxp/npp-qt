@@ -1,6 +1,7 @@
 // RunDlg.h — Qt6 translation of Run dialog
 #pragma once
 
+#include <QDialog>
 #include <QLineEdit>
 #include <QComboBox>
 #include <QPushButton>

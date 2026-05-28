@@ -24,4 +24,6 @@ target_include_directories(lexilla PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/lexers"
     "${CMAKE_CURRENT_SOURCE_DIR}/lexilla"
     "${CMAKE_CURRENT_SOURCE_DIR}/../scintilla/include"
+    "${CMAKE_SOURCE_DIR}/include"
+    "${CMAKE_SOURCE_DIR}/src"
 )

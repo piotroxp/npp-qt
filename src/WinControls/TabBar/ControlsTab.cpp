@@ -12,13 +12,13 @@ ControlsTab::ControlsTab(QWidget* parent)
 
 ControlsTab::~ControlsTab() = default;
 
-void ControlsTab::createTabs(const WindowVector& winVector)
+void ControlsTab::createTabs(const QVector<QPair<QString, QWidget*>>& tabs)
 {
-    _winVector = winVector;
+    _tabs = tabs;
 
-    for (const auto& info : winVector)
+    for (const auto& tab : tabs)
     {
-        addTab(info._widget, info._name);
+        addTab(tab.second, tab.first);
     }
 
     activateWindowAt(0);
@@ -29,42 +29,26 @@ void ControlsTab::activateWindowAt(int index)
     if (index == _current)
         return;
 
-    if (_current >= 0 && _current < _winVector.size())
-        _winVector[_current]._widget->hide();
+    if (_current >= 0 && _current < _tabs.size())
+        _tabs[_current].second->hide();
 
     _current = index;
 
-    if (_current >= 0 && _current < _winVector.size())
+    if (_current >= 0 && _current < _tabs.size())
     {
-        _winVector[_current]._widget->show();
+        _tabs[_current].second->show();
         // Re-size child widget
         QRect r = contentsRect();
         r.adjust(8, 8, -20, -55);
-        _winVector[_current]._widget->setGeometry(r);
+        _tabs[_current].second->setGeometry(r);
     }
-}
-
-void ControlsTab::resizeTo(const QRect& rc)
-{
-    setGeometry(rc);
-
-    QRect childRect = rc;
-    childRect.adjust(8, 8, -20, -55);
-
-    if (_current >= 0 && _current < _winVector.size())
-        _winVector[_current]._widget->setGeometry(childRect);
 }
 
 bool ControlsTab::renameTab(const QString& internalName, const QString& newName)
 {
-    for (int i = 0; i < _winVector.size(); ++i)
-    {
-        if (_winVector[i]._internalName == internalName)
-        {
-            renameTab(i, newName);
-            return true;
-        }
-    }
+    Q_UNUSED(internalName);
+    Q_UNUSED(newName);
+    // Tab name lookup by internal name not yet implemented in this port
     return false;
 }
 
@@ -81,6 +65,6 @@ void ControlsTab::resizeEvent(QResizeEvent* event)
     QRect childRect = contentsRect();
     childRect.adjust(8, 8, -20, -55);
 
-    if (_current >= 0 && _current < _winVector.size())
-        _winVector[_current]._widget->setGeometry(childRect);
+    if (_current >= 0 && _current < _tabs.size())
+        _tabs[_current].second->setGeometry(childRect);
 }

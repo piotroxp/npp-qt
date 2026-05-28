@@ -18,6 +18,7 @@
 
 #include <QDialog>
 #include <QListWidget>
+#include <QWidget>
 
 #include "../StaticDialog/StaticDialog.h"
 

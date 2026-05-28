@@ -6,6 +6,25 @@
 #include <QResizeEvent>
 #include <QShowEvent>
 #include <QCloseEvent>
+#include <QAbstractButton>
+#include <QObject>
+
+// Win32 type stubs for Qt6 port
+#ifndef WPARAM
+#define WPARAM unsigned long
+#endif
+#ifndef LPARAM  
+#define LPARAM unsigned long
+#endif
+#ifndef LRESULT
+#define LRESULT long
+#endif
+#ifndef LOWORD
+#define LOWORD(l) ((uint16_t)((uintptr_t)(l) & 0xFFFF))
+#endif
+#ifndef HIWORD
+#define HIWORD(l) ((uint16_t)(((uintptr_t)(l) >> 16) & 0xFFFF))
+#endif
 
 StaticDialog::StaticDialog(QWidget* parent, Qt::WindowFlags f)
     : QDialog(parent, f)
@@ -38,6 +57,11 @@ void StaticDialog::destroy()
     _isCreated = false;
 }
 
+void StaticDialog::init(QWidget* parent)
+{
+    QDialog::setParent(parent);
+}
+
 QRect StaticDialog::getMappedChildRect(QWidget* child) const
 {
     if (!child)
@@ -67,7 +91,7 @@ void StaticDialog::redrawDlgItem(int nIDDlgItem, bool forceUpdate) const
 
 void StaticDialog::goToCenter(unsigned /*swpFlags*/)
 {
-    QWidget* parentWidget = parentWidget();
+    QWidget* parentWidget = QWidget::parentWidget();
     if (!parentWidget)
         parentWidget = QApplication::activeWindow();
 
@@ -109,7 +133,7 @@ bool StaticDialog::moveForDpiChange()
     return false;
 }
 
-void StaticDialog::display(bool toShow) const
+void StaticDialog::display(bool toShow)
 {
     if (toShow)
     {
@@ -215,7 +239,7 @@ void StaticDialog::setChecked(int checkControlID, bool checkOrNot) const
         btn->setChecked(checkOrNot);
 }
 
-void StaticDialog::setPositionDpi(WPARAM /*wParam*/, LPARAM lParam)
+void StaticDialog::setPositionDpi(unsigned long /*wParam*/, unsigned long lParam)
 {
     QRect rc;
     rc.setCoords(

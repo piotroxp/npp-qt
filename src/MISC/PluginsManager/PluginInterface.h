@@ -1,17 +1,30 @@
-// PluginInterface.h - Qt port
+// PluginInterface.h - Qt port (Linux-compatible)
 #pragma once
 #include "Scintilla.h"
 #include "Notepad_plus_msgs.h"
-#include <QWidget>
 #include "WindowsCompat.h"
+#include <QWidget>
 
-// Function pointer types - Qt6/WinForms compatibility
-typedef const wchar_t* (__cdecl * PFUNCGETNAME)();
-typedef void (__cdecl * PFUNCSETINFO)(NppData*);
-typedef void (__cdecl * PFUNCPLUGINCMD)();
-typedef void (__cdecl * PBENOTIFIED)(const void*);
-typedef long (__cdecl * PMESSAGEPROC)(unsigned int, unsigned long long, long long);
-typedef FuncItem* (__cdecl * PFUNCGETFUNCSARRAY)(int*);
+// Calling convention macro - empty on non-Windows
+#ifdef _WIN32
+#define NPP_CDECL __cdecl
+#else
+#define NPP_CDECL
+#endif
+
+// Forward declarations for circular dependencies
+struct NppData;
+struct ShortcutKey;
+struct FuncItem;
+
+// Function pointer types
+typedef const wchar_t* (NPP_CDECL * PFUNCGETNAME)();
+typedef void (NPP_CDECL * PFUNCSETINFO)(struct NppData*);
+typedef void (NPP_CDECL * PFUNCPLUGINCMD)();
+typedef void (NPP_CDECL * PBENOTIFIED)(const void*);
+typedef long (NPP_CDECL * PMESSAGEPROC)(unsigned int, unsigned long long, long long);
+typedef FuncItem* (NPP_CDECL * PFUNCGETFUNCSARRAY)(int*);
+typedef bool (NPP_CDECL * PFUNCISUNICODE)();
 
 // NppData - data passed to plugins from Notepad++
 struct NppData {
@@ -38,38 +51,5 @@ struct FuncItem {
     ShortcutKey* _pShKey = nullptr;
 };
 
-// Plugin entry points (implemented by plugins)
-extern "C" {
-    __declspec(dllexport) void setInfo(NppData);
-    __declspec(dllexport) const wchar_t* getName();
-    __declspec(dllexport) FuncItem* getFuncsArray(int*);
-    __declspec(dllexport) void beNotified(const void*);
-    __declspec(dllexport) long messageProc(unsigned int, unsigned long long, long long);
-    __declspec(dllexport) bool isUnicode();
-}
-// Shortcut key structure
-struct ShortcutKey {
-    bool _isCtrl = false;
-    bool _isAlt = false;
-    bool _isShift = false;
-    unsigned char _key = 0;
-};
-
-// FuncItem - plugin menu item
-const int menuItemSize = 64;
-struct FuncItem {
-    wchar_t _itemName[menuItemSize] = { '\0' };
-    PFUNCPLUGINCMD _pFunc = nullptr;
-    int _cmdID = 0;
-    bool _init2Check = false;
-    ShortcutKey* _pShKey = nullptr;
-};
-
-// Exported plugin functions
-    __declspec(dllexport) void setInfo(NppData);
-    __declspec(dllexport) const wchar_t* getName();
-    __declspec(dllexport) FuncItem* getFuncsArray(int*);
-    __declspec(dllexport) void beNotified(const void*);
-    __declspec(dllexport) long messageProc(unsigned int, unsigned long long, long long);
-    __declspec(dllexport) bool isUnicode();
-}
+// HMENUFunctions - Windows menu handle function pointer (placeholder)
+typedef intptr_t HMENUFunctions;

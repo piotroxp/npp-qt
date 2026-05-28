@@ -157,11 +157,11 @@ QTreeWidgetItem* TreeView::getSelection() const
     return currentItem();
 }
 
-bool TreeView::selectItem(QTreeWidgetItem* hTreeItem2Select) const
+bool TreeView::selectItem(QTreeWidgetItem* hTreeWidgetItem2Select)
 {
-    if (hTreeItem2Select) {
-        setCurrentItem(hTreeItem2Select);
-        scrollToItem(hTreeItem2Select);
+    if (hTreeWidgetItem2Select) {
+        setCurrentItem(hTreeWidgetItem2Select);
+        scrollToItem(hTreeWidgetItem2Select);
         return true;
     }
     return false;
@@ -350,8 +350,10 @@ bool TreeView::moveDown(QTreeWidgetItem* itemToMove)
     if (row < maxRow) {
         QTreeWidgetItem* below = parent ? parent->child(row + 1) : topLevelItem(row + 1);
         if (below) {
-            parent ? parent->removeChild(itemToMove) : takeTopLevelItem(row);
-            parent ? parent->insertChild(row + 1, itemToMove) : insertTopLevelItem(row + 1, itemToMove);
+            if (parent) parent->removeChild(itemToMove);
+            else takeTopLevelItem(row);
+            if (parent) parent->insertChild(row + 1, itemToMove);
+            else insertTopLevelItem(row + 1, itemToMove);
             return true;
         }
     }
@@ -368,8 +370,10 @@ bool TreeView::moveUp(QTreeWidgetItem* itemToMove)
     if (row > 0) {
         QTreeWidgetItem* above = parent ? parent->child(row - 1) : topLevelItem(row - 1);
         if (above) {
-            parent ? parent->removeChild(itemToMove) : takeTopLevelItem(row);
-            parent ? parent->insertChild(row - 1, itemToMove) : insertTopLevelItem(row - 1, itemToMove);
+            if (parent) parent->removeChild(itemToMove);
+            else takeTopLevelItem(row);
+            if (parent) parent->insertChild(row - 1, itemToMove);
+            else insertTopLevelItem(row - 1, itemToMove);
             return true;
         }
     }

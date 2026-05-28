@@ -1,6 +1,3 @@
-// This file is part of Notepad++ project
-// Copyright (C)2021 Don HO <don.h@free.fr>
-
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -14,7 +11,40 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#ifndef IDOK
+#define IDOK 1
+#endif
+
 #include "TaskListDlg.h"
+
+// Win32 macro stubs for Linux Qt6 port
+#ifndef WM_INITDIALOG
+#define WM_INITDIALOG 0x0110
+#endif
+#ifndef WM_SIZE
+#define WM_SIZE 0x0005
+#endif
+#ifndef WM_COMMAND
+#define WM_COMMAND 0x0111
+#endif
+#ifndef WM_NOTIFY
+#define WM_NOTIFY 0x004E
+#endif
+#ifndef WM_DESTROY
+#define WM_DESTROY 0x0002
+#endif
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
+#ifndef LOWORD
+#define LOWORD(l) ((uint16_t)((uintptr_t)(l) & 0xFFFF))
+#endif
+#ifndef HIWORD
+#define HIWORD(l) ((uint16_t)(((uintptr_t)(l) >> 16) & 0xFFFF))
+#endif
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>

@@ -45,17 +45,17 @@ public:
     void create(QWidget* hParent, const QVector<MenuItemUnit>& menuItemArray, QMenu* mainMenuHandle = nullptr, bool copyLink = false);
     bool isCreated() const { return !_menuItems.isEmpty(); }
 
-    void display(const QPoint& p) const {
+    void display(const QPoint& p) {
         if (!_menuItems.isEmpty()) {
             QMenu::popup(p);
         }
     }
 
-    void displayAtCursor() const {
+    void displayAtCursor() {
         display(QCursor::pos());
     }
 
-    void display(QWidget* hwnd) const {
+    void display(QWidget* hwnd) {
         Q_UNUSED(hwnd);
         display(QCursor::pos());
     }

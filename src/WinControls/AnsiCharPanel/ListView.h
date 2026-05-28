@@ -140,8 +140,8 @@ public:
             ++col;
         }
         
-        // Apply extra styles
-        if (_extraStyle & LVS_EX_FULLROWSELECT) {
+        // Apply extra styles (LVS_EX_FULLROWSELECT equivalent handled via Qt selection behavior)
+        if (_extraStyle & 0x00000020) {  // 0x20 = LVS_EX_FULLROWSELECT
             setSelectionBehavior(QAbstractItemView::SelectRows);
         }
     }

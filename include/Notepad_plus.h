@@ -46,7 +46,25 @@
 #include "WinControls/ToolBar/ToolBar.h"
 #include "WinControls/TabBar/TabBar.h"
 #include "WinControls/StaticDialog/StaticDialog.h"
+#include "WinControls/DocumentMap/documentMap.h"
 #include "ScintillaComponent/ScintillaCtrls.h"
+#include "ScintillaComponent/columnEditor.h"
+#include "ScintillaComponent/FindReplaceDlg.h"
+#include "ScintillaAccelerator.h"
+#include "MISC/PluginsManager/PluginsManager.h"
+#include "MISC/PluginsManager/PluginInterface.h"
+#include "WinControls/PluginsAdmin/pluginsAdmin.h"
+#include "WinControls/shortcut/shortcut.h"
+#include "WinControls/shortcut/RunMacroDlg/RunMacroDlg.h"
+#include "WinControls/Grid/ShortcutMapper.h"
+#include "Macro.h"
+
+// Forward declarations for dialogs - include their headers as needed
+class RunMacroDlg;
+class ShortcutMapper;
+class ScintillaAccelerator;
+class PluginsAdmin;
+class columnEditor;
 
 
 #include <QtWidgets/QMainWindow>
@@ -73,40 +91,6 @@
 #include <memory>
 #include <chrono>
 #include <atomic>
-#include <functional>
-
-// Forward declarations for all dialog and component classes
-class DockingManager; class AutoCompletion; class SmartHighlighter; class NativeLangSpeaker;
-class LocalizationSwitcher; class DocTabView; class ScintillaEditView; class SplitterContainer;
-class ContextMenu; class FindReplaceDlg; class ToolBar; class StatusBar; class TabBar;
-class StaticDialog; class AboutDlg; class RunDlg; class GoToLineDlg; class ColumnEditorDlg;
-class WordStyleDlg; class ColourPicker; class PreferenceDlg; class PluginsAdminDlg;
-class DocumentPeeker; class LastRecentFileList; class Macro;
-class NppConverter; class NppParameters; class ScintillaCtrls;
-class QNetworkAccessManager; class QNetworkReply; class QMenu; class QToolBar;
-
-
-class ScintillaEditView;
-class DocTabView;
-class SplitterContainer;
-class FindReplaceDlg;
-class AboutDlg;
-class RunDlg;
-class StatusBar;
-class LastRecentFileList;
-class GoToLineDlg;
-class FindCharsInRange;
-class ColumnEditorDlg;
-class WordStyleDlg;
-class PreferenceDlg;
-#include "MISC/PluginsManager/PluginsManager.h"
-class RunMacroDlg;
-class DockingManager;
-class AutoCompletion;
-class SmartHighlighter;
-class ScintillaCtrls;
-class PluginsAdminDlg;
-class NativeLangSpeaker;
 class LocalizationSwitcher;
 class Buffer;
 class NppParameters;
@@ -325,7 +309,7 @@ public:
     void showQuote(const QuoteParams* quote) const;
 
     std::wstring getPluginListVerStr() const {
-        return _pluginsAdminDlg.getPluginListVerStr();
+        return L"1.0";  // Stub: no version string available without plugins
     }
 
     // UI management
@@ -410,6 +394,12 @@ signals:
     // File change notification
     void fileChangedOnDisk(const QString& filePath);
 
+    // Signals for Scintilla view configuration
+    void nppInternalSetCaretWidth(int width);
+    void nppInternalSetCaretBlinkRate(int rate);
+    void nppInternalEdgeMultiSetSize(int size);
+    void nppInternalSetMultiSelection(int flags);
+
 protected:
     // Qt event handlers
     void closeEvent(QCloseEvent* event) override;
@@ -448,13 +438,17 @@ private:
     DocTabView* _pNonDocTab = nullptr;
 
     // Scintilla editors
-    enum { MAIN_VIEW = 0, SUB_VIEW = 1 };
+    // View identifiers (defined in Notepad_plus_msgs.h via PluginInterface.h)
+#define MAIN_VIEW 0
+#define SUB_VIEW 1
+
     ScintillaEditView _mainEditView;
     ScintillaEditView _subEditView;
     ScintillaEditView _invisibleEditView;
     ScintillaEditView _fileEditView;
     ScintillaEditView* _pEditView = nullptr;
     ScintillaEditView* _pNonEditView = nullptr;
+    int _activeView = 0;
 
     // View accessors
     ScintillaEditView* getCurrentEditView() const { return (_activeView == MAIN_VIEW) ? const_cast<ScintillaEditView*>(&_mainEditView) : const_cast<ScintillaEditView*>(&_subEditView); }
@@ -498,11 +492,11 @@ private:
     void* _sha512FromFilesDlg = nullptr;
     void* _sha512FromTextDlg = nullptr;
     GoToLineDlg _goToLineDlg;
-    ColumnEditorDlg _colEditorDlg;
+    columnEditor _colEditorDlg;
     WordStyleDlg _configStyleDlg;
     PreferenceDlg _preference;
     void* _findCharsInRangeDlg = nullptr;
-    PluginsAdminDlg _pluginsAdminDlg;
+    PluginsAdmin _pluginsAdminDlg;
     DocumentPeeker _documentPeeker;
 
     // List of open dialogs
@@ -581,7 +575,7 @@ private:
     void* _pProjectPanel_2 = nullptr;
     void* _pProjectPanel_3 = nullptr;
     void* _pFileBrowser = nullptr;
-    void* _pDocMap = nullptr;
+    DocumentMap* _pDocMap = nullptr;
     void* _pFuncList = nullptr;
 
     // File system watcher for monitoring
@@ -589,7 +583,6 @@ private:
 
     // Internal state
     uint8_t _mainWindowStatus = 0;
-    int _activeView = 0;
     int _multiSelectFlag = 0;
 
     // Document management private methods
@@ -771,10 +764,8 @@ private:
     static int getRandomNumber(int rangeMax = -1);
 
     // Backup thread
-    static DWORD WINAPI backupDocument(void* params);
-    
-    // File monitoring thread
-    static DWORD WINAPI monitorFileOnChange(void* params);
+    // File monitoring is handled via QFileSystemWatcher (see _pFileWatcher member)
+    // The old Win32 CreateThread/monitorFileOnChange approach is deprecated
     struct MonitorInfo {
         MonitorInfo(Buffer* buf, QWidget* nppHandle);
         Buffer* _buffer = nullptr;
@@ -816,4 +807,15 @@ private:
     // Restore saved session
     void loadBufferIntoView(BufferID id, int whichOne);
 };
+
+
+// Stub definitions for remaining incomplete types to allow compilation
+#ifndef STUB_CLASSES_DEFINED
+#define STUB_CLASSES_DEFINED
+class PluginsAdminDlg : public QDialog {
+    Q_OBJECT
+public:
+    PluginsAdminDlg(QWidget* p = nullptr) : QDialog(p) {}
+};
+#endif  // STUB_CLASSES_DEFINED
 

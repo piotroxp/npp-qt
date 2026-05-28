@@ -24,6 +24,35 @@
 #include <QScrollArea>
 #include <QHeaderView>
 
+// Win32 macro stubs for Linux Qt6 port
+#ifndef WM_INITDIALOG
+#define WM_INITDIALOG 0x0110
+#endif
+#ifndef WM_SIZE
+#define WM_SIZE 0x0005
+#endif
+#ifndef WM_COMMAND
+#define WM_COMMAND 0x0111
+#endif
+#ifndef WM_NOTIFY
+#define WM_NOTIFY 0x004E
+#endif
+#ifndef WM_DESTROY
+#define WM_DESTROY 0x0002
+#endif
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
+#ifndef LOWORD
+#define LOWORD(l) ((uint16_t)((uintptr_t)(l) & 0xFFFF))
+#endif
+#ifndef HIWORD
+#define HIWORD(l) ((uint16_t)(((uintptr_t)(l) >> 16) & 0xFFFF))
+#endif
+
 AnsiCharPanel::AnsiCharPanel()
     : DockingDlgInterface(IDD_ANSIASCII_PANEL)
 {
@@ -32,13 +61,15 @@ AnsiCharPanel::AnsiCharPanel()
 
 void AnsiCharPanel::init(QWidget* parent, ScintillaEditView** ppEditView)
 {
-    DockingDlgInterface::init(parent);
+    _hParent = parent;
     _ppEditView = ppEditView;
+    setParent(parent);
 }
 
 void AnsiCharPanel::setParent(QWidget* parent2set)
 {
     _hParent = parent2set;
+    QDialog::setParent(parent2set);
 }
 
 void AnsiCharPanel::switchEncoding()
@@ -50,7 +81,7 @@ void AnsiCharPanel::switchEncoding()
     updateCharDisplay();
 }
 
-void AnsiCharPanel::insertChar(unsigned char char2insert) const
+void AnsiCharPanel::insertChar(unsigned char char2insert) // removed const
 {
     QString ch = QString(QChar(char2insert));
     insertString(ch);
@@ -62,7 +93,7 @@ void AnsiCharPanel::insertChar(unsigned char char2insert) const
     emit insertCharacter(QChar(char2insert));
 }
 
-void AnsiCharPanel::insertString(const QString& string2insert) const
+void AnsiCharPanel::insertString(const QString& string2insert) // removed const
 {
     if (_ppEditView && *_ppEditView) {
         //(*_ppEditView)->execute(SCI_REPLACESEL, 0, reinterpret_cast<LPARAM>(string2insert.toUtf8().constData()));

@@ -2,13 +2,15 @@
 
 #ifndef _WINDOWS_COMPAT_H
 #define _WINDOWS_COMPAT_H
+#define _WINDOWS_COMPAT_H_DEFINED  // Signal to windows.h that types are already defined
 
 // Basic types
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
 #include <cstdio>
-#include <unistd.h>
+#include <unistd.h>  // For ::usleep() on glibc systems
+
 
 typedef uint8_t BYTE;
 typedef uint16_t WORD;
@@ -55,14 +57,26 @@ typedef DWORD* LPDWORD;
 typedef LONG* PLONG;
 typedef WORD* LPWORD;
 
-// Constants
+// Constants (guard against redefinition)
+#ifndef NULL
 #define NULL 0
+#endif
+#ifndef TRUE
 #define TRUE 1
+#endif
+#ifndef FALSE
 #define FALSE 0
+#endif
+// MAX_PATH and INFINITE constants (guard against redefinition)
+#ifndef MAX_PATH
 #define MAX_PATH 260
+#endif
+#ifndef INFINITE
 #define INFINITE 0xFFFFFFFF
+#endif
 
 // Structures
+#ifndef RECT
 struct RECT {
     LONG left;
     LONG top;
@@ -71,25 +85,38 @@ struct RECT {
     RECT() : left(0), top(0), right(0), bottom(0) {}
     RECT(LONG l, LONG t, LONG r, LONG b) : left(l), top(t), right(r), bottom(b) {}
 };
+#endif
 
+#ifndef POINT
 struct POINT {
     LONG x;
     LONG y;
     POINT() : x(0), y(0) {}
     POINT(LONG x_, LONG y_) : x(x_), y(y_) {}
 };
+#endif
 
+#ifndef SIZE
 struct SIZE {
     LONG cx;
     LONG cy;
     SIZE() : cx(0), cy(0) {}
     SIZE(LONG cx_, LONG cy_) : cx(cx_), cy(cy_) {}
 };
+// FILETIME structure
+struct FILETIME {
+    uint32_t dwLowDateTime;
+    uint32_t dwHighDateTime;
+};
 
+#endif
+
+#ifndef LPRECT
 typedef RECT* LPRECT;
 typedef const RECT* LPCRECT;
 typedef POINT* LPPOINT;
 typedef SIZE* LPSIZE;
+#endif
 
 // Macros
 #define LOWORD(l) ((WORD)((DWORD)(l) & 0xFFFF))
@@ -97,28 +124,60 @@ typedef SIZE* LPSIZE;
 #define LOBYTE(w) ((BYTE)((DWORD)(w) & 0xFF))
 #define HIBYTE(w) ((BYTE)((DWORD)(w) >> 8))
 #define MAKELONG(a, b) ((LONG)(((WORD)(a)) | ((DWORD)((WORD)(b))) << 16))
-#define RGB(r,g,b) ((DWORD)((r) | ((g) << 8) | ((b) << 16)))
 
+// Colors - note: RGB macro deleted, use qRgb(r,g,b) from Qt instead
+
+// Stub WINAPI definition
+#ifdef WINAPI
+#undef WINAPI
+#endif
 #define WINAPI
 
+// ListView extended styles
+#ifndef LVS_EX_FULLROWSELECT
+#define LVS_EX_FULLROWSELECT 0x00000020
+#endif
+
 // Stub functions
+#ifndef Sleep
 inline void Sleep(DWORD ms) { ::usleep(ms * 1000); }
+#endif
+#ifndef GetTickCount
 inline DWORD GetTickCount() { 
     struct timespec ts; 
-    clock_gettime(CLOCK_MONOTONIC, &ts); 
+    clock_gettime(CLOCK_MONOTONIC, &ts);
     return (DWORD)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000); 
 }
+#endif
+#ifndef OutputDebugStringA
 inline void OutputDebugStringA(const char* msg) { fprintf(stderr, "%s", msg); }
+#endif
+#ifndef OutputDebugString
 #define OutputDebugString OutputDebugStringA
+#endif
+#ifndef ReleaseDC
 inline int ReleaseDC(HWND, HDC) { return 1; }
+#endif
+#ifndef DeleteDC
 inline int DeleteDC(HDC) { return 1; }
+#endif
+#ifndef DeleteObject
 inline int DeleteObject(HGDIOBJ) { return 1; }
+#endif
+#ifndef RegCloseKey
 inline LONG RegCloseKey(HKEY) { return 0; }
+#endif
 
-// File attributes
+// File attributes (with redefinition guards)
+#ifndef FILE_ATTRIBUTE_NORMAL
 #define FILE_ATTRIBUTE_NORMAL 0x80
+#endif
+#ifndef FILE_ATTRIBUTE_DIRECTORY
 #define FILE_ATTRIBUTE_DIRECTORY 0x10
+#endif
+#ifndef FILE_ATTRIBUTE_READONLY
 #define FILE_ATTRIBUTE_READONLY 0x1
+#endif
 #define INVALID_FILE_ATTRIBUTES 0xFFFFFFFF
 
 // Scintilla forward declaration

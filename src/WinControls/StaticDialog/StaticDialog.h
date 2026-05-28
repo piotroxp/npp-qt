@@ -34,7 +34,7 @@ public:
     bool moveForDpiChange();
 
     // Display/hide
-    void display(bool toShow = true);
+    void display(bool toShow);
     void displayEnhanced(bool toShow);
 
     // Viewable position rect for multi-monitor
@@ -49,13 +49,16 @@ public:
 
     // DPI
     void setDpi() { /* handled by Qt */ }
-    void setPositionDpi(long wParam, long lParam);
+    void setPositionDpi(unsigned long wParam, unsigned long lParam);
 
     // Get rect
     QRect getRect() const { return _rc; }
 
     // Destroy
     void destroy();
+
+    // Initialize with parent widget
+    void init(QWidget* parent);
 
 // Signal for DPI changes
     void dpiChanged() { Q_EMIT dpiChanged(); }
@@ -65,6 +68,9 @@ protected:
     virtual intptr_t run_dlgProc(intptr_t message, intptr_t wParam, intptr_t lParam) = 0;
 
     bool event(QEvent* event) override;
+    void showEvent(QShowEvent* event) override;
+    void closeEvent(QCloseEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
     QRect _rc;
     bool _isCreated = false;
