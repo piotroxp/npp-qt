@@ -36,7 +36,8 @@ enum BufferStatusInfo {
     BufferChangeRecentTag = 0x100, BufferChangeLexing = 0x200, BufferChangeMask = 0x3FF
 };
 
-enum class EolType { OsDefault = -1, Windows = 0, Unix = 1, Mac = 2, Unknown = 3 };
+// EolType is now defined in Parameters.h as NppEolType
+// using EolType = NppEolType; // alias provided by Parameters.h
 
 struct MapPosition {
     int _firstVisibleLine = 0; int _firstVisibleDigit = 0; int _offset = 0;

@@ -37,6 +37,12 @@
 #endif
 #ifndef FALSE
 #define FALSE 0
+#ifndef IDOK
+#define IDOK 1
+#endif
+#ifndef IDCANCEL
+#define IDCANCEL 2
+#endif
 #endif
 #ifndef LOWORD
 #define LOWORD(l) ((uint16_t)((uintptr_t)(l) & 0xFFFF))

@@ -21,6 +21,9 @@
 #include <QWidget>
 
 #include "../StaticDialog/StaticDialog.h"
+#ifndef HWND
+#define HWND QWindow*
+#endif
 
 // WindowsDlg - Windows dialog for managing windows
 class WindowsDlg : public StaticDialog

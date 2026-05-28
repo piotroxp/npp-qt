@@ -29,6 +29,47 @@ public:
     // Editor access
     ScintillaEditView* activeEditor();
 
+public slots:
+    // File menu slots
+    void onFileNew();
+    void onFileOpen();
+    void onFileSave();
+    void onFileSaveAs();
+    void onFileSaveAll();
+    void onFileClose();
+    void onFileCloseAll();
+    void onFilePrint();
+
+    // Edit menu slots
+    void onEditUndo();
+    void onEditRedo();
+    void onEditCut();
+    void onEditCopy();
+    void onEditPaste();
+    void onEditDelete();
+    void onEditSelectAll();
+    void onEditFind();
+    void onEditReplace();
+
+    // Search menu slots
+    void onSearchFindNext();
+    void onSearchFindPrev();
+    void onSearchGoToLine();
+
+    // View menu slots
+    void onViewZoomIn();
+    void onViewZoomOut();
+    void onViewFullScreen();
+    void onViewPostIt();
+
+    // Tools menu slots
+    void onRunCommand();
+
+    // Macro menu slots
+    void onMacroStartRecord();
+    void onMacroStopRecord();
+    void onMacroPlayRecord();
+
 signals:
     void fileOpened(const QString& path);
     void sessionLoaded(const QString& session);

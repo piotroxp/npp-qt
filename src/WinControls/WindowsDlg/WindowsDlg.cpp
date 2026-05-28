@@ -56,7 +56,7 @@
 
 WindowsDlg::WindowsDlg()
 {
-    setCaption("Windows");
+    setWindowTitle("Windows");
 }
 
 void WindowsDlg::init(QWidget* parent)

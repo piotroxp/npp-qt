@@ -4,6 +4,7 @@
 #include <QHeaderView>
 #include <QMenu>
 #include <QFileDialog>
+#include <QDir>
 
 FileBrowser::FileBrowser(QWidget* parent)
     : QDockWidget("Folder as Workspace", parent)
@@ -16,7 +17,11 @@ FileBrowser::FileBrowser(QWidget* parent)
 
     // Create toolbar
     QToolBar* toolbar = new QToolBar(content);
-    toolbar->addAction("Add Folder", this, &FileBrowser::addRootFolder);
+    toolbar->addAction("Add Folder", this, [this]() {
+        QString dir = QFileDialog::getExistingDirectory(this, "Select Folder to Add", QDir::homePath());
+        if (!dir.isEmpty())
+            addRootFolder(dir);
+    });
     toolbar->addAction("Expand All", this, [this] {
         if (_treeView)
             _treeView->expandAll();

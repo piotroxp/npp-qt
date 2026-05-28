@@ -1,4 +1,4 @@
-// MISC/PluginsManager/PluginsManager.cpp - Qt6 port of Notepad++ plugin manager
+// PluginsManager.cpp - Qt6 port of Notepad++ plugin manager
 #include "PluginsManager.h"
 #include <QLibrary>
 #include <QDir>
@@ -6,7 +6,7 @@
 #include <QMenu>
 #include <QFileInfo>
 
-bool PluginsManager::loadPlugins(const QString& dir, const PluginViewList*, PluginViewList*)
+bool PluginsManager::loadPlugins(const QString& dir, const PluginInterfaceInfo*, PluginInterfaceInfo*)
 {
     if (dir.isEmpty()) {
         return false;
@@ -33,7 +33,7 @@ int PluginsManager::loadPluginFromPath(const QString& pluginFilePath)
         return -1;
     }
 
-    auto* pluginInfo = new PluginInfo();
+    auto* pluginInfo = new PluginInterfaceInfo();
     
     // Resolve plugin functions
     pluginInfo->_pFuncSetInfo = reinterpret_cast<PFUNCSETINFO>(
@@ -50,7 +50,7 @@ int PluginsManager::loadPluginFromPath(const QString& pluginFilePath)
         lib.resolve("isUnicode"));
 
     if (pluginInfo->_pFuncSetInfo && pluginInfo->_pFuncGetFuncsArray) {
-        pluginInfo->_pFuncSetInfo(_nppData);
+        pluginInfo->_pFuncSetInfo(&_nppData);
         
         int numFuncs = 0;
         pluginInfo->_funcItems = pluginInfo->_pFuncGetFuncsArray(&numFuncs);
@@ -77,7 +77,7 @@ void PluginsManager::runPluginCommand(size_t i)
 {
     if (i >= _pluginInfos.size()) return;
     
-    PluginInfo* info = _pluginInfos[i].get();
+    PluginInterfaceInfo* info = _pluginInfos[i].get();
     if (info && info->_funcItems) {
         for (int j = 0; j < info->_nbFuncItem; ++j) {
             if (info->_funcItems[j]._pFunc) {

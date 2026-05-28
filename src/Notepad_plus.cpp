@@ -913,9 +913,9 @@ void Notepad_plus::updateStatusBar() {
     EolType eol = curBuf->getEolFormat();
     QString eolText;
     switch (eol) {
-        case EolType::windows: eolText = "Windows (CR LF)"; break;
-        case EolType::unix: eolText = "Unix (LF)"; break;
-        case EolType::mac: eolText = "Macintosh (CR)"; break;
+        case EolType::Windows: eolText = "Windows (CR LF)"; break;
+        case EolType::Unix: eolText = "Unix (LF)"; break;
+        case EolType::Mac: eolText = "Macintosh (CR)"; break;
         default: eolText = "Mixed"; break;
     }
     
@@ -926,8 +926,8 @@ void Notepad_plus::updateStatusBar() {
         case UniMode::uni8Bit: encText = QString::fromLatin1(curBuf->getEncodingLabel()); break;
         case UniMode::uniUTF8: encText = "UTF-8"; break;
         case UniMode::uniUTF8Bom: encText = "UTF-8-BOM"; break;
-        case UniMode::uniUTF16LE: encText = "UTF-16 LE"; break;
-        case UniMode::uniUTF16BE: encText = "UTF-16 BE"; break;
+        case UniMode::uni16LE: encText = "UTF-16 LE"; break;
+        case UniMode::uni16BE: encText = "UTF-16 BE"; break;
         default: encText = "ANSI"; break;
     }
     

@@ -165,9 +165,9 @@ public:
     void setTabPinButtonOrder(int order) { _pinButtonZone.setOrder(order); }
 
     // Theme changes
-    static void triggerOwnerDraw();
-    static void doVertical(bool enabled);
-    static void doMultiLine(bool enabled);
+    void triggerOwnerDraw();
+    void doVertical(bool enabled);
+    void doMultiLine(bool enabled);
 
     // Colors
     static QRgb activeTextColor();

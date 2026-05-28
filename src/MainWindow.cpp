@@ -193,7 +193,7 @@ void MainWindow::setupStatusBar() {
 }
 
 ScintillaEditView* MainWindow::activeEditor() {
-    return _npp._pEditView;
+    return _npp.getCurrentEditView();
 }
 
 void MainWindow::openFiles(const QStringList& files) {

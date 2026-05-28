@@ -77,7 +77,7 @@ public:
     QString commandLine() const { return _cmdLine; }
 
 private:
-    void extractArgs(QString& cmdExec, QString& args, const QString& cmdEntier) const;
+    void extractArgs(QString& cmdExec, QStringList& args, const QString& cmdEntier) const;
 
     QString _cmdLine;
 };

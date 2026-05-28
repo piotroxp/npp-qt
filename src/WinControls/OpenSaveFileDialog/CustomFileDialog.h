@@ -46,7 +46,7 @@ public:
     void setCheckbox(const QString& text, bool isActive = true);
     void setExtIndex(int extTypeIndex);
     void setSaveAsCopy(bool isSavingAsCopy);
-    bool getOpenTheCopyAfterSaveAsCopy();
+    bool getOpenTheCopyAfterSaveAsCopy() const;
 
     void enableFileTypeCheckbox(const QString& text, bool value);
     bool getFileTypeCheckboxValue() const;

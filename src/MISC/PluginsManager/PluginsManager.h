@@ -42,7 +42,7 @@ public:
     
     void initHMenus(intptr_t pfn);
     int loadPluginFromPath(const QString& pluginFilePath);
-    bool loadPlugins(const QString& dir, const void* pluginList, void* outList);
+    bool loadPlugins(const QString& dir, const PluginInterfaceInfo* inList, PluginInterfaceInfo* outList);
     
     void runPluginCommand(size_t i);
     void runPluginCommand(const QString& pluginName, int commandID);

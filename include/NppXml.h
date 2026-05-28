@@ -1,81 +1,116 @@
-#include <string>
-// NppXml.h - XML parsing utilities for NppParameters
+// NppXml.h - Qt XML wrapper for notepad-plus configuration
 #pragma once
 
-#include <QString>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 #include <QFile>
-#include <QIODevice>
-#include <QVector>
-#include <QMap>
+#include <QString>
+#include <QByteArray>
+#include <memory>
 
-struct XmlNode {
-    QString name;
-    QMap<QString, QString> attributes;
-    QString text;
-    QVector<XmlNode> children;
-    
-    XmlNode() {}
-    XmlNode(const QString& n) : name(n) {}
-    
-    QString attribute(const QString& key, const QString& def = QString()) const {
-        return attributes.value(key, def);
-    }
-    
-    XmlNode* findChild(const QString& childName) {
-        for (auto& child : children) {
-            if (child.name == childName)
-                return &child;
+class NppXml {
+public:
+    NppXml() : _reader(nullptr), _writer(nullptr) {}
+    ~NppXml() { close(); }
+
+    bool load(const QString& filePath) {
+        close();
+        _file.reset(new QFile(filePath));
+        if (!_file->open(QIODevice::ReadOnly | QIODevice::Text)) {
+            _file.reset();
+            return false;
         }
-        return nullptr;
+        _reader.reset(new QXmlStreamReader(_file.get()));
+        return true;
     }
-};
 
-class NppXmlDoc {
-public:
-    NppXmlDoc() : _root() {}
-    
-    bool load(const QString& filePath);
-    bool save(const QString& filePath) const;
-    
-    XmlNode& root() { return _root; }
-    const XmlNode& root() const { return _root; }
-    
-    bool isValid() const { return _isValid; }
-    QString errorString() const { return _errorString; }
-    
-    // XPath-like queries
-    XmlNode* findNode(const QString& path);
-    QVector<XmlNode*> findNodes(const QString& path);
-    
+    bool save(const QString& filePath) {
+        _file.reset(new QFile(filePath));
+        if (!_file->open(QIODevice::WriteOnly | QIODevice::Text)) {
+            _file.reset();
+            return false;
+        }
+        _writer.reset(new QXmlStreamWriter(_file.get()));
+        _writer->writeStartDocument();
+        return true;
+    }
+
+    void close() {
+        if (_writer) {
+            _writer->writeEndDocument();
+            _writer.reset();
+        }
+        if (_reader) {
+            _reader.reset();
+        }
+        if (_file) {
+            _file->close();
+            _file.reset();
+        }
+    }
+
+    // Element navigation
+    bool readNext() {
+        if (!_reader) return false;
+        return _reader->readNextStartElement();
+    }
+
+    QString name() const {
+        if (!_reader) return QString();
+        return _reader->name().toString();
+    }
+
+    QString readElementText() {
+        if (!_reader) return QString();
+        return _reader->readElementText();
+    }
+
+    bool hasElement(const QString& name) const {
+        if (!_reader) return false;
+        // Read ahead to find element, return to beginning when done
+        // Simplified - just skip forward to first occurrence
+        while (!_reader->atEnd()) {
+            _reader->readNext();
+            if (_reader->tokenType() == QXmlStreamReader::StartElement &&
+                _reader->name().toString() == name) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Write operations
+    void writeStartElement(const QString& name) {
+        if (_writer) _writer->writeStartElement(name);
+    }
+
+    void writeAttribute(const QString& name, const QString& value) {
+        if (_writer) _writer->writeAttribute(name, value);
+    }
+
+    void writeCharacters(const QString& text) {
+        if (_writer) _writer->writeCharacters(text);
+    }
+
+    void writeEndElement() {
+        if (_writer) _writer->writeEndElement();
+    }
+
+    // Root element helpers
+    void writeDocType(const QString& rootName, const QString& pubId, 
+                    const QString& sysId, const QString& subset) {
+        if (_writer) _writer->writeDTD("<!DOCTYPE " + rootName + ">");
+    }
+
+    // Static factory
+    static std::unique_ptr<NppXml> create() {
+        return std::make_unique<NppXml>();
+    }
+
 private:
-    XmlNode _root;
-    bool _isValid = false;
-    QString _errorString;
-    
-    void parseElement(QXmlStreamReader& xml, XmlNode& node);
+    std::unique_ptr<QFile> _file;
+    std::unique_ptr<QXmlStreamReader> _reader;
+    std::unique_ptr<QXmlStreamWriter> _writer;
 };
 
-class NppXmlWriter {
-public:
-    static bool writeElement(QIODevice* device, const XmlNode& node, int indent = 0);
-    static QByteArray nodeToByteArray(const XmlNode& node);
-};
-
-// Convenience class for building XML
-class NppXmlBuilder {
-public:
-    NppXmlBuilder(const QString& rootName);
-    
-    NppXmlBuilder& addChild(const QString& name);
-    NppXmlBuilder& addText(const QString& text);
-    NppXmlBuilder& addAttr(const QString& key, const QString& value);
-    NppXmlBuilder& addAttr(const QString& key, int value);
-    
-    XmlNode build();
-    
-private:
-    XmlNode _root;
-    QVector<XmlNode*> _stack;
-};
+using NppXmlPtr = std::unique_ptr<NppXml>;

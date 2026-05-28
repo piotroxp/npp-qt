@@ -14,7 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include <QLabel>
+#include <QDialog>
 #include "ProjectPanel.h"
+#include <QPushButton>
 
 // Win32 macro stubs for Linux Qt6 port
 #ifndef WM_INITDIALOG
@@ -37,6 +40,12 @@
 #endif
 #ifndef FALSE
 #define FALSE 0
+#endif
+#ifndef IDOK
+#define IDOK 1
+#endif
+#ifndef IDCANCEL
+#define IDCANCEL 2
 #endif
 #ifndef LOWORD
 #define LOWORD(l) ((uint16_t)((uintptr_t)(l) & 0xFFFF))

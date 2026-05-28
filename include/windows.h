@@ -3,13 +3,17 @@
 
 // Minimal Windows API stubs for cross-platform compilation
 
-#ifndef WIN32
-#define WIN32
-#endif
+// On non-Windows platforms, do NOT define WIN32/_WINDOWS unconditionally.
+// This prevents Win32 macro leakage that breaks Scintilla Qt headers.
+// EXPORT_IMPORT_API relies on WIN32 being absent to be a no-op on Linux.
+// Individual modules that need WIN32 for other purposes should use
+// platform-specific checks (__linux__) or _WIN32.
 
-#ifndef _WINDOWS
-#define _WINDOWS
-#endif
+#ifndef _WIN32
+// Win32 symbols may still be needed by some source files for conditional compilation.
+// Guard them carefully - only define what individual modules actually use.
+// Do NOT redefine WIN32 globally on non-Windows platforms as it breaks
+// Scintilla headers that use #ifdef WIN32 to guard __declspec(dllexport).
 
 // Basic Windows types are already defined in WindowsCompat.h
 // These stubs are only for files that #include <windows.h>
@@ -148,3 +152,4 @@ typedef unsigned int UINT;
 #ifndef GET_Y_LPARAM
 #define GET_Y_LPARAM(lp) ((int)(short)HIWORD(lp))
 #endif
+#endif // !_WIN32

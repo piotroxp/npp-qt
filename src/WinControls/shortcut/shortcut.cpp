@@ -208,8 +208,9 @@ void Accelerator::updateShortcuts()
     qDeleteAll(_shortcuts);
     _shortcuts.clear();
 
-    for (const auto& sc : _shortcutList)
+    for (int i = 0; i < _shortcutList.size(); ++i)
     {
+        const Shortcut& sc = _shortcutList[i];
         if (sc.isEnabled())
         {
             QShortcut* shortcut = new QShortcut(sc.qtModifiers() | Qt::Key(sc._keyCombo._key), qApp->activeWindow());

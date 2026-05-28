@@ -68,6 +68,9 @@ enum class NppEolType {
     Unknown = 3
 };
 
+// Legacy type alias for compatibility with code using EolType
+using EolType = NppEolType;
+
 // Unicode modes
 enum class UniMode {
     uni8Bit = 0,
@@ -79,7 +82,7 @@ enum class UniMode {
     uniEnd = 6
 };
 
-// Language types
+// Language types (lifted from Windows source Notepad_plus_msgs.h for cross-platform parity)
 enum class LangType {
     L_TEXT = 0,
     L_PHP = 1,
@@ -95,37 +98,101 @@ enum class LangType {
     L_PASCAL = 11,
     L_BATCH = 12,
     L_INI = 13,
-    L_NFO = 14,
+    L_ASCII = 14,         // was L_NFO
     L_USER = 15,
     L_ASP = 16,
     L_SQL = 17,
-    L_PYTHON = 18,
-    L_PERL = 19,
-    L_JS = 20,
-    L_USER2 = 21,
-    L_USER3 = 22,
-    L_USER4 = 23,
-    L_FORTRAN = 24,
-    L_BASH = 25,
-    L_FLASH = 26,
-    L_NSIS = 27,
-    L_CAML = 28,
-    L_ADA = 29,
-    L_VERILOG = 30,
-    L_MATLAB = 31,
-    L_HASKELL = 32,
-    L_INNO = 33,
-    L_SEARCHRESULT = 34,
-    L_CMAKE = 35,
-    L_YAML = 36,
-    L_COBOL = 37,
-    L_GUI4CLI = 38,
-    L_D = 39,
-    L_POWERSHELL = 40,
-    L_R = 41,
-    L_JSP = 42,
-    L_EXTERNAL = 100,
-    L_EXTERNAL_LANG = 200
+    L_VB = 18,            // was L_PYTHON
+    L_JS_EMBEDDED = 19,   // was L_JS
+    L_CSS = 20,
+    L_PERL = 21,          // was L_USER2
+    L_PYTHON = 22,        // shifted from 18
+    L_LUA = 23,           // was L_USER3
+    L_TEX = 24,           // was L_USER4
+    L_FORTRAN = 25,
+    L_BASH = 26,
+    L_FLASH = 27,
+    L_NSIS = 28,
+    L_TCL = 29,           // was L_CAML
+    L_LISP = 30,          // was L_ADA
+    L_SCHEME = 31,        // was L_VERILOG
+    L_ASM = 32,           // was L_MATLAB
+    L_DIFF = 33,          // was L_HASKELL
+    L_PROPS = 34,         // was L_INNO
+    L_PS = 35,            // was L_SEARCHRESULT
+    L_RUBY = 36,          // was L_CMAKE
+    L_SMALLTALK = 37,     // was L_YAML
+    L_VHDL = 38,          // was L_COBOL
+    L_KIX = 39,           // was L_GUI4CLI
+    L_AU3 = 40,           // was L_D
+    L_CAML = 41,          // was L_POWERSHELL
+    L_ADA = 42,
+    L_VERILOG = 43,
+    L_MATLAB = 44,
+    L_HASKELL = 45,
+    L_INNO = 46,
+    L_SEARCHRESULT = 47,
+    L_CMAKE = 48,
+    L_YAML = 49,
+    L_COBOL = 50,
+    L_GUI4CLI = 51,
+    L_D = 52,
+    L_POWERSHELL = 53,
+    L_R = 54,
+    L_JSP = 55,
+    // Extended language types (from Windows source)
+    L_COFFEESCRIPT = 56,
+    L_JSON = 57,
+    L_JAVASCRIPT = 58,
+    L_FORTRAN_77 = 59,
+    L_BAANC = 60,
+    L_SREC = 61,
+    L_IHEX = 62,
+    L_TEHEX = 63,
+    L_SWIFT = 64,
+    L_ASN1 = 65,
+    L_AVS = 66,
+    L_BLITZBASIC = 67,
+    L_PUREBASIC = 68,
+    L_FREEBASIC = 69,
+    L_CSOUND = 70,
+    L_ERLANG = 71,
+    L_ESCRIPT = 72,
+    L_FORTH = 73,
+    L_LATEX = 74,
+    L_MMIXAL = 75,
+    L_NIM = 76,
+    L_NNCRONTAB = 77,
+    L_OSCRIPT = 78,
+    L_REBOL = 79,
+    L_REGISTRY = 80,
+    L_RUST = 81,
+    L_SPICE = 82,
+    L_TXT2TAGS = 83,
+    L_VISUALPROLOG = 84,
+    L_TYPESCRIPT = 85,
+    L_JSON5 = 86,
+    L_MSSQL = 87,
+    L_GDSCRIPT = 88,
+    L_HOLLYWOOD = 89,
+    L_GOLANG = 90,
+    L_RAKU = 91,
+    L_TOML = 92,
+    L_SAS = 93,
+    L_ERRORLIST = 94,
+    // Don't use L_JS_EMBEDDED, use L_JAVASCRIPT instead
+    // The end of enumerated language type, so it should be always at the end
+    L_EXTERNAL = 95,
+    // Legacy aliases for backward compatibility with code that uses unscoped constants
+    L_NFO = L_ASCII,
+    L_JS = L_JS_EMBEDDED,
+    L_USER2 = L_PERL,
+    L_USER3 = L_LUA,
+    L_USER4 = L_TEX,
+    L_FORTRAN_ = L_FORTRAN,
+    L_PS2 = L_PS,
+    L_GUI = L_GUI4CLI,
+    L_BAAN = L_BAANC,
 };
 
 
@@ -866,6 +933,12 @@ public:
     void setFontList(QWidget* hWnd);
     bool isInFontList(const std::wstring& fontName2Search) const;
     const std::vector<std::wstring>& getFontList() const { return _fontlist; }
+
+    // User languages
+    QString getSettingsPath(const QString& fileName) const;
+    void loadShortcuts();
+    void loadUserLanguages();
+    void loadFindHistory();
     
     int getNbUserLang() const { return _nbUserLang; }
     UserLangContainer* getULCFromIndex(size_t i);
@@ -949,6 +1022,12 @@ private:
 
     // Shortcuts
     std::vector<void*> _shortcuts;
+
+    // User languages
+    std::vector<std::unique_ptr<UserLangContainer>> _userLangArray;
+
+    // Find history
+    FindHistory _findHistory;
 
     // Settings path cache
     mutable QString _cachedSettingsPath;

@@ -6,7 +6,12 @@
 #include <QMap>
 #include "NppXml.h"
 
-// Use NppXmlDoc directly - it's defined in NppXml.h
+// Forward declarations for missing types
+struct XmlNode;
+
+// Simple document holder
+using NppXmlDoc = NppXml*;
+
 class NativeLangSpeaker : public QObject {
     Q_OBJECT
 public:

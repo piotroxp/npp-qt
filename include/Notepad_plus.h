@@ -194,6 +194,12 @@ public:
     void processCommand(int id);
     void killAllChildren();
 
+    // View accessors
+    ScintillaEditView* getCurrentEditView() const { return (_activeView == MAIN_VIEW) ? const_cast<ScintillaEditView*>(&_mainEditView) : const_cast<ScintillaEditView*>(&_subEditView); }
+    ScintillaEditView* getNonCurrentEditView() const { return (_activeView == MAIN_VIEW) ? const_cast<ScintillaEditView*>(&_subEditView) : const_cast<ScintillaEditView*>(&_mainEditView); }
+    ScintillaEditView& getMainEditView() { return _mainEditView; }
+    ScintillaEditView& getSubEditView() { return _subEditView; }
+
     // Document operations
     enum class comment_mode { cm_comment, cm_uncomment, cm_toggle };
     
@@ -449,12 +455,6 @@ private:
     ScintillaEditView* _pEditView = nullptr;
     ScintillaEditView* _pNonEditView = nullptr;
     int _activeView = 0;
-
-    // View accessors
-    ScintillaEditView* getCurrentEditView() const { return (_activeView == MAIN_VIEW) ? const_cast<ScintillaEditView*>(&_mainEditView) : const_cast<ScintillaEditView*>(&_subEditView); }
-    ScintillaEditView* getNonCurrentEditView() const { return (_activeView == MAIN_VIEW) ? const_cast<ScintillaEditView*>(&_subEditView) : const_cast<ScintillaEditView*>(&_mainEditView); }
-    ScintillaEditView& getMainEditView() { return _mainEditView; }
-    ScintillaEditView& getSubEditView() { return _subEditView; }
 
     // Splitters
     SplitterContainer* _pMainSplitter = nullptr;

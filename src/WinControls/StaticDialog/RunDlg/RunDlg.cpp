@@ -79,7 +79,7 @@ bool Command::run(QWidget* parent, const QString& cwd)
     return started;
 }
 
-void Command::extractArgs(QString& cmdExec, QString& args, const QString& cmdEntier) const
+void Command::extractArgs(QString& cmdExec, QStringList& args, const QString& cmdEntier) const
 {
     cmdExec = cmdEntier;
     args.clear();
@@ -88,7 +88,10 @@ void Command::extractArgs(QString& cmdExec, QString& args, const QString& cmdEnt
     int spacePos = cmdExec.indexOf(' ');
     if (spacePos > 0)
     {
-        args = cmdExec.mid(spacePos + 1).trimmed();
+        QString argStr = cmdExec.mid(spacePos + 1).trimmed();
+        if (!argStr.isEmpty()) {
+            args.append(argStr);
+        }
         cmdExec = cmdExec.left(spacePos).trimmed();
     }
 }

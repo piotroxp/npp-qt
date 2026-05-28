@@ -414,7 +414,7 @@ void TabBarPlus::paintEvent(QPaintEvent* event)
                                  QColor::fromRgb(inactiveTextColor()));
         }
 
-        QRect tabRect = QTabBar::tabRect(index);  // Qt6 alternative
+        QRect tabRect = this->tabRect(i);  // Qt6 alternative
         Q_UNUSED(tabRect);
         style()->drawControl(QStyle::CE_TabBarTabLabel, &opt, &p, this);
     }
