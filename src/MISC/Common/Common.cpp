@@ -113,10 +113,39 @@ void ControlInfoTip::show(showPosition) const {}
 void ControlInfoTip::hide() {}
 
 unsigned int invokeNppUacOp(const std::wstring&) { return 0; }
-bool fileTimeToYMD(const FILETIME&, int&) { return false; }
-void expandEnv(std::wstring&) {}
 
-std::string Utf8::encode(std::wstring_view sv) { return QString::fromStdWString(std::wstring(sv)).toUtf8().constData(); }
+std::wstring BuildMenuFileName(int filenameLen, unsigned int pos, const std::wstring &filename, bool ordinalNumber) {
+    std::wstring result;
+    if (ordinalNumber && pos > 0) {
+        result = std::to_wstring(pos) + L". ";
+    }
+    if (filename.length() > static_cast<size_t>(filenameLen)) {
+        result += L"..." + filename.substr(filename.length() - filenameLen + 3);
+    } else {
+        result += filename;
+    }
+    return result;
+}
+
+bool isInList(const wchar_t* token, const wchar_t* list) {
+    if (!token || !list) return false;
+    std::wstring tokenStr(token);
+    std::wstring listStr(list);
+    size_t start = 0;
+    while (start < listStr.length()) {
+        size_t end = listStr.find(L'|', start);
+        if (end == std::wstring::npos) end = listStr.length();
+        std::wstring item = listStr.substr(start, end - start);
+        if (item == tokenStr) return true;
+        start = end + 1;
+    }
+    return false;
+}
+
+// Global time point for startup timing
+std::chrono::steady_clock::time_point g_nppStartTimePoint{};
+
+// File I/O stubs
 std::string getFileContent(const wchar_t* f, bool* pbFailed) {
     if (pbFailed) *pbFailed = false;
     QFile file(QString::fromWCharArray(f));
@@ -124,7 +153,12 @@ std::string getFileContent(const wchar_t* f, bool* pbFailed) {
     QByteArray d = file.readAll();
     return d.constData();
 }
-std::wstring relativeFilePathToFullFilePath(const wchar_t* rel) { return QDir(QString::fromWCharArray(rel)).absolutePath().toStdWString(); }
-void writeFileContent(const wchar_t* f, const char* c) { QFile file(QString::fromWCharArray(f)); if (file.open(QIODevice::WriteOnly)) file.write(c); }
 
-namespace { std::wstring getWidowString() { return L"no error"; } }
+void writeFileContent(const wchar_t* f, const char* c) {
+    QFile file(QString::fromWCharArray(f));
+    if (file.open(QIODevice::WriteOnly)) file.write(c);
+}
+
+bool fileTimeToYMD(const FILETIME&, int&) { return false; }
+
+void expandEnv(std::wstring&) {}

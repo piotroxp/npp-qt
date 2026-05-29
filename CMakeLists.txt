@@ -25,6 +25,7 @@ set(NPP_CORE_SOURCES
     src/MISC/PluginsManager/PluginsManager.cpp
     src/MISC/Process/Processus.cpp
     src/MISC/RegExt/regExtDlg.cpp
+    src/MISC/md5/md5.cpp
     src/MISC/md5/md5Dlgs.cpp
     src/MISC/sha1/calc_sha1.cpp
     src/MISC/sha1/sha1.cpp
