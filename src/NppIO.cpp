@@ -16,21 +16,19 @@
 
 
 #include <ctime>
-#ifndef QT_NO_DEBUG
-#define QT_NO_DEBUG
-#endif
-#include <QFileInfo>
-#include <QDir>
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
+#include "MISC/Common/WindowsMessageStubs.h"
 #include "Notepad_plus_Window.h"
-#include "CustomFileDialog.h"
-#include "VerticalFileSwitcher.h"
-#include "functionListPanel.h"
-#include "ReadDirectoryChanges.h"
-#include "ReadFileChanges.h"
-#include "fileBrowser.h"
+#include "WinControls/OpenSaveFileDialog/CustomFileDialog.h"
+#include "WinControls/VerticalFileSwitcher/VerticalFileSwitcher.h"
+#include "WinControls/FunctionList/functionListPanel.h"
+#include "WinControls/ReadDirectoryChanges/ReadDirectoryChanges.h"
+#include "WinControls/ReadDirectoryChanges/ReadFileChanges.h"
+#include "WinControls/FileBrowser/fileBrowser.h"
 #include <unordered_set>
-#include "Common.h"
-#include "NppConstants.h"
+#include "MISC/Common/Common.h"
+#include "MISC/Common/NppConstants.h"
 
 using namespace std;
 
@@ -47,16 +45,11 @@ DWORD WINAPI Notepad_plus::monitorFileOnChange(void * params)
 
 	const wchar_t *fullFileName = (const wchar_t *)buf->getFullPathName();
 
-	//The folder to watch:
-	QString folderStr = QString::fromWCharArray(fullFileName);
-	QFileInfo fi(folderStr);
-	QString parentDir = fi.absolutePath().path();
-	QByteArray parentDirBa = parentDir.toLocal8Bit();
-	char folderToMonitor[MAX_PATH];
-	strncpy(folderToMonitor, parentDirBa.constData(), MAX_PATH - 1);
-	folderToMonitor[MAX_PATH - 1] = '\0';
+	//The folder to watch :
+	wchar_t folderToMonitor[MAX_PATH]{};
+	wcscpy_s(folderToMonitor, fullFileName);
 
-	// Note: File monitoring via CReadDirectoryChanges/CReadFileChanges may need platform-specific reimplementation for Qt
+	::PathRemoveFileSpecW(folderToMonitor);
 	
 	const DWORD dwNotificationFlags = FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_SIZE;
 
@@ -141,15 +134,58 @@ DWORD WINAPI Notepad_plus::monitorFileOnChange(void * params)
 
 bool resolveLinkFile(std::wstring& linkFilePath)
 {
+#ifndef _WIN32
+	(void)linkFilePath;
+	return false;
+#else
 	// upperize for the following comparison because the ends_with is case sensitive unlike the Windows OS filesystem
 	std::wstring linkFilePathUp = linkFilePath;
 	std::transform(linkFilePathUp.begin(), linkFilePathUp.end(), linkFilePathUp.begin(), ::towupper);
 	if (!linkFilePathUp.ends_with(L".LNK"))
 		return false; // we will not check the renamed shortcuts like "file.lnk.txt"
 
-	// On Linux, .lnk shortcuts are not supported. This function requires Windows COM APIs (IShellLink).
-	// Return false to indicate resolution failed; the file will be opened as-is.
-	return false;
+	bool isResolved = false;
+
+	IShellLink* psl = nullptr;
+	wchar_t targetFilePath[MAX_PATH]{};
+	WIN32_FIND_DATA wfd{};
+
+	HRESULT hres = CoInitialize(NULL);
+	if (SUCCEEDED(hres))
+	{
+		hres = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, (LPVOID*)&psl);
+		if (SUCCEEDED(hres))
+		{
+			IPersistFile* ppf = nullptr;
+			hres = psl->QueryInterface(IID_IPersistFile, (void**)&ppf);
+			if (SUCCEEDED(hres))
+			{
+				// Load the shortcut. 
+				hres = ppf->Load(linkFilePath.c_str(), STGM_READ);
+				if (SUCCEEDED(hres) && hres != S_FALSE)
+				{
+					// Resolve the link. 
+					hres = psl->Resolve(NULL, 0);
+					if (SUCCEEDED(hres) && hres != S_FALSE)
+					{
+						// Get the path to the link target. 
+						hres = psl->GetPath(targetFilePath, MAX_PATH, (WIN32_FIND_DATA*)&wfd, SLGP_SHORTPATH);
+						if (SUCCEEDED(hres) && hres != S_FALSE)
+						{
+							linkFilePath = targetFilePath;
+							isResolved = true;
+						}
+					}
+				}
+				ppf->Release();
+			}
+			psl->Release();
+		}
+		CoUninitialize();
+	}
+
+	return isResolved;
+#endif
 }
 
 BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool isReadOnly, int encoding, const wchar_t *backupFileName, FILETIME fileNameTimestamp)
@@ -212,22 +248,22 @@ BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool is
 	}
 	else
 	{
-		// Use Qt to get absolute path
-		QString targetFileNameQ = QString::fromStdWString(targetFileName);
-		QFileInfo fi(targetFileNameQ);
-		QString absolutePath = fi.absoluteFilePath();
-		DWORD getFullPathNameResult = absolutePath.length();
+		const DWORD getFullPathNameResult = ::GetFullPathName(targetFileName.c_str(), longFileNameBufferSize, longFileName, NULL);
 		if (getFullPathNameResult == 0)
 		{
 			return BUFFER_INVALID;
 		}
-		if (getFullPathNameResult > longFileNameBufferSize - 1)
+		if (getFullPathNameResult > longFileNameBufferSize)
 		{
 			return BUFFER_INVALID;
 		}
-		wcsncpy_s(longFileName, _countof(longFileName), absolutePath.toStdWString().c_str(), _TRUNCATE);
+		assert(wcslen(longFileName) == getFullPathNameResult);
 
-		// On Linux, there's no ~ alias/short name issue like Windows
+		if (wcschr(longFileName, '~'))
+		{
+			// ignore the returned value of function due to win64 redirection system
+			::GetLongPathName(longFileName, longFileName, longFileNameBufferSize);
+		}
 	}
 
 	bool isSnapshotMode = (backupFileName != NULL) && doesFileExist(backupFileName);
@@ -1737,7 +1773,7 @@ bool Notepad_plus::fileSave(BufferID bufferID)
 		if (backup != bak_none && !buf->isLargeFile())
 		{
 			const wchar_t *fn = buf->getFullPathName();
-			wchar_t *name = ::PathFindFileName(fn);
+			wchar_t *name = ::PathFindFileName(const_cast<wchar_t*>(fn));
 			wstring fn_bak;
 
 			if (nppgui._useDir && !nppgui._backupDir.empty())
@@ -2384,7 +2420,7 @@ bool Notepad_plus::isFileSession(const wchar_t * filename)
 	if (*definedSessionExt != '\0')
 	{
 		wstring fncp = filename;
-		wchar_t *pExt = PathFindExtension(fncp.c_str());
+		wchar_t *pExt = PathFindExtension(fncp.data());
 
 		wstring usrSessionExt = L"";
 		if (*definedSessionExt != '.')
@@ -2408,7 +2444,7 @@ bool Notepad_plus::isFileWorkspace(const wchar_t * filename)
 	if (*definedWorkspaceExt != '\0')
 	{
 		wstring fncp = filename;
-		wchar_t *pExt = PathFindExtension(fncp.c_str());
+		wchar_t *pExt = PathFindExtension(fncp.data());
 
 		wstring usrWorkspaceExt = L"";
 		if (*definedWorkspaceExt != '.')

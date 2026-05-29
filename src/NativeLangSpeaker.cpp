@@ -1,7 +1,7 @@
 #include "NativeLangSpeaker.h"
 #include <QMenu>
 
-void NativeLangSpeaker::init(NppXmlDoc nativeLangDocRoot, bool loadIfEnglish) { _nativeLang = nativeLangDocRoot; Q_UNUSED(loadIfEnglish); }
+void NativeLangSpeaker::init(NppXmlDoc* nativeLangDocRoot, bool loadIfEnglish) { _nativeLang = nativeLangDocRoot; Q_UNUSED(loadIfEnglish); }
 void NativeLangSpeaker::changeConfigLang(QWidget* hDlg) const { Q_UNUSED(hDlg); }
 void NativeLangSpeaker::changeLangTabContextMenu(QMenu* hCM) const { Q_UNUSED(hCM); }
 void NativeLangSpeaker::getAlternativeNameFromTabContextMenu(QString& output, int cmdID, bool isAlternative, const QString& defaultValue) const { Q_UNUSED(cmdID); Q_UNUSED(isAlternative); output = defaultValue; }

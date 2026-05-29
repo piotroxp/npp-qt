@@ -10,6 +10,7 @@
 
 //#define _CRT_SECURE_NO_WARNINGS
 #include "sha1.h"
+#include "MISC/Common/WindowsCompat.h"
 
 #define SHA1_MAX_FILE_BUFFER (32 * 20 * 820)
 

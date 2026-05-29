@@ -22,11 +22,12 @@
 #include "verifySignedfile.h"
 
 #include "MISC/Common/WindowsCompat.h"
-
-#include <wintrust.h>
 #include "MISC/Common/WindowsStubs.h"
+#if defined(_WIN32)
+#include <wintrust.h>
 #include <wincrypt.h>
 #include <sensapi.h>
+#endif
 
 #include <cstdint>
 #include <iomanip>
@@ -36,8 +37,9 @@
 #include <string>
 #include <vector>
 
-#include "Common.h"
+#include "MISC/Common/Common.h"
 #include "MISC/sha2/sha-256.h"
+#include <cstdio>
 
 using namespace std;
 
@@ -129,6 +131,10 @@ static void writeCertVerifLog(const wchar_t* logFileName, const wchar_t* log2wri
 
 bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 {
+#if !defined(_WIN32)
+	(void)filepath;
+	return true;
+#else
 	wstring display_name;
 	wstring key_id_hex;
 	wstring subject;
@@ -394,4 +400,5 @@ bool SecurityGuard::verifySignedBinary(const std::wstring& filepath)
 	if (pSignerInfo != NULL)  LocalFree(pSignerInfo);
 
 	return status;
+#endif // _WIN32
 }

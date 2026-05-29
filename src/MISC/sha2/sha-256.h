@@ -25,3 +25,5 @@ private:
     static const uint32_t K[64];
     static const unsigned char PADDING[64];
 };
+
+void calc_sha_256(unsigned char hash[32], const unsigned char* input, size_t len);

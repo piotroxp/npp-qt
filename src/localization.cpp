@@ -17,7 +17,8 @@
 
 #include "localization.h"
 
-#include <windows.h>
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
 
 #include <cstring>
 #include <cwchar>
@@ -25,19 +26,19 @@
 #include <string>
 #include <vector>
 
-#include "Common.h"
-#include "FindReplaceDlg.h"
+#include "MISC/Common/Common.h"
+#include "ScintillaComponent/FindReplaceDlg.h"
 #include "NppDarkMode.h"
 #include "NppXml.h"
 #include "Parameters.h"
-#include "UserDefineDialog.h"
-#include "UserDefineResource.h"
-#include "Window.h"
+#include "ScintillaComponent/UserDefineDialog.h"
+#include "ScintillaComponent/UserDefineResource.h"
+#include "WinControls/Window.h"
 #include "menuCmdID.h"
-#include "pluginsAdmin.h"
-#include "preferenceDlg.h"
+#include "WinControls/PluginsAdmin/pluginsAdmin.h"
+#include "WinControls/Preference/preferenceDlg.h"
 #include "resource.h"
-#include "shortcut.h"
+#include "WinControls/shortcut/shortcut.h"
 
 
 static constexpr MenuPosition g_menuFolderPositions[]{

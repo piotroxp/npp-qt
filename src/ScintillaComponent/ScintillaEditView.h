@@ -27,7 +27,7 @@
 
 #include "lexilla/include/SciLexer.h"
 #include <Sci_Position.h>
-#include "scintilla/include/Scintilla.h"
+#include "ScintillaComponents/scintilla/include/Scintilla.h"
 
 #include "ScintillaComponent/Buffer.h"
 #include "MISC/PluginsManager/Notepad_plus_msgs.h"

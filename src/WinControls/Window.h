@@ -96,7 +96,8 @@ public:
 	}
 
 	void grabFocus() const {
-		::SetFocus(_hSelf);
+		if (_hSelf)
+			_hSelf->setFocus();
 	}
 
     HINSTANCE getHinst() const {

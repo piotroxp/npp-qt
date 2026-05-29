@@ -17,6 +17,7 @@
 #include "dockingResource.h"
 #include "DockingCont.h"
 #include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
 
 #include "WinControls/SplitterContainer/SplitterContainer.h"
 #include "WinControls/ToolTip/ToolTip.h"

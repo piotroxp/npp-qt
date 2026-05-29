@@ -16,6 +16,7 @@
 
 
 #include <string.h>
+#include "MISC/Common/WindowsCompat.h"
 #include "EncodingMapper.h"
 #include "scintilla/include/Scintilla.h"
 

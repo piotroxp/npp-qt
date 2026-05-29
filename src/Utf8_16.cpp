@@ -17,6 +17,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "../Utf8_16.h"
+#include "MISC/Common/WindowsStubs.h"
 
 const Utf8_16::utf8 Utf8_16::k_Boms[][3] = {
 	{0x00, 0x00, 0x00},  // Unknown

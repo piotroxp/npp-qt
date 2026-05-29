@@ -18,6 +18,8 @@
 #include "columnEditor.h"
 
 #include "../MISC/Common/WindowsCompat.h"
+#include "../MISC/Common/WindowsStubs.h"
+#include "../MISC/Common/windowsx.h"
 
 #include <algorithm>
 #include <cstdio>

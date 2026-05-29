@@ -25,6 +25,21 @@
 enum class PosAlign { left, right, top, bottom };
 
 #pragma pack(push, 1)
+struct DLGTEMPLATE {
+	DWORD style = 0;
+	DWORD dwExtendedStyle = 0;
+	WORD cdit = 0;
+	short x = 0, y = 0, cx = 0, cy = 0;
+};
+typedef DLGTEMPLATE* LPDLGTEMPLATE;
+inline INT_PTR DialogBoxIndirectParamW(HINSTANCE, DLGTEMPLATE*, HWND, DLGPROC, LPARAM) { return -1; }
+#define DialogBoxIndirectParam DialogBoxIndirectParamW
+inline INT_PTR DialogBoxParamW(HINSTANCE, const wchar_t*, HWND, DLGPROC, LPARAM) { return -1; }
+#define DialogBoxParam DialogBoxParamW
+inline HWND CreateDialogParamW(HINSTANCE, const wchar_t*, HWND, DLGPROC, LPARAM) { return nullptr; }
+#define CreateDialogParam CreateDialogParamW
+inline HWND CreateDialogIndirectParamW(HINSTANCE, DLGTEMPLATE*, HWND, DLGPROC, LPARAM) { return nullptr; }
+#define CreateDialogIndirectParam CreateDialogIndirectParamW
 struct DLGTEMPLATEEX
 {
 	WORD   dlgVer = 0;

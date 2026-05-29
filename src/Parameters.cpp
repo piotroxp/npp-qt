@@ -3172,7 +3172,7 @@ bool NppParameters::getSessionFromXmlTree(const NppXml::Document& pSessionDoc, S
 						if (!backupFilePath.starts_with(currentBackupFilePath))
 						{
 							// reconstruct backupFilePath
-							wchar_t* fn = ::PathFindFileNameW(pBackupFilePath);
+							const wchar_t* fn = ::PathFindFileNameW(pBackupFilePath);
 							currentBackupFilePath += fn;
 							pBackupFilePath = currentBackupFilePath.c_str();
 						}

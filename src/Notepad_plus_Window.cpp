@@ -15,7 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-#include <shlwapi.h>
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
 #include "Notepad_plus_Window.h"
 
 HWND Notepad_plus_Window::gNppHWND = NULL;
@@ -264,7 +265,7 @@ void Notepad_plus_Window::init(HINSTANCE hInst, HWND parent, const wchar_t *cmdL
 					::CreateDirectory(userDataThemePath.c_str(), NULL);
 				}
 
-				wchar_t* fn = PathFindFileName(fileName.c_str());
+				const wchar_t* fn = PathFindFileName(fileName.c_str());
 				pathAppend(userDataThemePath, fn);
 				themeSwitcher.addThemeStylerSavePath(fileName, userDataThemePath);
 			}

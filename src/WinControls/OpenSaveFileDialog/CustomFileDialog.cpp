@@ -15,6 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
+#if defined(_WIN32)
+
 #include <shobjidl.h>
 #include "MISC/Common/WindowsCompat.h"
 #ifdef __MINGW32__
@@ -1097,3 +1099,5 @@ wstring CustomFileDialog::pickFolder()
 	bool bOk = _impl->show();
 	return bOk ? _impl->getResultFilename() : L"";
 }
+
+#endif // _WIN32

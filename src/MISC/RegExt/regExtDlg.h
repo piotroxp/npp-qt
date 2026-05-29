@@ -1,37 +1,55 @@
-// regExtDlg.h - Qt port
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 #pragma once
-#include <QDialog>
-#include <QListWidget>
-#include <QPushButton>
-#include <QLabel>
-#include <QString>
 
-// Qt-compatible shims (no Windows headers needed)
-#ifdef _WIN32
-#include "MISC/Common/WindowsCompat.h"
-#else
-using HINSTANCE = void*;
-using HWND = void*;
-#endif
+#include "MISC/RegExt/regExtDlgRc.h"
+#include "WinControls/StaticDialog/StaticDialog.h"
 
-class RegExtDlg : public QDialog {
-    Q_OBJECT
-public:
-    RegExtDlg(QWidget* parent = nullptr);  // Fixed: had wrong signature
-    void init(HINSTANCE hInst, HWND parent);
-    void doDialog(bool toShow = true);
-    bool checkTheFileAndAssignExt(const wchar_t* fileExt);
-    void writeSettings();
+constexpr int extNameLen = 32;
 
-private slots:
-    void showDialog();
-    void getRegisteredExts();
-    void getDefSupportedExts();
-    void addExt(const QString& ext);
-    bool deleteExts(const QString& ext);
-    void writeNppPath();
+class RegExtDlg : public StaticDialog
+{
+public :
+	RegExtDlg() = default;
+	~RegExtDlg() override = default;
+	void doDialog(bool isRTL = false);
 
-private:
-    HWND _hParent = nullptr;
-    QListWidget* _extList = nullptr;
+
+private :
+	bool _isCustomize = false;
+
+	intptr_t CALLBACK run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam) override;
+
+	void getRegisteredExts();
+	void getDefSupportedExts();
+	void addExt(wchar_t *ext);
+	bool deleteExts(const wchar_t *ext2Delete);
+	void writeNppPath();
+
+	static int getNbSubKey(HKEY hKey) {
+		int nbSubKey = 0;
+		long result = ::RegQueryInfoKey(hKey, NULL, NULL, NULL, (LPDWORD)&nbSubKey, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+		return (result == ERROR_SUCCESS)?nbSubKey:0;
+	}
+
+	static int getNbSubValue(HKEY hKey) {
+		int nbSubValue = 0;
+		long result = ::RegQueryInfoKey(hKey, NULL, NULL, NULL, NULL, NULL, NULL, (LPDWORD)&nbSubValue, NULL, NULL, NULL, NULL);
+		return (result == ERROR_SUCCESS)?nbSubValue:0;
+	}
 };

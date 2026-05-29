@@ -20,7 +20,8 @@
 #include "MISC/Common/WindowsCompat.h"
 
 #include "MISC/Common/WindowsStubs.h"
-#include <vsstyle.h>
+#include "MISC/Common/vsstyle.h"
+#include "MISC/Common/WindowsStubs.h"
 
 #include <algorithm>
 #include <cassert>

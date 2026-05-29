@@ -181,12 +181,12 @@ void ToolBar::initTheme(NppXml::Document toolIconsDocRoot)
 				fs::path locator = iconFolderDir;
 				locator /= icoUnit._id;
 				locator.replace_extension(ext);
-				if (doesFileExist(locator.c_str()))
+				if (doesFileExist(locator.wstring().c_str()))
 				{
-					_customIconVect.push_back(iconLocator(HLIST_DEFAULT, i, locator));
-					_customIconVect.push_back(iconLocator(HLIST_DEFAULT2, i, locator));
-					_customIconVect.push_back(iconLocator(HLIST_DEFAULT_DM, i, locator));
-					_customIconVect.push_back(iconLocator(HLIST_DEFAULT_DM2, i, locator));
+					_customIconVect.push_back(iconLocator(HLIST_DEFAULT, i, locator.wstring()));
+					_customIconVect.push_back(iconLocator(HLIST_DEFAULT2, i, locator.wstring()));
+					_customIconVect.push_back(iconLocator(HLIST_DEFAULT_DM, i, locator.wstring()));
+					_customIconVect.push_back(iconLocator(HLIST_DEFAULT_DM2, i, locator.wstring()));
 				}
 
 				if (icoUnit._hasDisabledIcon)
@@ -195,12 +195,12 @@ void ToolBar::initTheme(NppXml::Document toolIconsDocRoot)
 					locator_dis /= icoUnit._id;
 					locator_dis += disabled_suffix;
 					locator_dis.replace_extension(ext);
-					if (doesFileExist(locator_dis.c_str()))
+					if (doesFileExist(locator_dis.wstring().c_str()))
 					{
-						_customIconVect.push_back(iconLocator(HLIST_DISABLE, i, locator_dis));
-						_customIconVect.push_back(iconLocator(HLIST_DISABLE2, i, locator_dis));
-						_customIconVect.push_back(iconLocator(HLIST_DISABLE_DM, i, locator_dis));
-						_customIconVect.push_back(iconLocator(HLIST_DISABLE_DM2, i, locator_dis));
+						_customIconVect.push_back(iconLocator(HLIST_DISABLE, i, locator_dis.wstring()));
+						_customIconVect.push_back(iconLocator(HLIST_DISABLE2, i, locator_dis.wstring()));
+						_customIconVect.push_back(iconLocator(HLIST_DISABLE_DM, i, locator_dis.wstring()));
+						_customIconVect.push_back(iconLocator(HLIST_DISABLE_DM2, i, locator_dis.wstring()));
 					}
 				}
 				++i;

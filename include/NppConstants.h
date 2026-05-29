@@ -1,2 +1,2 @@
 // Redirect to the real source file
-#include "src/MISC/Common/NppConstants.h"
+#include "MISC/Common/NppConstants.h"

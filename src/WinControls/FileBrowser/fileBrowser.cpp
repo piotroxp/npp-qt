@@ -868,7 +868,13 @@ void FileBrowser::popupMenuCmd(int cmdID)
 					}
 
 					if (hr == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
-						::ShellExecuteW(getHSelf(), L"explore", fs::path(selPath).parent_path().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+					{
+						wstring parentSel = selPath;
+						const size_t pos = parentSel.find_last_of(L"/\\");
+						if (pos != wstring::npos)
+							parentSel.resize(pos);
+						::ShellExecuteW(getHSelf(), L"explore", parentSel.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+					}
 				}
 			}
 		}
@@ -1059,7 +1065,7 @@ void FileBrowser::addRootFolder(wstring rootFolderPath)
 	std::vector<wstring> patterns2Match;
 	patterns2Match.push_back(L"*.*");
 
-	wchar_t *label = ::PathFindFileName(rootFolderPath.c_str());
+	const wchar_t* label = ::PathFindFileName(rootFolderPath.c_str());
 	wchar_t rootLabel[MAX_PATH] = {'\0'};
 	wcscpy_s(rootLabel, label);
 	size_t len = lstrlen(rootLabel);

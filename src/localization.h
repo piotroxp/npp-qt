@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include <QMenu>
 #include "MISC/Common/WindowsCompat.h"
 
 #include <map>
@@ -55,17 +54,17 @@ class NativeLangSpeaker
 public:
 	void init(NppXml::Document nativeLangDocRoot, bool loadIfEnglish = false);
 	void changeConfigLang(HWND hDlg) const;
-	void changeLangTabContextMenu(QMenu* hCM) const;
+	void changeLangTabContextMenu(HMENU hCM) const;
 	void getAlternativeNameFromTabContextMenu(std::wstring& output, int cmdID, bool isAlternative, const std::wstring& defaultValue) const;
 	static NppXml::Element searchDlgNode(NppXml::Element node, const char* dlgTagName);
 	bool changeDlgLang(HWND hDlg, const char* dlgTagName, char* title = nullptr, size_t titleMaxSize = 0) const;
-	void changeLangTabDropContextMenu(QMenu* hCM) const;
-	void changeLangTrayIconContexMenu(QMenu* hCM) const;
+	void changeLangTabDropContextMenu(HMENU hCM) const;
+	void changeLangTrayIconContexMenu(HMENU hCM) const;
 	std::wstring getSubMenuEntryName(const char* nodeName) const;
 	std::wstring getNativeLangMenuString(int itemID, const std::wstring& inCaseOfFailureStr = L"", bool removeMarkAnd = false) const;
 	std::wstring getShortcutNameString(int itemID) const;
 
-	void changeMenuLang(QMenu* menuHandle) const;
+	void changeMenuLang(HMENU menuHandle) const;
 	static void changeStyleCtrlsLang(HWND hDlg, int* idArray, const char** translatedText);
 	void changeUserDefineLang(UserDefineDialog* userDefineDlg) const;
 	void changeUserDefineLangPopupDlg(HWND hDlg) const;

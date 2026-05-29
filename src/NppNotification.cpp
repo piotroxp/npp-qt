@@ -17,14 +17,15 @@
 
 #include "localization.h"
 #include "Notepad_plus_Window.h"
-#include "functionListPanel.h"
-#include "xmlMatchedTagsHighlighter.h"
-#include "VerticalFileSwitcher.h"
+#include "WinControls/FunctionList/functionListPanel.h"
+#include "ScintillaComponent/xmlMatchedTagsHighlighter.h"
+#include "WinControls/VerticalFileSwitcher/VerticalFileSwitcher.h"
 #include "NppDarkMode.h"
-#include "documentMap.h"
-#include "Common.h"
+#include "WinControls/DocumentMap/documentMap.h"
+#include "MISC/Common/Common.h"
+#include "MISC/Common/WindowsMessageStubs.h"
 #include <stack>
-#include "shortcut.h"
+#include "WinControls/shortcut/shortcut.h"
 
 using namespace std;
 

@@ -22,7 +22,8 @@
 
 #include "xmlMatchedTagsHighlighter.h"
 #include "ScintillaEditView.h"
-#include <shlwapi.h>
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
 
 using namespace std;
 

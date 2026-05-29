@@ -7,18 +7,13 @@
 #include <QMap>
 #include "NppXml.h"
 
-// Forward declarations for missing types
-
-// Simple document holder
-using NppXmlDoc = NppXml*;
-
 class NativeLangSpeaker : public QObject {
     Q_OBJECT
 public:
     NativeLangSpeaker(QObject* parent = nullptr) : QObject(parent) {}
     ~NativeLangSpeaker() = default;
     
-    void init(NppXmlDoc nativeLangDocRoot, bool loadIfEnglish = false);
+    void init(NppXmlDoc* nativeLangDocRoot, bool loadIfEnglish = false);
     void changeConfigLang(QWidget* hDlg) const;
     void changeLangTabContextMenu(QMenu* hCM) const;
     void getAlternativeNameFromTabContextMenu(QString& output, int cmdID, bool isAlternative, const QString& defaultValue) const;
@@ -45,7 +40,7 @@ public:
                                       const QString& nodeL2Name = "name");
     
 private:
-    NppXml* _nativeLang = nullptr;
+    NppXmlDoc* _nativeLang = nullptr;
     bool _isRTL = false;
     bool _isEditZoneRTL = false;
     QString _fileName;

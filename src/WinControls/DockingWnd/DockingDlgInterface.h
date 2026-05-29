@@ -47,9 +47,7 @@ public:
 	virtual void create(DockedWidgetData* data, bool isRTL = false) {
 		assert(data != nullptr);
 		StaticDialog::create(_dlgID, isRTL);
-		wchar_t temp[MAX_PATH];
-		::GetWindowText(_hSelf, temp, MAX_PATH);
-		_pluginName = temp;
+		_pluginName = _hSelf ? _hSelf->windowTitle().toStdWString() : std::wstring();
 
 		// user information
 		data->hClient = _hSelf;

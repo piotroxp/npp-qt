@@ -46,8 +46,6 @@ typedef void (*PFUNCSETINFO)(NppData);
 typedef void (*PFUNCPLUGINCMD)();
 typedef void (*PBENOTIFIED)(SCNotification*);
 typedef long (*PMESSAGEPROC)(unsigned int, unsigned long, long);
-typedef FuncItem* (*PFUNCGETFUNCSARRAY)(int*);
-typedef bool (*PFUNCISUNICODE)();
 
 struct ShortcutKey
 {
@@ -67,6 +65,9 @@ struct FuncItem
 	bool _init2Check = false;
 	ShortcutKey *_pShKey = nullptr;
 };
+
+typedef FuncItem* (*PFUNCGETFUNCSARRAY)(int*);
+typedef bool (*PFUNCISUNICODE)();
 
 // Plugin API functions (stub for Linux)
 extern "C" __declspec(dllexport) void setInfo(NppData);

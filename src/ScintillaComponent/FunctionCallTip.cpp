@@ -25,7 +25,9 @@
 
 #include <Scintilla.h>
 
-#include "Common.h"
+#include "MISC/Common/Common.h"
+#include "MISC/Common/WindowsStubs.h"
+#include "MISC/Common/WindowsMessageStubs.h"
 #include "NppXml.h"
 
 struct Token {

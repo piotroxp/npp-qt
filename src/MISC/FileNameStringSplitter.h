@@ -3,12 +3,18 @@
 
 #include <QString>
 #include <QStringList>
+#include <string>
+#include <vector>
 
 typedef QStringList stringVector;
 
 class FileNameStringSplitter
 {
 public:
+    FileNameStringSplitter(const wchar_t* fileNameStr)
+        : FileNameStringSplitter(QString::fromWCharArray(fileNameStr ? fileNameStr : L""))
+    {}
+
     FileNameStringSplitter(const QString& fileNameStr)
     {
         const int filePathLength = 260; // MAX_PATH
@@ -67,14 +73,21 @@ public:
         }
     }
 
-    const stringVector& getFileNames() const {
-        return _fileNames;
+    const wchar_t* getFileName(size_t index) const {
+        if (index >= static_cast<size_t>(_fileNames.size()))
+            return nullptr;
+        _wstringCache.resize(_fileNames.size());
+        if (_wstringCache[index].empty())
+            _wstringCache[index] = _fileNames.at(static_cast<int>(index)).toStdWString();
+        return _wstringCache[index].c_str();
     }
 
-    const QString getFileName(size_t index) const {
-        if (index >= static_cast<size_t>(_fileNames.size()))
-            return QString();
-        return _fileNames.at(static_cast<int>(index));
+    std::vector<std::wstring> getFileNames() const {
+        std::vector<std::wstring> out;
+        out.reserve(_fileNames.size());
+        for (const QString& s : _fileNames)
+            out.push_back(s.toStdWString());
+        return out;
     }
 
     int size() const {
@@ -83,4 +96,5 @@ public:
 
 private:
     stringVector _fileNames;
+    mutable std::vector<std::wstring> _wstringCache;
 };

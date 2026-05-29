@@ -19,7 +19,9 @@
 
 #include "MISC/Common/WindowsCompat.h"
 
-#include <commdlg.h>
+#include "MISC/Common/commdlg.h"
+#include "MISC/Common/WindowsStubs.h"
+#include "MISC/Common/WindowsMessageStubs.h"
 
 #include <array>
 #include <stdexcept>

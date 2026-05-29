@@ -15,9 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 #include "MISC/Common/Common.h"
-#include <QMenu>
-#include <QAction>
-#include <QWidget>
+
+
 
 struct MenuItemUnit final
 {
@@ -39,31 +38,35 @@ public:
 		destroy();
 	}
 
-	void create(QWidget* hParent, const std::vector<MenuItemUnit> & menuItemArray, QMenu* mainMenuHandle = nullptr, bool copyLink = false);
-	bool isCreated() const { return _menu != nullptr; }
-
-	void display(const QPoint& p) const {
-		if (_menu) {
-			_menu->popup(p);
-		}
+	void create(HWND hParent, const std::vector<MenuItemUnit> & menuItemArray, const HMENU mainMenuHandle = NULL, bool copyLink = false);
+	bool isCreated() const {return _hMenu != NULL;}
+	
+	void display(const POINT & p) const {
+		::TrackPopupMenu(_hMenu, TPM_LEFTALIGN, p.x, p.y, 0, _hParent, NULL);
 	}
 
-	void display(QWidget* hwnd) const;
+	void display(HWND hwnd) const;
 
-	void enableItem(int cmdID, bool doEnable) const;
-	bool isItemEnabled(int cmdID) const;
-	void checkItem(int cmdID, bool doCheck) const;
-	bool isItemChecked(int cmdID) const;
+	void enableItem(int cmdID, bool doEnable) const
+	{
+		int flag = doEnable ? (MF_ENABLED | MF_BYCOMMAND) : (MF_DISABLED | MF_GRAYED | MF_BYCOMMAND);
+		::EnableMenuItem(_hMenu, cmdID, flag);
+	}
 
-	QMenu* getMenuHandle() const { return _menu; }
+	void checkItem(int cmdID, bool doCheck) const
+	{
+		::CheckMenuItem(_hMenu, cmdID, MF_BYCOMMAND | (doCheck ? MF_CHECKED : MF_UNCHECKED));
+	}
+
+	HMENU getMenuHandle() const
+	{
+		return _hMenu;
+	}
 
 	void destroy();
 
-	// Helper: find action by ID
-	QAction* findAction(int cmdID) const;
-
 private:
-	QWidget* _hParent = nullptr;
-	QMenu* _menu = nullptr;
-	std::vector<QMenu*> _subMenus;
+	HWND _hParent = NULL;
+	HMENU _hMenu = NULL;
+	std::vector<HMENU> _subMenus;
 };

@@ -1,43 +1,47 @@
-// MISC/md5/md5Dlgs.h - Qt6 port of MD5 hash dialog
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
 #pragma once
 
-#include <QDialog>
+#include "WinControls/StaticDialog/StaticDialog.h"
 
-// Hash type enum - moved outside classes for easier access
-enum HashType { hash_md5 = 16, hash_sha1 = 20, hash_sha256 = 32, hash_sha512 = 64 };
-
-class HashFromFilesDlg : public QDialog
-{
-    Q_OBJECT
-public:
-    HashFromFilesDlg(QWidget* parent = nullptr);
-    ~HashFromFilesDlg() = default;
-
-    void accept() override;
-    void reject() override;
-
-    void setHashType(int hashType2set);
-
-private:
-    int _ht = hash_md5;
-};
-
-class HashFromTextDlg : public QDialog
-{
-    Q_OBJECT
-public:
-    HashFromTextDlg(QWidget* parent = nullptr);
-    ~HashFromTextDlg() = default;
-
-    void accept() override;
-    void reject() override;
-    void generateHash();
-    void generateHashPerLine();
-    void setHashType(int hashType2set);
-
-private:
-    int _ht = hash_md5;
-};
+enum hashType {hash_md5 = 16, hash_sha1 = 20, hash_sha256 = 32, hash_sha512 = 64};
 
 #define HASH_MAX_LENGTH hash_sha512
 #define HASH_STR_MAX_LENGTH (hash_sha512 * 2 + 1)
+
+class HashFromFilesDlg : public StaticDialog
+{
+public :
+	HashFromFilesDlg() = default;
+
+	void doDialog(bool isRTL = false);
+	void destroy() override;
+	void setHashType(hashType hashType2set);
+
+protected :
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
+	hashType _ht = hash_md5;
+
+private :
+	HFONT _hFont = nullptr;
+};
+
+class HashFromTextDlg : public StaticDialog
+{
+public :
+	HashFromTextDlg() = default;
+
+	void doDialog(bool isRTL = false);
+	void destroy() override;
+	void generateHash();
+	void generateHashPerLine();
+	void setHashType(hashType hashType2set);
+
+protected :
+	intptr_t CALLBACK run_dlgProc(UINT message, WPARAM wParam, LPARAM lParam) override;
+	hashType _ht = hash_md5;
+
+private :
+	HFONT _hFont = nullptr;
+};

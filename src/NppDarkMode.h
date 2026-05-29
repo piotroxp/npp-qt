@@ -173,6 +173,7 @@ namespace NppDarkMode
 	// handle events
 	void handleSettingChange(HWND hwnd, LPARAM lParam, bool isFromBtn = false);
 	bool isDarkModeReg();
+	bool isHighContrast();
 
 	// from DarkMode.h
 	void initExperimentalDarkMode();

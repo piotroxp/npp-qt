@@ -29,6 +29,9 @@
 #include <QEvent>
 #include <QDebug>
 
+bool g_darkModeSupported = false;
+bool g_darkModeEnabled = false;
+
 // =============================================================================
 // COLORREF helper - uses 0xRRGGBB format (same as HEXRGB output)
 // =============================================================================
@@ -340,7 +343,7 @@ namespace NppDarkMode
         {
             NppParameters& nppParam = NppParameters::getInstance();
             NppGUI& nppGUI = nppParam.getNppGUI();
-            nppGUI._darkmode._isEnabled = NppDarkMode::isDarkModeReg() && !IsHighContrast();
+            nppGUI._darkmode._isEnabled = NppDarkMode::isDarkModeReg() && !NppDarkMode::isHighContrast();
             _options.enable = nppGUI._darkmode._isEnabled;
         }
 
@@ -568,8 +571,10 @@ namespace NppDarkMode
     {
         Q_UNUSED(hwnd); Q_UNUSED(lParam); Q_UNUSED(isFromBtn);
         if (!isExperimentalSupported()) return;
-        g_darkModeEnabled = NppDarkMode::isDarkModeReg() && !IsHighContrast();
+        g_darkModeEnabled = NppDarkMode::isDarkModeReg() && !NppDarkMode::isHighContrast();
     }
+
+    bool isHighContrast() { return false; }
 
     bool isDarkModeReg()
     {
@@ -608,7 +613,7 @@ namespace NppDarkMode
         }
         else
         {
-            qApp->setPalette(qApp->style()->standardPalette());
+            qApp->setPalette(QApplication::palette());
         }
     }
 

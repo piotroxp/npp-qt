@@ -20,11 +20,11 @@
 #include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "localization.h"
 #include "../MISC/Common/Common.h"
-#include "Utf8.h"
 
 #include "../MISC/Common/WindowsCompat.h"
 
 #include "MISC/Common/WindowsStubs.h"
+#include "MISC/Common/WindowsMessageStubs.h"
 
 #include <cstring>
 #include <memory>
@@ -33,6 +33,22 @@
 #include "MISC/Common/NppConstants.h"
 
 using namespace std;
+
+namespace {
+bool utf8TailIsValid(const char* buf, int buflen)
+{
+	if (!buf || buflen <= 0) return true;
+	const unsigned char c = static_cast<unsigned char>(buf[0]);
+	if (c < 0x80) return true;
+	if (c < 0xC2 || c >= 0xF5) return false;
+	static const int lens[] = {1, 1, 2, 3};
+	const int n = (c < 0xC0) ? 0 : lens[(c & 0x30) >> 4];
+	if (buflen < n + 1) return false;
+	for (int i = n; i > 0; --i)
+		if ((static_cast<unsigned char>(buf[i]) & 0xC0) != 0x80) return false;
+	return true;
+}
+} // namespace
 
 FindOption * FindReplaceDlg::_env;
 FindOption FindReplaceDlg::_options;
@@ -5847,7 +5863,7 @@ string Finder::foundLine(FoundInfo fi, SearchResultMarkingLine miLine, const wch
 			size_t lenEndOfLongLine = strlen(endOfLongLine);
 			size_t cut = SC_SEARCHRESULT_LINEBUFFERMAXLENGTH - lenEndOfLongLine - 1;
 
-			while ((cut > 0) && (!Utf8::isValid(&text2AddUtf8[cut], (int)(text2AddUtf8Len - cut))))
+			while ((cut > 0) && (!utf8TailIsValid(&text2AddUtf8[cut], static_cast<int>(text2AddUtf8Len - cut))))
 				cut--;
 
 			memcpy(static_cast<void*>(const_cast<char*>(&text2AddUtf8[cut])), endOfLongLine, lenEndOfLongLine + 1);

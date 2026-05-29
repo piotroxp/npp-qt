@@ -25,14 +25,14 @@
 #include "WinControls/StatusBar/StatusBar.h"
 #include "lastRecentFileList.h"
 #include "ScintillaComponent/GoToLineDlg.h"
-#include "ScintillaComponent/FindCharsInRange.h"
+#include "WinControls/FindCharsInRange/FindCharsInRange.h"
 #include "ScintillaComponent/columnEditor.h"
 #include "WinControls/ColourPicker/WordStyleDlg.h"
 #include "WinControls/TrayIcon/trayIconControler.h"
 #include "MISC/PluginsManager/PluginsManager.h"
 #include "WinControls/Preference/preferenceDlg.h"
 #include "WinControls/WindowsDlg/WindowsDlg.h"
-#include "WinControls/shortcut/RunMacroDlg/RunMacroDlg.h"
+#include "WinControls/shortcut/RunMacroDlg.h"
 #include "WinControls/DockingWnd/DockingManager.h"
 #include "MISC/Process/Processus.h"
 #include "ScintillaComponent/AutoCompletion.h"
@@ -277,6 +277,9 @@ public:
 	void refreshInternalPanelIcons();
 
 	void changeReadOnlyUserModeForAllOpenedTabs(const bool ro);
+
+	ScintillaEditView* getCurrentEditView() const { return _pEditView; }
+	void executeCommand(int id) { command(id); }
 
 private:
 	Notepad_plus_Window* _pPublicInterface = nullptr;

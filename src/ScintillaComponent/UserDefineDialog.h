@@ -30,7 +30,7 @@
 #include "../WinControls/TabBar/ControlsTab.h"
 #include "../Parameters.h"
 #include "../WinControls/StaticDialog/StaticDialog.h"
-#include "../MISC/Common/URLCtrl.h"
+#include "WinControls/AboutDlg/URLCtrl.h"
 #include "UserDefineResource.h"
 #include "../WinControls/Window.h"
 

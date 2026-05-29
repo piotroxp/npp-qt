@@ -22,6 +22,7 @@
 #include "MISC/Common/NppConstants.h"
 
 #include "MISC/Common/WindowsStubs.h"
+#include "MISC/Common/WindowsMessageStubs.h"
 
 void ColourPicker::init(HINSTANCE hInst, HWND parent)
 {

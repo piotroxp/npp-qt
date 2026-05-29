@@ -1,6 +1,7 @@
 // MainWindow.cpp - Qt6 main window implementation
 #include "MainWindow.h"
 #include "Notepad_plus.h"
+#include "menuCmdID.h"
 #include <QMenuBar>
 #include <QMenu>
 #include <QAction>
@@ -128,14 +129,14 @@ void MainWindow::setupMenuBar() {
 }
 
 // File menu slots
-void MainWindow::onFileNew() { if (_npp) _npp->onFileNew(); }
-void MainWindow::onFileOpen() { if (_npp) _npp->onFileOpen(); }
-void MainWindow::onFileSave() { if (_npp) _npp->onFileSave(); }
-void MainWindow::onFileSaveAs() { if (_npp) _npp->onFileSaveAs(); }
-void MainWindow::onFileSaveAll() { if (_npp) _npp->onFileSaveAll(); }
-void MainWindow::onFileClose() { if (_npp) _npp->onFileClose(); }
-void MainWindow::onFileCloseAll() { if (_npp) _npp->onFileCloseAll(); }
-void MainWindow::onFilePrint() { if (_npp) _npp->onFilePrint(); }
+void MainWindow::onFileNew() { if (_npp) _npp->fileNew(); }
+void MainWindow::onFileOpen() { if (_npp) _npp->fileOpen(); }
+void MainWindow::onFileSave() { if (_npp) _npp->fileSave(); }
+void MainWindow::onFileSaveAs() { if (_npp) _npp->fileSaveAs(); }
+void MainWindow::onFileSaveAll() { if (_npp) _npp->fileSaveAll(); }
+void MainWindow::onFileClose() { if (_npp) _npp->fileClose(); }
+void MainWindow::onFileCloseAll() { if (_npp) _npp->fileCloseAll(false); }
+void MainWindow::onFilePrint() { if (_npp) _npp->filePrint(true); }
 
 // Edit menu slots
 void MainWindow::onEditUndo() { /* handled by scintilla */ }
@@ -145,27 +146,27 @@ void MainWindow::onEditCopy() { /* handled by scintilla */ }
 void MainWindow::onEditPaste() { /* handled by scintilla */ }
 void MainWindow::onEditDelete() { /* handled by scintilla */ }
 void MainWindow::onEditSelectAll() { /* handled by scintilla */ }
-void MainWindow::onEditFind() { if (_npp) _npp->onEditFind(); }
-void MainWindow::onEditReplace() { if (_npp) _npp->onEditReplace(); }
+void MainWindow::onEditFind() { if (_npp) _npp->executeCommand(IDM_SEARCH_FIND); }
+void MainWindow::onEditReplace() { if (_npp) _npp->executeCommand(IDM_SEARCH_REPLACE); }
 
 // Search menu slots
-void MainWindow::onSearchFindNext() { if (_npp) _npp->onSearchFindNext(); }
-void MainWindow::onSearchFindPrev() { if (_npp) _npp->onSearchFindPrev(); }
+void MainWindow::onSearchFindNext() { if (_npp) _npp->executeCommand(IDM_SEARCH_FINDNEXT); }
+void MainWindow::onSearchFindPrev() { if (_npp) _npp->executeCommand(IDM_SEARCH_FINDPREV); }
 void MainWindow::onSearchGoToLine() { /* open dialog */ }
 
 // View menu slots
-void MainWindow::onViewZoomIn() { if (_npp) _npp->onViewZoomIn(); }
-void MainWindow::onViewZoomOut() { if (_npp) _npp->onViewZoomOut(); }
+void MainWindow::onViewZoomIn() { if (_npp) _npp->executeCommand(IDM_VIEW_ZOOMIN); }
+void MainWindow::onViewZoomOut() { if (_npp) _npp->executeCommand(IDM_VIEW_ZOOMOUT); }
 void MainWindow::onViewFullScreen() { /* toggle fullscreen */ }
 void MainWindow::onViewPostIt() { /* toggle post-it mode */ }
 
 // Tools menu slots
-void MainWindow::onRunCommand() { if (_npp) _npp->onRunCommand(); }
+void MainWindow::onRunCommand() { if (_npp) _npp->executeCommand(IDM_MACRO_RUNMULTIMACRODLG); }
 
 // Macro menu slots
-void MainWindow::onMacroStartRecord() { if (_npp) _npp->onMacroStartRecord(); }
-void MainWindow::onMacroStopRecord() { if (_npp) _npp->onMacroStopRecord(); }
-void MainWindow::onMacroPlayRecord() { if (_npp) _npp->onMacroPlayRecord(); }
+void MainWindow::onMacroStartRecord() { if (_npp) _npp->executeCommand(IDM_MACRO_STARTRECORDINGMACRO); }
+void MainWindow::onMacroStopRecord() { if (_npp) _npp->executeCommand(IDM_MACRO_STOPRECORDINGMACRO); }
+void MainWindow::onMacroPlayRecord() { if (_npp) _npp->executeCommand(IDM_MACRO_PLAYBACKRECORDEDMACRO); }
 
 void MainWindow::setupToolBar() {
     // Placeholder toolbar - actual implementation would connect to _npp methods

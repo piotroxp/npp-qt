@@ -1,31 +1,60 @@
-// MISC/Process/Processus.cpp - Qt6 port of Notepad++ process utilities
+// This file is part of Notepad++ project
+// Copyright (C)2021 Don HO <don.h@free.fr>
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+#include "Parameters.h"
 #include "Processus.h"
-#include <QProcess>
-#include <QMessageBox>
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsMessageStubs.h"
+
 
 void Process::run(bool isElevationRequired) const
 {
-    Q_UNUSED(isElevationRequired); // On Linux, elevation is handled differently
-    
-    QStringList args = _args.isEmpty() ? QStringList() : _args.split(' ', Qt::SkipEmptyParts);
-    QProcess* proc = new QProcess();
-    proc->setWorkingDirectory(_curDir);
-    proc->start(_command, args);
+	const wchar_t *opVerb = isElevationRequired ? L"runas" : L"open";
+	::ShellExecute(NULL, opVerb, _command.c_str(), _args.c_str(), _curDir.c_str(), SW_SHOWNORMAL);
 }
 
 unsigned long Process::runSync(bool isElevationRequired) const
 {
-    Q_UNUSED(isElevationRequired);
-    
-    QProcess proc;
-    proc.setWorkingDirectory(_curDir);
-    
-    QStringList args = _args.isEmpty() ? QStringList() : _args.split(' ', Qt::SkipEmptyParts);
-    proc.start(_command, args);
-    
-    if (!proc.waitForFinished(-1)) {
-        throw QString("Process failed: ") + proc.errorString();
-    }
-    
-    return proc.exitCode();
+	SHELLEXECUTEINFO ShExecInfo = {};
+	ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+	ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+	ShExecInfo.hwnd = NULL;
+	ShExecInfo.lpVerb = isElevationRequired ? L"runas" : L"open";
+	ShExecInfo.lpFile = _command.c_str();
+	ShExecInfo.lpParameters = _args.c_str();
+	ShExecInfo.lpDirectory = _curDir.c_str();
+	ShExecInfo.nShow = SW_SHOWNORMAL;
+	ShExecInfo.hInstApp = NULL;
+
+	ShellExecuteEx(&ShExecInfo);
+	if (!ShExecInfo.hProcess)
+	{
+		// throw exception
+		throw GetLastErrorAsString(GetLastError());
+	}
+
+	WaitForSingleObject(ShExecInfo.hProcess, INFINITE);
+
+	DWORD exitCode = 0;
+	if (::GetExitCodeProcess(ShExecInfo.hProcess, &exitCode) == FALSE)
+	{
+		// throw exception
+		throw GetLastErrorAsString(GetLastError());
+	}
+
+	return exitCode;
 }

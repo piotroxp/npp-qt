@@ -6,6 +6,8 @@
 #include "WinControls/OpenSaveFileDialog/CustomFileDialog.h"
 #include "MISC/Common/NppConstants.h"
 
+#include <QApplication>
+
 #include <cstring>
 #include <cstdlib>
 #include <algorithm>
@@ -71,8 +73,8 @@ bool buf2Clipboard(const std::vector<Buffer*>&, bool, void*) { return true; }
 std::wstring GetLastErrorAsString(unsigned int) { return L"no error"; }
 std::wstring intToString(int v) { return std::to_wstring(v); }
 std::wstring uintToString(unsigned int v) { return std::to_wstring(v); }
-void* createToolTip(int, void*, void*, wchar_t*, bool) { return nullptr; }
-void* createToolTipRect(int, void*, void*, wchar_t*, RECT) { return nullptr; }
+HWND createToolTip(int, HWND, HINSTANCE, wchar_t*, bool) { return nullptr; }
+HWND createToolTipRect(int, HWND, HINSTANCE, wchar_t*, RECT) { return nullptr; }
 bool isCertificateValidated(const std::wstring&, const std::wstring&) { return false; }
 bool isAssoCommandExisting(const wchar_t*) { return false; }
 bool deleteFileOrFolder(const std::wstring&) { return false; }
@@ -80,15 +82,6 @@ void getFilesInFolder(std::vector<std::wstring>&, const std::wstring&, const std
 bool matchInList(const wchar_t*, const std::vector<std::wstring>&) { return false; }
 bool matchInExcludeDirList(const wchar_t*, const std::vector<std::wstring>&, size_t) { return false; }
 bool allPatternsAreExclusion(const std::vector<std::wstring>&) { return true; }
-
-template<typename T> size_t vecRemoveDuplicates(std::vector<T>& v, bool s, bool cs) {
-    if (!s && cs) std::sort(v.begin(), v.end());
-    v.erase(std::unique(v.begin(), v.end()), v.end()); return v.size();
-}
-template size_t vecRemoveDuplicates<>(std::vector<int>&, bool, bool);
-template size_t vecRemoveDuplicates<>(std::vector<unsigned int>&, bool, bool);
-template size_t vecRemoveDuplicates<>(std::vector<char>&, bool, bool);
-template size_t vecRemoveDuplicates<>(std::vector<wchar_t>&, bool, bool);
 
 void trim(std::wstring&) {}
 int nbDigitsFromNbLines(size_t n) { int d=1; while(n/=10) ++d; return d; }
@@ -115,7 +108,7 @@ bool doesPathExist(const wchar_t* f, unsigned int, bool*) { return QFileInfo(QSt
 bool isWindowVisibleOnAnyMonitor(const RECT&) { return false; }
 bool isCoreWindows() { return false; }
 
-bool ControlInfoTip::init(void*, void*, void*, const std::wstring&, bool, unsigned int, int) { return false; }
+bool ControlInfoTip::init(HINSTANCE, HWND, HWND, const std::wstring&, bool, unsigned int, int) { return false; }
 void ControlInfoTip::show(showPosition) const {}
 void ControlInfoTip::hide() {}
 

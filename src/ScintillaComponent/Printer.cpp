@@ -16,8 +16,10 @@
 
 
 #include "Printer.h"
-#include "RunDlg.h"
+#include "WinControls/StaticDialog/RunDlg/RunDlg.h"
 #include "localization.h"
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
 
 using namespace std;
 

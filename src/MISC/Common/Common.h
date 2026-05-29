@@ -185,8 +185,8 @@ bool buf2Clipboard(const std::vector<Buffer*>& buffers, bool isFullPath, void* h
 std::wstring GetLastErrorAsString(unsigned int errorCode = 0);
 std::wstring intToString(int val);
 std::wstring uintToString(unsigned int val);
-void* createToolTip(int toolID, void* hDlg, void* hInst, wchar_t* pszText, bool isRTL);
-void* createToolTipRect(int toolID, void* hWnd, void* hInst, wchar_t* pszText, RECT rc);
+HWND createToolTip(int toolID, HWND hDlg, HINSTANCE hInst, wchar_t* pszText, bool isRTL);
+HWND createToolTipRect(int toolID, HWND hWnd, HINSTANCE hInst, wchar_t* pszText, RECT rc);
 bool isCertificateValidated(const std::wstring & fullFilePath, const std::wstring & subjectName2check);
 bool isAssoCommandExisting(const wchar_t* FullPathName);
 bool deleteFileOrFolder(const std::wstring& f2delete);
@@ -278,15 +278,15 @@ class ControlInfoTip final
 public:
 	ControlInfoTip() = default;
 	~ControlInfoTip() { hide(); }
-	bool init(void* hInst, void* ctrl2attached, void* ctrl2attachedParent, const std::wstring& tipStr, bool isRTL, unsigned int remainTimeMillisecond = 0, int maxWidth = 200);
+	bool init(HINSTANCE hInst, HWND ctrl2attached, HWND ctrl2attachedParent, const std::wstring& tipStr, bool isRTL, unsigned int remainTimeMillisecond = 0, int maxWidth = 200);
 	bool isValid() const { return _hWndInfoTip != nullptr; }
-	void* getTipHandle() const { return _hWndInfoTip; }
+	HWND getTipHandle() const { return _hWndInfoTip; }
 	enum showPosition { beginning, middle, end };
 	void show(showPosition pos = middle) const;
 	void hide();
 
 private:
-	void* _hWndInfoTip = nullptr;
+	HWND _hWndInfoTip = nullptr;
 	TOOLINFO _toolInfo = {};
 
 	ControlInfoTip(const ControlInfoTip&) = delete;
@@ -329,24 +329,4 @@ public:
 	static std::string encode(std::wstring_view sv);
 };
 
-// Forward declarations for types used in declarations
-#ifndef WIN32_FILE_ATTRIBUTE_DATA
-struct WIN32_FILE_ATTRIBUTE_DATA {
-    unsigned long dwFileAttributes;
-    FILETIME ftCreationTime, ftLastAccessTime, ftLastWriteTime;
-    unsigned long nFileSizeHigh, nFileSizeLow;
-};
-#endif
-
-#ifndef TOOLINFO
-#define TOOLINFO
-struct TOOLINFO {
-    unsigned int cbSize, uFlags;
-    void* hwnd, * uId;
-    RECT rect;
-    void* hinst;
-    wchar_t* lpszText;
-    long lParam;
-    void* lpReserved;
-};
-#endif
+// WIN32_FILE_ATTRIBUTE_DATA and TOOLINFO are defined in WindowsCompat.h

@@ -163,6 +163,13 @@ inline constexpr int TAB_SHOWONLYPINNEDBUTTON  =    0x2000;    // 0010 0000 0000
 inline constexpr bool activeText = true;
 inline constexpr bool activeNumeric = false;
 
+#ifdef unix
+#undef unix
+#endif
+#ifdef linux
+#undef linux
+#endif
+
 enum class EolType : std::uint8_t
 {
 	windows,

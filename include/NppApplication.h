@@ -5,6 +5,9 @@
 #include <QSettings>
 #include <QTranslator>
 #include <QDir>
+#include <QLocale>
+#include <QLibraryInfo>
+#include <QStandardPaths>
 
 class NppApplication : public QApplication {
     Q_OBJECT

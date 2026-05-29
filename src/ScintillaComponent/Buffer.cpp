@@ -29,6 +29,8 @@
 #include "EncodingMapper.h"
 #include "uchardet/uchardet.h"
 #include "MISC/Common/FileInterface.h"
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
 
 
 static const int blockSize = 128 * 1024 + 4;
@@ -263,7 +265,7 @@ void Buffer::setFileName(const wchar_t *fn)
 	}
 
 	_fullPathName = fn;
-	_fileName = PathFindFileName(_fullPathName.c_str());
+	_fileName = PathFindFileName(_fullPathName.data());
 
 	const UINT tabCompactLabelLen = nppParamInst.getNbTabCompactLabelLen();
 	if ((tabCompactLabelLen == 0) || (static_cast<UINT>(wcslen(_fileName)) <= tabCompactLabelLen))
@@ -284,7 +286,7 @@ void Buffer::setFileName(const wchar_t *fn)
 
 	// for _lang
 	LangType determinedLang = L_TEXT;
-	wchar_t *ext = PathFindExtension(_fullPathName.c_str());
+	wchar_t *ext = PathFindExtension(_fullPathName.data());
 	if (*ext == '.') // extension found
 	{
 		ext += 1;
@@ -1964,7 +1966,11 @@ bool FileManager::loadFileData(Document doc, int64_t fileSize, const wchar_t * f
 	EolType format = EolType::unknown;
 	int sciStatus = SC_STATUS_OK;
 	wchar_t szException[64] = {'\0'};
+#if defined(_WIN32)
 	__try
+#else
+	try
+#endif
 	{
 		// First allocate enough memory for the whole file (this will reduce memory copy during loading)
 		_pscratchTilla->execute(SCI_ALLOCATE, WPARAM(bufferSizeRequested));
@@ -2098,7 +2104,11 @@ bool FileManager::loadFileData(Document doc, int64_t fileSize, const wchar_t * f
 		}
 		while (lenFile > 0);
 	}
+#if defined(_WIN32)
 	__except (EXCEPTION_EXECUTE_HANDLER)
+#else
+	catch (...)
+#endif
 	{
 		switch (sciStatus)
 		{

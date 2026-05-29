@@ -18,6 +18,8 @@
 #include "URLCtrl.h"
 
 #include "MISC/Common/WindowsStubs.h"
+#include "MISC/Common/WindowsMessageStubs.h"
+#include "MISC/Common/windowsx.h"
 
 #include "MISC/Common/Common.h"
 #include "MISC/Common/NppConstants.h"

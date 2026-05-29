@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "MISC/Common/WindowsCompat.h"
 #include "WinControls/Window.h"
 #include <string>
 

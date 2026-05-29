@@ -54,6 +54,10 @@ Do you want to remove this plugin from the plugins directory to prevent this mes
 
 static WORD getBinaryArchitectureType(const wchar_t *filePath)
 {
+#if !defined(_WIN32)
+	(void)filePath;
+	return IMAGE_FILE_MACHINE_UNKNOWN;
+#else
 	HANDLE hFile = CreateFile(filePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
@@ -86,6 +90,7 @@ static WORD getBinaryArchitectureType(const wchar_t *filePath)
 	CloseHandle(hFile);
 
 	return machine_type;
+#endif // _WIN32
 }
 
 #ifndef LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR
@@ -234,11 +239,11 @@ int PluginsManager::loadPluginFromPath(const wchar_t *pluginFilePath)
 
 			fs::path xmlPath = nppParams.getNppPath() / pluginPath;
 
-			if (!doesFileExist(xmlPath.c_str()))
+			if (!doesFileExist(xmlPath.wstring().c_str()))
 			{
 				xmlPath = nppParams.getAppDataNppDir() / pluginPath;
 
-				if (!doesFileExist(xmlPath.c_str()))
+				if (!doesFileExist(xmlPath.wstring().c_str()))
 				{
 					throw std::wstring(xmlPath.wstring() + L" is missing.");
 				}
@@ -246,7 +251,7 @@ int PluginsManager::loadPluginFromPath(const wchar_t *pluginFilePath)
 
 			NppXml::Document pXmlDoc = new NppXml::NewDocument();
 
-			if (!NppXml::loadFile(pXmlDoc, xmlPath.c_str()))
+			if (!NppXml::loadFile(pXmlDoc, xmlPath.wstring().c_str()))
 			{
 				delete pXmlDoc;
 				pXmlDoc = nullptr;

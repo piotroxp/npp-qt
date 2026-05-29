@@ -64,11 +64,11 @@ private :
 
 	long long getLine() const {
 		constexpr int maxLen = 256;
-		char goLineEditStr[maxLen] = {'\0'};
-		UINT count = ::GetDlgItemTextA(_hSelf, ID_GOLINE_EDIT, goLineEditStr, maxLen);
+		wchar_t goLineEditStr[maxLen] = {L'\0'};
+		UINT count = ::GetDlgItemTextW(_hSelf, ID_GOLINE_EDIT, goLineEditStr, maxLen);
 		if (!count)
 			return -1;
-		char* p_end = nullptr;
-		return strtoll(goLineEditStr, &p_end, 10);
+		wchar_t* p_end = nullptr;
+		return wcstoll(goLineEditStr, &p_end, 10);
 	}
 };

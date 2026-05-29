@@ -16,15 +16,12 @@
 
 
 #include "dpiManagerV2.h"
+#include "NppDarkMode.h"
 
-#include <windows.h>
-
-#include <commctrl.h>
-
-namespace NppDarkMode
-{
-	bool isWindows10();
-}
+#ifndef _WIN32
+#include <QGuiApplication>
+#include <QFont>
+#endif
 
 template <typename P>
 inline auto LoadFn(HMODULE handle, P& pointer, const char* name) noexcept -> bool
@@ -175,6 +172,21 @@ void DPIManagerV2::setPositionDpi(LPARAM lParam, HWND hWnd, UINT flags)
 
 LOGFONT DPIManagerV2::getDefaultGUIFontForDpi(UINT dpi, FontType type)
 {
+#ifndef _WIN32
+	(void)type;
+	LOGFONT lf{};
+	const QFont appFont = QGuiApplication::font();
+	const int pointSize = appFont.pointSize() > 0 ? appFont.pointSize() : 9;
+	lf.lfHeight = -MulDiv(pointSize, static_cast<int>(dpi), 72);
+	lf.lfWeight = appFont.bold() ? 700 : 400;
+	lf.lfItalic = appFont.italic() ? TRUE : FALSE;
+	lf.lfCharSet = DEFAULT_CHARSET;
+	lf.lfQuality = 5;
+	const std::wstring family = appFont.family().toStdWString();
+	wcsncpy(lf.lfFaceName, family.c_str(), 31);
+	lf.lfFaceName[31] = L'\0';
+	return lf;
+#else
 	LOGFONT lf{};
 	NONCLIENTMETRICS ncm{};
 	ncm.cbSize = sizeof(NONCLIENTMETRICS);
@@ -222,18 +234,31 @@ LOGFONT DPIManagerV2::getDefaultGUIFontForDpi(UINT dpi, FontType type)
 	}
 
 	return lf;
+#endif
 }
 
 void DPIManagerV2::loadIcon(HINSTANCE hinst, const wchar_t* pszName, int cx, int cy, HICON* phico, UINT fuLoad)
 {
+#ifndef _WIN32
+	(void)hinst;
+	(void)pszName;
+	(void)cx;
+	(void)cy;
+	(void)fuLoad;
+	*phico = nullptr;
+#else
 	if (::LoadIconWithScaleDown(hinst, pszName, cx, cy, phico) != S_OK)
 	{
 		*phico = static_cast<HICON>(::LoadImage(hinst, pszName, IMAGE_ICON, cx, cy, fuLoad));
 	}
+#endif
 }
 
 DWORD DPIManagerV2::getTextScaleFactor()
 {
+#ifndef _WIN32
+	return 100;
+#else
 	static constexpr DWORD defaultVal = 100;
 	DWORD data = defaultVal;
 	DWORD dwBufSize = sizeof(data);
@@ -245,4 +270,5 @@ DWORD DPIManagerV2::getTextScaleFactor()
 		return data;
 	}
 	return defaultVal;
+#endif
 }

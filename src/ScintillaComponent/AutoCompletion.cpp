@@ -17,9 +17,8 @@
 
 #include "AutoCompletion.h"
 
-#include <windows.h>
-
-#include <shlwapi.h>
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -36,7 +35,7 @@
 #include <Scintilla.h>
 
 #include "Buffer.h"
-#include "Common.h"
+#include "MISC/Common/Common.h"
 #include "Notepad_plus_msgs.h"
 #include "NppDarkMode.h"
 #include "NppXml.h"

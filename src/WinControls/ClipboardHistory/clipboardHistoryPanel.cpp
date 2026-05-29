@@ -18,6 +18,9 @@
 #include "clipboardHistoryPanel.h"
 #include "ScintillaComponent/ScintillaEditView.h"
 #include "clipboardFormats.h"
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
+#include "MISC/Common/WindowsMessageStubs.h"
 
 
 #define MAX_DISPLAY_LENGTH 64

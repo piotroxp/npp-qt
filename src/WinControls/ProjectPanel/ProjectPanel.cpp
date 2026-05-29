@@ -370,7 +370,7 @@ bool ProjectPanel::openWorkSpace(const wchar_t* projectFileName, bool force)
 	_treeView.removeAllItems();
 	_workSpaceFilePath = projectFileName;
 
-	wchar_t * fileName = PathFindFileName(projectFileName);
+	const wchar_t* fileName = PathFindFileName(projectFileName);
 	HTREEITEM rootItem = _treeView.addItem(fileName, TVI_ROOT, INDEX_CLEAN_ROOT);
 
 	for (;
@@ -457,7 +457,7 @@ bool ProjectPanel::writeWorkSpace(const wchar_t* projectFileName, bool doUpdateG
 
 		return false;
 	}
-	wchar_t * fileName = PathFindFileName(fn2write);
+	const wchar_t* fileName = PathFindFileName(fn2write);
 	if (doUpdateGUI)
 	{
 		_treeView.renameItem(tvRoot, fileName);
@@ -1201,7 +1201,7 @@ void ProjectPanel::popupMenuCmd(int cmdID)
 					return;
 
 				*fn = newValue;
-				wchar_t *strValueLabel = ::PathFindFileName(fn->c_str());
+				const wchar_t* strValueLabel = ::PathFindFileName(fn->c_str());
 				wcscpy_s(textBuffer, strValueLabel);
 				int iImage = doesFileExist(fn->c_str()) ? INDEX_LEAF : INDEX_LEAF_INVALID;
 				tvItem.iImage = tvItem.iSelectedImage = iImage;
@@ -1262,7 +1262,7 @@ void ProjectPanel::addFiles(HTREEITEM hTreeItem)
 		size_t sz = fns.size();
 		for (size_t i = 0 ; i < sz ; ++i)
 		{
-			wchar_t *strValueLabel = ::PathFindFileName(fns.at(i).c_str());
+			const wchar_t* strValueLabel = ::PathFindFileName(fns.at(i).c_str());
 
 			_fullPathStrs.push_back(std::make_unique<std::wstring>(fns.at(i)));
 			auto lParamPathFileStr = reinterpret_cast<LPARAM>(_fullPathStrs.back().get());

@@ -18,6 +18,9 @@
 #include <format>
 #include "AboutDlg.h"
 #include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
+#include "MISC/Common/WindowsMessageStubs.h"
+#include "NppLibsVersion.h"
 #include "../Parameters.h"
 #include "localization.h"
 #include "json.hpp"

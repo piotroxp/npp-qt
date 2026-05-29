@@ -18,6 +18,7 @@
 #include "ScintillaComponent/Buffer.h"
 #include "TabBar.h"
 #include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsMessageStubs.h"
 #include "../Parameters.h"
 #include "DoubleBuffer/DoubleBuffer.h"
 

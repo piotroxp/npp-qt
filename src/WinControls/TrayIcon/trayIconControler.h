@@ -18,6 +18,7 @@
 #pragma once
 
 #include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsMessageStubs.h"
 
 #define ADD     NIM_ADD
 #define REMOVE  NIM_DELETE

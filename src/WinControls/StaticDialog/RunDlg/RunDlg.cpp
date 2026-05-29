@@ -22,7 +22,7 @@
 #include "WinControls/shortcut/shortcut.h"
 #include "../Parameters.h"
 #include "Notepad_plus.h"
-#include <strsafe.h>
+#include "MISC/Common/strsafe.h"
 
 using namespace std;
 

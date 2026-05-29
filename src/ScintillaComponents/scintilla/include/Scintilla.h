@@ -28,9 +28,11 @@ int Scintilla_ReleaseResources(void);
 // Include header that defines basic numeric types.
 #include <stdint.h>
 
-// Minimal Windows type stubs for Scintilla (full compatibility layer in WindowsCompat.h)
+// Minimal Windows type stubs for Scintilla (HWND comes from WindowsCompat.h in npp-qt)
+#ifndef NPP_WINDOWS_COMPAT_HWND
 #ifndef HWND
 typedef void* HWND;
+#endif
 #endif
 #ifndef HINSTANCE
 typedef void* HINSTANCE;

@@ -16,13 +16,13 @@
 
 
 #include "ContextMenu.h"
-#include "MISC/Common/WindowsCompat.h"
 #include "menuCmdID.h"
-#include "../Parameters.h"
+#include "Parameters.h"
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsMessageStubs.h"
 #include "localization.h"
-#include <QApplication>
 
-MenuItemUnit::MenuItemUnit(unsigned long cmdID, const wchar_t*     itemName, const wchar_t*     parentFolderName) : _cmdID(cmdID)
+MenuItemUnit::MenuItemUnit(unsigned long cmdID, const wchar_t* itemName, const wchar_t* parentFolderName) : _cmdID(cmdID)
 {
 	if (!itemName)
 		_itemName.clear();
@@ -35,35 +35,15 @@ MenuItemUnit::MenuItemUnit(unsigned long cmdID, const wchar_t*     itemName, con
 		_parentFolderName = parentFolderName;
 }
 
-QAction* ContextMenu::findAction(int cmdID) const
-{
-	if (!_menu)
-		return nullptr;
-	const auto actions = _menu->actions();
-	for (QAction* a : actions) {
-		if (a->data().toLongLong() == static_cast<long long>(cmdID))
-			return a;
-		// check submenus
-		QMenu* sm = a->menu();
-		if (sm) {
-			for (QAction* sa : sm->actions()) {
-				if (sa->data().toLongLong() == static_cast<long long>(cmdID))
-					return sa;
-			}
-		}
-	}
-	return nullptr;
-}
-
-void ContextMenu::create(QWidget* hParent, const std::vector<MenuItemUnit> & menuItemArray, QMenu* mainMenuHandle, bool copyLink)
-{
+void ContextMenu::create(HWND hParent, const std::vector<MenuItemUnit> & menuItemArray, const HMENU mainMenuHandle, bool copyLink)
+{ 
 	_hParent = hParent;
-	_menu = new QMenu(hParent);
-
+	_hMenu = ::CreatePopupMenu();
 	bool lastIsSep = false;
-	QMenu* hParentFolder = nullptr;
+	HMENU hParentFolder = NULL;
 	std::wstring currentParentFolderStr;
 	int j = 0;
+	MENUITEMINFO mii{};
 
 	for (size_t i = 0, len = menuItemArray.size(); i < len; ++i)
 	{
@@ -71,7 +51,7 @@ void ContextMenu::create(QWidget* hParent, const std::vector<MenuItemUnit> & men
 		if (item._parentFolderName.empty())
 		{
 			currentParentFolderStr.clear();
-			hParentFolder = nullptr;
+			hParentFolder = NULL;
 			j = 0;
 		}
 		else
@@ -79,74 +59,59 @@ void ContextMenu::create(QWidget* hParent, const std::vector<MenuItemUnit> & men
 			if (item._parentFolderName != currentParentFolderStr)
 			{
 				currentParentFolderStr = item._parentFolderName;
-				hParentFolder = new QMenu(QString::fromWCharArray(currentParentFolderStr.c_str()), _menu);
+				hParentFolder = ::CreateMenu();
 				j = 0;
 
 				_subMenus.push_back(hParentFolder);
-				QAction* act = _menu->addMenu(hParentFolder);
-				Q_UNUSED(act);
+				::InsertMenu(_hMenu, static_cast<UINT>(i), MF_BYPOSITION | MF_POPUP, (UINT_PTR)hParentFolder, currentParentFolderStr.c_str());
 			}
 		}
 
-		if (item._cmdID == 0)
+		unsigned int flag = MF_BYPOSITION | ((item._cmdID == 0)?MF_SEPARATOR:0);
+		if (hParentFolder)
 		{
-			// separator
-			if (hParentFolder)
-			{
-				if (!lastIsSep)
-					hParentFolder->addSeparator();
-			}
-			else if ((i == 0 || i == menuItemArray.size() - 1) || !lastIsSep)
-			{
-				if (!lastIsSep)
-					_menu->addSeparator();
-			}
+			::InsertMenu(hParentFolder, j++, flag, item._cmdID, item._itemName.c_str());
+			lastIsSep = false;
+		}
+		else if ((i == 0 || i == menuItemArray.size() - 1) && item._cmdID == 0)
+		{
 			lastIsSep = true;
 		}
-		else
+		else if (item._cmdID != 0)
 		{
-			QAction* act = nullptr;
-			if (hParentFolder)
-			{
-				act = hParentFolder->addAction(QString::fromWCharArray(item._itemName.c_str()));
-				lastIsSep = false;
-			}
-			else
-			{
-				act = _menu->addAction(QString::fromWCharArray(item._itemName.c_str()));
-				lastIsSep = false;
-			}
-			act->setData(QVariant::fromValue<long long>(item._cmdID));
+			::InsertMenu(_hMenu, static_cast<UINT>(i), flag, item._cmdID, item._itemName.c_str());
 			lastIsSep = false;
+		}
+		else if (/*item._cmdID == 0 &&*/ !lastIsSep)
+		{
+			::InsertMenu(_hMenu, static_cast<int32_t>(i), flag, item._cmdID, item._itemName.c_str());
+			lastIsSep = true;
+		}
+		else // last item is separator and current item is separator
+		{
+			lastIsSep = true;
 		}
 
 		if (mainMenuHandle)
 		{
-			// Mirror enabled/checked state from main menu
-			QAction* mainAct = nullptr;
-			for (QAction* a : mainMenuHandle->actions()) {
-				if (a->data().toLongLong() == static_cast<long long>(item._cmdID)) {
-					mainAct = a;
-					break;
-				}
-				if (a->menu()) {
-					for (QAction* sa : a->menu()->actions()) {
-						if (sa->data().toLongLong() == static_cast<long long>(item._cmdID)) {
-							mainAct = sa;
-							break;
-						}
-					}
-					if (mainAct) break;
-				}
+			UINT s = ::GetMenuState(mainMenuHandle, item._cmdID, MF_BYCOMMAND);
+			if (s != ((UINT)-1))
+			{
+				bool isEnabled = (s & (MF_DISABLED | MF_GRAYED)) == 0;
+				bool isChecked = (s & (MF_CHECKED)) != 0;
+				if (!isEnabled)
+					enableItem(item._cmdID, isEnabled);
+				if (isChecked)
+					checkItem(item._cmdID, isChecked);
 			}
-			if (mainAct) {
-				QAction* ourAct = findAction(item._cmdID);
-				if (ourAct) {
-					ourAct->setEnabled(mainAct->isEnabled());
-					ourAct->setCheckable(true);
-					ourAct->setChecked(mainAct->isChecked());
-				}
-			}
+
+			// set up any menu item bitmaps in the context menu, using main menu bitmaps
+			memset(&mii, 0, sizeof(mii));
+			mii.cbSize = sizeof(MENUITEMINFO);
+			mii.fMask = MIIM_CHECKMARKS;
+			mii.fType = MFT_BITMAP;
+			GetMenuItemInfo(mainMenuHandle, item._cmdID, FALSE, &mii);
+			SetMenuItemInfo(_hMenu, item._cmdID, FALSE, &mii);
 		}
 
 		if (copyLink && (item._cmdID == IDM_EDIT_COPY))
@@ -155,66 +120,31 @@ void ContextMenu::create(QWidget* hParent, const std::vector<MenuItemUnit> & men
 			std::wstring localized = nativeLangSpeaker->getNativeLangMenuString(IDM_EDIT_COPY_LINK);
 			if (localized.length() == 0)
 				localized = L"Copy link";
-			QAction* lastAct = _menu->actions().isEmpty() ? nullptr : _menu->actions().back();
-			if (lastAct) {
-				lastAct->setText(QString::fromWCharArray(localized.c_str()));
-				lastAct->setData(QVariant::fromValue<long long>(IDM_EDIT_COPY_LINK));
-			}
+			memset(&mii, 0, sizeof(mii));
+			mii.cbSize = sizeof(MENUITEMINFO);
+			mii.fMask = MIIM_ID | MIIM_STRING | MIIM_STATE;
+			mii.wID = IDM_EDIT_COPY_LINK;
+			mii.dwTypeData = (wchar_t*) localized.c_str();
+			mii.fState = MFS_ENABLED;
+			int c = GetMenuItemCount(_hMenu);
+			SetMenuItemInfo(_hMenu, c - 1, TRUE, & mii);
 		}
 	}
 }
 
-void ContextMenu::display(QWidget* hwnd) const
+void ContextMenu::display(HWND hwnd) const
 {
-	if (!_menu)
-		return;
-	QWidget* parent = _hParent ? _hParent : hwnd;
-	if (!parent)
-		parent = QApplication::activeWindow();
-	if (!parent)
-		return;
+	RECT rcItem{};
+	::GetClientRect(hwnd, &rcItem);
+	::MapWindowPoints(hwnd, HWND_DESKTOP, reinterpret_cast<LPPOINT>(&rcItem), 2);
 
-	QRect rc = parent->rect();
-	QPoint p = parent->mapToGlobal(QPoint(rc.left(), rc.bottom()));
+	TPMPARAMS tpm{};
+	tpm.cbSize = sizeof(TPMPARAMS);
+	tpm.rcExclude = rcItem;
 
 	const NativeLangSpeaker* nativeLangSpeaker = NppParameters::getInstance().getNativeLangSpeaker();
-	if (nativeLangSpeaker->isRTL())
-	{
-		p.setX(parent->mapToGlobal(QPoint(rc.right(), 0)).x());
-		_menu->popup(p);
-	}
-	else
-	{
-		_menu->popup(p);
-	}
-}
-
-void ContextMenu::enableItem(int cmdID, bool doEnable) const
-{
-	QAction* act = findAction(static_cast<int>(cmdID));
-	if (act)
-		act->setEnabled(doEnable);
-}
-
-bool ContextMenu::isItemEnabled(int cmdID) const
-{
-	QAction* act = findAction(static_cast<int>(cmdID));
-	return act ? act->isEnabled() : false;
-}
-
-void ContextMenu::checkItem(int cmdID, bool doCheck) const
-{
-	QAction* act = findAction(static_cast<int>(cmdID));
-	if (act) {
-		act->setCheckable(true);
-		act->setChecked(doCheck);
-	}
-}
-
-bool ContextMenu::isItemChecked(int cmdID) const
-{
-	QAction* act = findAction(static_cast<int>(cmdID));
-	return act ? act->isChecked() : false;
+	const UINT flags = nativeLangSpeaker->isRTL() ? (TPM_RIGHTALIGN | TPM_RIGHTBUTTON | TPM_LAYOUTRTL) : (TPM_LEFTALIGN | TPM_LEFTBUTTON);
+	::TrackPopupMenuEx(_hMenu, flags | TPM_VERTICAL, rcItem.left, rcItem.bottom, _hParent, &tpm);
 }
 
 void ContextMenu::destroy()
@@ -223,11 +153,10 @@ void ContextMenu::destroy()
 	{
 		for (size_t i = 0, len = _subMenus.size(); i < len; ++i)
 		{
-			delete _subMenus[i];
+			::DestroyMenu(_subMenus[i]);
 			_subMenus[i] = nullptr;
 		}
-		_subMenus.clear();
-		delete _menu;
-		_menu = nullptr;
+		::DestroyMenu(_hMenu);
+		_hMenu = nullptr;
 	}
 }

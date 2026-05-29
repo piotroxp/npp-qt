@@ -18,6 +18,7 @@
 #include "preferenceDlg.h"
 
 #include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/windowsx.h"
 
 #include <algorithm>
 #include <cassert>
@@ -37,7 +38,7 @@
 #include "WinControls/ColourPicker/ColourPicker.h"
 #include "MISC/Common/Common.h"
 #include "WinControls/ContextMenu/ContextMenu.h"
-#include "WinControls/ControlsTab/ControlsTab.h"
+#include "WinControls/TabBar/ControlsTab.h"
 #include "EncodingMapper.h"
 #include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "MISC/Common/NppConstants.h"
@@ -50,7 +51,7 @@
 #include "localization.h"
 #include "menuCmdID.h"
 #include "preference_rc.h"
-#include "regExtDlgRc.h"
+#include "MISC/RegExt/regExtDlgRc.h"
 #include "resource.h"
 #include "WinControls/shortcut/shortcut.h"
 

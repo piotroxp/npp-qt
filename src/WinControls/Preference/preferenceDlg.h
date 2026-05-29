@@ -26,7 +26,7 @@
 #include "WinControls/ColourPicker/ColourPicker.h"
 #include "MISC/Common/Common.h"
 #include "WinControls/ContextMenu/ContextMenu.h"
-#include "WinControls/ControlsTab/ControlsTab.h"
+#include "WinControls/TabBar/ControlsTab.h"
 #include "MISC/PluginsManager/Notepad_plus_msgs.h"
 #include "../Parameters.h"
 #include "WinControls/StaticDialog/StaticDialog.h"

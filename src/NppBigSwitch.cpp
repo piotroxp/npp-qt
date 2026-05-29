@@ -16,23 +16,23 @@
 
 
 #include <algorithm>
-#include <shlwapi.h>
-#include <uxtheme.h> // for EnableThemeDialogTexture
+#include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/WindowsStubs.h"
+#include "MISC/Common/WindowsMessageStubs.h"
 #include <format>
-#include <windowsx.h> // for GET_X_LPARAM, GET_Y_LPARAM
 #include <atomic>
 #include "Notepad_plus_Window.h"
-#include "TaskListDlg.h"
-#include "ShortcutMapper.h"
-#include "ansiCharPanel.h"
-#include "clipboardHistoryPanel.h"
-#include "VerticalFileSwitcher.h"
-#include "ProjectPanel.h"
-#include "documentMap.h"
-#include "functionListPanel.h"
-#include "fileBrowser.h"
+#include "WinControls/TaskList/TaskListDlg.h"
+#include "WinControls/Grid/ShortcutMapper.h"
+#include "WinControls/AnsiCharPanel/ansiCharPanel.h"
+#include "WinControls/ClipboardHistory/clipboardHistoryPanel.h"
+#include "WinControls/VerticalFileSwitcher/VerticalFileSwitcher.h"
+#include "WinControls/ProjectPanel/ProjectPanel.h"
+#include "WinControls/DocumentMap/documentMap.h"
+#include "WinControls/FunctionList/functionListPanel.h"
+#include "WinControls/FileBrowser/fileBrowser.h"
 #include "NppDarkMode.h"
-#include "NppConstants.h"
+#include "MISC/Common/NppConstants.h"
 
 using namespace std;
 

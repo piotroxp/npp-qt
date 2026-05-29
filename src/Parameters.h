@@ -18,6 +18,7 @@
 #pragma once
 
 #include "MISC/Common/WindowsCompat.h"
+#include "MISC/Common/NppConstants.h"
 
 #include "MISC/Common/WindowsStubs.h"
 
@@ -199,8 +200,7 @@ struct CmdLineParams
 
 	CmdLineParams()
 	{
-		_point.x = 0;
-		_point.y = 0;
+		_point = {0, 0};
 	}
 
 	bool isPointValid() const
