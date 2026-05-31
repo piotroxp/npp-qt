@@ -148,11 +148,7 @@ endif()
 
 # Headers in include/ need MOC processing - add them explicitly for AUTOMOC to work.
 # These are the headers that define Q_OBJECT classes requiring MOC generation.
-set(NPP_MOC_HEADERS
-    include/MainWindow.h
-    include/NppApplication.h
-)
-add_executable(npp-qt ${NPP_CORE_SOURCES} ${NPP_MOC_HEADERS})
+add_executable(npp-qt ${NPP_CORE_SOURCES} include/MainWindow.h include/NppApplication.h)
 
 target_compile_definitions(npp-qt PRIVATE NPP_WINDOWS_COMPAT_HWND)
 
