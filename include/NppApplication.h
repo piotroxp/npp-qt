@@ -1,6 +1,7 @@
 // NppApplication.h - Qt6 port
 #pragma once
 
+#include <QObject>
 #include <QApplication>
 #include <QSettings>
 #include <QTranslator>

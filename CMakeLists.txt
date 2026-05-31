@@ -146,9 +146,13 @@ if(NOT WIN32)
     list(APPEND NPP_CORE_SOURCES src/WinControls/OpenSaveFileDialog/CustomFileDialog_qt.cpp)
 endif()
 
-# Headers are discovered via #include from .cpp; listing include/*.h here caused
-# duplicate type definitions and broken MOC (parallel include/ vs src/ trees).
-add_executable(npp-qt ${NPP_CORE_SOURCES})
+# Headers in include/ need MOC processing - add them explicitly for AUTOMOC to work.
+# These are the headers that define Q_OBJECT classes requiring MOC generation.
+set(NPP_MOC_HEADERS
+    include/MainWindow.h
+    include/NppApplication.h
+)
+add_executable(npp-qt ${NPP_CORE_SOURCES} ${NPP_MOC_HEADERS})
 
 target_compile_definitions(npp-qt PRIVATE NPP_WINDOWS_COMPAT_HWND)
 
