@@ -21,6 +21,11 @@
 
 HWND Notepad_plus_Window::gNppHWND = NULL;
 
+LRESULT Notepad_plus_Window::dispatchWin32Message(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	return Notepad_plus_Proc(hwnd, message, wParam, lParam);
+}
+
 namespace // anonymous
 {
 

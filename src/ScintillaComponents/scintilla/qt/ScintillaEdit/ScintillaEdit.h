@@ -7,7 +7,7 @@
 
 #include <QPair>
 
-#include "src/ScintillaComponents/scintilla/qt/ScintillaEditBase/ScintillaEditBase.h"
+#include "../ScintillaEditBase/ScintillaEditBase.h"
 #include "ScintillaDocument.h"
 
 #ifndef EXPORT_IMPORT_API

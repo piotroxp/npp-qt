@@ -7,7 +7,7 @@
 
 // MD5 initialization constants
 const unsigned char MD5::PADDING[64] = {
-    0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -32,12 +32,6 @@ const int MD5::S43 = 15;
 const int MD5::S44 = 21;
 
 // F, G, H, I are basic MD5 functions
-#define MD5_F(x, y, z) (((x) & (y)) | ((~x) & (z)))
-#define MD5_G(x, y, z) (((x) & (z) | ((y) & ~z))
-#define MD5_H(x, y, z) ((x) ^ (y) ^ (z))
-#define MD5_I(x, y, z) ((y) ^ ((x) | ~z))
-
-#define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32-(n))))
 
 void MD5::Init() {
     context.count[0] = context.count[1] = 0;
@@ -52,12 +46,7 @@ void MD5::Init() {
 void MD5::MD5Transform(uint32_t state[4], unsigned char block[64]) {
     uint32_t a = state[0], b = state[1], c = state[2], d = state[3], x[16];
     Decode(x, block, 64);
-    
-    #define MD5_FF(a,b,c,d,x,s,ac) { (a) += MD5_F((b),(c),(d)) + x + ac; (a) = ROTATE_LEFT((a),s) + (b); }
-    #define MD5_GG(a,b,c,d,x,s,ac) { (a) += MD5_G((b),(c),(d)) + x + ac; (a) = ROTATE_LEFT((a),s) + (b); }
-    #define MD5_HH(a,b,c,d,x,s,ac) { (a) += MD5_H((b),(c),(d)) + x + ac; (a) = ROTATE_LEFT((a),s) + (b); }
-    #define MD5_II(a,b,c,d,x,s,ac) { (a) += MD5_I((b),(c),(d)) + x + ac; (a) = ROTATE_LEFT((a),s) + (b); }
-    
+
     MD5_FF(a,b,c,d,x[0],S11,0xd76aa478); MD5_FF(d,a,b,c,x[1],S12,0xe8c7b756);
     MD5_FF(c,d,a,b,x[2],S13,0x242070db); MD5_FF(b,c,d,a,x[3],S14,0xc1bdceee);
     MD5_FF(a,b,c,d,x[4],S11,0xf57c0faf); MD5_FF(d,a,b,c,x[5],S12,0x4787c62a);
@@ -143,8 +132,7 @@ void MD5::Encode(unsigned char* output, uint32_t* input, unsigned int len) {
 void MD5::Decode(uint32_t* output, unsigned char* input, unsigned int len) {
     unsigned int i, j;
     for (i = 0, j = 0; j < len; i++, j += 4)
-        output[i] = ((uint32_t)input[j]) | (((uint32_t)input[j + 1] << 8) |
-                    (((uint32_t)input[j + 2] << 16) | (((uint32_t)input[j + 3] << 24));
+        output[i] = (uint32_t)input[j] | ((uint32_t)input[j+1] << 8) | ((uint32_t)input[j+2] << 16) | ((uint32_t)input[j+3] << 24);
 }
 
 void MD5::writeToString() {

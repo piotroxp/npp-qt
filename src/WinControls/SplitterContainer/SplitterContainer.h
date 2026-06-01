@@ -60,6 +60,8 @@ public:
 		return ((_dwSplitterStyle & SV_VERTICAL) != 0);
 	}
 
+	static LRESULT dispatchWin32Message(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+
 private:
 	Window* _pWin0 = nullptr; // left or top window
 	Window* _pWin1 = nullptr; // right or bottom window

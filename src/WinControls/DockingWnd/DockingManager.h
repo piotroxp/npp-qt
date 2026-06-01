@@ -80,6 +80,8 @@ public:
 	void destroy() override;
 	void resize();
 
+	static LRESULT dispatchWin32Message(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
+
 private:
 	Window						**_ppWindow = nullptr;
 	RECT						_rcWork = {};
@@ -91,7 +93,6 @@ private:
 	BOOL						_isInitialized = FALSE;
 	int							_iContMap[CONT_MAP_MAX] = { 0 };
 	std::vector<DockingSplitter*>	_vSplitter;
-
 
 	static LRESULT CALLBACK staticWinProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);
 	LRESULT runProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);

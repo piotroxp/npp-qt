@@ -17,6 +17,7 @@ add_subdirectory(src/ScintillaComponents/lexilla)
 set(NPP_CORE_SOURCES
     src/EncodingMapper.cpp
     src/MISC/Common/Common.cpp
+    src/MISC/Common/NppQtPlatform.cpp
     src/MISC/Common/FileInterface.cpp
     src/MISC/Common/SortLocale.cpp
     src/MISC/Common/verifySignedfile.cpp
@@ -31,7 +32,6 @@ set(NPP_CORE_SOURCES
     src/MISC/sha1/sha1.cpp
     src/MISC/sha2/sha-256.cpp
     src/MISC/sha512/sha512.cpp
-    src/MainWindow.cpp
     src/Notepad_plus.cpp
     src/Notepad_plus_Window.cpp
     src/NppBigSwitch.cpp
@@ -148,7 +148,7 @@ endif()
 
 # Headers in include/ need MOC processing - add them explicitly for AUTOMOC to work.
 # These are the headers that define Q_OBJECT classes requiring MOC generation.
-add_executable(npp-qt ${NPP_CORE_SOURCES} include/MainWindow.h include/NppApplication.h)
+add_executable(npp-qt ${NPP_CORE_SOURCES} include/NppApplication.h)
 
 target_compile_definitions(npp-qt PRIVATE NPP_WINDOWS_COMPAT_HWND)
 

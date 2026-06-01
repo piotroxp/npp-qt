@@ -234,9 +234,9 @@ public:
 	void setVersionFrom(const std::wstring& filePath);
 	std::wstring toString() const;
 	static bool isNumber(const std::wstring& s) {
-		static const auto& loc = std::locale::classic();
+		const auto& loc = std::locale::classic();
 		return !s.empty() && std::find_if(s.begin(), s.end(),
-			[&loc](auto c) { return !std::isdigit(c, loc); }) == s.end();
+			[&loc](wchar_t c) { return !std::isdigit(c, loc); }) == s.end();
 	}
 	int compareTo(const Version& v2c) const;
 	bool operator < (const Version& v2c) const { return compareTo(v2c) == -1; }

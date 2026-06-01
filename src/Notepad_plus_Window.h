@@ -68,6 +68,9 @@ public:
 		DPIManagerV2::loadIcon(hinst, MAKEINTRESOURCE(IDI_M30ICON), ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), icon);
 	}
 
+	// Qt port: route Win32 messages to the Notepad++ window procedure
+	static LRESULT dispatchWin32Message(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+
 private:
 	Notepad_plus _notepad_plus_plus_core;
 	static LRESULT CALLBACK Notepad_plus_Proc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam);

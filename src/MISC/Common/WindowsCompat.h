@@ -1086,7 +1086,7 @@ struct DRAWITEMSTRUCT {
 	DWORD_PTR itemData;
 };
 
-inline LRESULT SendMessage(HWND, UINT, WPARAM, LPARAM) { return 0; }
+// SendMessage implemented in NppQtPlatform.cpp
 inline LRESULT SendDlgItemMessage(HWND, int, UINT, WPARAM, LPARAM) { return 0; }
 inline HWND GetDlgItem(HWND parent, int) { return parent; }
 inline BOOL ImageList_Destroy(HIMAGELIST) { return TRUE; }
@@ -1267,7 +1267,7 @@ inline BOOL SetWindowPos(HWND hwnd, HWND, int x, int y, int cx, int cy, UINT) {
 		hwnd->setGeometry(x, y, cx, cy);
 	return TRUE;
 }
-inline HWND CreateWindowExW(DWORD, const wchar_t*, const wchar_t*, DWORD, int, int, int, int, HWND, HMENU, HINSTANCE, void*) { return nullptr; }
+// CreateWindowEx implemented in NppQtPlatform.cpp
 #define CreateWindowEx CreateWindowExW
 inline ATOM RegisterClassW(const WNDCLASSW*) { return 1; }
 #define RegisterClass RegisterClassW
@@ -1303,15 +1303,15 @@ inline HDC GetDCEx(HWND, HRGN, DWORD) { return nullptr; }
 #endif
 inline BOOL IsDialogMessageW(HWND, void*) { return FALSE; }
 #define IsDialogMessage IsDialogMessageW
-inline BOOL ShowWindow(HWND, int) { return TRUE; }
+BOOL ShowWindow(HWND hwnd, int nCmdShow);
 inline BOOL UpdateWindow(HWND) { return TRUE; }
 inline BOOL InvalidateRect(HWND, const RECT*, BOOL) { return TRUE; }
 inline BOOL RedrawWindow(HWND, const RECT*, HRGN, UINT) { return TRUE; }
-inline BOOL GetWindowRect(HWND, RECT*) { return TRUE; }
+BOOL GetWindowRect(HWND hwnd, RECT* lpRect);
 inline BOOL SetForegroundWindow(HWND) { return TRUE; }
 inline HWND SetCapture(HWND) { return nullptr; }
 inline BOOL ReleaseCapture() { return TRUE; }
-inline BOOL GetClientRect(HWND, RECT*) { return TRUE; }
+BOOL GetClientRect(HWND hwnd, RECT* lpRect);
 
 // Menu helpers
 inline UINT CheckMenuItem(HMENU, UINT, UINT) { return 0; }
@@ -2049,7 +2049,6 @@ inline HINSTANCE ShellExecuteW(HWND, const wchar_t*, const wchar_t*, const wchar
 #ifndef IDOK
 #define IDOK 1
 #endif
-inline LRESULT SendMessageW(HWND, UINT, WPARAM, LPARAM) { return 0; }
 #ifndef SendMessage
 #define SendMessage SendMessageW
 #endif
@@ -2101,7 +2100,7 @@ inline HKL GetKeyboardLayout(DWORD) { return reinterpret_cast<HKL>(static_cast<D
 inline BOOL SetDlgItemInt(HWND, int, UINT, BOOL) { return TRUE; }
 #endif
 inline void _wsplitpath_s(const wchar_t*, wchar_t*, size_t, wchar_t*, size_t, wchar_t*, size_t, wchar_t*, size_t) {}
-inline HHOOK SetWindowsHookExW(int, HOOKPROC, HINSTANCE, DWORD) { return nullptr; }
+inline HHOOK SetWindowsHookExW(int, HOOKPROC, HINSTANCE, DWORD) { return reinterpret_cast<HHOOK>(1); }
 #define SetWindowsHookEx SetWindowsHookExW
 inline BOOL UnhookWindowsHookEx(HHOOK) { return TRUE; }
 inline LRESULT CallNextHookEx(HHOOK, int nCode, WPARAM wParam, LPARAM lParam) {
@@ -2354,9 +2353,8 @@ inline BOOL PostMessageW(HWND, UINT, WPARAM, LPARAM) { return TRUE; }
 inline BOOL RemoveMenu(HMENU, UINT, UINT) { return TRUE; }
 inline BOOL SetMenuItemInfoW(HMENU, UINT, BOOL, void*) { return TRUE; }
 #define SetMenuItemInfo SetMenuItemInfoW
-inline LONG_PTR SetWindowLongPtrW(HWND, int, LONG_PTR) { return 0; }
 #define SetWindowLongPtr SetWindowLongPtrW
-inline BOOL SetWindowPlacement(HWND, const void*) { return TRUE; }
+BOOL SetWindowPlacement(HWND hwnd, const WINDOWPLACEMENT* lpwndpl);
 inline void Sleep(DWORD) {}
 inline BOOL TrackPopupMenu(HMENU, UINT, int, int, int, HWND, void*) { return FALSE; }
 inline UINT TrackPopupMenuEx(HMENU, UINT, int, int, HWND, void*) { return 0; }
@@ -2508,7 +2506,6 @@ inline int GetObjectW(HANDLE, int, void*) { return 0; }
 inline HBRUSH GetSysColorBrush(int) { return nullptr; }
 inline BOOL GetTextExtentPoint32W(HDC, const wchar_t*, int, void*) { return FALSE; }
 #define GetTextExtentPoint32 GetTextExtentPoint32W
-inline LONG_PTR GetWindowLongPtrW(HWND, int) { return 0; }
 #define GetWindowLongPtr GetWindowLongPtrW
 inline int GetWindowTextLengthW(HWND) { return 0; }
 #define GetWindowTextLength GetWindowTextLengthW
@@ -2716,5 +2713,15 @@ inline LSTATUS RegGetValueW(HKEY, LPCWSTR, LPCWSTR, DWORD, LPDWORD, PVOID, LPDWO
 inline HRESULT LoadIconWithScaleDown(HINSTANCE, LPCWSTR, int, int, HICON*) { return E_FAIL; }
 
 #include "WindowsCommCtrlStubs.h"
+
+#ifndef NPP_QT_PLATFORM_FUNCTIONS
+#define NPP_QT_PLATFORM_FUNCTIONS
+HWND CreateWindowExW(DWORD dwExStyle, const wchar_t* lpClassName, const wchar_t* lpWindowName,
+	DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu,
+	HINSTANCE hInstance, void* lpCreateParams);
+LRESULT SendMessageW(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+LONG_PTR SetWindowLongPtrW(HWND hwnd, int index, LONG_PTR value);
+LONG_PTR GetWindowLongPtrW(HWND hwnd, int index);
+#endif
 
 #endif // WINDOWS_COMPAT_H

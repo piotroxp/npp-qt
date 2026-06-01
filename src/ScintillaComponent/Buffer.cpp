@@ -256,6 +256,9 @@ void Buffer::updateTimeStamp()
 // and determine its language by its extension.
 void Buffer::setFileName(const wchar_t *fn)
 {
+	if (!fn)
+		fn = L"";
+
 	NppParameters& nppParamInst = NppParameters::getInstance();
 	if (_fullPathName == fn)
 	{
@@ -287,7 +290,7 @@ void Buffer::setFileName(const wchar_t *fn)
 	// for _lang
 	LangType determinedLang = L_TEXT;
 	wchar_t *ext = PathFindExtension(_fullPathName.data());
-	if (*ext == '.') // extension found
+	if (ext && *ext == L'.') // extension found
 	{
 		ext += 1;
 

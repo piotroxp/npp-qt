@@ -129,7 +129,9 @@ typedef LVCOLUMNW LVCOLUMN;
 #define ListView_SetTextColor(hwnd, c) 0
 #define LVSIL_SMALL 1
 #define LVM_GETSELECTEDCOUNT (LVM_FIRST + 50)
+#ifndef LVM_GETITEMCOUNT
 #define LVM_GETITEMCOUNT (LVM_FIRST + 4)
+#endif
 #define LVCF_WIDTH 0x0001
 #define LVIF_PARAM 0x0004
 #define LVIS_STATEIMAGEMASK 0xF000

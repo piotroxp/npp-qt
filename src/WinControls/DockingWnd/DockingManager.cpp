@@ -170,6 +170,11 @@ void DockingManager::destroy()
 	::DestroyWindow(_hSelf);
 }
 
+LRESULT DockingManager::dispatchWin32Message(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	return staticWinProc(hwnd, message, wParam, lParam);
+}
+
 LRESULT CALLBACK DockingManager::staticWinProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	DockingManager *pDockingManager = NULL;

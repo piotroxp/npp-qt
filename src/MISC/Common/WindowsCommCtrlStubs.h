@@ -245,10 +245,22 @@ inline ATOM RegisterClassExW(const WNDCLASSEXW*) { return 1; }
 inline BOOL UnregisterClassW(const wchar_t*, HINSTANCE) { return TRUE; }
 #define UnregisterClass UnregisterClassW
 inline BOOL InitCommonControlsEx(INITCOMMONCONTROLSEX*) { return TRUE; }
-inline LONG InterlockedIncrement(volatile long* v) { return ++(*v); }
-inline LONG InterlockedDecrement(volatile long* v) { return --(*v); }
-inline LONG InterlockedIncrement(volatile DWORD* v) { return ++(*reinterpret_cast<volatile long*>(v)); }
-inline LONG InterlockedDecrement(volatile DWORD* v) { return --(*reinterpret_cast<volatile long*>(v)); }
+inline LONG InterlockedIncrement(volatile long* v) {
+	long* p = const_cast<long*>(reinterpret_cast<const volatile long*>(v));
+	return ++(*p);
+}
+inline LONG InterlockedDecrement(volatile long* v) {
+	long* p = const_cast<long*>(reinterpret_cast<const volatile long*>(v));
+	return --(*p);
+}
+inline LONG InterlockedIncrement(volatile DWORD* v) {
+	DWORD* p = const_cast<DWORD*>(reinterpret_cast<const volatile DWORD*>(v));
+	return static_cast<LONG>(++(*p));
+}
+inline LONG InterlockedDecrement(volatile DWORD* v) {
+	DWORD* p = const_cast<DWORD*>(reinterpret_cast<const volatile DWORD*>(v));
+	return static_cast<LONG>(--(*p));
+}
 inline BOOL OffsetWindowOrgEx(HDC, int, int, POINT*) { return TRUE; }
 inline BOOL SetWindowOrgEx(HDC, int, int, POINT*) { return TRUE; }
 inline BOOL TranslateMessage(const void*) { return TRUE; }
