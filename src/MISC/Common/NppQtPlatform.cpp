@@ -10,6 +10,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMainWindow>
+#include <QStatusBar>
 #include <QPointer>
 #include <QTabWidget>
 #include <QTabBar>
@@ -79,6 +80,47 @@ QString toQString(const std::wstring& text)
 	return QString::fromWCharArray(text.c_str());
 }
 
+struct MainWindowChromeInsets {
+	int top = 0;
+	int bottom = 0;
+};
+
+MainWindowChromeInsets mainWindowChromeInsets(const QMainWindow* main)
+{
+	MainWindowChromeInsets insets;
+	if (!main)
+		return insets;
+
+	if (QMenuBar* bar = main->menuBar()) {
+		if (bar->isVisible() && !bar->actions().isEmpty()) {
+			const int h = bar->height();
+			insets.top = h > 0 ? h : bar->sizeHint().height();
+		}
+	}
+
+	if (QStatusBar* status = main->statusBar()) {
+		if (status->isVisible()) {
+			const int h = status->height();
+			insets.bottom = h > 0 ? h : status->sizeHint().height();
+		}
+	}
+	return insets;
+}
+
+void applyClientGeometryToParent(QWidget* widget, int x, int y, int w, int h)
+{
+	if (!widget)
+		return;
+
+	if (auto* main = qobject_cast<QMainWindow*>(widget->parentWidget())) {
+		const MainWindowChromeInsets insets = mainWindowChromeInsets(main);
+		y += insets.top;
+		if (QMenuBar* bar = main->menuBar())
+			bar->raise();
+	}
+	widget->setGeometry(x, y, w, h);
+}
+
 HMENU rootMenu(HMENU menu)
 {
 	HMENU current = menu;
@@ -128,12 +170,16 @@ void applyMenuToWindow(HWND hwnd, HMENU menu)
 	QMenuBar* bar = mainWindow->menuBar();
 	if (!bar)
 		return;
+	bar->setNativeMenuBar(false);
+	bar->setEnabled(true);
 
 	bar->clear();
 	if (!menu) {
 		windowMenus().erase(hwnd);
+		bar->setVisible(false);
 		return;
 	}
+	bar->setVisible(true);
 
 	NppMenuData* data = getMenuData(menu);
 	if (!data)
@@ -148,11 +194,13 @@ void applyMenuToWindow(HWND hwnd, HMENU menu)
 
 		if ((item.flags & MF_POPUP) && item.submenu) {
 			QMenu* top = bar->addMenu(toQString(item.text));
+			top->menuAction()->setEnabled(true);
 			buildQtMenuRecursive(top, item.submenu, hwnd);
 			continue;
 		}
 
 		QAction* action = bar->addAction(toQString(item.text));
+		action->setEnabled(true);
 		if (item.id != 0) {
 			QObject::connect(action, &QAction::triggered, hwnd, [hwnd, id = item.id]() {
 				SendMessageW(hwnd, WM_COMMAND, static_cast<WPARAM>(id), 0);
@@ -185,15 +233,118 @@ void ensureDefaultMainMenu(QMainWindow* mainWindow)
 	};
 
 	NppMenuData* rootData = getMenuData(root);
+	std::vector<HMENU> topSubmenus;
 	for (const wchar_t* title : kTopMenus) {
 		HMENU popup = allocMenu();
 		if (NppMenuData* popupData = getMenuData(popup))
 			popupData->parent = root;
+		topSubmenus.push_back(popup);
 		rootData->items.push_back(
 			{ static_cast<UINT>(MF_BYPOSITION | MF_POPUP), reinterpret_cast<UINT_PTR>(popup), title, popup });
 	}
 
+	auto addCmd = [](HMENU menu, UINT id, const wchar_t* text) {
+		NppMenuData* data = getMenuData(menu);
+		if (!data)
+			return;
+		data->items.push_back({ MF_BYPOSITION, id, text ? text : L"", nullptr });
+	};
+	auto addSep = [](HMENU menu) {
+		NppMenuData* data = getMenuData(menu);
+		if (!data)
+			return;
+		data->items.push_back({ static_cast<UINT>(MF_BYPOSITION | MF_SEPARATOR), 0, L"", nullptr });
+	};
+
+	// File
+	addCmd(topSubmenus[MENUINDEX_FILE], IDM_FILE_NEW, L"&New");
+	addCmd(topSubmenus[MENUINDEX_FILE], IDM_FILE_OPEN, L"&Open...");
+	addCmd(topSubmenus[MENUINDEX_FILE], IDM_FILE_SAVE, L"&Save");
+	addCmd(topSubmenus[MENUINDEX_FILE], IDM_FILE_SAVEAS, L"Save &As...");
+	addSep(topSubmenus[MENUINDEX_FILE]);
+	addCmd(topSubmenus[MENUINDEX_FILE], IDM_FILE_CLOSE, L"&Close");
+	addCmd(topSubmenus[MENUINDEX_FILE], IDM_FILE_CLOSEALL, L"Close A&ll");
+	addSep(topSubmenus[MENUINDEX_FILE]);
+	addCmd(topSubmenus[MENUINDEX_FILE], IDM_FILE_EXIT, L"E&xit");
+
+	// Edit
+	addCmd(topSubmenus[MENUINDEX_EDIT], IDM_EDIT_UNDO, L"&Undo");
+	addCmd(topSubmenus[MENUINDEX_EDIT], IDM_EDIT_REDO, L"&Redo");
+	addSep(topSubmenus[MENUINDEX_EDIT]);
+	addCmd(topSubmenus[MENUINDEX_EDIT], IDM_EDIT_CUT, L"Cu&t");
+	addCmd(topSubmenus[MENUINDEX_EDIT], IDM_EDIT_COPY, L"&Copy");
+	addCmd(topSubmenus[MENUINDEX_EDIT], IDM_EDIT_PASTE, L"&Paste");
+	addSep(topSubmenus[MENUINDEX_EDIT]);
+	addCmd(topSubmenus[MENUINDEX_EDIT], IDM_EDIT_SELECTALL, L"Select A&ll");
+
+	// Search
+	addCmd(topSubmenus[MENUINDEX_SEARCH], IDM_SEARCH_FIND, L"&Find...");
+	addCmd(topSubmenus[MENUINDEX_SEARCH], IDM_SEARCH_REPLACE, L"&Replace...");
+	addCmd(topSubmenus[MENUINDEX_SEARCH], IDM_SEARCH_FINDNEXT, L"Find &Next");
+	addCmd(topSubmenus[MENUINDEX_SEARCH], IDM_SEARCH_FINDPREV, L"Find &Previous");
+	addSep(topSubmenus[MENUINDEX_SEARCH]);
+	addCmd(topSubmenus[MENUINDEX_SEARCH], IDM_SEARCH_FINDINFILES, L"Find in Fi&les...");
+	addCmd(topSubmenus[MENUINDEX_SEARCH], IDM_SEARCH_GOTOLINE, L"&Go to...");
+
+	// View
+	addCmd(topSubmenus[MENUINDEX_VIEW], IDM_VIEW_ZOOMIN, L"Zoom &In");
+	addCmd(topSubmenus[MENUINDEX_VIEW], IDM_VIEW_ZOOMOUT, L"Zoom &Out");
+	addCmd(topSubmenus[MENUINDEX_VIEW], IDM_VIEW_ZOOMRESTORE, L"&Restore Default Zoom");
+	addSep(topSubmenus[MENUINDEX_VIEW]);
+	addCmd(topSubmenus[MENUINDEX_VIEW], IDM_VIEW_FULLSCREENTOGGLE, L"&Full Screen");
+
+	// Settings
+	addCmd(topSubmenus[MENUINDEX_SETTINGS], IDM_SETTING_PREFERENCE, L"&Preferences...");
+	addCmd(topSubmenus[MENUINDEX_SETTINGS], IDM_SETTING_SHORTCUT_MAPPER, L"&Shortcut Mapper...");
+
+	// Macro
+	addCmd(topSubmenus[MENUINDEX_MACRO], IDM_MACRO_STARTRECORDINGMACRO, L"&Start Recording");
+	addCmd(topSubmenus[MENUINDEX_MACRO], IDM_MACRO_STOPRECORDINGMACRO, L"Sto&p Recording");
+	addCmd(topSubmenus[MENUINDEX_MACRO], IDM_MACRO_PLAYBACKRECORDEDMACRO, L"&Playback");
+
+	// Run
+	addCmd(topSubmenus[MENUINDEX_RUN], IDM_EXECUTE, L"&Run...");
+
+	// Help
+	addCmd(topSubmenus[MENUINDEX_HELP], IDM_ABOUT, L"&About Notepad++");
+
 	applyMenuToWindow(mainWindow, root);
+}
+
+NppMenuItem* findItemByCommand(HMENU menu, UINT cmd)
+{
+	NppMenuData* data = getMenuData(menu);
+	if (!data)
+		return nullptr;
+	for (NppMenuItem& item : data->items) {
+		if (!(item.flags & MF_POPUP) && item.id == cmd)
+			return &item;
+		if (item.submenu) {
+			if (NppMenuItem* nested = findItemByCommand(item.submenu, cmd))
+				return nested;
+		}
+	}
+	return nullptr;
+}
+
+const NppMenuItem* findItemByCommandConst(HMENU menu, UINT cmd)
+{
+	return findItemByCommand(menu, cmd);
+}
+
+NppMenuItem* findItemByPosition(HMENU menu, UINT pos)
+{
+	NppMenuData* data = getMenuData(menu);
+	if (!data || pos >= data->items.size())
+		return nullptr;
+	return &data->items[pos];
+}
+
+const NppMenuItem* resolveMenuItem(HMENU menu, UINT item, UINT flags)
+{
+	if (flags & MF_BYPOSITION)
+		return findItemByPosition(menu, item);
+	return findItemByCommandConst(menu, item);
 }
 
 void rememberWindowClass(HWND hwnd, const wchar_t* className)
@@ -509,12 +660,83 @@ BOOL RemoveMenu(HMENU hMenu, UINT uPosition, UINT uFlags)
 	if (!data)
 		return FALSE;
 
-	if ((uFlags & MF_BYPOSITION) && uPosition < data->items.size()) {
-		data->items.erase(data->items.begin() + uPosition);
-		refreshMenuTree(hMenu);
-		return TRUE;
+	if (uFlags & MF_BYPOSITION) {
+		if (uPosition < data->items.size()) {
+			data->items.erase(data->items.begin() + uPosition);
+			refreshMenuTree(hMenu);
+			return TRUE;
+		}
+		return FALSE;
+	}
+
+	for (auto it = data->items.begin(); it != data->items.end(); ++it) {
+		if (!(it->flags & MF_POPUP) && it->id == uPosition) {
+			data->items.erase(it);
+			refreshMenuTree(hMenu);
+			return TRUE;
+		}
 	}
 	return FALSE;
+}
+
+BOOL DeleteMenu(HMENU hMenu, UINT uPosition, UINT uFlags)
+{
+	return RemoveMenu(hMenu, uPosition, uFlags);
+}
+
+int GetMenuItemCount(HMENU hMenu)
+{
+	NppMenuData* data = getMenuData(hMenu);
+	return data ? static_cast<int>(data->items.size()) : 0;
+}
+
+BOOL GetMenuItemInfoW(HMENU hMenu, UINT item, BOOL byPosition, MENUITEMINFOW* info)
+{
+	if (!info)
+		return FALSE;
+	const UINT flags = byPosition ? MF_BYPOSITION : MF_BYCOMMAND;
+	const NppMenuItem* menuItem = resolveMenuItem(hMenu, item, flags);
+	if (!menuItem)
+		return FALSE;
+
+	info->fType = (menuItem->flags & MF_SEPARATOR) ? MFT_SEPARATOR : MFT_STRING;
+	info->fState = ((menuItem->flags & MF_DISABLED) || (menuItem->flags & MF_GRAYED))
+		? static_cast<UINT>(MF_DISABLED | MF_GRAYED)
+		: static_cast<UINT>(0);
+	info->wID = static_cast<UINT>(menuItem->id);
+	info->hSubMenu = menuItem->submenu;
+	if (info->dwTypeData && info->cch > 0) {
+		std::wcsncpy(info->dwTypeData, menuItem->text.c_str(), info->cch);
+		info->dwTypeData[info->cch - 1] = L'\0';
+	}
+	return TRUE;
+}
+
+int GetMenuStringW(HMENU hMenu, UINT item, wchar_t* out, int cchMax, UINT flags)
+{
+	if (!out || cchMax <= 0)
+		return 0;
+	const NppMenuItem* menuItem = resolveMenuItem(hMenu, item, flags);
+	if (!menuItem)
+		return 0;
+	std::wcsncpy(out, menuItem->text.c_str(), static_cast<size_t>(cchMax));
+	out[cchMax - 1] = L'\0';
+	return static_cast<int>(std::wcslen(out));
+}
+
+BOOL EnableMenuItem(HMENU hMenu, UINT uIDEnableItem, UINT uEnable)
+{
+	NppMenuItem* menuItem = (uEnable & MF_BYPOSITION)
+		? findItemByPosition(hMenu, uIDEnableItem)
+		: findItemByCommand(hMenu, uIDEnableItem);
+	if (!menuItem)
+		return FALSE;
+
+	menuItem->flags &= ~(MF_DISABLED | MF_GRAYED);
+	if ((uEnable & MF_DISABLED) || (uEnable & MF_GRAYED))
+		menuItem->flags |= (uEnable & (MF_DISABLED | MF_GRAYED));
+	refreshMenuTree(hMenu);
+	return TRUE;
 }
 
 BOOL DestroyWindow(HWND hwnd)
@@ -661,6 +883,42 @@ BOOL GetClientRect(HWND hwnd, RECT* lpRect)
 	lpRect->top = 0;
 	lpRect->right = r.width();
 	lpRect->bottom = r.height();
+
+	if (auto* main = qobject_cast<QMainWindow*>(hwnd)) {
+		const MainWindowChromeInsets insets = mainWindowChromeInsets(main);
+		lpRect->bottom -= insets.top + insets.bottom;
+	}
+	return TRUE;
+}
+
+BOOL MoveWindow(HWND hwnd, int x, int y, int w, int h, BOOL /*bRepaint*/)
+{
+	if (!hwnd)
+		return FALSE;
+	applyClientGeometryToParent(hwnd, x, y, w, h);
+	return TRUE;
+}
+
+BOOL SetWindowPos(HWND hwnd, HWND /*hwndInsertAfter*/, int x, int y, int cx, int cy, UINT uFlags)
+{
+	if (!hwnd)
+		return FALSE;
+
+	const bool keepPos = (uFlags & SWP_NOMOVE) != 0;
+	const bool keepSize = (uFlags & SWP_NOSIZE) != 0;
+	QRect geom = hwnd->geometry();
+	if (!keepPos) {
+		geom.moveTopLeft(QPoint(x, y));
+		if (auto* main = qobject_cast<QMainWindow*>(hwnd->parentWidget()))
+			geom.moveTop(geom.top() + mainWindowChromeInsets(main).top);
+	}
+	if (!keepSize)
+		geom.setSize(QSize(cx, cy));
+	hwnd->setGeometry(geom);
+	if (auto* main = qobject_cast<QMainWindow*>(hwnd->parentWidget())) {
+		if (QMenuBar* bar = main->menuBar())
+			bar->raise();
+	}
 	return TRUE;
 }
 

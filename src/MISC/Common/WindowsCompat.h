@@ -1274,11 +1274,7 @@ inline BOOL EndPaint(HWND, void*) { return TRUE; }
 inline int GetSystemMetrics(int) { return 32; }
 inline LONG GetWindowLongW(HWND, int) { return 0; }
 inline LONG SetWindowLongW(HWND, int, LONG) { return 0; }
-inline BOOL SetWindowPos(HWND hwnd, HWND, int x, int y, int cx, int cy, UINT) {
-	if (hwnd)
-		hwnd->setGeometry(x, y, cx, cy);
-	return TRUE;
-}
+BOOL SetWindowPos(HWND hwnd, HWND hwndInsertAfter, int x, int y, int cx, int cy, UINT uFlags);
 // CreateWindowEx implemented in NppQtPlatform.cpp
 #define CreateWindowEx CreateWindowExW
 inline ATOM RegisterClassW(const WNDCLASSW*) { return 1; }
@@ -2370,16 +2366,16 @@ inline HANDLE CreateMutexW(void*, BOOL, const wchar_t*) { return nullptr; }
 HMENU CreatePopupMenu();
 typedef DWORD (*LPTHREAD_START_ROUTINE)(void*);
 inline HANDLE CreateThread(void*, size_t, LPTHREAD_START_ROUTINE, void*, DWORD, DWORD*) { return nullptr; }
-inline BOOL DeleteMenu(HMENU, UINT, UINT) { return TRUE; }
+BOOL DeleteMenu(HMENU hMenu, UINT uPosition, UINT uFlags);
 inline BOOL DragQueryPoint(HDROP, POINT*) { return FALSE; }
-inline BOOL EnableMenuItem(HMENU, UINT, UINT) { return TRUE; }
+BOOL EnableMenuItem(HMENU hMenu, UINT uIDEnableItem, UINT uEnable);
 inline HANDLE GetClipboardData(UINT) { return nullptr; }
 HMENU GetMenu(HWND hWnd);
-inline int GetMenuItemCount(HMENU) { return 0; }
-inline BOOL GetMenuItemInfoW(HMENU, UINT, BOOL, void*) { return FALSE; }
+int GetMenuItemCount(HMENU hMenu);
+BOOL GetMenuItemInfoW(HMENU hMenu, UINT item, BOOL byPosition, MENUITEMINFOW* info);
 #define GetMenuItemInfo GetMenuItemInfoW
 inline UINT GetMenuState(HMENU, UINT, UINT) { return 0; }
-inline int GetMenuStringW(HMENU, UINT, wchar_t*, int, UINT) { return 0; }
+int GetMenuStringW(HMENU hMenu, UINT item, wchar_t* out, int cchMax, UINT flags);
 #define GetMenuString GetMenuStringW
 inline BOOL GetMonitorInfoW(HMONITOR, MONITORINFO*) { return FALSE; }
 #define GetMonitorInfo GetMonitorInfoW
@@ -2394,10 +2390,7 @@ inline BOOL IsWindowVisible(HWND) { return TRUE; }
 inline int MapWindowPoints(HWND, HWND, POINT*, int) { return 0; }
 inline BOOL MessageBeep(UINT) { return TRUE; }
 inline HMONITOR MonitorFromWindow(HWND, DWORD) { return nullptr; }
-inline BOOL MoveWindow(HWND hwnd, int x, int y, int w, int h, BOOL) {
-	if (hwnd) hwnd->setGeometry(x, y, w, h);
-	return TRUE;
-}
+BOOL MoveWindow(HWND hwnd, int x, int y, int w, int h, BOOL bRepaint);
 inline BOOL OpenClipboard(HWND) { return TRUE; }
 inline BOOL PostMessageW(HWND, UINT, WPARAM, LPARAM) { return TRUE; }
 #ifndef PostMessage

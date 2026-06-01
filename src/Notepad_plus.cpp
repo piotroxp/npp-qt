@@ -6418,6 +6418,8 @@ void Notepad_plus::getCurrentOpenedFiles(Session & session, bool includeUntitled
 			vector<sessionFileInfo> *viewFiles = (vector<sessionFileInfo> *)(k == 0?&(session._mainViewFiles):&(session._subViewFiles));
 
 			Buffer * buf = MainFileManager.getBufferByID(bufID);
+			if (!buf)
+				continue;
 
 			if (buf->isUntitled() && buf->docLength() == 0)
 				continue;

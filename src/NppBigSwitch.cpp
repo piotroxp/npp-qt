@@ -166,7 +166,8 @@ LRESULT Notepad_plus_Window::runProc(HWND hwnd, UINT message, WPARAM wParam, LPA
 			try
 			{
 				NppDarkMode::setDarkTitleBar(hwnd);
-				NppDarkMode::autoSubclassWindowMenuBar(hwnd);
+				// Qt menu bar is native QWidget-based; Win32 subclassing here eats mouse handling.
+				// Keep title bar theming but skip menu-bar subclass hook in Qt port.
 				NppDarkMode::autoSubclassCtlColor(hwnd);
 
 				_notepad_plus_plus_core._pPublicInterface = this;
