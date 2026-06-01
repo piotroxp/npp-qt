@@ -91,6 +91,10 @@ public:
 		return _hSelf;
 	}
 
+	void clearHandle() {
+		_hSelf = nullptr;
+	}
+
 	HWND getHParent() const {
 		return _hParent;
 	}

@@ -1089,8 +1089,20 @@ struct DRAWITEMSTRUCT {
 // SendMessage implemented in NppQtPlatform.cpp
 inline LRESULT SendDlgItemMessage(HWND, int, UINT, WPARAM, LPARAM) { return 0; }
 inline HWND GetDlgItem(HWND parent, int) { return parent; }
-inline BOOL ImageList_Destroy(HIMAGELIST) { return TRUE; }
-inline BOOL ImageList_RemoveAll(HIMAGELIST) { return TRUE; }
+struct NppImageListStub {
+	int width = 0;
+	int height = 0;
+	int count = 0;
+};
+inline BOOL ImageList_Destroy(HIMAGELIST list) {
+	delete static_cast<NppImageListStub*>(list);
+	return TRUE;
+}
+inline BOOL ImageList_RemoveAll(HIMAGELIST list) {
+	if (auto* img = static_cast<NppImageListStub*>(list))
+		img->count = 0;
+	return TRUE;
+}
 
 struct TBBUTTON {
 	int iBitmap;
@@ -1216,7 +1228,7 @@ inline int MessageBoxW(void*, const wchar_t*, const wchar_t*, unsigned int) { re
 inline int MessageBox(void*, const wchar_t*, const wchar_t*, unsigned int) { return 0; }
 inline BOOL DestroyMenu(HMENU) { return TRUE; }
 inline BOOL DestroyIcon(HICON) { return TRUE; }
-inline BOOL DestroyWindow(HWND) { return TRUE; }
+// DestroyWindow implemented in NppQtPlatform.cpp
 
 // Library stubs
 inline BOOL FreeLibrary(HMODULE) { return TRUE; }
@@ -1888,11 +1900,36 @@ inline int GetClipRgn(HDC, HRGN) { return 0; }
 inline BOOL IntersectRect(LPRECT, const RECT*, const RECT*) { return TRUE; }
 inline BOOL Polyline(HDC, const POINT*, int) { return TRUE; }
 inline int SelectClipRgn(HDC, HRGN) { return 0; }
-inline HIMAGELIST ImageList_Create(int, int, UINT, int, int) { return nullptr; }
-inline int ImageList_AddIcon(HIMAGELIST, HICON) { return 0; }
-inline HICON ImageList_GetIcon(HIMAGELIST, int, UINT) { return nullptr; }
-inline int ImageList_AddMasked(HIMAGELIST, HBITMAP, COLORREF) { return 0; }
-inline int ImageList_ReplaceIcon(HIMAGELIST, int, HICON) { return 0; }
+inline HIMAGELIST ImageList_Create(int cx, int cy, UINT, int initial, int) {
+	auto* img = new NppImageListStub();
+	img->width = cx;
+	img->height = cy;
+	img->count = (initial > 0) ? initial : 0;
+	return static_cast<HIMAGELIST>(img);
+}
+inline int ImageList_AddIcon(HIMAGELIST list, HICON) {
+	auto* img = static_cast<NppImageListStub*>(list);
+	if (!img)
+		return -1;
+	return img->count++;
+}
+inline HICON ImageList_GetIcon(HIMAGELIST list, int index, UINT) {
+	auto* img = static_cast<NppImageListStub*>(list);
+	if (!img || index < 0 || index >= img->count)
+		return nullptr;
+	return reinterpret_cast<HICON>(static_cast<uintptr_t>(index + 1));
+}
+inline int ImageList_AddMasked(HIMAGELIST list, HBITMAP, COLORREF) {
+	return ImageList_AddIcon(list, nullptr);
+}
+inline int ImageList_ReplaceIcon(HIMAGELIST list, int index, HICON) {
+	auto* img = static_cast<NppImageListStub*>(list);
+	if (!img)
+		return -1;
+	if (index < 0 || index >= img->count)
+		return img->count++;
+	return index;
+}
 inline int GetDIBits(HDC, HBITMAP, UINT, UINT, void*, BITMAPINFO*, UINT) { return 0; }
 inline int SetDIBits(HDC, HBITMAP, UINT, UINT, const void*, const BITMAPINFO*, UINT) { return 0; }
 inline BOOL GetIconInfo(HICON, ICONINFO*) { return FALSE; }
@@ -2052,13 +2089,29 @@ inline HINSTANCE ShellExecuteW(HWND, const wchar_t*, const wchar_t*, const wchar
 #ifndef SendMessage
 #define SendMessage SendMessageW
 #endif
-inline int ImageList_SetIconSize(void*, int, int) { return 0; }
+inline int ImageList_SetIconSize(void* list, int cx, int cy) {
+	auto* img = static_cast<NppImageListStub*>(list);
+	if (!img)
+		return 0;
+	img->width = cx;
+	img->height = cy;
+	return 1;
+}
 inline BOOL ImageList_BeginDrag(HIMAGELIST, int, int, int) { return TRUE; }
 inline BOOL ImageList_DragEnter(HWND, int, int) { return TRUE; }
 inline BOOL ImageList_DragMove(int, int) { return TRUE; }
 inline void ImageList_DragShowNolock(BOOL) {}
 inline void ImageList_EndDrag() {}
-inline BOOL ImageList_GetIconSize(HIMAGELIST, int*, int*) { return FALSE; }
+inline BOOL ImageList_GetIconSize(HIMAGELIST list, int* cx, int* cy) {
+	auto* img = static_cast<NppImageListStub*>(list);
+	if (!img)
+		return FALSE;
+	if (cx)
+		*cx = img->width;
+	if (cy)
+		*cy = img->height;
+	return TRUE;
+}
 inline int ShowCursor(BOOL) { return 0; }
 #ifndef NPP_STUB_REGISTERWINDOWMESSAGE
 #define NPP_STUB_REGISTERWINDOWMESSAGE
@@ -2483,7 +2536,7 @@ inline DWORD ExpandEnvironmentStringsW(const wchar_t*, wchar_t*, DWORD) { return
 #define ExpandEnvironmentStrings ExpandEnvironmentStringsW
 inline int SHCreateDirectory(HWND, const wchar_t*) { return 0; }
 inline BOOL EnableWindow(HWND, BOOL) { return TRUE; }
-inline void PostQuitMessage(int) {}
+// PostQuitMessage implemented in NppQtPlatform.cpp
 inline LRESULT DefWindowProcW(HWND, UINT, WPARAM, LPARAM) { return 0; }
 #define DefWindowProc DefWindowProcW
 inline HDWP BeginDeferWindowPos(int) { return nullptr; }
@@ -2719,6 +2772,8 @@ inline HRESULT LoadIconWithScaleDown(HINSTANCE, LPCWSTR, int, int, HICON*) { ret
 HWND CreateWindowExW(DWORD dwExStyle, const wchar_t* lpClassName, const wchar_t* lpWindowName,
 	DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu,
 	HINSTANCE hInstance, void* lpCreateParams);
+BOOL DestroyWindow(HWND hwnd);
+void PostQuitMessage(int nExitCode);
 LRESULT SendMessageW(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LONG_PTR SetWindowLongPtrW(HWND hwnd, int index, LONG_PTR value);
 LONG_PTR GetWindowLongPtrW(HWND hwnd, int index);

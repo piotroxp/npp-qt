@@ -5,7 +5,9 @@
 #include "ScintillaComponents/scintilla/qt/ScintillaEdit/ScintillaEdit.h"
 
 #include <QApplication>
+#include <QCloseEvent>
 #include <QMainWindow>
+#include <QPointer>
 #include <QTabWidget>
 #include <QTabBar>
 #include <QWidget>
@@ -122,6 +124,18 @@ QWidget* createTabWidget(QWidget* parent)
 	return tabs;
 }
 
+HWND createDialogWidget(HWND parent, DLGPROC dlgProc, LPARAM initParam)
+{
+	QWidget* dialog = new QWidget(parent);
+	dialog->setWindowFlag(Qt::Dialog, true);
+	dialog->setAttribute(Qt::WA_DeleteOnClose, false);
+	dialog->resize(480, 90);
+	if (dlgProc)
+		dlgProc(dialog, WM_INITDIALOG, 0, initParam);
+	dialog->show();
+	return dialog;
+}
+
 LRESULT dispatchWindowMessage(HWND hwnd, const wchar_t* className, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	if (!hwnd)
@@ -150,7 +164,60 @@ void bootstrapWindow(HWND hwnd, const wchar_t* className, void* lpCreateParams)
 	dispatchWindowMessage(hwnd, className, WM_CREATE, 0, 0);
 }
 
+class CloseToWin32Bridge final : public QObject {
+public:
+	explicit CloseToWin32Bridge(QWidget* hwnd)
+		: QObject(hwnd)
+		, m_hwnd(hwnd)
+	{
+		hwnd->installEventFilter(this);
+	}
+
+	bool eventFilter(QObject* watched, QEvent* event) override
+	{
+		if (watched != m_hwnd || event->type() != QEvent::Close)
+			return QObject::eventFilter(watched, event);
+
+		// Defer WM_CLOSE so we never synchronously delete the window inside QEvent::Close.
+		const QPointer<QWidget> guard(m_hwnd);
+		QMetaObject::invokeMethod(
+			QCoreApplication::instance(),
+			[guard]() {
+				if (guard)
+					SendMessageW(guard, WM_CLOSE, 0, 0);
+			},
+			Qt::QueuedConnection);
+		static_cast<QCloseEvent*>(event)->ignore();
+		return true;
+	}
+
+private:
+	QWidget* m_hwnd;
+};
+
 } // namespace
+
+HWND CreateDialogParamW(HINSTANCE, const wchar_t*, HWND hWndParent, DLGPROC lpDialogFunc, LPARAM dwInitParam)
+{
+	return createDialogWidget(hWndParent, lpDialogFunc, dwInitParam);
+}
+
+HWND CreateDialogIndirectParamW(HINSTANCE, DLGTEMPLATE*, HWND hWndParent, DLGPROC lpDialogFunc, LPARAM dwInitParam)
+{
+	return createDialogWidget(hWndParent, lpDialogFunc, dwInitParam);
+}
+
+INT_PTR DialogBoxParamW(HINSTANCE, const wchar_t*, HWND hWndParent, DLGPROC lpDialogFunc, LPARAM dwInitParam)
+{
+	HWND hDlg = createDialogWidget(hWndParent, lpDialogFunc, dwInitParam);
+	return hDlg ? IDOK : -1;
+}
+
+INT_PTR DialogBoxIndirectParamW(HINSTANCE, DLGTEMPLATE*, HWND hWndParent, DLGPROC lpDialogFunc, LPARAM dwInitParam)
+{
+	HWND hDlg = createDialogWidget(hWndParent, lpDialogFunc, dwInitParam);
+	return hDlg ? IDOK : -1;
+}
 
 HWND CreateWindowExW(
 	DWORD dwExStyle,
@@ -179,6 +246,7 @@ HWND CreateWindowExW(
 		main->setMinimumSize(400, 300);
 		if (nWidth <= 0 || nHeight <= 0)
 			main->resize(800, 600);
+		new CloseToWin32Bridge(main);
 		widget = main;
 	} else if (classNameIs(lpClassName, WC_TABCONTROL)) {
 		widget = createTabWidget(parentWidget);
@@ -199,6 +267,29 @@ HWND CreateWindowExW(
 		widget->show();
 
 	return widget;
+}
+
+BOOL DestroyWindow(HWND hwnd)
+{
+	if (!hwnd)
+		return FALSE;
+
+	const auto it = windowExtras().find(hwnd);
+	const wchar_t* className = (it != windowExtras().end()) ? it->second.className.c_str() : nullptr;
+
+	dispatchWindowMessage(hwnd, className, WM_DESTROY, 0, 0);
+	windowExtras().erase(hwnd);
+	delete hwnd;
+	return TRUE;
+}
+
+void PostQuitMessage(int)
+{
+	QCoreApplication* app = QCoreApplication::instance();
+	if (!app)
+		return;
+	// Queue quit so WM_DESTROY / DestroyWindow can finish before aboutToQuit runs.
+	QMetaObject::invokeMethod(app, &QCoreApplication::quit, Qt::QueuedConnection);
 }
 
 LRESULT SendMessageW(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)

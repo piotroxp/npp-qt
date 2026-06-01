@@ -32,13 +32,13 @@ struct DLGTEMPLATE {
 	short x = 0, y = 0, cx = 0, cy = 0;
 };
 typedef DLGTEMPLATE* LPDLGTEMPLATE;
-inline INT_PTR DialogBoxIndirectParamW(HINSTANCE, DLGTEMPLATE*, HWND, DLGPROC, LPARAM) { return -1; }
+INT_PTR DialogBoxIndirectParamW(HINSTANCE, DLGTEMPLATE*, HWND, DLGPROC, LPARAM);
 #define DialogBoxIndirectParam DialogBoxIndirectParamW
-inline INT_PTR DialogBoxParamW(HINSTANCE, const wchar_t*, HWND, DLGPROC, LPARAM) { return -1; }
+INT_PTR DialogBoxParamW(HINSTANCE, const wchar_t*, HWND, DLGPROC, LPARAM);
 #define DialogBoxParam DialogBoxParamW
-inline HWND CreateDialogParamW(HINSTANCE, const wchar_t*, HWND, DLGPROC, LPARAM) { return nullptr; }
+HWND CreateDialogParamW(HINSTANCE, const wchar_t*, HWND, DLGPROC, LPARAM);
 #define CreateDialogParam CreateDialogParamW
-inline HWND CreateDialogIndirectParamW(HINSTANCE, DLGTEMPLATE*, HWND, DLGPROC, LPARAM) { return nullptr; }
+HWND CreateDialogIndirectParamW(HINSTANCE, DLGTEMPLATE*, HWND, DLGPROC, LPARAM);
 #define CreateDialogIndirectParam CreateDialogIndirectParamW
 struct DLGTEMPLATEEX
 {

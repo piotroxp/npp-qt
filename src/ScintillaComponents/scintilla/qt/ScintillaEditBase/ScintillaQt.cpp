@@ -66,9 +66,6 @@ static const QString sWrappedVSEditorLineCutCopy("application/x-qt-windows-mime;
 #elif defined(Q_OS_MAC)
 static const QString sScintillaRecPboardType("com.scintilla.utf16-plain-text.rectangular");
 static const QString sScintillaRecMimeType("text/x-scintilla.utf16-plain-text.rectangular");
-#else
-// Linux
-static const QString sMimeRectangularMarker("text/x-rectangular-marker");
 #endif
 
 #if defined(Q_OS_MAC) && QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
@@ -184,9 +181,8 @@ static void AddRectangularToMime(QMimeData *mimeData, [[maybe_unused]] const QSt
 	// clipboard format is supposed to be UTF-16, not UTF-8.
 	mimeData->setData(sScintillaRecMimeType, su.toUtf8());
 #else
-	// Linux
-	// Add an empty marker
-	mimeData->setData(sMimeRectangularMarker, QByteArray());
+	// Linux — QStringLiteral avoids a static QString destroyed after QApplication.
+	mimeData->setData(QStringLiteral("text/x-rectangular-marker"), QByteArray());
 #endif
 }
 
@@ -215,7 +211,7 @@ static bool IsRectangularInMime(const QMimeData *mimeData)
 			return true;
 #else
 		// Linux
-		if (formats[i] == sMimeRectangularMarker)
+		if (formats[i] == QLatin1String("text/x-rectangular-marker"))
 			return true;
 #endif
 	}

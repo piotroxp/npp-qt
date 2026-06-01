@@ -91,12 +91,6 @@ typedef void* HHOOK;
 #define ICC_TREEVIEW_CLASSES 0x00000002
 #define ICC_TAB_CLASSES 0x00000008
 
-#define LVM_FIRST 0x1000
-#define TV_FIRST 0x1100
-
-#define LVN_FIRST (-100)
-#define TVN_FIRST (-400)
-
 #define LVIF_TEXT 0x0001
 #define LVCF_TEXT 0x0004
 #define LVIS_FOCUSED 0x0001

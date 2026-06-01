@@ -17,60 +17,32 @@ public:
 
     FileNameStringSplitter(const QString& fileNameStr)
     {
-        const int filePathLength = 260; // MAX_PATH
-        QString str;
+        QString current;
         bool isInsideQuotes = false;
-        int i = 0;
-        bool fini = false;
 
-        const QChar* pStr = fileNameStr.constData();
-        
-        while (!fini && i < filePathLength)
+        for (QChar ch : fileNameStr)
         {
-            if (*pStr == '"')
+            if (ch == QChar('"'))
             {
-                if (isInsideQuotes)
-                {
-                    str[i] = '\0';
-                    if (!str.isEmpty() && i > 0)
-                        _fileNames.append(str);
-                    i = 0;
-                    str.clear();
-                }
                 isInsideQuotes = !isInsideQuotes;
-                ++pStr;
+                continue;
             }
-            else if (*pStr == ' ')
+
+            if (!isInsideQuotes && ch.isSpace())
             {
-                if (isInsideQuotes)
+                if (!current.isEmpty())
                 {
-                    str[i] = *pStr;
-                    ++i;
+                    _fileNames.append(current);
+                    current.clear();
                 }
-                else
-                {
-                    str[i] = '\0';
-                    if (!str.isEmpty() && i > 0)
-                        _fileNames.append(str);
-                    i = 0;
-                    str.clear();
-                }
-                ++pStr;
+                continue;
             }
-            else if (*pStr == '\0')
-            {
-                str[i] = *pStr;
-                if (!str.isEmpty() && i > 0)
-                    _fileNames.append(str);
-                fini = true;
-            }
-            else
-            {
-                str[i] = *pStr;
-                ++i;
-                ++pStr;
-            }
+
+            current.append(ch);
         }
+
+        if (!current.isEmpty())
+            _fileNames.append(current);
     }
 
     const wchar_t* getFileName(size_t index) const {

@@ -3,6 +3,8 @@
 #include "Notepad_plus_Window.h"
 #include "ScintillaComponents/scintilla/qt/ScintillaEdit/ScintillaEdit.h"
 
+#include <QCoreApplication>
+#include <QEvent>
 #include <QMessageBox>
 #include <QSize>
 #include <QString>
@@ -12,9 +14,8 @@
 
 int main(int argc, char* argv[])
 {
-    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-
     NppApplication app(argc, argv);
+    app.setQuitOnLastWindowClosed(false);
     app.setApplicationName(QStringLiteral("npp-qt"));
     app.setApplicationVersion(QStringLiteral("8.9.4"));
     app.setOrganizationName(QStringLiteral("Notepad++"));
@@ -30,7 +31,14 @@ int main(int argc, char* argv[])
         cmdLine += QString::fromLocal8Bit(argv[i]).toStdWString();
     }
 
-    auto nppWindow = std::make_unique<Notepad_plus_Window>();
+    std::unique_ptr<Notepad_plus_Window> nppWindow;
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, [&nppWindow]() {
+        nppWindow.reset();
+        if (QCoreApplication::instance())
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    });
+
+    nppWindow = std::make_unique<Notepad_plus_Window>();
     try {
         nppWindow->init(reinterpret_cast<HINSTANCE>(&app), nullptr,
             cmdLine.empty() ? L"" : cmdLine.c_str(), &cmdLineParams);

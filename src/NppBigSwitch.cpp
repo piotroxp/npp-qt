@@ -16,6 +16,7 @@
 
 
 #include <algorithm>
+#include <cstdio>
 #include "MISC/Common/WindowsCompat.h"
 #include "MISC/Common/WindowsStubs.h"
 #include "MISC/Common/WindowsMessageStubs.h"
@@ -183,6 +184,7 @@ LRESULT Notepad_plus_Window::runProc(HWND hwnd, UINT message, WPARAM wParam, LPA
 			}
 			catch (std::exception& ex)
 			{
+				std::fprintf(stderr, "Exception On WM_CREATE: %s\n", ex.what());
 				::MessageBoxA(hwnd, ex.what(), "Exception On WM_CREATE", MB_OK);
 				exit(-1);
 			}
@@ -2810,8 +2812,10 @@ LRESULT Notepad_plus::process(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 		case WM_DESTROY:
 		{
 			killAllChildren();
-			::PostQuitMessage(0);
+			if (_pPublicInterface)
+				_pPublicInterface->clearHandle();
 			_pPublicInterface->gNppHWND = NULL;
+			::PostQuitMessage(0);
 			return TRUE;
 		}
 
