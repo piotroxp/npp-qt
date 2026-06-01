@@ -1289,7 +1289,7 @@ inline HICON LoadIcon(HINSTANCE inst, int id) { return LoadIconW(inst, MAKEINTRE
 inline HCURSOR LoadCursorW(HINSTANCE, const wchar_t*) { return nullptr; }
 inline HCURSOR LoadCursor(HINSTANCE inst, const wchar_t* name) { return LoadCursorW(inst, name); }
 inline HCURSOR LoadCursor(HINSTANCE inst, int id) { return LoadCursorW(inst, MAKEINTRESOURCE(id)); }
-inline BOOL SetMenu(HWND, HMENU) { return TRUE; }
+BOOL SetMenu(HWND hwnd, HMENU hMenu);
 inline BOOL LockWindowUpdate(HWND) { return TRUE; }
 inline HDC GetDCEx(HWND, HRGN, DWORD) { return nullptr; }
 #ifndef COLOR_MENU
@@ -1328,7 +1328,7 @@ BOOL GetClientRect(HWND hwnd, RECT* lpRect);
 // Menu helpers
 inline UINT CheckMenuItem(HMENU, UINT, UINT) { return 0; }
 inline BOOL DrawMenuBar(HWND) { return TRUE; }
-inline HMENU GetSubMenu(HMENU, int) { return nullptr; }
+HMENU GetSubMenu(HMENU hMenu, int nPos);
 
 // Drag & drop / file stubs
 inline UINT DragQueryFileW(HDROP, UINT, wchar_t*, UINT) { return 0; }
@@ -1691,14 +1691,14 @@ inline int wsprintf(wchar_t* buf, const wchar_t* fmt, ...) {
 	return n < 0 ? 0 : n;
 }
 
-inline HMENU CreateMenu() { return nullptr; }
+HMENU CreateMenu();
 inline BOOL DeleteFileW(const wchar_t*) { return TRUE; }
 #define DeleteFile DeleteFileW
 inline HANDLE FindFirstFileW(const wchar_t*, WIN32_FIND_DATA*) { return INVALID_HANDLE_VALUE; }
 #define FindFirstFile FindFirstFileW
 inline BOOL FindNextFileW(HANDLE, WIN32_FIND_DATA*) { return FALSE; }
 #define FindNextFile FindNextFileW
-inline BOOL InsertMenuW(HMENU, UINT, UINT, UINT_PTR, const wchar_t*) { return TRUE; }
+BOOL InsertMenuW(HMENU hMenu, UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, const wchar_t* lpNewItem);
 #define InsertMenu InsertMenuW
 inline HMODULE LoadLibraryExW(const wchar_t*, HANDLE, DWORD) { return nullptr; }
 #define LoadLibraryEx LoadLibraryExW
@@ -2356,7 +2356,7 @@ struct MONITORINFO {
 	DWORD dwFlags;
 };
 
-inline HMENU AppendMenuW(HMENU, UINT, UINT_PTR, const wchar_t*) { return nullptr; }
+HMENU AppendMenuW(HMENU hMenu, UINT uFlags, UINT_PTR uIDNewItem, const wchar_t* lpNewItem);
 #define AppendMenu AppendMenuW
 inline BOOL CheckMenuRadioItem(HMENU, UINT, UINT, UINT, UINT) { return TRUE; }
 inline HWND ChildWindowFromPointEx(HWND, POINT, UINT) { return nullptr; }
@@ -2367,14 +2367,14 @@ inline BOOL CreateDirectoryW(const wchar_t*, void*) { return TRUE; }
 #define CreateDirectory CreateDirectoryW
 inline HANDLE CreateMutexW(void*, BOOL, const wchar_t*) { return nullptr; }
 #define CreateMutex CreateMutexW
-inline HMENU CreatePopupMenu() { return nullptr; }
+HMENU CreatePopupMenu();
 typedef DWORD (*LPTHREAD_START_ROUTINE)(void*);
 inline HANDLE CreateThread(void*, size_t, LPTHREAD_START_ROUTINE, void*, DWORD, DWORD*) { return nullptr; }
 inline BOOL DeleteMenu(HMENU, UINT, UINT) { return TRUE; }
 inline BOOL DragQueryPoint(HDROP, POINT*) { return FALSE; }
 inline BOOL EnableMenuItem(HMENU, UINT, UINT) { return TRUE; }
 inline HANDLE GetClipboardData(UINT) { return nullptr; }
-inline HMENU GetMenu(HWND) { return nullptr; }
+HMENU GetMenu(HWND hWnd);
 inline int GetMenuItemCount(HMENU) { return 0; }
 inline BOOL GetMenuItemInfoW(HMENU, UINT, BOOL, void*) { return FALSE; }
 #define GetMenuItemInfo GetMenuItemInfoW
@@ -2403,7 +2403,7 @@ inline BOOL PostMessageW(HWND, UINT, WPARAM, LPARAM) { return TRUE; }
 #ifndef PostMessage
 #define PostMessage PostMessageW
 #endif
-inline BOOL RemoveMenu(HMENU, UINT, UINT) { return TRUE; }
+BOOL RemoveMenu(HMENU hMenu, UINT uPosition, UINT uFlags);
 inline BOOL SetMenuItemInfoW(HMENU, UINT, BOOL, void*) { return TRUE; }
 #define SetMenuItemInfo SetMenuItemInfoW
 #define SetWindowLongPtr SetWindowLongPtrW

@@ -5,7 +5,10 @@
 #include "ScintillaComponents/scintilla/qt/ScintillaEdit/ScintillaEdit.h"
 
 #include <QApplication>
+#include <QAction>
 #include <QCloseEvent>
+#include <QMenu>
+#include <QMenuBar>
 #include <QMainWindow>
 #include <QPointer>
 #include <QTabWidget>
@@ -14,8 +17,11 @@
 #include <QObject>
 
 #include <cwchar>
+#include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace {
 
@@ -28,6 +34,166 @@ std::unordered_map<QWidget*, NppWndExtra>& windowExtras()
 {
 	static std::unordered_map<QWidget*, NppWndExtra> extras;
 	return extras;
+}
+
+struct NppMenuItem {
+	UINT flags = 0;
+	UINT_PTR id = 0;
+	std::wstring text;
+	HMENU submenu = nullptr;
+};
+
+struct NppMenuData {
+	std::vector<NppMenuItem> items;
+	HMENU parent = nullptr;
+};
+
+std::unordered_map<HMENU, std::unique_ptr<NppMenuData>>& menuStore()
+{
+	static std::unordered_map<HMENU, std::unique_ptr<NppMenuData>> store;
+	return store;
+}
+
+std::unordered_map<HWND, HMENU>& windowMenus()
+{
+	static std::unordered_map<HWND, HMENU> byWindow;
+	return byWindow;
+}
+
+NppMenuData* getMenuData(HMENU menu)
+{
+	const auto it = menuStore().find(menu);
+	return (it != menuStore().end()) ? it->second.get() : nullptr;
+}
+
+HMENU allocMenu()
+{
+	auto menu = std::make_unique<NppMenuData>();
+	HMENU handle = reinterpret_cast<HMENU>(menu.get());
+	menuStore()[handle] = std::move(menu);
+	return handle;
+}
+
+QString toQString(const std::wstring& text)
+{
+	return QString::fromWCharArray(text.c_str());
+}
+
+HMENU rootMenu(HMENU menu)
+{
+	HMENU current = menu;
+	while (NppMenuData* data = getMenuData(current)) {
+		if (!data->parent)
+			return current;
+		current = data->parent;
+	}
+	return menu;
+}
+
+void buildQtMenuRecursive(QMenu* qmenu, HMENU menu, HWND targetWindow)
+{
+	NppMenuData* data = getMenuData(menu);
+	if (!qmenu || !data)
+		return;
+
+	for (const NppMenuItem& item : data->items) {
+		if (item.flags & MF_SEPARATOR) {
+			qmenu->addSeparator();
+			continue;
+		}
+
+		if ((item.flags & MF_POPUP) && item.submenu) {
+			QMenu* child = qmenu->addMenu(toQString(item.text));
+			buildQtMenuRecursive(child, item.submenu, targetWindow);
+			continue;
+		}
+
+		QAction* action = qmenu->addAction(toQString(item.text));
+		const bool disabled = (item.flags & MF_DISABLED) || (item.flags & MF_GRAYED);
+		action->setEnabled(!disabled);
+		if (item.id != 0) {
+			QObject::connect(action, &QAction::triggered, targetWindow, [targetWindow, id = item.id]() {
+				SendMessageW(targetWindow, WM_COMMAND, static_cast<WPARAM>(id), 0);
+			});
+		}
+	}
+}
+
+void applyMenuToWindow(HWND hwnd, HMENU menu)
+{
+	QMainWindow* mainWindow = qobject_cast<QMainWindow*>(hwnd);
+	if (!mainWindow)
+		return;
+
+	QMenuBar* bar = mainWindow->menuBar();
+	if (!bar)
+		return;
+
+	bar->clear();
+	if (!menu) {
+		windowMenus().erase(hwnd);
+		return;
+	}
+
+	NppMenuData* data = getMenuData(menu);
+	if (!data)
+		return;
+
+	windowMenus()[hwnd] = menu;
+	for (const NppMenuItem& item : data->items) {
+		if (item.flags & MF_SEPARATOR) {
+			bar->addSeparator();
+			continue;
+		}
+
+		if ((item.flags & MF_POPUP) && item.submenu) {
+			QMenu* top = bar->addMenu(toQString(item.text));
+			buildQtMenuRecursive(top, item.submenu, hwnd);
+			continue;
+		}
+
+		QAction* action = bar->addAction(toQString(item.text));
+		if (item.id != 0) {
+			QObject::connect(action, &QAction::triggered, hwnd, [hwnd, id = item.id]() {
+				SendMessageW(hwnd, WM_COMMAND, static_cast<WPARAM>(id), 0);
+			});
+		}
+	}
+}
+
+void refreshMenuTree(HMENU changedMenu)
+{
+	if (!changedMenu)
+		return;
+	const HMENU root = rootMenu(changedMenu);
+	for (const auto& [hwnd, mapped] : windowMenus()) {
+		if (rootMenu(mapped) == root)
+			applyMenuToWindow(hwnd, mapped);
+	}
+}
+
+void ensureDefaultMainMenu(QMainWindow* mainWindow)
+{
+	if (!mainWindow || windowMenus().find(mainWindow) != windowMenus().end())
+		return;
+
+	HMENU root = allocMenu();
+	static constexpr const wchar_t* kTopMenus[] = {
+		L"&File", L"&Edit", L"&Search", L"&View", L"F&ormat",
+		L"&Language", L"&Settings", L"&Tools", L"&Macro", L"&Run",
+		L"&Plugins", L"&Window", L"&?", L"", L"&List"
+	};
+
+	NppMenuData* rootData = getMenuData(root);
+	for (const wchar_t* title : kTopMenus) {
+		HMENU popup = allocMenu();
+		if (NppMenuData* popupData = getMenuData(popup))
+			popupData->parent = root;
+		rootData->items.push_back(
+			{ static_cast<UINT>(MF_BYPOSITION | MF_POPUP), reinterpret_cast<UINT_PTR>(popup), title, popup });
+	}
+
+	applyMenuToWindow(mainWindow, root);
 }
 
 void rememberWindowClass(HWND hwnd, const wchar_t* className)
@@ -247,6 +413,7 @@ HWND CreateWindowExW(
 		if (nWidth <= 0 || nHeight <= 0)
 			main->resize(800, 600);
 		new CloseToWin32Bridge(main);
+		ensureDefaultMainMenu(main);
 		widget = main;
 	} else if (classNameIs(lpClassName, WC_TABCONTROL)) {
 		widget = createTabWidget(parentWidget);
@@ -267,6 +434,87 @@ HWND CreateWindowExW(
 		widget->show();
 
 	return widget;
+}
+
+HMENU CreateMenu()
+{
+	return allocMenu();
+}
+
+HMENU CreatePopupMenu()
+{
+	return allocMenu();
+}
+
+BOOL InsertMenuW(HMENU hMenu, UINT uPosition, UINT uFlags, UINT_PTR uIDNewItem, const wchar_t* lpNewItem)
+{
+	NppMenuData* data = getMenuData(hMenu);
+	if (!data)
+		return FALSE;
+
+	NppMenuItem item{};
+	item.flags = uFlags;
+	item.id = uIDNewItem;
+	if (lpNewItem)
+		item.text = lpNewItem;
+
+	if (uFlags & MF_POPUP) {
+		item.submenu = reinterpret_cast<HMENU>(uIDNewItem);
+		if (NppMenuData* child = getMenuData(item.submenu))
+			child->parent = hMenu;
+	}
+
+	const bool byPosition = (uFlags & MF_BYPOSITION) != 0;
+	if (!byPosition || uPosition >= data->items.size())
+		data->items.push_back(std::move(item));
+	else
+		data->items.insert(data->items.begin() + uPosition, std::move(item));
+
+	refreshMenuTree(hMenu);
+	return TRUE;
+}
+
+HMENU AppendMenuW(HMENU hMenu, UINT uFlags, UINT_PTR uIDNewItem, const wchar_t* lpNewItem)
+{
+	NppMenuData* data = getMenuData(hMenu);
+	const UINT pos = data ? static_cast<UINT>(data->items.size()) : 0;
+	if (!InsertMenuW(hMenu, pos, uFlags | MF_BYPOSITION, uIDNewItem, lpNewItem))
+		return nullptr;
+	return hMenu;
+}
+
+HMENU GetSubMenu(HMENU hMenu, int nPos)
+{
+	NppMenuData* data = getMenuData(hMenu);
+	if (!data || nPos < 0 || static_cast<size_t>(nPos) >= data->items.size())
+		return nullptr;
+	return data->items[static_cast<size_t>(nPos)].submenu;
+}
+
+HMENU GetMenu(HWND hWnd)
+{
+	const auto it = windowMenus().find(hWnd);
+	return (it != windowMenus().end()) ? it->second : nullptr;
+}
+
+BOOL SetMenu(HWND hwnd, HMENU hMenu)
+{
+	applyMenuToWindow(hwnd, hMenu);
+	return TRUE;
+}
+
+BOOL RemoveMenu(HMENU hMenu, UINT uPosition, UINT uFlags)
+{
+	NppMenuData* data = getMenuData(hMenu);
+	if (!data)
+		return FALSE;
+
+	if ((uFlags & MF_BYPOSITION) && uPosition < data->items.size()) {
+		data->items.erase(data->items.begin() + uPosition);
+		refreshMenuTree(hMenu);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 BOOL DestroyWindow(HWND hwnd)
