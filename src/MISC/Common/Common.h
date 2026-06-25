@@ -67,6 +67,12 @@ QString wstringToString(const QString& rString, const char* codec = "UTF-8");
 inline QString string2wstring(const std::string& s, uintptr_t = 0) {
     return QString::fromLatin1(s.c_str());
 }
+
+// QString → QString (pass-through for Qt API; encoding codepage is ignored)
+inline QString string2wstring(const QString& s, uintptr_t /*codepage*/ = 0) {
+    return s;
+}
+
 inline std::string wstring2string(const QString& s, uintptr_t = 0) {
     return s.toLatin1().constData();
 }
@@ -244,6 +250,7 @@ class Version {
 public:
     Version() = default;
     explicit Version(const QString& versionStr);
+    explicit Version(const std::wstring& versionStr);
 
     void setVersionFrom(const QString& filePath);
     QString toString() const;
@@ -263,18 +270,22 @@ public:
 
     bool empty() const { return _major == 0 && _minor == 0 && _patch == 0 && _build == 0; }
     bool isCompatibleTo(const Version& from, const Version& to) const;
+    bool isCompatibleTo(const Version& minVer, bool minInclusive, const Version& maxVer, bool maxInclusive) const;
 
 private:
-    unsigned long _major = 0;
-    unsigned long _minor = 0;
-    unsigned long _patch = 0;
-    unsigned long _build = 0;
+    int _major = 0;
+    int _minor = 0;
+    int _patch = 0;
+    int _build = 0;
 };
 
 // File/directory existence (timeout variants — Qt always synchronous)
 bool doesFileExist(const QString& filePath, unsigned int = 0, bool* = nullptr);
 inline bool doesFileExist(const char* filePath, unsigned int timeout = 0, bool* timedOut = nullptr) {
     return doesFileExist(QString::fromUtf8(filePath), timeout, timedOut);
+}
+inline bool doesFileExist(const wchar_t* filePath, unsigned int timeout = 0, bool* timedOut = nullptr) {
+    return doesFileExist(QString::fromStdWString(filePath), timeout, timedOut);
 }
 bool doesDirectoryExist(const QString& dirPath, unsigned int = 0, bool* = nullptr);
 bool doesPathExist(const QString& path, unsigned int = 0, bool* = nullptr);

@@ -30,54 +30,8 @@
 #include <QLineEdit>
 #include <QTextEdit>
 
-// =============================================================================
-// Version — constructor from string
-// Mirrors Win32 Version::setVersionFrom().
-// =============================================================================
-
-Version::Version(const QString& versionStr)
-{
-    QStringList parts = versionStr.split('.');
-    if (parts.size() >= 1) _major = parts[0].toInt();
-    if (parts.size() >= 2) _minor = parts[1].toInt();
-    if (parts.size() >= 3) _patch = parts[2].toInt();
-    if (parts.size() >= 4) _build = parts[3].toInt();
-}
-
-Version::Version(const std::wstring& versionStr)
-    : Version(QString::fromWCharArray(versionStr.c_str()))
-{}
-
-bool Version::isCompatibleTo(const Version& from, const Version& to) const
-{
-    return isCompatibleTo(from, true, to, true);
-}
-
-bool Version::isCompatibleTo(const Version& minVer, bool minInclusive, const Version& maxVer, bool maxInclusive) const
-{
-    bool aboveMin = minInclusive ? (*this >= minVer) : (*this > minVer);
-    bool belowMax = maxInclusive ? (*this <= maxVer) : (*this < maxVer);
-    return aboveMin && belowMax;
-}
-
-bool Version::operator<(const Version& other) const
-{
-    if (_major != other._major) return _major < other._major;
-    if (_minor != other._minor) return _minor < other._minor;
-    if (_patch != other._patch) return _patch < other._patch;
-    return _build < other._build;
-}
-
-bool Version::operator<=(const Version& other) const
-{
-    return !(other < *this);
-}
-
-bool Version::operator==(const Version& other) const
-{
-    return _major == other._major && _minor == other._minor &&
-           _patch == other._patch && _build == other._build;
-}
+// Version methods are in Common.cpp (via Common.h)
+// No local implementations needed here
 
 // =============================================================================
 // PluginUpdateInfo — methods

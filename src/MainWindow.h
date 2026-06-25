@@ -24,6 +24,7 @@
 // Forward declarations
 class Buffer;
 class ScintillaEdit;
+class Notepad_plus;  // break circular: Notepad_plus.h includes MainWindow.h
 
 // Main window class - semantic lift from Notepad_plus_Window
 class MainWindow : public QMainWindow

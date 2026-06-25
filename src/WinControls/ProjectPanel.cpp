@@ -49,7 +49,7 @@ void ProjectTreeItem::loadFromXml(QXmlStreamReader& xml)
     if (xml.tokenType() != QXmlStreamReader::StartElement)
         return;
 
-    const QStringRef tagName = xml.name();
+    const QStringView tagName = xml.name();
     if (tagName == QStringLiteral("Project"))
         setNodeType(nodeType_project);
     else if (tagName == QStringLiteral("Folder"))
@@ -910,3 +910,7 @@ intptr_t ProjectPanel::run_dlgProc(unsigned int message, intptr_t wParam, intptr
     return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
 }
 
+
+void ProjectPanel::setPanelTitle(const std::wstring& title) {
+    _panelTitle = QString::fromStdWString(title);
+}

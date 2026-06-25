@@ -79,7 +79,7 @@ bool FunctionParsersManager::getOverrideMapFromXmlTree(const QString& xmlDirPath
 
     while (!xml.atEnd()) {
         QXmlStreamReader::TokenType token = xml.readNext();
-        QStringRef name = xml.name();
+        QStringView name = xml.name();
 
         if (token == QXmlStreamReader::StartElement) {
             if (name == QStringLiteral("associationMap")) {
@@ -242,7 +242,7 @@ bool FunctionParsersManager::loadFuncListFromXmlTree(const QString& xmlDirPath,
 
     while (!xml.atEnd()) {
         QXmlStreamReader::TokenType token = xml.readNext();
-        QStringRef name = xml.name();
+        QStringView name = xml.name();
 
         if (token == QXmlStreamReader::StartElement) {
             if (name == QStringLiteral("parser")) {

@@ -1,7 +1,7 @@
 // Ported to Qt6
 #pragma once
-#include <QList>
-#include <QMenu>
+#include <QMenu>    // Must precede QQueue (QList→qmetatype.h registers QPointer<T> with T complete)
+#include <QQueue>
 #include <QObject>
 
 class LastRecentFileList : public QObject {
@@ -35,7 +35,7 @@ private:
         QString _name;
         explicit RecentItem(const QString& name) : _name(name) {}
     };
-    QList<RecentItem> _lrfl;
+    QQueue<RecentItem> _lrfl;
     int _userMax = 30;
     int _size = 0;
     int _nativeLangEncoding = -1;

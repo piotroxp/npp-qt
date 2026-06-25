@@ -4,6 +4,7 @@
 #include <QMenu>
 #include <QObject>
 #include <QShortcut>
+#include "../NppConstants.h"
 #include <QString>
 #include <QVector>
 // NppSciCompat.h defines all needed SCI_* constants as constexpr.

@@ -50,7 +50,7 @@ void LastRecentFileList::updateMenu()
         _hMenu->addSeparator();
         for (int j = 0; j < _size; ++j) {
             const RecentItem& item = _lrfl[j];
-            QString label = BuildMenuFileName(100, static_cast<unsigned>(j), item._name);
+            QString label = buildMenuFileName(100, static_cast<unsigned>(j), item._name);
             QAction* action = _hMenu->addAction(label);
             QObject::connect(action, &QAction::triggered, this, [this, j]() {
                 if (j < _lrfl.size()) emit itemSelected(_lrfl[j]._name);

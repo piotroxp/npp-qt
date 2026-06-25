@@ -176,6 +176,7 @@ Notepad_plus::Notepad_plus()
 	, _autoCompleteSub(&_subEditView)
 	, _smartHighlighter(&_findReplaceDlg)
 {
+	this = this;
 	ZeroMemory(&_prevSelectedRange, sizeof(_prevSelectedRange));
 
 	NppParameters& nppParam = NppParameters::getInstance();
@@ -261,10 +262,10 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	_pNonDocTab = &_subDocTab;
 	_pNonEditView = &_subEditView;
 
-	_mainEditView.init(_pPublicInterface->getHinst(), hwnd);
-	_subEditView.init(_pPublicInterface->getHinst(), hwnd);
+	_mainEditView.init(this->getHinst(), hwnd);
+	_subEditView.init(this->getHinst(), hwnd);
 
-	_fileEditView.init(_pPublicInterface->getHinst(), hwnd);
+	_fileEditView.init(this->getHinst(), hwnd);
 	_fileEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF); // Turn off the modification event
 	MainFileManager.init(this, &_fileEditView); //get it up and running asap.
 
@@ -312,12 +313,12 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	buttonsStatus |= (tabBarStatus & TAB_CLOSEBUTTON) ? 1 : 0;
 	buttonsStatus |= (tabBarStatus & TAB_PINBUTTON) ? 2 : 0;
 
-	_mainDocTab.init(_pPublicInterface->getHinst(), hwnd, &_mainEditView, indexDocTabIcon, buttonsStatus);
-	_subDocTab.init(_pPublicInterface->getHinst(), hwnd, &_subEditView, indexDocTabIcon, buttonsStatus);
+	_mainDocTab.init(this->getHinst(), hwnd, &_mainEditView, indexDocTabIcon, buttonsStatus);
+	_subDocTab.init(this->getHinst(), hwnd, &_subEditView, indexDocTabIcon, buttonsStatus);
 
 	_mainEditView.display();
 
-	_invisibleEditView.init(_pPublicInterface->getHinst(), hwnd);
+	_invisibleEditView.init(this->getHinst(), hwnd);
 	_invisibleEditView.execute(SCI_SETUNDOCOLLECTION);
 	_invisibleEditView.execute(SCI_EMPTYUNDOBUFFER);
 	_invisibleEditView.execute(SCI_SETMODEVENTMASK, MODEVENTMASK_OFF); // Turn off the modification event
@@ -335,9 +336,9 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	// SendMessage(NPPM_) -> Qt: INTERNAL_SETCARETWIDTH, 0, 0);
 	// SendMessage(NPPM_) -> Qt: INTERNAL_SETCARETBLINKRATE, 0, 0);
 
-	_configStyleDlg.init(_pPublicInterface->getHinst(), hwnd);
-	_preference.init(_pPublicInterface->getHinst(), hwnd);
-	_pluginsAdminDlg.init(_pPublicInterface->getHinst(), hwnd);
+	_configStyleDlg.init(this->getHinst(), hwnd);
+	_preference.init(this->getHinst(), hwnd);
+	_pluginsAdminDlg.init(this->getHinst(), hwnd);
 
 	//Marker Margin config
 	_mainEditView.setMakerStyle(svp._folderStyle);
@@ -442,7 +443,7 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	// TabCtrl_SetItemSize removed (use stylesheet in Qt)
 	Q_UNUSED(tabDpiDynamicalWidth);
 	Q_UNUSED(tabDpiDynamicalHeight);
-	TabCtrl_SetItemSize(_subDocTab.getHSelf(), tabDpiDynamicalWidth, tabDpiDynamicalHeight);
+	// TabCtrl_SetItemSize removed - no Win32 TabCtrl on Linux
 
 	_mainDocTab.display();
 
@@ -474,12 +475,12 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	bool isVertical = (nppGUI._splitterPos == POS_VERTICAL);
 
 	const int splitterSizeDyn = DPIManagerV2::scale(splitterSize, dpi);
-	_subSplitter.init(_pPublicInterface->getHinst(), hwnd);
+	_subSplitter.init(this->getHinst(), hwnd);
 	_subSplitter.create(&_mainDocTab, &_subDocTab, splitterSizeDyn, SplitterMode::DYNAMIC, 50, isVertical);
 
 	//--Status Bar Section--//
 	bool willBeShown = nppGUI._statusBarShow;
-	_statusBar.init(_pPublicInterface->getHinst(), hwnd, 6);
+	_statusBar.init(this->getHinst(), hwnd, 6);
 	_statusBar.setPartWidth(STATUSBAR_DOC_SIZE, DPIManagerV2::scale(220, dpi));
 	_statusBar.setPartWidth(STATUSBAR_CUR_POS, DPIManagerV2::scale(260, dpi));
 	_statusBar.setPartWidth(STATUSBAR_EOF_FORMAT, DPIManagerV2::scale(110, dpi));
@@ -489,12 +490,12 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 
 	_pMainWindow = &_mainDocTab;
 
-	_dockingManager.init(_pPublicInterface->getHinst(), hwnd, &_pMainWindow);
+	_dockingManager.init(this->getHinst(), hwnd, &_pMainWindow);
 
 	if (nppGUI._isMinimizedToTray != sta_none && _pTrayIco == nullptr)
 	{
 		HICON icon = nullptr;
-		MainWindow::loadTrayIcon(_pPublicInterface->getHinst(), &icon);
+		MainWindow::loadTrayIcon(this->getHinst(), &icon);
 		_pTrayIco = new trayIconControler(hwnd, IDI_M30ICON, NPPM_INTERNAL_MINIMIZED_TRAY, icon, L"");
 	}
 
@@ -506,14 +507,14 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	nppData._scintillaMainHandle = _mainEditView.getHSelf();
 	nppData._scintillaSecondHandle = _subEditView.getHSelf();
 
-	_scintillaCtrls4Plugins.init(_pPublicInterface->getHinst(), hwnd);
+	_scintillaCtrls4Plugins.init(this->getHinst(), hwnd);
 	_pluginsManager.init(nppData);
 
 	bool enablePluginAdmin = _pluginsAdminDlg.initFromJson();
 	std::chrono::steady_clock::time_point pluginsLoadingStartTP = std::chrono::steady_clock::now();
 	_pluginsManager.loadPlugins(nppParam.getPluginRootDir(), enablePluginAdmin ? &_pluginsAdminDlg.getAvailablePluginUpdateInfoList() : nullptr, enablePluginAdmin ? &_pluginsAdminDlg.getIncompatibleList() : nullptr);
 	g_pluginsLoadingTime = std::chrono::steady_clock::now() - pluginsLoadingStartTP;
-	_restoreButton.init(_pPublicInterface->getHinst(), hwnd);
+	_restoreButton.init(this->getHinst(), hwnd);
 
 	// ------------ //
 	// Menu Section //
@@ -744,45 +745,45 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	scnN.nmhdr.idFrom = 0;
 	_pluginsManager.notify(&scnN);
 
-	_toolBar.init(_pPublicInterface->getHinst(), hwnd, tbStatus, toolBarIcons, sizeof(toolBarIcons) / sizeof(IconListButtonUnit));
+	_toolBar.init(this->getHinst(), hwnd, tbStatus, toolBarIcons, sizeof(toolBarIcons) / sizeof(IconListButtonUnit));
 
-	_rebarTop.init(_pPublicInterface->getHinst(), hwnd);
-	_rebarBottom.init(_pPublicInterface->getHinst(), hwnd);
+	_rebarTop.init(this->getHinst(), hwnd);
+	_rebarBottom.init(this->getHinst(), hwnd);
 	_toolBar.addToRebar(&_rebarTop);
 	_rebarTop.setIDVisible(REBAR_BAR_TOOLBAR, willBeShown);
 
 	checkMacroState();
 
 	//--Init dialogs--//
-	_findReplaceDlg.init(_pPublicInterface->getHinst(), hwnd, &_pEditView);
-	_findInFinderDlg.init(_pPublicInterface->getHinst(), hwnd);
-	_incrementFindDlg.init(_pPublicInterface->getHinst(), hwnd, &_findReplaceDlg, _nativeLangSpeaker.isRTL());
+	_findReplaceDlg.init(this->getHinst(), hwnd, &_pEditView);
+	_findInFinderDlg.init(this->getHinst(), hwnd);
+	_incrementFindDlg.init(this->getHinst(), hwnd, &_findReplaceDlg, _nativeLangSpeaker.isRTL());
 	_incrementFindDlg.addToRebar(&_rebarBottom);
-	_goToLineDlg.init(_pPublicInterface->getHinst(), hwnd, &_pEditView);
-	_findCharsInRangeDlg.init(_pPublicInterface->getHinst(), hwnd, &_pEditView);
-	_colEditorDlg.init(_pPublicInterface->getHinst(), hwnd, &_pEditView);
-	_aboutDlg.init(_pPublicInterface->getHinst(), hwnd);
-	_debugInfoDlg.init(_pPublicInterface->getHinst(), hwnd, _isAdministrator, _pluginsManager.getLoadedPluginNames());
-	_cmdLineArgsDlg.init(_pPublicInterface->getHinst(), hwnd);
-	_runDlg.init(_pPublicInterface->getHinst(), hwnd);
-	_runMacroDlg.init(_pPublicInterface->getHinst(), hwnd);
-	_documentPeeker.init(_pPublicInterface->getHinst(), hwnd);
+	_goToLineDlg.init(this->getHinst(), hwnd, &_pEditView);
+	_findCharsInRangeDlg.init(this->getHinst(), hwnd, &_pEditView);
+	_colEditorDlg.init(this->getHinst(), hwnd, &_pEditView);
+	_aboutDlg.init(this->getHinst(), hwnd);
+	_debugInfoDlg.init(this->getHinst(), hwnd, _isAdministrator, _pluginsManager.getLoadedPluginNames());
+	_cmdLineArgsDlg.init(this->getHinst(), hwnd);
+	_runDlg.init(this->getHinst(), hwnd);
+	_runMacroDlg.init(this->getHinst(), hwnd);
+	_documentPeeker.init(this->getHinst(), hwnd);
 
-	_md5FromFilesDlg.init(_pPublicInterface->getHinst(), hwnd);
+	_md5FromFilesDlg.init(this->getHinst(), hwnd);
 	_md5FromFilesDlg.setHashType(hash_md5);
-	_md5FromTextDlg.init(_pPublicInterface->getHinst(), hwnd);
+	_md5FromTextDlg.init(this->getHinst(), hwnd);
 	_md5FromTextDlg.setHashType(hash_md5);
-	_sha2FromFilesDlg.init(_pPublicInterface->getHinst(), hwnd);
+	_sha2FromFilesDlg.init(this->getHinst(), hwnd);
 	_sha2FromFilesDlg.setHashType(hash_sha256);
-	_sha2FromTextDlg.init(_pPublicInterface->getHinst(), hwnd);
+	_sha2FromTextDlg.init(this->getHinst(), hwnd);
 	_sha2FromTextDlg.setHashType(hash_sha256);
-	_sha1FromFilesDlg.init(_pPublicInterface->getHinst(), hwnd);
+	_sha1FromFilesDlg.init(this->getHinst(), hwnd);
 	_sha1FromFilesDlg.setHashType(hash_sha1);
-	_sha1FromTextDlg.init(_pPublicInterface->getHinst(), hwnd);
+	_sha1FromTextDlg.init(this->getHinst(), hwnd);
 	_sha1FromTextDlg.setHashType(hash_sha1);
-	_sha512FromFilesDlg.init(_pPublicInterface->getHinst(), hwnd);
+	_sha512FromFilesDlg.init(this->getHinst(), hwnd);
 	_sha512FromFilesDlg.setHashType(hash_sha512);
-	_sha512FromTextDlg.init(_pPublicInterface->getHinst(), hwnd);
+	_sha512FromTextDlg.init(this->getHinst(), hwnd);
 	_sha512FromTextDlg.setHashType(hash_sha512);
 
 	//--User Define Dialog Section--//
@@ -946,13 +947,13 @@ bool Notepad_plus::saveGUIParams()
 	// Save them so that those will be used when window is restored next time.
 	WINDOWPLACEMENT posInfo{};
 	posInfo.length = sizeof(WINDOWPLACEMENT);
-	::GetWindowPlacement(_pPublicInterface->getHSelf(), &posInfo);
+	::GetWindowPlacement(this->getHSelf(), &posInfo);
 
 	nppGUI._appPos.left   = posInfo.rcNormalPosition.left;
 	nppGUI._appPos.top    = posInfo.rcNormalPosition.top;
 	nppGUI._appPos.right  = posInfo.rcNormalPosition.right - posInfo.rcNormalPosition.left;
 	nppGUI._appPos.bottom = posInfo.rcNormalPosition.bottom - posInfo.rcNormalPosition.top;
-	nppGUI._isMaximized = ((IsZoomed(_pPublicInterface->getHSelf()) != 0) || (posInfo.flags & WPF_RESTORETOMAXIMIZED));
+	nppGUI._isMaximized = ((IsZoomed(this->getHSelf()) != 0) || (posInfo.flags & WPF_RESTORETOMAXIMIZED));
 
 	if (_findReplaceDlg.getHSelf() != NULL)
 	{
@@ -1035,9 +1036,9 @@ void Notepad_plus::saveDockingParams()
 
 		for (size_t j = 0, len2 = vDataVis.size(); j < len2 ; ++j)
 		{
-			if (vDataVis[j]->pszName && vDataVis[j]->pszName[0])
+			if (!vDataVis[j]->pszName.empty())
 			{
-				PluginDlgDockingInfo pddi(vDataVis[j]->pszModuleName, vDataVis[j]->dlgID, int32_t(i), vDataVis[j]->iPrevCont, true);
+				PluginDlgDockingInfo pddi(vDataVis[j]->pszModuleName.c_str(), vDataVis[j]->dlgID, int32_t(i), vDataVis[j]->iPrevCont, true);
 				vPluginDockInfo.push_back(pddi);
 			}
 		}
@@ -1047,9 +1048,9 @@ void Notepad_plus::saveDockingParams()
 
 		for (size_t j = 0, len3 = vDataAll.size(); j < len3 ; ++j)
 		{
-			if ((vDataAll[j]->pszName && vDataAll[j]->pszName[0]) && (!vCont[i]->isTbVis(vDataAll[j])))
+			if (!vDataAll[j]->pszName.empty() && (!vCont[i]->isTbVis(vDataAll[j])))
 			{
-				PluginDlgDockingInfo pddi(vDataAll[j]->pszModuleName, vDataAll[j]->dlgID, int32_t(i), vDataAll[j]->iPrevCont, false);
+				PluginDlgDockingInfo pddi(vDataAll[j]->pszModuleName.c_str(), vDataAll[j]->dlgID, int32_t(i), vDataAll[j]->iPrevCont, false);
 				vPluginDockInfo.push_back(pddi);
 			}
 		}
@@ -1958,7 +1959,7 @@ bool Notepad_plus::replaceInFilelist(std::vector<wstring> & fileNames)
 	Document oldDoc = _invisibleEditView.execute(SCI_GETDOCPOINTER);
 	Buffer * oldBuf = _invisibleEditView.getCurrentBuffer();	//for manually setting the buffer, so notifications can be handled properly
 
-	Progress progress(_pPublicInterface->getHinst());
+	Progress progress(this->getHinst());
 	size_t filesCount = fileNames.size();
 	size_t filesPerPercent = 1;
 
@@ -2066,7 +2067,7 @@ bool Notepad_plus::findInFinderFiles(FindersInfo *findInFolderInfo)
 	findInFolderInfo->_pDestFinder->beginNewFilesSearch();
 	findInFolderInfo->_pDestFinder->addSearchLine(findInFolderInfo->_findOption._str2Search.c_str());
 
-	Progress progress(_pPublicInterface->getHinst());
+	Progress progress(this->getHinst());
 
 	size_t filesCount = fileNames.size();
 	size_t filesPerPercent = 1;
@@ -2163,7 +2164,7 @@ bool Notepad_plus::findInFilelist(std::vector<wstring> & fileNames)
 
 	_findReplaceDlg.beginNewFilesSearch();
 
-	Progress progress(_pPublicInterface->getHinst());
+	Progress progress(this->getHinst());
 
 	size_t filesCount = fileNames.size();
 	size_t filesPerPercent = 1;
@@ -2431,7 +2432,7 @@ void Notepad_plus::filePrint(bool showDialog)
 	intptr_t startPos = _pEditView->execute(SCI_GETSELECTIONSTART);
 	intptr_t endPos = _pEditView->execute(SCI_GETSELECTIONEND);
 
-	printer.init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), _pEditView, showDialog, startPos, endPos, _nativeLangSpeaker.isRTL());
+	printer.init(this->getHinst(), this->getHSelf(), _pEditView, showDialog, startPos, endPos, _nativeLangSpeaker.isRTL());
 	printer.doPrint();
 }
 
@@ -2441,15 +2442,15 @@ int Notepad_plus::doSaveOrNot(const wchar_t* fn, bool isMulti)
 		return IDCANCEL; // simulate Esc-key or Cancel-button as there should not be any big delay / code-flow block
 
 	// In case Notepad++ is minimized into taskbar or iconized into notification zone
-	if (// IsIconic -> QWidget::isMinimized: _pPublicInterface->getHSelf()))
+	if (// IsIconic -> QWidget::isMinimized: this->getHSelf()))
 	{
-		if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->showNormal();
+		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->showNormal();
 	}
 	else
 	{
-		if (!::IsWindowVisible(_pPublicInterface->getHSelf()))
+		if (!::IsWindowVisible(this->getHSelf()))
 		{
-			if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->show();
+			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
 
 			// Send sizing info to make window fit (specially to show tool bar.)
 			// SendMessage(WM_) -> Qt: SIZE, 0, 0);
@@ -2468,11 +2469,11 @@ int Notepad_plus::doSaveOrNot(const wchar_t* fn, bool isMulti)
 
 		msg = stringReplace(msg, L"$STR_REPLACE$", fn);
 
-		return QMessageBox::warning(qobject_cast<QWidget*>(_pPublicInterface->getHSelf()),  msg.c_str(), title.c_str(), 0CANCEL | MB_ICONQUESTION | 0);
+		return QMessageBox::warning(qobject_cast<QWidget*>(this->getHSelf()),  msg.c_str(), title.c_str(), 0CANCEL | MB_ICONQUESTION | 0);
 	}
 
 	DoSaveOrNotBox doSaveOrNotBox;
-	doSaveOrNotBox.init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), fn, isMulti);
+	doSaveOrNotBox.init(this->getHinst(), this->getHSelf(), fn, isMulti);
 	doSaveOrNotBox.doDialog(_nativeLangSpeaker.isRTL());
 	int buttonID = doSaveOrNotBox.getClickedButtonId();
 	doSaveOrNotBox.destroy();
@@ -2483,16 +2484,16 @@ int Notepad_plus::doSaveOrNot(const wchar_t* fn, bool isMulti)
 int Notepad_plus::doSaveAll()
 {
 	// In case Notepad++ is iconized into notification zone
-	if (!::IsWindowVisible(_pPublicInterface->getHSelf()))
+	if (!::IsWindowVisible(this->getHSelf()))
 	{
-		if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->show();
+		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
 
 		// Send sizing info to make window fit (specially to show tool bar.)
 		// SendMessage(WM_) -> Qt: SIZE, 0, 0);
 	}
 
 	DoSaveAllBox doSaveAllBox;
-	doSaveAllBox.init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf());
+	doSaveAllBox.init(this->getHinst(), this->getHSelf());
 	doSaveAllBox.doDialog(_nativeLangSpeaker.isRTL());
 	int buttonID = doSaveAllBox.getClickedButtonId();
 	doSaveAllBox.destroy();
@@ -2504,7 +2505,7 @@ int Notepad_plus::doReloadOrNot(const wchar_t *fn, bool dirty)
 {
 	if (dirty)
 		return _nativeLangSpeaker.messageBox("DoReloadOrNotAndLooseChange",
-			_pPublicInterface->getHSelf(),
+			this->getHSelf(),
 			L"\"$STR_REPLACE$\"\r\rThis file has been modified by another program.\rDo you want to reload it and lose the changes made in Notepad++?",
 			L"Reload",
 			0 | MB_DEFBUTTON2 | 0 | MB_ICONEXCLAMATION,
@@ -2512,7 +2513,7 @@ int Notepad_plus::doReloadOrNot(const wchar_t *fn, bool dirty)
 			fn);
 	else
 		return _nativeLangSpeaker.messageBox("DoReloadOrNot",
-			_pPublicInterface->getHSelf(),
+			this->getHSelf(),
 			L"\"$STR_REPLACE$\"\r\rThis file has been modified by another program.\rDo you want to reload it?",
 			L"Reload",
 			0 | 0 | MB_ICONQUESTION,
@@ -2523,7 +2524,7 @@ int Notepad_plus::doReloadOrNot(const wchar_t *fn, bool dirty)
 int Notepad_plus::doCloseOrNot(const wchar_t *fn)
 {
 	return _nativeLangSpeaker.messageBox("DoCloseOrNot",
-		_pPublicInterface->getHSelf(),
+		this->getHSelf(),
 		L"The file \"$STR_REPLACE$\" doesn't exist anymore.\rKeep this file in editor?",
 		L"Keep non existing file",
 		0 | MB_ICONQUESTION | 0,
@@ -2534,7 +2535,7 @@ int Notepad_plus::doCloseOrNot(const wchar_t *fn)
 int Notepad_plus::doDeleteOrNot(const wchar_t *fn)
 {
 	return _nativeLangSpeaker.messageBox("DoDeleteOrNot",
-		_pPublicInterface->getHSelf(),
+		this->getHSelf(),
 		L"The file \"$STR_REPLACE$\"\rwill be moved to your Recycle Bin and this document will be closed.\rContinue?",
 		L"Delete file",
 		0CANCEL | MB_ICONQUESTION | 0,
@@ -2873,7 +2874,7 @@ void Notepad_plus::copyMarkedLines()
 			globalStr = currentStr;
 		}
 	}
-	str2Clipboard(globalStr, _pPublicInterface->getHSelf());
+	str2Clipboard(globalStr, this->getHSelf());
 }
 
 std::mutex mark_mutex;
@@ -2897,7 +2898,7 @@ void Notepad_plus::cutMarkedLines()
 		}
 	}
 	_pEditView->execute(SCI_ENDUNDOACTION);
-	str2Clipboard(globalStr, _pPublicInterface->getHSelf());
+	str2Clipboard(globalStr, this->getHSelf());
 }
 
 void Notepad_plus::deleteMarkedLines(bool isMarked)
@@ -2926,7 +2927,7 @@ void Notepad_plus::pasteToMarkedLines()
 
 	intptr_t lastLine = _pEditView->lastZeroBasedLineNumber();
 
-	if (!// OpenClipboard -> QClipboard: _pPublicInterface->getHSelf()))
+	if (!// OpenClipboard -> QClipboard: this->getHSelf()))
 		return;
 
 	void* clipboardData = // GetClipboardData -> QClipboard::text: clipFormat);
@@ -4194,7 +4195,7 @@ void Notepad_plus::setTitle()
 		result += buf->getFullPathName();
 	}
 	result += L" - ";
-	result += _pPublicInterface->getClassName();
+	result += this->getClassName();
 
 	if (_isAdministrator)
 		result += L" [Administrator]";
@@ -4517,7 +4518,7 @@ void Notepad_plus::dropFiles(QMimeData* hdrop)
 		// Determine in which view the file(s) is (are) dropped
 		QPoint p{};
 		::DragQueryPoint(hdrop, &p);
-		QWidget* hWin = ::ChildWindowFromPointEx(_pPublicInterface->getHSelf(), p, CWP_SKIPINVISIBLE);
+		QWidget* hWin = ::ChildWindowFromPointEx(this->getHSelf(), p, CWP_SKIPINVISIBLE);
 		if (!hWin) return;
 
 		if ((_mainEditView.getHSelf() == hWin) || (_mainDocTab.getHSelf() == hWin))
@@ -4581,7 +4582,7 @@ void Notepad_plus::dropFiles(QMimeData* hdrop)
 		{
 			// display error & do nothing
 			_nativeLangSpeaker.messageBox("DroppingFolderAsProjectModeWarning",
-				_pPublicInterface->getHSelf(),
+				this->getHSelf(),
 				L"You can only drop files or folders but not both, because you're in dropping Folder as Project mode.\rYou have to enable \"Open all files of folder instead of launching Folder as Workspace on folder dropping\" in \"Default Directory\" section of Preferences dialog to make this operation work.",
 				L"Invalid action",
 				0 | 0);
@@ -4598,11 +4599,11 @@ void Notepad_plus::dropFiles(QMimeData* hdrop)
 		// May not work for Win2k, but OK for lower versions
 		// Note: how to drop a file to an iconic window?
 		// Actually, it is the Send To command that generates a drop.
-		if (// IsIconic -> QWidget::isMinimized: _pPublicInterface->getHSelf()))
+		if (// IsIconic -> QWidget::isMinimized: this->getHSelf()))
 		{
-			if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->showNormal();
+			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->showNormal();
 		}
-		// SetForegroundWindow -> QWidget::activateWindow: _pPublicInterface->getHSelf());
+		// SetForegroundWindow -> QWidget::activateWindow: this->getHSelf());
 	}
 }
 
@@ -4614,7 +4615,7 @@ void Notepad_plus::checkModifiedDocument(bool bCheckOnlyCurrentBuffer)
 
 void Notepad_plus::getMainClientRect(QRect &rc) const
 {
-    _pPublicInterface->getClientRect(rc);
+    this->getClientRect(rc);
 	rc.top += _rebarTop.getHeight();
 	rc.bottom -= rc.top + _rebarBottom.getHeight() + _statusBar.getHeight();
 }
@@ -4888,7 +4889,7 @@ void Notepad_plus::dockUserDlg()
     if (!_pMainSplitter)
     {
         _pMainSplitter = new SplitterContainer;
-		_pMainSplitter->init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf());
+		_pMainSplitter->init(this->getHinst(), this->getHSelf());
 
         Window *pWindow;
 		if (_mainWindowStatus & (WindowMainActive | WindowSubActive))
@@ -4896,7 +4897,7 @@ void Notepad_plus::dockUserDlg()
         else
             pWindow = _pDocTab;
 
-		const int splitterSizeDyn = DPIManagerV2::scale(splitterSize, _pPublicInterface->getHSelf());
+		const int splitterSizeDyn = DPIManagerV2::scale(splitterSize, this->getHSelf());
         _pMainSplitter->create(pWindow, ScintillaEditView::getUserDefineDlg(), splitterSizeDyn, SplitterMode::RIGHT_FIX, 45);
     }
 
@@ -4977,7 +4978,7 @@ void Notepad_plus::docOpenInNewInstance(FileTransferMode mode, int x, int y)
 	cmdLine += to_wstring(_pEditView->getCurrentColumnNumber() + 1);
 
 	Command cmd(cmdLine);
-	cmd.run(_pPublicInterface->getHSelf());
+	cmd.run(this->getHSelf());
 	if (mode == TransferMove)
 	{
 		doClose(bufferID, currentView());
@@ -5779,7 +5780,7 @@ bool Notepad_plus::addCurrentMacro()
 	int nbTopLevelItem = macroMenu.getTopLevelItemNumber();
 	int cmdID = ID_MACRO + nbMacro;
 	MacroShortcut ms(Shortcut(), _macro, cmdID);
-	ms.init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf());
+	ms.init(this->getHinst(), this->getHSelf());
 
 	if (ms.doDialog() != -1)
 	{
@@ -5971,7 +5972,7 @@ void Notepad_plus::fullScreenToggle()
 	if (!_beforeSpecialView._isFullScreen)	//toggle fullscreen on
 	{
 		_beforeSpecialView._winPlace.length = sizeof(_beforeSpecialView._winPlace);
-		::GetWindowPlacement(_pPublicInterface->getHSelf(), &_beforeSpecialView._winPlace);
+		::GetWindowPlacement(this->getHSelf(), &_beforeSpecialView._winPlace);
 
 		QRect fullscreenArea{};		//QRect used to calculate window fullscreen size
 		//Preset view area, in case something fails, primary monitor values
@@ -5985,7 +5986,7 @@ void Notepad_plus::fullScreenToggle()
 			HMONITOR currentMonitor;	//Handle to monitor where fullscreen should go
 			MONITORINFO mi{};				//Info of that monitor
 			//Caution, this will not work on windows 95, so probably add some checking of some sorts like Unicode checks, IF 95 were to be supported
-			currentMonitor = // MonitorFromWindow -> QDesktopWidget: _pPublicInterface->getHSelf(), MONITOR_DEFAULTTONEAREST);	//should always be valid monitor handle
+			currentMonitor = // MonitorFromWindow -> QDesktopWidget: this->getHSelf(), MONITOR_DEFAULTTONEAREST);	//should always be valid monitor handle
 			mi.cbSize = sizeof(MONITORINFO);
 			if (::GetMonitorInfo(currentMonitor, &mi) != false)
 			{
@@ -6015,12 +6016,12 @@ void Notepad_plus::fullScreenToggle()
         _restoreButton.setButtonStatus(bs);
 
 		//Hide window so windows can properly update it
-		if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->hide();
+		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->hide();
 
 		//Set popup style for fullscreen window and store the old style
 		if (!_beforeSpecialView._isPostIt)
 		{
-			_beforeSpecialView._preStyle = // SetWindowLongPtr -> QWidget: _pPublicInterface->getHSelf(), 0, WS_POPUP);
+			_beforeSpecialView._preStyle = // SetWindowLongPtr -> QWidget: this->getHSelf(), 0, WS_POPUP);
 			if (!_beforeSpecialView._preStyle)
 			{
 				//something went wrong, use default settings
@@ -6029,9 +6030,9 @@ void Notepad_plus::fullScreenToggle()
 		}
 
 		//Set fullscreen window, highest non-top z-order, show the window and redraw it (refreshing the windowmanager cache as well)
-		if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->show();
-		// SetWindowPos -> QWidget: _pPublicInterface->getHSelf(), HWND_TOP, fullscreenArea.left, fullscreenArea.top, fullscreenArea.right, fullscreenArea.bottom, SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
-		// SetForegroundWindow -> QWidget::activateWindow: _pPublicInterface->getHSelf());
+		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
+		// SetWindowPos -> QWidget: this->getHSelf(), HWND_TOP, fullscreenArea.left, fullscreenArea.top, fullscreenArea.right, fullscreenArea.bottom, SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
+		// SetForegroundWindow -> QWidget::activateWindow: this->getHSelf());
 
         // show restore button
         _restoreButton.doDialog(_nativeLangSpeaker.isRTL());
@@ -6042,7 +6043,7 @@ void Notepad_plus::fullScreenToggle()
 	    int h = rect.bottom - rect.top;
 
         QRect nppRect;
-        GetWindowRect(_pPublicInterface->getHSelf(), &nppRect);
+        GetWindowRect(this->getHSelf(), &nppRect);
         int x = nppRect.right - w;
         int y = nppRect.top;
         // MoveWindow -> QWidget::setGeometry: _restoreButton.getHSelf(), x, y, w, h, false);
@@ -6052,7 +6053,7 @@ void Notepad_plus::fullScreenToggle()
 	else	//toggle fullscreen off
 	{
 		//Hide window for updating, restore style and menu then restore position and Z-Order
-		if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->hide();
+		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->hide();
 
         _restoreButton.setButtonStatus(buttonStatus_fullscreen ^ _restoreButton.getButtonStatus());
         _restoreButton.display(false);
@@ -6072,29 +6073,29 @@ void Notepad_plus::fullScreenToggle()
 		//Set old style if not fullscreen
 		if (!_beforeSpecialView._isPostIt)
 		{
-			// SetWindowLongPtr -> QWidget:  _pPublicInterface->getHSelf(), 0, _beforeSpecialView._preStyle);
+			// SetWindowLongPtr -> QWidget:  this->getHSelf(), 0, _beforeSpecialView._preStyle);
 			//Redraw the window and refresh windowmanager cache, don't do anything else, sizing is done later on
-			// SetWindowPos -> QWidget: _pPublicInterface->getHSelf(), HWND_TOP,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
-			if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->show();
+			// SetWindowPos -> QWidget: this->getHSelf(), HWND_TOP,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
+			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
 		}
 
 		if (_beforeSpecialView._winPlace.length)
 		{
 			if (_beforeSpecialView._winPlace.showCmd == Qt::WindowState::WindowActiveMAXIMIZED)
 			{
-				// ShowWindow -> QWidget: _pPublicInterface->getHSelf(), Qt::WindowState::WindowActiveMAXIMIZED);
+				// ShowWindow -> QWidget: this->getHSelf(), Qt::WindowState::WindowActiveMAXIMIZED);
 			}
 			else
 			{
-				::SetWindowPlacement(_pPublicInterface->getHSelf(), &_beforeSpecialView._winPlace);
+				::SetWindowPlacement(this->getHSelf(), &_beforeSpecialView._winPlace);
 			}
 		}
 		else	//fallback
 		{
-			if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->show();
+			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
 		}
 	}
-	//// SetForegroundWindow -> QWidget::activateWindow: _pPublicInterface->getHSelf());
+	//// SetForegroundWindow -> QWidget::activateWindow: this->getHSelf());
 	_beforeSpecialView._isFullScreen = !_beforeSpecialView._isFullScreen;
 	// SendMessage(WM_) -> Qt: SIZE, 0, 0);
     if (_beforeSpecialView._isPostIt)
@@ -6106,7 +6107,7 @@ void Notepad_plus::fullScreenToggle()
         int h = rect.bottom - rect.top;
 
         QRect nppRect;
-        GetWindowRect(_pPublicInterface->getHSelf(), &nppRect);
+        GetWindowRect(this->getHSelf(), &nppRect);
         int x = nppRect.right - w - w;
         int y = nppRect.top + 1;
         // MoveWindow -> QWidget::setGeometry: _restoreButton.getHSelf(), x, y, w, h, false);
@@ -6155,16 +6156,16 @@ void Notepad_plus::postItToggle()
 		if (!_beforeSpecialView._isFullScreen)
 		{
 			//Hide window so windows can properly update it
-			if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->hide();
-			_beforeSpecialView._preStyle = // SetWindowLongPtr -> QWidget:  _pPublicInterface->getHSelf(), 0, WS_POPUP );
+			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->hide();
+			_beforeSpecialView._preStyle = // SetWindowLongPtr -> QWidget:  this->getHSelf(), 0, WS_POPUP );
 			if (!_beforeSpecialView._preStyle)
 			{
 				//something went wrong, use default settings
 				_beforeSpecialView._preStyle = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
 			}
 			//Redraw the window and refresh windowmanager cache, don't do anything else, sizing is done later on
-			// SetWindowPos -> QWidget: _pPublicInterface->getHSelf(), HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
-			if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->show();
+			// SetWindowPos -> QWidget: this->getHSelf(), HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
+			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
 		}
 
         // show restore button
@@ -6176,7 +6177,7 @@ void Notepad_plus::postItToggle()
 	    int h = rect.bottom - rect.top;
 
         QRect nppRect;
-        GetWindowRect(_pPublicInterface->getHSelf(), &nppRect);
+        GetWindowRect(this->getHSelf(), &nppRect);
         int x = nppRect.right - w - w;
         int y = nppRect.top + 1;
         // MoveWindow -> QWidget::setGeometry: _restoreButton.getHSelf(), x, y, w, h, false);
@@ -6211,12 +6212,12 @@ void Notepad_plus::postItToggle()
 		if (!_beforeSpecialView._isFullScreen)
 		{
 			//dwStyle |= (WS_CAPTION | WS_SIZEBOX);
-			if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->hide();
-			// SetWindowLongPtr -> QWidget: _pPublicInterface->getHSelf(), 0, _beforeSpecialView._preStyle);
+			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->hide();
+			// SetWindowLongPtr -> QWidget: this->getHSelf(), 0, _beforeSpecialView._preStyle);
 
 			//Redraw the window and refresh windowmanager cache, don't do anything else, sizing is done later on
-			// SetWindowPos -> QWidget: _pPublicInterface->getHSelf(), HWND_NOTOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
-			if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->show();
+			// SetWindowPos -> QWidget: this->getHSelf(), HWND_NOTOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
+			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
 		}
 	}
 
@@ -6383,7 +6384,7 @@ bool Notepad_plus::getIntegralDockingData(DockedWidgetData & dockData, int & iCo
 	{
 		const PluginDlgDockingInfo & pddi = dockingData._pluginDockInfo[i];
 
-		if (!_wcsicmp(pddi._name.c_str(), dockData.pszModuleName) && (pddi._internalID == dockData.dlgID))
+		if (!_wcsicmp(pddi._name.c_str(), dockData.pszModuleName.c_str()) && (pddi._internalID == dockData.dlgID))
 		{
 			iCont				= pddi._currContainer;
 			isVisible			= pddi._isVisible;
@@ -6603,8 +6604,8 @@ void Notepad_plus::drawDocumentMapColoursFromStylerArray()
 void Notepad_plus::prepareBufferChangedDialog(Buffer * buffer)
 {
 	// immediately show window if it was minimized before
-	if (// IsIconic -> QWidget::isMinimized: _pPublicInterface->getHSelf()))
-		if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->showNormal();
+	if (// IsIconic -> QWidget::isMinimized: this->getHSelf()))
+		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->showNormal();
 
 	// switch to the file that changed
 	int index = _pDocTab->getIndexByBuffer(buffer->getID());
@@ -6713,7 +6714,7 @@ void Notepad_plus::notifyBufferChanged(Buffer * buffer, int mask)
 
 				SCNotification scnN{};
 				scnN.nmhdr.code = NPPN_FILEDELETED;
-				scnN.nmhdr.hwndFrom = _pPublicInterface->getHSelf();
+				scnN.nmhdr.hwndFrom = this->getHSelf();
 				scnN.nmhdr.idFrom = (uptr_t)buffer->getID();
 				_pluginsManager.notify(&scnN);
 
@@ -6803,7 +6804,7 @@ void Notepad_plus::notifyBufferChanged(Buffer * buffer, int mask)
 
 		SCNotification scnN{};
 		scnN.nmhdr.code = NPPN_LANGCHANGED;
-		scnN.nmhdr.hwndFrom = _pPublicInterface->getHSelf();
+		scnN.nmhdr.hwndFrom = this->getHSelf();
 		scnN.nmhdr.idFrom = (uptr_t)_pEditView->getCurrentBufferID();
 		_pluginsManager.notify(&scnN);
 	}
@@ -6861,7 +6862,7 @@ void Notepad_plus::notifyBufferActivated(BufferID bufid, int view)
 
 	SCNotification scnN{};
 	scnN.nmhdr.code = NPPN_BUFFERACTIVATED;
-	scnN.nmhdr.hwndFrom = _pPublicInterface->getHSelf();
+	scnN.nmhdr.hwndFrom = this->getHSelf();
 	scnN.nmhdr.idFrom = (uptr_t)bufid;
 	_pluginsManager.notify(&scnN);
 
@@ -7058,7 +7059,7 @@ void Notepad_plus::setFindReplaceFolderFilter(const wchar_t *dir, const wchar_t 
 
 vector<wstring> Notepad_plus::addNppComponents(const wchar_t *destDir, const wchar_t *extFilterName, const wchar_t *extFilter)
 {
-	CustomFileDialog fDlg(_pPublicInterface->getHSelf());
+	CustomFileDialog fDlg(this->getHSelf());
 	fDlg.setExtFilter(extFilterName, extFilter);
 
     vector<wstring> copiedFiles;
@@ -7095,7 +7096,7 @@ vector<wstring> Notepad_plus::addNppComponents(const wchar_t *destDir, const wch
 
 vector<wstring> Notepad_plus::addNppPlugins(const wchar_t *extFilterName, const wchar_t *extFilter)
 {
-	CustomFileDialog fDlg(_pPublicInterface->getHSelf());
+	CustomFileDialog fDlg(this->getHSelf());
     fDlg.setExtFilter(extFilterName, extFilter);
 
     vector<wstring> copiedFiles;
@@ -7366,7 +7367,7 @@ void Notepad_plus::launchClipboardHistoryPanel()
 	{
 		_pClipboardHistoryPanel = new ClipboardHistoryPanel();
 
-		_pClipboardHistoryPanel->init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), &_pEditView);
+		_pClipboardHistoryPanel->init(this->getHinst(), this->getHSelf(), &_pEditView);
 
 		NativeLangSpeaker *pNativeSpeaker = nppParams.getNativeLangSpeaker();
 		bool isRTL = pNativeSpeaker->isRTL();
@@ -7377,7 +7378,7 @@ void Notepad_plus::launchClipboardHistoryPanel()
 		// define the default docking behaviour
 		data.uMask = DWS_DF_CONT_RIGHT | DWS_ICONTAB | DWS_USEOWNDARKMODE;
 
-		loadPanelIcon(_pPublicInterface->getHinst(), _pClipboardHistoryPanel, &data.hIconTab);
+		loadPanelIcon(this->getHinst(), _pClipboardHistoryPanel, &data.hIconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -7422,7 +7423,7 @@ void Notepad_plus::launchDocumentListPanel(bool changeFromBtnCmd)
 
 		HIMAGELIST hImgLst = _mainDocTab.getImgLst(tabIconSet);
 
-		_pDocumentListPanel->init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), hImgLst);
+		_pDocumentListPanel->init(this->getHinst(), this->getHSelf(), hImgLst);
 		NativeLangSpeaker *pNativeSpeaker = nppParams.getNativeLangSpeaker();
 		bool isRTL = pNativeSpeaker->isRTL();
 		DockedWidgetData	data{};
@@ -7432,7 +7433,7 @@ void Notepad_plus::launchDocumentListPanel(bool changeFromBtnCmd)
 		// define the default docking behaviour
 		data.uMask = DWS_DF_CONT_LEFT | DWS_ICONTAB | DWS_USEOWNDARKMODE;
 
-		loadPanelIcon(_pPublicInterface->getHinst(), _pDocumentListPanel, &data.hIconTab);
+		loadPanelIcon(this->getHinst(), _pDocumentListPanel, &data.hIconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -7500,7 +7501,7 @@ void Notepad_plus::launchAnsiCharPanel()
 	if (!_pAnsiCharPanel)
 	{
 		_pAnsiCharPanel = new AnsiCharPanel();
-		_pAnsiCharPanel->init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), &_pEditView);
+		_pAnsiCharPanel->init(this->getHinst(), this->getHSelf(), &_pEditView);
 		
 		NppParameters& nppParams = NppParameters::getInstance();
 
@@ -7513,7 +7514,7 @@ void Notepad_plus::launchAnsiCharPanel()
 		// define the default docking behaviour
 		data.uMask = DWS_DF_CONT_RIGHT | DWS_ICONTAB | DWS_USEOWNDARKMODE;
 
-		loadPanelIcon(_pPublicInterface->getHinst(), _pAnsiCharPanel, &data.hIconTab);
+		loadPanelIcon(this->getHinst(), _pAnsiCharPanel, &data.hIconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -7546,7 +7547,7 @@ void Notepad_plus::launchFileBrowser(const vector<wstring> & folders, const wstr
 	if (!_pFileBrowser)
 	{
 		_pFileBrowser = new FileBrowser;
-		_pFileBrowser->init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf());
+		_pFileBrowser->init(this->getHinst(), this->getHSelf());
 
 		DockedWidgetData	data{};
 		_pFileBrowser->create(&data, { IDR_FILEBROWSER_ICO, IDR_FILEBROWSER_ICO_DM, IDR_FILEBROWSER_ICO2 }, _nativeLangSpeaker.isRTL());
@@ -7558,7 +7559,7 @@ void Notepad_plus::launchFileBrowser(const vector<wstring> & folders, const wstr
 		// define the default docking behaviour
 		data.uMask = DWS_DF_CONT_LEFT | DWS_ICONTAB | DWS_USEOWNDARKMODE;
 		
-		loadPanelIcon(_pPublicInterface->getHinst(), _pFileBrowser, &data.hIconTab);
+		loadPanelIcon(this->getHinst(), _pFileBrowser, &data.hIconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -7649,7 +7650,7 @@ void Notepad_plus::launchProjectPanel(int cmdID, ProjectPanel ** pProjPanel, int
 	if (!(*pProjPanel))
 	{
 		(*pProjPanel) = new ProjectPanel;
-		(*pProjPanel)->init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), panelID);
+		(*pProjPanel)->init(this->getHinst(), this->getHSelf(), panelID);
 		(*pProjPanel)->setWorkSpaceFilePath(nppParam.getWorkSpaceFilePath(panelID));
 		NativeLangSpeaker *pNativeSpeaker = nppParam.getNativeLangSpeaker();
 		bool isRTL = pNativeSpeaker->isRTL();
@@ -7661,7 +7662,7 @@ void Notepad_plus::launchProjectPanel(int cmdID, ProjectPanel ** pProjPanel, int
 		// define the default docking behaviour
 		data.uMask = DWS_DF_CONT_LEFT | DWS_ICONTAB | DWS_USEOWNDARKMODE;
 
-		loadPanelIcon(_pPublicInterface->getHinst(), (*pProjPanel), &data.hIconTab);
+		loadPanelIcon(this->getHinst(), (*pProjPanel), &data.hIconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -7672,8 +7673,8 @@ void Notepad_plus::launchProjectPanel(int cmdID, ProjectPanel ** pProjPanel, int
 
 		wstring title_no = to_wstring (panelID + 1);
 		wstring title_temp = pNativeSpeaker->getAttrNameStr(PM_PROJECTPANELTITLE, "ProjectManager", "PanelTitle") + L" " + title_no;
-		(*pProjPanel)->setPanelTitle(title_temp);
-		data.pszName = (*pProjPanel)->getPanelTitle();
+		(*pProjPanel)->setPanelTitle(QString::fromStdWString(title_temp));
+		data.pszName = (*pProjPanel)->getPanelTitle().toStdWString();
 		// SendMessage(NPPM_) -> Qt: DMMREGASDCKDLG, 0, reinterpret_cast<qintptr>(&data));
 
 		COLORREF fgColor = nppParam.getCurrentDefaultFgColor();
@@ -7699,7 +7700,7 @@ void Notepad_plus::launchDocMap()
 	if (!nppParam.isTransparentAvailable())
 	{
 		_nativeLangSpeaker.messageBox("PrehistoricSystemDetected",
-			_pPublicInterface->getHSelf(),
+			this->getHSelf(),
 			L"It seems you still use a prehistoric system. This feature works only on a modern system, sorry.",
 			L"Prehistoric system detected",
 			0);
@@ -7710,7 +7711,7 @@ void Notepad_plus::launchDocMap()
 	if (!_pDocMap)
 	{
 		_pDocMap = new DocumentMap();
-		_pDocMap->init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), &_pEditView);
+		_pDocMap->init(this->getHinst(), this->getHSelf(), &_pEditView);
 
 		DockedWidgetData	data{};
 		_pDocMap->create(&data, { IDR_DOCMAP_ICO, IDR_DOCMAP_ICO_DM, IDR_DOCMAP_ICO2 });
@@ -7719,7 +7720,7 @@ void Notepad_plus::launchDocMap()
 		// define the default docking behaviour
 		data.uMask = DWS_DF_CONT_RIGHT | DWS_ICONTAB | DWS_USEOWNDARKMODE;
 
-		loadPanelIcon(_pPublicInterface->getHinst(), _pDocMap, &data.hIconTab);
+		loadPanelIcon(this->getHinst(), _pDocMap, &data.hIconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -7751,7 +7752,7 @@ void Notepad_plus::launchFunctionList()
 	if (!_pFuncList)
 	{
 		_pFuncList = new FunctionListPanel();
-		_pFuncList->init(_pPublicInterface->getHinst(), _pPublicInterface->getHSelf(), &_pEditView);
+		_pFuncList->init(this->getHinst(), this->getHSelf(), &_pEditView);
 
 		DockedWidgetData	data{};
 		_pFuncList->create(&data, { IDR_FUNC_LIST_ICO, IDR_FUNC_LIST_ICO_DM, IDR_FUNC_LIST_ICO2 });
@@ -7762,7 +7763,7 @@ void Notepad_plus::launchFunctionList()
 		
 		NppParameters& nppParam = NppParameters::getInstance();
 
-		loadPanelIcon(_pPublicInterface->getHinst(), _pFuncList, &data.hIconTab);
+		loadPanelIcon(this->getHinst(), _pFuncList, &data.hIconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -8434,7 +8435,7 @@ void Notepad_plus::showQuote(const QuoteParams* quote) const
 {
 	static TextPlayerParams params;
 	params._quotParams = const_cast<QuoteParams*>(quote);
-	params._nppHandle = Notepad_plus::_pPublicInterface->getHSelf();
+	params._nppHandle = Notepad_plus::this->getHSelf();
 	params._pCurrentView = _pEditView;
 
 	void* hThread = ::CreateThread(NULL, 0, threadTextPlayer, &params, 0, NULL);
@@ -8488,7 +8489,7 @@ void Notepad_plus::refreshDarkMode(bool resetStyle)
 		_findInFinderDlg.window()->repaint(); // ::RedrawWindow
 
 		NppDarkMode::instance().applyToWidget(_incrementFindDlg.window()); // NPPM_INTERNAL_REFRESHDARKMODE
-		_pPublicInterface->window()->repaint(); // ::RedrawWindow
+		this->window()->repaint(); // ::RedrawWindow
 
 		if (_pProjectPanel_1)
 		{
@@ -8616,8 +8617,8 @@ void Notepad_plus::refreshDarkMode(bool resetStyle)
 		{
 			NppDarkMode::allowDarkModeForApp(NppDarkMode::isEnabled());
 
-			NppDarkMode::setDarkTitleBar(_pPublicInterface->getHSelf());
-			// SetWindowPos -> QWidget: _pPublicInterface->getHSelf(), nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOQSize | SWP_NOZORDER | SWP_FRAMECHANGED);
+			NppDarkMode::setDarkTitleBar(this->getHSelf());
+			// SetWindowPos -> QWidget: this->getHSelf(), nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOQSize | SWP_NOZORDER | SWP_FRAMECHANGED);
 
 			for (const auto& docCont : _dockingManager.getContainerInfo())
 			{
@@ -8657,7 +8658,7 @@ void Notepad_plus::refreshDarkMode(bool resetStyle)
 		}
 
 		_findInFinderDlg.window()->repaint(); // ::RedrawWindow
-		_pPublicInterface->window()->repaint(); // ::RedrawWindow
+		this->window()->repaint(); // ::RedrawWindow
 	}
 }
 
@@ -8707,14 +8708,14 @@ void Notepad_plus::refreshInternalPanelIcons()
 	{
 		if (panel != nullptr)
 		{
-			refreshPanelIcon(_pPublicInterface->getHinst(), panel);
+			refreshPanelIcon(this->getHinst(), panel);
 		}
 	}
 
 	const auto mainFinder = _findReplaceDlg.getMainFinder();
 	if (mainFinder != nullptr)
 	{
-		refreshPanelIcon(_pPublicInterface->getHinst(), mainFinder);
+		refreshPanelIcon(this->getHinst(), mainFinder);
 
 		const auto& finders = _findReplaceDlg.getFindersOfFinder();
 		if (!finders.empty())
@@ -8723,7 +8724,7 @@ void Notepad_plus::refreshInternalPanelIcons()
 			{
 				if (finder != nullptr)
 				{
-					refreshPanelIcon(_pPublicInterface->getHinst(), finder);
+					refreshPanelIcon(this->getHinst(), finder);
 				}
 			}
 		}
@@ -8997,7 +8998,7 @@ void Notepad_plus::monitoringStartOrStopAndUpdateUI(Buffer* pBuf, bool isStartin
 
 void Notepad_plus::createMonitoringThread(Buffer* pBuf)
 {
-	MonitorInfo *monitorInfo = new Notepad_plus::MonitorInfo(pBuf, _pPublicInterface->getHSelf());
+	MonitorInfo *monitorInfo = new Notepad_plus::MonitorInfo(pBuf, this->getHSelf());
 	void* hThread = ::CreateThread(NULL, 0, monitorFileOnChange, (void *)monitorInfo, 0, NULL); // will be deallocated while quitting thread
 	if (hThread != nullptr)
 		// CloseHandle: hThread);
@@ -9254,7 +9255,7 @@ bool Notepad_plus::notifyTBShowMenu(LPNMTOOLBARW lpnmtb, const char* menuPosId)
 
 			::TrackPopupMenuEx(hPopupMenu,
 				flags | TPM_VERTICAL,
-				rcItem.left, rcItem.bottom, _pPublicInterface->getHSelf(), &tpm);
+				rcItem.left, rcItem.bottom, this->getHSelf(), &tpm);
 
 			return true;
 		}
@@ -9284,7 +9285,7 @@ bool Notepad_plus::notifyTBShowMenu(LPNMTOOLBARW lpnmtb, const char* menuPosId, 
 
 		::TrackPopupMenuEx(hPopupMenu,
 			flags | TPM_VERTICAL,
-			rcItem.left, rcItem.bottom, _pPublicInterface->getHSelf(), &tpm);
+			rcItem.left, rcItem.bottom, this->getHSelf(), &tpm);
 
 		// DestroyMenu -> delete: hPopupMenu);
 

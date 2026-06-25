@@ -63,7 +63,7 @@ constexpr quint32 DWS_DF_FLOATING = 0x80000000;
 
 struct DockedWidgetData {
     QWidget* client = nullptr;           // hClient
-    QString name;                        // pszName
+    std::wstring pszName;               // was QString name
     int dlgID = 0;                       // dialog ID
 
     // User modifications
@@ -73,8 +73,8 @@ struct DockedWidgetData {
 
     // Internal data
     QRect rcFloat;                       // floating position
-    int prevCont = 0;                    // iPrevCont
-    QString moduleName;                  // pszModuleName
+    int iPrevCont = 0;                   // was int prevCont
+    std::wstring pszModuleName;          // was QString moduleName
 };
 
 // =============================================================================

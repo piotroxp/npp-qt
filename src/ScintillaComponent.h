@@ -184,7 +184,9 @@ public:
 
     // Win32 compatibility shims
     Buffer* getCurrentBuffer() const { return currentBuffer(); }
+    Buffer* getCurrentBufferID() const { return getCurrentBuffer(); }  // alias for plugin compat
     intptr_t getCurrentLineNumber() const { return currentLine(); }
+    void setLineIndent(int line, int indent) { send(SCI_SETLINEINDENTATION, line, indent); }
 
     // Attach the default (startup) document as a Buffer
     void attachDefaultDoc();

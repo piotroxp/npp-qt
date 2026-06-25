@@ -20,30 +20,8 @@
 #include <vector>
 #include <string>
 
-// =============================================================================
-// Version — version comparison (mirrors Win32 Version)
-// =============================================================================
-
-struct Version {
-    int _major = 0, _minor = 0, _patch = 0, _build = 0;
-
-    Version() = default;
-    Version(const QString& versionStr);
-    Version(const std::wstring& versionStr);
-
-    QString toString() const {
-        return QStringLiteral("%1.%2.%3.%4").arg(_major).arg(_minor).arg(_patch).arg(_build);
-    }
-
-    bool isCompatibleTo(const Version& from, const Version& to) const;
-    bool isCompatibleTo(const Version& minVer, bool minInclusive, const Version& maxVer, bool maxInclusive) const;
-
-    bool operator<(const Version& other) const;
-    bool operator<=(const Version& other) const;
-    bool operator==(const Version& other) const;
-    bool operator>(const Version& other) const { return other < *this; }
-    bool operator>=(const Version& other) const { return other <= *this; }
-};
+// Version is defined in Common.h — reuses NppParameters::getVersion() + plugin compatibility
+#include "MISC/Common/Common.h"
 
 // =============================================================================
 // PluginUpdateInfo — plugin metadata (mirrors Win32 PluginUpdateInfo)

@@ -2046,7 +2046,7 @@ bool NppParameters::isInFontList(const std::wstring& fontName2Search) const
 void NppParameters::getLangKeywordsFromXmlTree()
 {
 	NppXml::Element root = NppXml::firstChildElement(_pXmlDoc._doc, "NotepadPlus");
-	if (!root) return;
+	if (root.isNull()) return;
 	updateFromModelXml(root, ConfXml::lang);	// updateKeyWordsFromModelXml(root);
 	feedKeyWordsParameters(root);
 }
@@ -2054,7 +2054,7 @@ void NppParameters::getLangKeywordsFromXmlTree()
 void NppParameters::getExternalLexerFromXmlTree(NppXml::Document externalLexerDoc)
 {
 	NppXml::Element root = NppXml::firstChildElement(externalLexerDoc, "NotepadPlus");
-	if (!root) return;
+	if (root.isNull()) return;
 	feedKeyWordsParameters(root);
 	feedStylerArray(root);
 }
@@ -2070,7 +2070,7 @@ int NppParameters::addExternalLangToEnd(std::unique_ptr<ExternalLangContainer> e
 bool NppParameters::getUserStylersFromXmlTree()
 {
 	NppXml::Element root = NppXml::firstChildElement(_pXmlUserStylerDoc._doc, "NotepadPlus");
-	if (!root)
+	if (root.isNull())
 		return false;
 
 	addDefaultStyles(root);	// make sure that GlobalStyles > WidgetStyles has certain elements, allowing defaults to be populated based on other existing WidgetStyles if needed
@@ -2724,7 +2724,7 @@ bool NppParameters::getUserParametersFromXmlTree()
 		return false;
 
 	NppXml::Element root = NppXml::firstChildElement(_xmlUserDoc._doc, "NotepadPlus");
-	if (!root)
+	if (root.isNull())
 		return false;
 
 	// Get GUI parameters
@@ -2761,7 +2761,7 @@ std::pair<unsigned char, unsigned char> NppParameters::addUserDefineLangsFromXml
 		return std::make_pair(static_cast<unsigned char>(0), static_cast<unsigned char>(0));
 
 	NppXml::Element root = NppXml::firstChildElement(xmldoc, "NotepadPlus");
-	if (!root)
+	if (root.isNull())
 		return std::make_pair(static_cast<unsigned char>(0), static_cast<unsigned char>(0));
 
 	return feedUserLang(root);
@@ -2773,7 +2773,7 @@ bool NppParameters::getShortcutsFromXmlTree()
 		return false;
 
 	NppXml::Element root = NppXml::firstChildElement(_pXmlShortcutDoc, "NotepadPlus");
-	if (!root)
+	if (root.isNull())
 		return false;
 
 	feedShortcut(root);
@@ -2786,7 +2786,7 @@ bool NppParameters::getMacrosFromXmlTree()
 		return false;
 
 	NppXml::Element root = NppXml::firstChildElement(_pXmlShortcutDoc, "NotepadPlus");
-	if (!root)
+	if (root.isNull())
 		return false;
 
 	feedMacros(root);
@@ -2799,7 +2799,7 @@ bool NppParameters::getUserCmdsFromXmlTree()
 		return false;
 
 	NppXml::Element root = NppXml::firstChildElement(_pXmlShortcutDoc, "NotepadPlus");
-	if (!root)
+	if (root.isNull())
 		return false;
 
 	feedUserCmds(root);
@@ -2812,7 +2812,7 @@ bool NppParameters::getPluginCmdsFromXmlTree()
 		return false;
 
 	NppXml::Element root = NppXml::firstChildElement(_pXmlShortcutDoc, "NotepadPlus");
-	if (!root)
+	if (root.isNull())
 		return false;
 
 	feedPluginCustomizedCmds(root);
@@ -2825,7 +2825,7 @@ bool NppParameters::getScintKeysFromXmlTree()
 		return false;
 
 	NppXml::Element root = NppXml::firstChildElement(_pXmlShortcutDoc, "NotepadPlus");
-	if (!root)
+	if (root.isNull())
 		return false;
 
 	feedScintKeys(root);
@@ -2968,7 +2968,7 @@ bool NppParameters::getContextMenuFromXmlTree(QMenu* mainMenuHandle, QMenu* plug
 	if (!pXmlContextMenuDoc)
 		return false;
 	NppXml::Element root = NppXml::firstChildElement(pXmlContextMenuDoc, "NotepadPlus");
-	if (!root)
+	if (root.isNull())
 		return false;
 
 	WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
@@ -3077,7 +3077,7 @@ bool NppParameters::getSessionFromXmlTree(const NppXml::Document& pSessionDoc, S
 		return false;
 
 	NppXml::Element root = NppXml::firstChildElement(pSessionDoc, "NotepadPlus");
-	if (!root)
+	if (root.isNull())
 		return false;
 
 	NppXml::Element sessionRoot = NppXml::firstChildElement(root, "Session");
@@ -3319,7 +3319,7 @@ void NppParameters::feedColumnEditorParameters(const NppXml::Element& element)
 			_columnEditParam._mainChoice = activeNumeric;
 	}
 	NppXml::Element childNode = NppXml::firstChildElement(columnEditorRoot, "text");
-	if (!childNode) return;
+	if (childNode.isNull()) return;
 
 	const char* content = NppXml::attribute(childNode, "content");
 	if (content && content[0])
@@ -3328,7 +3328,7 @@ void NppParameters::feedColumnEditorParameters(const NppXml::Element& element)
 	}
 
 	childNode = NppXml::firstChildElement(columnEditorRoot, "number");
-	if (!childNode) return;
+	if (childNode.isNull()) return;
 
 	int val = NppXml::intAttribute(childNode, "initial", -1);
 	if (val > -1)
@@ -4457,7 +4457,7 @@ void NppParameters::writeShortcuts()
 	}
 
 	NppXml::Element root = NppXml::firstChildElement(_pXmlShortcutDoc, "NotepadPlus");
-	if (!root)
+	if (root.isNull())
 	{
 		root = NppXml::createChildElement(_pXmlShortcutDoc, "NotepadPlus");
 	}

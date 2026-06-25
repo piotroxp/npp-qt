@@ -1,6 +1,8 @@
 // This file is part of Notepad++ project
 // Copyright (C)2021 Don HO <don.h@free.fr>
 
+#include "Parameters.h"
+#include "Buffer.h"
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -49,23 +51,9 @@
 
 #include <algorithm>
 // shlwapi.h removed
-#ifdef _WIN32
-#ifdef _WIN32
 #include <uxtheme.h> // for EnableThemeDialogTexture
-#else
-// Stub: EnableThemeDialogTexture is Windows-only
-#define ETDT_DISABLE        0
-#define ETDT_ENABLE         1
-#define ETDT_APPLY_TYPE     2
-#define ETDT_DISABLETAB     3
-#define ETDT_ENABLETYPE     4
-#define ETDT_APPLYUTBUFFER  5
-#define WM_THEMECHANGED     0x031A
-static inline HRESULT EnableThemeDialogTexture(void*, DWORD) { return S_OK; }
-#endif
-#include <windowsx.h> // for GET_X_LPARAM, GET_Y_LPARAM
-#endif
 #include <format>
+#include <windowsx.h> // for GET_X_qintptr, GET_Y_qintptr
 #include <atomic>
 #include "Notepad_plus_Window.h"
 #include "TaskListDlg.h"
@@ -212,7 +200,7 @@ qintptr MainWindow::runProc(QWidget* hwnd, unsigned int message, quintptr wParam
 				NppDarkMode::autoSubclassWindowMenuBar(hwnd);
 				NppDarkMode::autoSubclassCtlColor(hwnd);
 
-				_notepad_plus_plus_core._pPublicInterface = this;
+				_notepad_plus_plus_core.this = this;
 				qintptr lRet = _notepad_plus_plus_core.init(hwnd);
 
 				if (NppDarkMode::isEnabled() && NppDarkMode::isExperimentalSupported())
@@ -720,7 +708,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 		case 0 /* WM_SIZE -> QResizeEvent */:
 		{
 			QRect rc;
-			_pPublicInterface->getClientRect(rc);
+			this->getClientRect(rc);
 			if (lParam == 0)
 				lParam = MAKEqintptr(rc.right - rc.left, rc.bottom - rc.top);
 
@@ -884,7 +872,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 			{
 				SCNotification scnN{};
 				scnN.nmhdr.code = NPPN_NATIVELANGCHANGED;
-				scnN.nmhdr.hwndFrom = _pPublicInterface->getHSelf();
+				scnN.nmhdr.hwndFrom = this->getHSelf();
 				scnN.nmhdr.idFrom = 0;
 				_pluginsManager.notify(&scnN);
 			}
@@ -2508,7 +2496,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 		case NPPM_INTERNAL_WINDOWSSESSIONEXIT:
 		{
 			int answer = _nativeLangSpeaker.messageBox("WindowsSessionExit",
-				_pPublicInterface->getHSelf(),
+				this->getHSelf(),
 				L"Windows session is about to be terminated but you have some data unsaved. Do you want to exit Notepad++ now?",
 				L"Notepad++ - Windows session exit",
 				0 | MB_ICONQUESTION | 0);
@@ -2700,7 +2688,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 		case 0 /* WM_CLOSE -> QCloseEvent */:
 		{
-			if (_pPublicInterface->isPrelaunch())
+			if (this->isPrelaunch())
 			{
 				SendMessage(hwnd, 0 /* WM_SYSCOMMAND -> QEvent */, SC_MINIMIZE, 0);
 			}
@@ -2857,7 +2845,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 		{
 			killAllChildren();
 			::PostQuitMessage(0);
-			_pPublicInterface->gNppQWidget* = NULL;
+			this->gNppQWidget* = NULL;
 			return true;
 		}
 
@@ -2882,14 +2870,14 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 		{
 			const NppGUI & nppgui = nppParam.getNppGUI();
 			auto toTray = nppgui._isMinimizedToTray;
-			if (((toTray == sta_minimize || toTray == sta_minimize_close || _pPublicInterface->isPrelaunch()) && (wParam == SC_MINIMIZE)) ||
+			if (((toTray == sta_minimize || toTray == sta_minimize_close || this->isPrelaunch()) && (wParam == SC_MINIMIZE)) ||
 				((toTray == sta_close || toTray == sta_minimize_close) && wParam == SC_CLOSE)
 			)
 			{
 				if (!_pTrayIco)
 				{
 					HICON icon = nullptr;
-					MainWindow::loadTrayIcon(_pPublicInterface->getHinst(), &icon);
+					MainWindow::loadTrayIcon(this->getHinst(), &icon);
 					_pTrayIco = new trayIconControler(hwnd, IDI_M30ICON, NPPM_INTERNAL_MINIMIZED_TRAY, icon, L"");
 				}
 
@@ -2943,7 +2931,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 					_dockingManager.showFloatingContainers(true);
 					restoreMinimizeDialogs();
 
-					if (!_pPublicInterface->isPrelaunch())
+					if (!this->isPrelaunch())
 						_pTrayIco->doTrayIcon(REMOVE);
 					// SendMessage(WM_) -> Qt: SIZE, 0, 0);
 					return true;
@@ -2962,7 +2950,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 					QMenu* hmenu;            // menu template
 					QMenu* hTrayIconMenu;  // shortcut menu
-					hmenu = ::LoadMenu(_pPublicInterface->getHinst(), MAKEINTRESOURCE(IDR_SYSTRAYPOPUP_MENU));
+					hmenu = ::LoadMenu(this->getHinst(), MAKEINTRESOURCE(IDR_SYSTRAYPOPUP_MENU));
 					hTrayIconMenu = // GetSubMenu -> QMenu::actions: hmenu, 0);
 					_nativeLangSpeaker.changeLangTrayIconContexMenu(hTrayIconMenu);
 					SetForegroundWindow(hwnd);
@@ -3025,13 +3013,13 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 				std::vector<DockedWidgetData *> tbData = dockContainer[i]->getDataOfAllTb();
 				for (size_t j = 0, len2 = tbData.size() ; j < len2 ; ++j)
 				{
-					if (_wcsicmp(moduleName, tbData[j]->pszModuleName) == 0)
+					if (_wcsicmp(moduleName, tbData[j]->pszModuleName.c_str()) == 0)
 					{
 						if (!windowName)
-							return (qintptr)tbData[j]->hClient;
+							return (qintptr)tbData[j]->client;
 
-						if (_wcsicmp(windowName, tbData[j]->pszName) == 0)
-							return (qintptr)tbData[j]->hClient;
+						if (_wcsicmp(windowName, tbData[j]->pszName.c_str()) == 0)
+							return (qintptr)tbData[j]->client;
 					}
 				}
 			}
@@ -3040,7 +3028,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 		case NPPM_ADDTOOLBARICON_DEPRECATED:
 		{
-			_toolBar.registerDynBtn(static_cast<UINT>(wParam), reinterpret_cast<toolbarIcons*>(lParam), _pPublicInterface->getAbsentIcoHandle());
+			_toolBar.registerDynBtn(static_cast<UINT>(wParam), reinterpret_cast<toolbarIcons*>(lParam), this->getAbsentIcoHandle());
 			return true;
 		}
 
@@ -3293,7 +3281,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 				return oldVal;
 
 			QRect rc;
-			_pPublicInterface->getClientRect(rc);
+			this->getClientRect(rc);
 
 			nppGUI._statusBarShow = show;
 			_statusBar.display(nppGUI._statusBarShow);

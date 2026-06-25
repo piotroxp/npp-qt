@@ -3,6 +3,7 @@
 #include <QMap>
 #include <QString>
 #include <QTranslator>
+#include <QMenu>
 
 class FindReplaceDlg;
 class PreferenceDlg;

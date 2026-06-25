@@ -19,6 +19,7 @@
 #include <QString>
 #include <vector>
 #include <memory>
+#include <string>
 
 // Panel title constants (mirrors PM_* Win32 defines)
 const QString PM_PROJECTPANELTITLE   = QStringLiteral("Project Panel");
@@ -28,10 +29,6 @@ const QString PM_NEWPROJECTNAME      = QStringLiteral("New Project");
 
 // Node type enumeration (mirrors Win32 NodeType)
 enum NodeType { nodeType_root = 0, nodeType_project = 1, nodeType_folder = 2, nodeType_file = 3 };
-
-// Dialog return codes (mirrors Win32 IDOK/IDCANCEL)
-const int IDOK     = 1;   // QDialog::Accepted
-const int IDCANCEL = 2;   // QDialog::Rejected
 
 // Menu command IDs (mirrors menuCmdID.h IDM_PROJECT_*)
 const int IDM_PROJECT_NEWWS          = 0;
@@ -137,6 +134,11 @@ public:
     // Colors
     void setBackgroundColor(const QColor& col) override;
     void setForegroundColor(const QColor& col) override;
+
+    // Panel title (mirrors Win32 DockingDlgInterface method)
+    QString getPanelTitle() const { return _panelTitle; }
+    void setPanelTitle(const QString& title) { _panelTitle = title; }
+    void setPanelTitle(const std::wstring& title);
 
     // File enumeration
     QStringList enumWorkSpaceFiles(const QStringList& patterns) const;

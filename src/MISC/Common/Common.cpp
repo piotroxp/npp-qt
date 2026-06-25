@@ -1163,10 +1163,10 @@ Version::Version(const QString& versionStr)
         if (ss.size() > 4)
             throw QString(versionStr);
 
-        if (ss.size() > 0) _major = ss[0].toULongLong();
-        if (ss.size() > 1) _minor = ss[1].toULongLong();
-        if (ss.size() > 2) _patch = ss[2].toULongLong();
-        if (ss.size() > 3) _build = ss[3].toULongLong();
+        if (ss.size() > 0) _major = ss[0].toInt();
+        if (ss.size() > 1) _minor = ss[1].toInt();
+        if (ss.size() > 2) _patch = ss[2].toInt();
+        if (ss.size() > 3) _build = ss[3].toInt();
     }
     catch (...) {
         _major = 0;
@@ -1175,6 +1175,10 @@ Version::Version(const QString& versionStr)
         _build = 0;
     }
 }
+
+Version::Version(const std::wstring& versionStr)
+    : Version(QString::fromWCharArray(versionStr.c_str()))
+{}
 
 void Version::setVersionFrom(const QString& filePath)
 {
@@ -1218,17 +1222,22 @@ int Version::compareTo(const Version& v2c) const
 
 bool Version::isCompatibleTo(const Version& from, const Version& to) const
 {
+    return isCompatibleTo(from, true, to, true);
+}
+
+bool Version::isCompatibleTo(const Version& minVer, bool minInclusive, const Version& maxVer, bool maxInclusive) const
+{
     if (empty())
         return false;
-    if (from.empty() && to.empty())
+    if (minVer.empty() && maxVer.empty())
         return true;
-    if (from.empty() && *this <= to)
+    if (minVer.empty() && (maxInclusive ? *this <= maxVer : *this < maxVer))
         return true;
-    if (to.empty() && *this >= from)
+    if (maxVer.empty() && (minInclusive ? *this >= minVer : *this > minVer))
         return true;
-    if (from <= *this && to >= *this)
-        return true;
-    return false;
+    bool aboveMin = minInclusive ? *this >= minVer : *this > minVer;
+    bool belowMax = maxInclusive ? *this <= maxVer : *this < maxVer;
+    return aboveMin && belowMax;
 }
 
 // ScopedCOMInit is a Windows COM stub — no-op on Linux

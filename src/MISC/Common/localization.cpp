@@ -3,6 +3,10 @@
 #include <QAction>
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QLabel>
+#include <QPushButton>
+#include <QCheckBox>
+#include <QRadioButton>
 #include <QDialog>
 #include <QDir>
 #include <QDomDocument>
@@ -115,11 +119,11 @@ void NativeLangSpeaker::init(const QString& languageFilePath, bool loadIfEnglish
         while (!xml.atEnd()) {
             if (xml.readNext() == QXmlStreamReader::StartElement)
                 if (xml.name() == "Native-Langue") {
-                    QStringRef rtl = xml.attributes().value("RTL");
-                    _isRTL = (rtl == "yes");
+                    QString rtl = xml.attributes().value("RTL").toString();
+                    _isRTL = (rtl == QStringLiteral("yes"));
                     if (_isRTL) {
-                        QStringRef ezrtl = xml.attributes().value("editZoneRTL");
-                        _isEditZoneRTL = ezrtl.isNull() ? true : (ezrtl != "no");
+                        QString ezrtl = xml.attributes().value("editZoneRTL").toString();
+                        _isEditZoneRTL = ezrtl.isNull() ? true : (ezrtl != QStringLiteral("no"));
                     } else { _isEditZoneRTL = false; }
                     _fileName = xml.attributes().value("filename").toString();
                     break;
@@ -209,7 +213,7 @@ void NativeLangSpeaker::getMainMenuEntryName(QString& dest, QMenu* hMenu, const 
     if (it != _shortcutMenuEntryNameMap.end()) { dest = it.value(); return; }
     const MenuPosition& menuPos = MenuPosition::getMenuPosition(menuId);
     if (menuPos._x != -1 && menuPos._y == -1 && menuPos._z == -1) {
-        if (QMenuBar* mb = hMenu->menuBar()) {
+        if (QMenuBar* mb = qobject_cast<QMenuBar*>(hMenu->parentWidget())) {
             QList<QAction*> actions = mb->actions();
             if (menuPos._x >= 0 && menuPos._x < actions.size()) {
                 dest = actions[menuPos._x]->text();

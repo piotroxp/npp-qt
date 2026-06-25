@@ -28,18 +28,8 @@ const int FALT      = 0x04;
 const int FSHIFT    = 0x08;
 
 // Win32 Virtual Key codes used in KeyCombo::isValid()
-#ifndef VK_SPACE
-#define VK_SPACE   0x20
-#endif
-#ifndef VK_CAPITAL
-#define VK_CAPITAL 0x14
-#endif
-#ifndef VK_BACK
-#define VK_BACK    0x08
-#endif
-#ifndef VK_RETURN
-#define VK_RETURN  0x0D
-#endif
+// All VK_* constants are defined in NppConstants.h (VK_SPACE, VK_CAPITAL, etc.)
+// This file uses them via NppConstants.h inclusion chain.
 
 // Scintilla key translate (mirrors Win32 keyTranslate())
 // Use NPP_SCK_ prefix to avoid conflict with Scintilla.h macros (SCK_ESCAPE, etc.)

@@ -111,7 +111,7 @@ void ColumnEditorDlg::onInsert()
         }
         sci->send(SCI_BEGINUNDOACTION);
         sci->send(SCI_TARGETFROMSELECTION);
-        sci->send(SCI_REPLACETARGET, -1, reinterpret_cast<sptr_t>(result.toUtf8().constData());
+        sci->send(SCI_REPLACETARGET, -1, reinterpret_cast<sptr_t>(result.toUtf8().constData()));
         sci->send(SCI_ENDUNDOACTION);
     }
     accept();

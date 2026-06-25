@@ -18,11 +18,13 @@
 
 #include "ScintillaEditView.h"
 // Additional includes needed for Qt6 port
+#include "MainWindow.h"
 #include "Buffer.h"
 #include "ScintillaComponent.h"
 #include "DockingCont.h"
 #include "WinControls/PluginsAdmin.h"
 #include "StubDialogs.h"
+#include "MISC/Common/Common.h"
 // Qt6 port
 #include <QWidget>
 #include <QMenu>
@@ -187,7 +189,6 @@ struct QuoteParams
 };
 
 class CustomFileDialog;
-class Notepad_plus_Window;
 class AnsiCharPanel;
 class ClipboardHistoryPanel;
 class VerticalFileSwitcher;
@@ -197,14 +198,16 @@ class FunctionListPanel;
 class FileBrowser;
 struct QuoteParams;
 
-class Notepad_plus final
+class Notepad_plus final : public MainWindow
 {
-friend class Notepad_plus_Window;
 friend class FileManager;
 
 public:
 	Notepad_plus();
 	~Notepad_plus();
+
+    // Global plugin interface pointer (mirrors Win32 _pPublicInterface)
+    static Notepad_plus* _pPublicInterface;
 
 	qintptr init(QWidget* hwnd);
 	qintptr process(QWidget* hwnd, unsigned int Message, quintptr wParam, qintptr lParam);
@@ -329,7 +332,6 @@ public:
 	void changeReadOnlyUserModeForAllOpenedTabs(const bool ro);
 
 private:
-	Notepad_plus_Window* _pPublicInterface = nullptr;
     Window* _pMainWindow = nullptr;
 	DockingManager _dockingManager;
 	std::vector<int> _internalFuncIDs;

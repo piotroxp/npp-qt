@@ -17,6 +17,7 @@
 
 // Language type constants (mirrors Win32 Notepad_plus_msgs.h LangType enum)
 #include "NppConstants.h"  // defines LangType enum, L_USER=15, L_EXTERNAL=95
+#include "ScintillaComponent.h"
 
 // ScintillaComponent is the Qt6 port of ScintillaEditView
 // (defined in src/ScintillaComponent.h).

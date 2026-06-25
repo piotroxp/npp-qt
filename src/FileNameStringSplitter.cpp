@@ -2,34 +2,30 @@
 #include "FileNameStringSplitter.h"
 #include <QFileInfo>
 
+static const QChar FWD_SLASH = u'/';
+static const QChar BCK_SLASH = u'\\';
+
 QString FileNameStringSplitter::baseName() const
 {
-    // Return everything after the last / or \
-    const QChar fwd = QChar(u'/');
-    const QChar bck = QChar(u'\\');
-    int ixFwd = _str.lastIndexOf(fwd);
-    int ixBck = _str.lastIndexOf(bck);
-    int ix = qMax(ixFwd, ixBck);
+    int posFwd = _str.lastIndexOf(FWD_SLASH);
+    int posBck = _str.lastIndexOf(BCK_SLASH);
+    int ix = qMax(posFwd, posBck);
     if (ix < 0) return _str;
     return _str.mid(ix + 1);
 }
 
 QString FileNameStringSplitter::dirName() const
 {
-    // Return everything before the last / or \
-    const QChar fwd = QChar(u'/');
-    const QChar bck = QChar(u'\\');
-    int ixFwd = _str.lastIndexOf(fwd);
-    int ixBck = _str.lastIndexOf(bck);
-    int ix = qMax(ixFwd, ixBck);
+    int posFwd = _str.lastIndexOf(FWD_SLASH);
+    int posBck = _str.lastIndexOf(BCK_SLASH);
+    int ix = qMax(posFwd, posBck);
     if (ix < 0) return QString();
     return _str.left(ix);
 }
 
 QString FileNameStringSplitter::extension() const
 {
-    // Return everything after the last .
-    int ixDot = _str.lastIndexOf(QChar(u'.'));
+    int ixDot = _str.lastIndexOf(u'.');
     if (ixDot < 0) return QString();
     return _str.mid(ixDot + 1);
 }
@@ -37,39 +33,33 @@ QString FileNameStringSplitter::extension() const
 QString FileNameStringSplitter::baseNameWithoutExtension() const
 {
     QString base = baseName();
-    int ixDot = base.lastIndexOf(QChar(u'.'));
+    int ixDot = base.lastIndexOf(u'.');
     if (ixDot < 0) return base;
     return base.left(ixDot);
 }
 
 int FileNameStringSplitter::componentCount() const
 {
-    // Count path components separated by / or \
-    int nComponents = 0;
-    const QChar fwd = QChar(u'/');
-    const QChar bck = QChar(u'\\');
-    bool prevSep = true;
-    for (QChar c : _str) {
-        if (c == fwd || c == bck) {
-            if (!prevSep) nComponents++;
-            prevSep = true;
+    int count = 0;
+    bool wasSep = true;
+    for (QChar ch : _str) {
+        if (ch == FWD_SLASH || ch == BCK_SLASH) {
+            if (!wasSep) count++;
+            wasSep = true;
         } else {
-            prevSep = false;
+            wasSep = false;
         }
     }
-    if (!prevSep) nComponents++;
-    return nComponents;
+    if (!wasSep) count++;
+    return count;
 }
 
 QString FileNameStringSplitter::operator[](int index) const
 {
     if (index < 0) return QString();
-    QStringList parts;
     QString s = _str;
-    const QChar bck = QChar(u'\\');
-    const QChar fwd = QChar(u'/');
-    s.replace(bck, fwd);
-    parts = s.split(fwd, Qt::SkipEmptyParts);
+    s.replace(BCK_SLASH, FWD_SLASH);
+    QStringList parts = s.split(FWD_SLASH, Qt::SkipEmptyParts);
     if (index >= parts.size()) return QString();
     return parts[index];
 }

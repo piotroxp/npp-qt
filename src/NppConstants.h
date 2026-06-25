@@ -12,6 +12,9 @@ using ScintillaEditView = ScintillaComponent;  // canonical alias (also in Scint
 class NppGUI;
 class NppParameters;
 
+// Internal function/module name sentinel for docking data (mirrors Win32 definition)
+inline constexpr wchar_t NPP_INTERNAL_FUNCTION_STR[] = L"NPP_INTERNAL_FUNCTION";
+
 // Scintilla markers
 inline constexpr int MARKER_NEW = 0;
 inline constexpr int MARKER_UNPIN = 1;
@@ -169,6 +172,10 @@ inline constexpr int VK_LEFT = 0x25;
 inline constexpr int VK_UP = 0x26;
 inline constexpr int VK_RIGHT = 0x27;
 inline constexpr int VK_DOWN = 0x28;
+inline constexpr int VK_nullptr = 0x00; // Sentinel: no keyboard shortcut
+inline constexpr int VK_INSERT = 0x2D;
+inline constexpr int VK_PRIOR  = 0x21; // Page Up
+inline constexpr int VK_NEXT   = 0x22; // Page Down
 inline constexpr int VK_DELETE = 0x2E;
 inline constexpr int VK_TAB = 0x09;
 inline constexpr int VK_BACK = 0x08;
@@ -198,6 +205,20 @@ using UINT = unsigned int;
 using WPARAM = quint64;
 using LPARAM = quint64;
 using LRESULT = quint64;
+
+// Win32 dialog result codes
+inline constexpr int IDOK = 1;
+inline constexpr int IDCANCEL = 2;
+inline constexpr int IDYES = 6;
+inline constexpr int IDNO = 7;
+inline constexpr int IDRETRY = 4;
+inline constexpr int IDABORT = 3;
+inline constexpr int IDIGNORE = 5;
+inline constexpr int IDCLOSE = 8;
+
+// Win32 GetMenuString stub (always returns empty)
+inline int GetMenuString(int /*hMenu*/, unsigned int, char*, int, unsigned int) { return 0; }
+inline int GetMenuString(int /*hMenu*/, unsigned int, wchar_t*, int, unsigned int) { return 0; }
 using HWND = void*;
 using HANDLE = void*;
 using HINSTANCE = void*;

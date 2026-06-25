@@ -70,6 +70,9 @@ public:
     FindReplaceDlg();
     ~FindReplaceDlg() override;
 
+    // getHSelf() returns the widget handle (mirrors Win32 getHSelf())
+    QWidget* getHSelf() const { return const_cast<FindReplaceDlg*>(this); }
+
     void init(QWidget* parent, ScintillaComponent** ppEditView);
     void doDialog(DIALOG_TYPE whichType, bool isRTL = false);
     void create(DIALOG_TYPE whichType);
@@ -82,8 +85,8 @@ public:
     int markAll(const wchar_t* txt2find, int styleID);
     int processAll(ProcessOperation op, const FindOption* opt, bool isEntire = false);
     int processRange(ProcessOperation op, const std::wstring& findReplaceInfo,
-                     const FindOption* opt, int colourStyleID = -1,
-                     ScintillaComponent* view2Process = nullptr);
+                     const FindOption* opt, int colourStyleID, int extraArg,
+                     ScintillaComponent* view2Process);
     int processRange(ProcessOperation op, const FindReplaceInfo& fri,
                      const FindOption* opt, int colourStyleID = -1,
                      ScintillaComponent* view2Process = nullptr);

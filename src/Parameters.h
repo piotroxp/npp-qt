@@ -24,6 +24,7 @@
 //   using WPARAM = quintptr;  using LPARAM = qintptr;  using LRESULT = qintptr;
 
 #include "Window.h"
+#include "MISC/Common/Common.h"
 
 #include <QtCore>
 #include <QtGui>
