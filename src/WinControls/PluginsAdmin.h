@@ -158,6 +158,7 @@ public:
     // List access
     QVector<PluginUpdateInfo> getAvailablePlugins() const;
     QVector<PluginUpdateInfo> getInstalledPlugins() const;
+    std::wstring getPluginListVerStr() const;
 
 signals:
     void pluginsInstalled(const QVector<PluginUpdateInfo>& plugins);

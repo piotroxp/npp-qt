@@ -38,6 +38,15 @@ public:
 };
 // Note: BUFFER_INVALID is defined as constexpr in ScintillaComponent.h
 
+// BufferViewInfo — lightweight pair of (buffer, view) used by file-close operations
+struct BufferViewInfo {
+    BufferID _buffer;
+    int _view;
+
+    BufferViewInfo() : _buffer(), _view(0) {}
+    BufferViewInfo(BufferID buffer, int view) : _buffer(buffer), _view(view) {}
+};
+
 enum class BufferStatus : unsigned { Normal = 0, ReadOnly = 1, Dirty = 2, Untitled = 4 };
 
 enum class EolFormat { Windows = 0, Unix = 1, Mac = 2 };

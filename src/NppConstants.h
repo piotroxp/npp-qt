@@ -3,6 +3,8 @@
 #pragma once
 
 #include <QtCore/Qt>
+#include <QtGui/qrgb.h>   // QRgb used by COLORREF typedef
+#include <QtCore/QString>
 
 // Forward declarations for types used across npp-qt
 class ScintillaComponent;       // defined in ScintillaComponent.h

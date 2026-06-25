@@ -10,6 +10,10 @@
 // Include this in any file that uses bare SCI_* constants.
 #pragma once
 
+// NOTE: We include qsciscintillabase.h to verify QScintilla is available.
+// DO NOT use `using QsciScintillaBase::SCI_*` here — those enum values conflict
+// with our constexpr npp_sci definitions when both are brought into global scope.
+// Use the npp_sci constexpr values exclusively.
 #include <Qsci/qsciscintillabase.h>
 
 // Some Scintilla.h macros conflict with QsciScintillaBase anonymous-enum values
@@ -194,6 +198,30 @@ namespace npp_sci {
     constexpr int SCI_APPENDTEXT      = 2006;
     constexpr int SCI_EMPTYUNDOBUFFER = 2060;
     constexpr int SCI_SETSAVEPOINT   = 2012;
+    constexpr int SCI_LINESONSCREEN   = 2370;
+    constexpr int SCI_GETSELECTIONEMPTY = 2650;
+    constexpr int SCI_WORDSTARTPOSITION = 2266;
+    constexpr int SCI_WORDENDPOSITION   = 2267;
+    constexpr int SCI_AUTOCSETSEPARATOR = 2106;
+    constexpr int SCI_AUTOCSETIGNORECASE = 2115;
+    constexpr int SCI_AUTOCSETAUTOHIDE   = 2118;
+    constexpr int SCI_AUTOCSETDROPRESTOFWORD = 2270;
+    constexpr int SCI_REPLACESEL         = 2170;
+    constexpr int SCI_SETSEL              = 2160;
+    constexpr int SCI_DOCLINEFROMVISIBLE  = 2221;
+    constexpr int SCI_REPLACETARGET       = 2194;
+    constexpr int SCI_TARGETFROMSELECTION = 2287;
+    constexpr int SCI_BEGINUNDOACTION      = 2078;
+    constexpr int SCI_ENDUNDOACTION        = 2079;
+    constexpr int SCI_INSERTTEXT           = 2003;
+
+    // ==== Search flags (SCFIND_*) ====
+    constexpr int SCFIND_MATCHCASE   = 4;
+    constexpr int SCFIND_WHOLEWORD   = 2;
+    constexpr int SCFIND_REGEXP      = 0x00200000;
+
+    // ==== Universal styles ====
+    constexpr int SCE_UNIVERSAL_FOUND_STYLE_SMART = 33;
 
 }  // namespace npp_sci
 

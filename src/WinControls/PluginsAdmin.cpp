@@ -4,6 +4,7 @@
 
 #include "PluginsAdmin.h"
 #include "StaticDialog.h"
+#include <string>  // std::wstring
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -864,3 +865,8 @@ intptr_t PluginsAdminDlg::run_dlgProc(unsigned int message, intptr_t wParam, int
     return 0;
 }
 
+
+std::wstring PluginsAdminDlg::getPluginListVerStr() const
+{
+    return L"";  // no-op stub for Qt6 port
+}
