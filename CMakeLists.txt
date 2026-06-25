@@ -1,0 +1,404 @@
+cmake_minimum_required(VERSION 3.16)
+project(npp-qt VERSION 8.9.6 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core)
+# QScintilla2 has no CMake config; link manually via pkg-config or library path
+find_library(QSCINTILLA2_LIB NAMES qscintilla2_qt6 PATHS /usr/lib/x86_64-linux-gnu)
+if(NOT QSCINTILLA2_LIB)
+    message(FATAL_ERROR "QScintilla2 library not found — install libqscintilla2-qt6-dev")
+endif()
+message(STATUS "QScintilla2: ${QSCINTILLA2_LIB}")
+
+# =============================================================================
+# WinControls — base infrastructure
+# =============================================================================
+set(WINCONTROLS_BASE
+    src/WinControls/Window.h
+    src/WinControls/TabBar.h
+    src/WinControls/TabBar.cpp
+    src/WinControls/ToolBar.h
+    src/WinControls/ToolBar.cpp
+    src/WinControls/StatusBar.h
+    src/WinControls/StatusBar.cpp
+    src/WinControls/DockingWnd.h
+    src/WinControls/DockingWnd.cpp
+    src/WinControls/SplitterContainer.h
+    src/WinControls/SplitterContainer.cpp
+    src/WinControls/StaticDialog.h
+    src/WinControls/StaticDialog.cpp
+)
+
+# =============================================================================
+# WinControls — dialogs
+# =============================================================================
+set(WINCONTROLS_DIALOGS
+    src/WinControls/AboutDlg.h
+    src/WinControls/AboutDlg.cpp
+    src/WinControls/WindowsDlg.h
+    src/WinControls/WindowsDlg.cpp
+    src/WinControls/WinMgr.h
+    src/WinControls/WinMgr.cpp
+    src/WinControls/WinRect.h
+    src/WinControls/SizeableDlg.h
+    src/WinControls/SizeableDlg.cpp
+    src/WinControls/AnsiCharPanel.h
+    src/WinControls/AnsiCharPanel.cpp
+    src/WinControls/ColourPicker.h
+    src/WinControls/ColourPicker.cpp
+    src/WinControls/WordStyleDlg.h
+    src/WinControls/WordStyleDlg.cpp
+    src/WinControls/RunMacroDlg.h
+    src/WinControls/RunMacroDlg.cpp
+)
+
+# =============================================================================
+# WinControls — panels (dockable/floating)
+# =============================================================================
+set(WINCONTROLS_PANELS
+    src/WinControls/DocumentMap.h
+    src/WinControls/DocumentMap.cpp
+    src/WinControls/FunctionList.h
+    src/WinControls/FunctionList.cpp
+    src/WinControls/FileBrowser.h
+    src/WinControls/FileBrowser.cpp
+    src/WinControls/FindCharsInRange.h
+    src/WinControls/FindCharsInRange.cpp
+)
+
+# =============================================================================
+# WinControls — advanced (preference, plugins, misc tools)
+# =============================================================================
+set(WINCONTROLS_ADVANCED
+    src/WinControls/Preference.h
+    src/WinControls/Preference.cpp
+    src/WinControls/ClipboardHistory.h
+    src/WinControls/ClipboardHistory.cpp
+    src/WinControls/ContextMenu.h
+    src/WinControls/ContextMenu.cpp
+    src/WinControls/ToolTip.h
+    src/WinControls/ToolTip.cpp
+    src/WinControls/TrayIcon.h
+    src/WinControls/TrayIcon.cpp
+    src/WinControls/TreeView.h
+    src/WinControls/TreeView.cpp
+    src/WinControls/TaskList.h
+    src/WinControls/TaskList.cpp
+    # TaskListDlg is declared+defined in TaskList.h/.cpp
+    src/WinControls/functionParser.h
+    src/WinControls/functionParser.cpp
+    src/WinControls/VerticalFileSwitcher.h
+    src/WinControls/VerticalFileSwitcher.cpp
+    src/WinControls/PluginsAdmin.h
+    src/WinControls/PluginsAdmin.cpp
+    src/WinControls/ProjectPanel.h
+    src/WinControls/ProjectPanel.cpp
+    src/WinControls/ShortcutMapper.h
+    src/WinControls/ShortcutMapper.cpp
+)
+
+# =============================================================================
+# WinControls — BabyGrid spreadsheet control + wrappers
+# =============================================================================
+set(WINCONTROLS_BABYGRID
+    src/WinControls/Grid/BabyGrid.h
+    src/WinControls/Grid/BabyGrid.cpp
+    src/WinControls/Grid/BabyGridWrapper.h
+    src/WinControls/Grid/BabyGridWrapper.cpp
+)
+
+# =============================================================================
+# WinControls — utility / infrastructure lift
+# =============================================================================
+set(WINCONTROLS_UTILS
+    src/WinControls/DoubleBuffer.h
+    src/WinControls/DoubleBuffer.cpp
+    src/WinControls/ImageListSet.h
+    src/WinControls/ImageListSet.cpp
+    src/WinControls/ReadDirectoryChanges.h
+    src/WinControls/ReadDirectoryChanges.cpp
+    src/WinControls/CustomFileDialog.h
+    src/WinControls/CustomFileDialog.cpp
+)
+
+# =============================================================================
+# Scintilla layers — editor components stacked on ScintillaEditBase
+# (port of PowerEditor/src/ScintillaComponent/*)
+# =============================================================================
+set(SCINTILLA_LAYERS
+    # ScintillaComponent — main editor widget (Qt6 Scintilla wrapper)
+    src/ScintillaComponent.h
+    src/ScintillaComponent.cpp
+
+    # ScintillaEditView — type-alias header for Win32 compatibility (see ScintillaComponent.h)
+    src/ScintillaEditView.h
+
+    # ScintillaCtrls — editor factory (stub; implementation in ScintillaComponent.cpp)
+    src/ScintillaCtrls.cpp
+
+    # Buffer — document buffer management
+    src/Buffer.h
+    src/Buffer.cpp
+
+    # DocTabView — document tab container
+    src/DocTabView.h
+    src/DocTabView.cpp
+
+    # Find/Replace dialog
+    src/FindReplaceDlg.h
+    src/FindReplaceDlg.cpp
+
+    # Auto-completion + function calltips
+    src/AutoCompletion.h
+    src/AutoCompletion.cpp
+    src/FunctionCallTip.h
+    src/FunctionCallTip.cpp
+
+    # Go to line dialog
+    src/GoToLineDlg.h
+    src/GoToLineDlg.cpp
+
+    # Smart/highlight all matching words
+    src/SmartHighlighter.h
+    src/SmartHighlighter.cpp
+
+    # Column editor (numeric/text insertion in column mode)
+    src/columnEditor.h
+    src/columnEditor.cpp
+
+    # Printer — print support (QPrinter)
+    src/Printer.h
+    src/Printer.cpp
+
+    # XML tag matching highlighter
+    src/xmlMatchedTagsHighlighter.h
+    src/xmlMatchedTagsHighlighter.cpp
+
+    # User-defined language dialog
+    src/UserDefineDialog.h
+    src/UserDefineDialog.cpp
+)
+
+# =============================================================================
+# MISC — Common utilities
+# =============================================================================
+set(MISC_COMMON
+    src/MISC/Common/Common.h
+    src/MISC/Common/Common.cpp
+    src/MISC/Common/FileInterface.h
+    src/MISC/Common/FileInterface.cpp
+    src/MISC/Common/EncodingMapper.h
+    src/MISC/Common/EncodingMapper.cpp
+    src/MISC/Common/IDAllocator.h
+)
+
+# =============================================================================
+# MISC — Plugins manager
+# =============================================================================
+set(MISC_PLUGINS
+    src/MISC/PluginsManager/PluginsManager.h
+    src/MISC/PluginsManager/PluginsManager.cpp
+)
+
+# =============================================================================
+# Top-level infrastructure files
+# =============================================================================
+set(INFRASTRUCTURE
+    src/resource.h
+    src/NppConstants.h
+    src/NppXml.h
+    src/NppNotification.h
+    src/dpiManagerV2.h
+    src/lastRecentFileList.h
+    src/localization.h
+    src/shortcut.h
+    src/clipboardFormats.h
+    src/keys.h
+)
+
+# =============================================================================
+# All sources — single authoritative list
+# =============================================================================
+set(SOURCES
+    # Entry point
+    src/main.cpp
+
+    # Core — main window and document model
+    src/MainWindow.h
+    src/MainWindow.cpp
+
+    # Scintilla edit layers — all ScintillaComponent files via ${SCINTILLA_LAYERS}
+    ${SCINTILLA_LAYERS}
+
+    # Scintilla base (abstract interface)
+    src/ScintillaEditBase.h
+    src/ScintillaEditBase.cpp
+
+    # Dark mode
+    src/NppDarkMode.h
+    src/NppDarkMode.cpp
+
+    # Text encoding
+    src/Utf8_16.h
+    src/Utf8_16.cpp
+
+    # Small dialogs
+    src/lesDlgs.h
+    src/lesDlgs.cpp
+
+    # Run dialog (execute command)
+    src/RunDlg.h
+    src/RunDlg.cpp
+
+    # MD5 checksum dialogs
+    src/md5Dlgs.h
+    src/md5Dlgs.cpp
+
+    # Document snapshot (file change monitoring)
+    src/documentSnapshot.h
+    src/documentSnapshot.cpp
+
+    # Process management
+    src/Processus.h
+    src/Processus.cpp
+
+    # Menu command IDs
+    src/menuCmdID.h
+
+    # MISC infrastructure
+    ${MISC_COMMON}
+    ${MISC_PLUGINS}
+
+    # Top-level infrastructure (headers)
+    ${INFRASTRUCTURE}
+
+    # New utility stubs
+    src/MiniDumper.h
+    src/Win32Exception.h
+    src/Sorters.h
+    src/SortLocale.h
+    src/FileNameStringSplitter.h
+    src/FileNameStringSplitter.cpp
+    src/md5.h
+    src/sha-256.h
+    src/sha512.h
+    src/calc_sha1.h
+    src/verifySignedfile.h
+
+    # Top-level infrastructure implementations
+    src/NppNotification.cpp
+    src/dpiManagerV2.cpp
+    src/lastRecentFileList.cpp
+    src/localization.cpp
+    src/shortcut.cpp
+
+    # MISC/Common implementations (separate from forwarding headers at root)
+    src/MISC/Common/NppNotification.cpp
+    src/MISC/Common/dpiManagerV2.cpp
+    src/MISC/Common/lastRecentFileList.cpp
+    src/MISC/Common/localization.cpp
+    src/MISC/Common/shortcut.cpp
+    src/MISC/Common/clipboardFormats.h
+    src/MISC/Common/keys.h
+
+    # Core application files — fully ported to Qt6
+    src/Parameters.h
+    src/Parameters.cpp
+    src/NppIO.h
+    src/NppIO.cpp
+    src/NppCommands.h
+    src/NppCommands.cpp
+    src/NppBigSwitch.h
+    src/NppBigSwitch.cpp
+    src/Notepad_plus.h
+    src/Notepad_plus.cpp
+
+    # WinControls (all layers)
+    ${WINCONTROLS_BASE}
+    ${WINCONTROLS_DIALOGS}
+    ${WINCONTROLS_PANELS}
+    ${WINCONTROLS_ADVANCED}
+    ${WINCONTROLS_UTILS}
+    ${WINCONTROLS_BABYGRID}
+)
+
+set(HEADERS
+    # Core
+    src/MainWindow.h
+    src/NppDarkMode.h
+    src/Utf8_16.h
+    src/lesDlgs.h
+    src/menuCmdID.h
+    src/Notepad_plus_msgs.h
+    src/ScintillaEditBase.h
+
+    # All ScintillaComponent files
+    ${SCINTILLA_LAYERS}
+
+    # Parameters + commands (large files)
+    src/Parameters.h
+    src/Notepad_plus.h
+    src/NppCommands.h
+    src/NppBigSwitch.h
+    src/NppIO.h
+
+    # Infrastructure
+    ${INFRASTRUCTURE}
+
+    # MISC
+    ${MISC_COMMON}
+    ${MISC_PLUGINS}
+
+    # WinControls
+    ${WINCONTROLS_BASE}
+    ${WINCONTROLS_DIALOGS}
+    ${WINCONTROLS_PANELS}
+    ${WINCONTROLS_ADVANCED}
+    ${WINCONTROLS_UTILS}
+    ${WINCONTROLS_BABYGRID}
+)
+
+add_executable(npp-qt WIN32
+    ${SOURCES}
+    ${HEADERS}
+)
+
+target_link_libraries(npp-qt
+    PRIVATE
+        Qt6::Widgets
+        Qt6::Gui
+        Qt6::Core
+        ${QSCINTILLA2_LIB}
+)
+
+target_include_directories(npp-qt PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/WinControls
+    /usr/include/x86_64-linux-gnu/qt6/QtPrintSupport
+    /home/node/.openclaw/workspace/notepad-plus-plus-translation/scintilla/include
+    /home/node/.openclaw/workspace/notepad-plus-plus-translation/lexilla/include
+)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(npp-qt PRIVATE QT_DEBUG)
+endif()
+
+if(WIN32)
+    add_compile_definitions(_UNICODE)
+endif()
+
+# -----------------------------------------------------------------------
+# Tests — enable only if Qt6TestCore is available
+# -----------------------------------------------------------------------
+find_package(Qt6TestCore QUIET)
+if(Qt6TestCore_FOUND)
+    enable_testing()
+    add_subdirectory(tests)
+else()
+    message(STATUS "Qt6TestCore not found — tests disabled")
+endif()

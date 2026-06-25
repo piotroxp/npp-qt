@@ -1,0 +1,707 @@
+// Copyright (C) 2002 Scott Kirkwood
+//
+// Permission to use, copy, modify, distribute and sell this code
+// and its documentation for any purpose is hereby granted without fee,
+// provided that the above copyright notice appear in all copies or
+// any derived copies.  Scott Kirkwood makes no representations
+// about the suitability of this software for any purpose.
+// It is provided "as is" without express or implied warranty.
+//
+// Modified 2006 Jens Lorenz
+// Semantic lift to Qt6 2025 — Win32 file I/O → QFile, IsTextUnicode → heuristic
+////////////////////////////////////////////////////////////////////////////////
+
+#include "Utf8_16.h"
+
+// qbswap — byte-swap a 16-bit value (was Qt-internal, now inlined)
+static inline unsigned short qbswap(unsigned short x) {
+    return (x << 8) | (x >> 8);
+}
+
+const Utf8_16::utf8 Utf8_16::k_Boms[uniEnd][3] = {
+    {0x00, 0x00, 0x00},  // Unknown
+    {0xEF, 0xBB, 0xBF},  // UTF-8 with BOM
+    {0xFE, 0xFF, 0x00},  // UTF-16 big-endian with BOM
+    {0xFF, 0xFE, 0x00},  // UTF-16 little-endian with BOM
+};
+
+
+// =============================================================================
+// Utf16_Iter — reads UTF-16 bytes and emits UTF-8 bytes
+// =============================================================================
+
+Utf16_Iter::Utf16_Iter()
+{
+    reset();
+}
+
+void Utf16_Iter::reset()
+{
+    m_pBuf      = nullptr;
+    m_pRead     = nullptr;
+    m_pEnd      = nullptr;
+    m_eState    = eStart;
+    m_out1st    = 0;
+    m_outLst    = 0;
+    m_nCur16    = 0;
+    m_eEncoding = uni8Bit;
+}
+
+void Utf16_Iter::set(const ubyte* pBuf, size_t nLen, unsigned eEncoding)
+{
+    m_pBuf      = pBuf;
+    m_pRead     = pBuf;
+    m_pEnd      = pBuf + nLen;
+    m_eEncoding = eEncoding;
+    // m_eState, m_out*, m_nCur16 intentionally NOT reset here
+}
+
+bool Utf16_Iter::get(utf8* c)
+{
+    if (m_out1st != m_outLst)
+    {
+        *c = m_out[m_out1st];
+        m_out1st = (m_out1st + 1) % (sizeof(m_out) / sizeof(m_out[0]));
+        return true;
+    }
+    return false;
+}
+
+void Utf16_Iter::pushout(ubyte c)
+{
+    m_out[m_outLst] = c;
+    m_outLst = (m_outLst + 1) % (sizeof(m_out) / sizeof(m_out[0]));
+}
+
+void Utf16_Iter::read()
+{
+    if (m_eEncoding == uni16LE || m_eEncoding == uni16LE_NoBOM)
+    {
+        m_nCur16 = *m_pRead++;
+        m_nCur16 |= static_cast<utf16>(*m_pRead << 8);
+    }
+    else // uni16BE or uni16BE_NoBOM
+    {
+        m_nCur16 = static_cast<utf16>(*m_pRead << 8);
+        m_nCur16 |= *m_pRead;
+    }
+    ++m_pRead;
+}
+
+void Utf16_Iter::operator++()
+{
+    if (m_out1st != m_outLst)
+        return;
+
+    switch (m_eState)
+    {
+        case eStart:
+        {
+            read();
+            if ((m_nCur16 >= 0xd800) && (m_nCur16 < 0xdc00))
+            {
+                m_eState = eSurrogate;
+                m_highSurrogate = m_nCur16;
+            }
+            else if (m_nCur16 < 0x80)
+            {
+                pushout(static_cast<ubyte>(m_nCur16));
+                m_eState = eStart;
+            }
+            else if (m_nCur16 < 0x800)
+            {
+                pushout(static_cast<ubyte>(0xC0 | (m_nCur16 >> 6)));
+                pushout(static_cast<ubyte>(0x80 | (m_nCur16 & 0x3f)));
+                m_eState = eStart;
+            }
+            else
+            {
+                pushout(static_cast<ubyte>(0xE0 | (m_nCur16 >> 12)));
+                pushout(static_cast<ubyte>(0x80 | ((m_nCur16 >> 6) & 0x3f)));
+                pushout(static_cast<ubyte>(0x80 | (m_nCur16 & 0x3f)));
+                m_eState = eStart;
+            }
+        }
+        break;
+
+        case eSurrogate:
+        {
+            read();
+            if ((m_nCur16 >= 0xDC00) && (m_nCur16 < 0xE000))
+            {
+                unsigned int code = 0x10000
+                    + ((m_highSurrogate & 0x3ff) << 10)
+                    + (m_nCur16 & 0x3ff);
+                pushout(static_cast<ubyte>(0xf0 | ((code >> 18) & 0x07)));
+                pushout(static_cast<ubyte>(0x80 | ((code >> 12) & 0x3f)));
+                pushout(static_cast<ubyte>(0x80 | ((code >> 6) & 0x3f)));
+                pushout(static_cast<ubyte>(0x80 | (code & 0x3f)));
+            }
+            m_eState = eStart;
+        }
+        break;
+    }
+}
+
+
+// =============================================================================
+// Utf8_Iter — reads UTF-8 bytes and emits UTF-16 words
+// =============================================================================
+
+Utf8_Iter::Utf8_Iter()
+{
+    reset();
+}
+
+void Utf8_Iter::reset()
+{
+    m_pBuf      = nullptr;
+    m_pRead     = nullptr;
+    m_pEnd      = nullptr;
+    m_eState    = eStart;
+    m_out1st    = 0;
+    m_outLst    = 0;
+    m_eEncoding = uni8Bit;
+    m_code      = 0;
+    m_count     = 0;
+}
+
+void Utf8_Iter::set(const ubyte* pBuf, size_t nLen, unsigned eEncoding)
+{
+    m_pBuf      = pBuf;
+    m_pRead     = pBuf;
+    m_pEnd      = pBuf + nLen;
+    m_eEncoding = eEncoding;
+    // m_eState, m_code, m_count, m_out* not reset
+}
+
+bool Utf8_Iter::get(utf16* c)
+{
+    if (m_out1st == m_outLst)
+        return false;
+    *c = m_out[m_out1st];
+    m_out1st = (m_out1st + 1) % (sizeof(m_out) / sizeof(m_out[0]));
+    return true;
+}
+
+void Utf8_Iter::pushout(utf16 c)
+{
+    m_out[m_outLst] = c;
+    m_outLst = (m_outLst + 1) % (sizeof(m_out) / sizeof(m_out[0]));
+}
+
+void Utf8_Iter::toStart()
+{
+    bool swap = (m_eEncoding == uni16BE || m_eEncoding == uni16BE_NoBOM);
+    if (m_code < 0x10000)
+    {
+        utf16 c = swap ? qbswap(m_code) : static_cast<utf16>(m_code);
+        pushout(c);
+    }
+    else
+    {
+        utf16 c1 = static_cast<utf16>(0xD800 | (m_code >> 10));
+        utf16 c2 = static_cast<utf16>(0xDC00 | (m_code & 0x3ff));
+        if (swap)
+        {
+            c1 = qbswap(c1);
+            c2 = qbswap(c2);
+        }
+        pushout(c1);
+        pushout(c2);
+    }
+    m_eState = eStart;
+}
+
+void Utf8_Iter::operator++()
+{
+    if (m_out1st != m_outLst)
+        return;
+
+    switch (m_eState)
+    {
+        case eStart:
+        {
+            if (*m_pRead < 0x80)
+            {
+                m_code = *m_pRead;
+                toStart();
+            }
+            else if (*m_pRead < 0xE0)
+            {
+                m_code = static_cast<utf16>(0x1f & *m_pRead);
+                m_eState = eFollow;
+                m_count = 1;
+            }
+            else if (*m_pRead < 0xF0)
+            {
+                m_code = static_cast<utf16>(0x0f & *m_pRead);
+                m_eState = eFollow;
+                m_count = 2;
+            }
+            else
+            {
+                m_code = static_cast<utf16>(0x07 & *m_pRead);
+                m_eState = eFollow;
+                m_count = 3;
+            }
+        }
+        break;
+
+        case eFollow:
+        {
+            m_code = (m_code << 6) | static_cast<utf8>(0x3F & *m_pRead);
+            --m_count;
+            if (m_count == 0)
+                toStart();
+        }
+        break;
+    }
+    ++m_pRead;
+}
+
+
+// =============================================================================
+// Utf8_16_Read
+// =============================================================================
+
+Utf8_16_Read::~Utf8_16_Read()
+{
+    if ((m_eEncoding == uni16BE) || (m_eEncoding == uni16LE)
+        || (m_eEncoding == uni16BE_NoBOM) || (m_eEncoding == uni16LE_NoBOM))
+    {
+        delete[] m_pNewBuf;
+        m_pNewBuf = nullptr;
+    }
+}
+
+// Returns: 0 = utf8NoBOM, 1 = ascii7bits, 2 = ascii8bits
+u78 Utf8_16_Read::utf8_7bits_8bits()
+{
+    int rv = 1;
+    int ASCII7only = 1;
+    const utf8* sx = reinterpret_cast<const utf8*>(m_pBuf);
+    const utf8* endx = sx + m_nLen;
+
+    while (sx < endx)
+    {
+        if (*sx == '\0')
+        {
+            ASCII7only = 0;
+            rv = 0;
+            break;
+        }
+        else if ((*sx & 0x80) == 0x0)
+        {
+            ++sx;
+        }
+        else if ((*sx & (0x80 + 0x40)) == 0x80)
+        {
+            ASCII7only = 0;
+            rv = 0;
+            break;
+        }
+        else if ((*sx & (0x80 + 0x40 + 0x20)) == (0x80 + 0x40))
+        {
+            ASCII7only = 0;
+            if (static_cast<size_t>(endx - sx) < 2)
+            {
+                rv = 0;
+                break;
+            }
+            if ((sx[1] & (0x80 + 0x40)) != 0x80)
+            {
+                rv = 0;
+                break;
+            }
+            sx += 2;
+        }
+        else if ((*sx & (0x80 + 0x40 + 0x20 + 0x10)) == (0x80 + 0x40 + 0x20))
+        {
+            ASCII7only = 0;
+            if (static_cast<size_t>(endx - sx) < 3)
+            {
+                rv = 0;
+                break;
+            }
+            if ((sx[1] & (0x80 + 0x40)) != 0x80
+                || (sx[2] & (0x80 + 0x40)) != 0x80)
+            {
+                rv = 0;
+                break;
+            }
+            sx += 3;
+        }
+        else if ((*sx & (0x80 + 0x40 + 0x20 + 0x10 + 0x8)) == (0x80 + 0x40 + 0x20 + 0x10))
+        {
+            ASCII7only = 0;
+            if (static_cast<size_t>(endx - sx) < 4)
+            {
+                rv = 0;
+                break;
+            }
+            if ((sx[1] & (0x80 + 0x40)) != 0x80
+                || (sx[2] & (0x80 + 0x40)) != 0x80
+                || (sx[3] & (0x80 + 0x40)) != 0x80)
+            {
+                rv = 0;
+                break;
+            }
+            sx += 4;
+        }
+        else
+        {
+            ASCII7only = 0;
+            rv = 0;
+            break;
+        }
+    }
+
+    if (ASCII7only)
+        return ascii7bits;
+    if (rv)
+        return utf8NoBOM;
+    return ascii8bits;
+}
+
+void Utf8_16_Read::determineEncoding(const unsigned char* buf, size_t len)
+{
+    m_eEncoding = uni8Bit;
+    m_nSkip = 0;
+    m_pBuf = buf;
+    m_nLen = len;
+
+    // UTF-16 BE with BOM
+    if (len > 1 && buf[0] == k_Boms[uni16BE][0] && buf[1] == k_Boms[uni16BE][1])
+    {
+        m_eEncoding = uni16BE;
+        m_nSkip = 2;
+        return;
+    }
+    // UTF-16 LE with BOM
+    if (len > 1 && buf[0] == k_Boms[uni16LE][0] && buf[1] == k_Boms[uni16LE][1])
+    {
+        m_eEncoding = uni16LE;
+        m_nSkip = 2;
+        return;
+    }
+    // UTF-8 with BOM
+    if (len > 2 && buf[0] == k_Boms[uniUTF8][0]
+        && buf[1] == k_Boms[uniUTF8][1]
+        && buf[2] == k_Boms[uniUTF8][2])
+    {
+        m_eEncoding = uniUTF8;
+        m_nSkip = 3;
+        return;
+    }
+
+    // Heuristic UTF-16 LE without BOM (replaces IsTextUnicode)
+    if (isLikelyUtf16Le(buf, len))
+    {
+        m_eEncoding = uni16LE_NoBOM;
+        m_nSkip = 0;
+        return;
+    }
+
+    // Content-based detection
+    u78 detected = utf8_7bits_8bits();
+    if (detected == utf8NoBOM)
+        m_eEncoding = uniUTF8_NoBOM;
+    else if (detected == ascii7bits)
+        m_eEncoding = uni7Bit;
+    else
+        m_eEncoding = uni8Bit;
+    m_nSkip = 0;
+}
+
+unsigned Utf8_16_Read::determineEncodingFromBOM(const unsigned char* buf, size_t bufLen)
+{
+    if (bufLen > 1 && buf[0] == k_Boms[uni16BE][0] && buf[1] == k_Boms[uni16BE][1])
+        return uni16BE;
+    if (bufLen > 1 && buf[0] == k_Boms[uni16LE][0] && buf[1] == k_Boms[uni16LE][1])
+        return uni16LE;
+    if (bufLen > 2 && buf[0] == k_Boms[uniUTF8][0]
+        && buf[1] == k_Boms[uniUTF8][1]
+        && buf[2] == k_Boms[uniUTF8][2])
+        return uniUTF8;
+    return uni8Bit;
+}
+
+bool Utf8_16_Read::isLikelyUtf16Le(const unsigned char* buf, size_t len)
+{
+    if (len < 4 || (len % 2) != 0)
+        return false;
+    // Very rough heuristic: count zero bytes at even vs odd positions
+    size_t zerosEven = 0;
+    size_t zerosOdd = 0;
+    for (size_t i = 0; i + 1 < len; i += 2)
+    {
+        if (buf[i] == 0) ++zerosEven;
+        if (buf[i + 1] == 0) ++zerosOdd;
+    }
+    // If odd-position zeros outnumber even-position zeros significantly,
+    // bytes are likely LE UTF-16 (high byte of most chars is non-zero)
+    return (zerosOdd > zerosEven * 3) && (zerosOdd > len / 8);
+}
+
+bool Utf8_16_Read::isLikelyUtf16Be(const unsigned char* buf, size_t len)
+{
+    if (len < 4 || (len % 2) != 0)
+        return false;
+    size_t zerosEven = 0;
+    size_t zerosOdd = 0;
+    for (size_t i = 0; i + 1 < len; i += 2)
+    {
+        if (buf[i] == 0) ++zerosEven;
+        if (buf[i + 1] == 0) ++zerosOdd;
+    }
+    return (zerosEven > zerosOdd * 3) && (zerosEven > len / 8);
+}
+
+QByteArray Utf8_16_Read::convert(const char* buf, size_t len)
+{
+    return convert(QByteArray(buf, static_cast<int>(len)));
+}
+
+QByteArray Utf8_16_Read::convert(const QByteArray& data)
+{
+    const unsigned char* buf = reinterpret_cast<const unsigned char*>(data.constData());
+    size_t len = static_cast<size_t>(data.size());
+
+    m_pBuf = buf;
+    m_nLen = len;
+    m_nNewBufSize = 0;
+
+    if (m_bFirstRead)
+    {
+        determineEncoding(buf, len);
+        m_bFirstRead = false;
+    }
+
+    switch (m_eEncoding)
+    {
+        case uni7Bit:
+        case uni8Bit:
+        case uniUTF8_NoBOM:
+        {
+            m_nAllocatedBufSize = 0;
+            m_pNewBuf = const_cast<char*>(data.constData());
+            m_nNewBufSize = len;
+            return data;
+        }
+
+        case uniUTF8:
+        {
+            size_t skip = (m_eEncoding == uniUTF8) ? 3 : 0;
+            m_nAllocatedBufSize = 0;
+            m_pNewBuf = const_cast<char*>(data.constData() + skip);
+            m_nNewBufSize = len - skip;
+            return QByteArray(data.constData() + skip, static_cast<int>(len - skip));
+        }
+
+        case uni16BE:
+        case uni16LE:
+        case uni16BE_NoBOM:
+        case uni16LE_NoBOM:
+        {
+            // Convert UTF-16 → UTF-8
+            size_t skip = (m_eEncoding == uni16BE || m_eEncoding == uni16LE) ? 2 : 0;
+            size_t dataLen = len - skip;
+
+            // Estimate output: worst case 3 UTF-8 bytes per UTF-16 word
+            size_t newSize = (dataLen + (dataLen % 2)) + (dataLen + (dataLen % 2)) / 2;
+            if (m_nAllocatedBufSize != newSize)
+            {
+                delete[] m_pNewBuf;
+                m_pNewBuf = nullptr;
+                m_nAllocatedBufSize = 0;
+                m_pNewBuf = new char[newSize];
+                if (m_pNewBuf)
+                    m_nAllocatedBufSize = newSize;
+            }
+
+            if (!m_nAllocatedBufSize)
+                return QByteArray();
+
+            unsigned char* pCur = reinterpret_cast<unsigned char*>(m_pNewBuf);
+            m_Iter16.set(m_pBuf + skip, dataLen, m_eEncoding);
+
+            while (m_Iter16)
+            {
+                ++m_Iter16;
+                utf8 c;
+                while (m_Iter16.get(&c))
+                    *pCur++ = c;
+            }
+            m_nNewBufSize = pCur - reinterpret_cast<unsigned char*>(m_pNewBuf);
+            return QByteArray(m_pNewBuf, static_cast<int>(m_nNewBufSize));
+        }
+
+        default:
+            break;
+    }
+
+    return QByteArray();
+}
+
+
+// =============================================================================
+// Utf8_16_Write
+// =============================================================================
+
+Utf8_16_Write::Utf8_16_Write()
+{
+    m_eEncoding = uni8Bit;
+    m_pNewBuf = nullptr;
+    m_bFirstWrite = true;
+    m_nBufSize = 0;
+}
+
+Utf8_16_Write::~Utf8_16_Write()
+{
+    closeFile();
+}
+
+bool Utf8_16_Write::openFile(const QString& fileName)
+{
+    m_lastFileError.clear();
+    m_file.setFileName(fileName);
+    if (!m_file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        m_lastFileError = m_file.errorString();
+        return false;
+    }
+    m_bFirstWrite = true;
+    return true;
+}
+
+bool Utf8_16_Write::writeFile(const void* p, size_t _size)
+{
+    if (!m_file.isOpen())
+        return false;
+
+    if (m_bFirstWrite)
+    {
+        switch (m_eEncoding)
+        {
+            case uniUTF8:
+            {
+                if (m_file.write(reinterpret_cast<const char*>(k_Boms[m_eEncoding]), 3) != 3)
+                    return false;
+            }
+            break;
+
+            case uni16BE:
+            case uni16LE:
+            {
+                if (m_file.write(reinterpret_cast<const char*>(k_Boms[m_eEncoding]), 2) != 2)
+                    return false;
+            }
+            break;
+
+            default:
+                break;
+        }
+        m_bFirstWrite = false;
+    }
+
+    qint64 written = m_file.write(static_cast<const char*>(p), static_cast<qint64>(_size));
+    return (written == static_cast<qint64>(_size));
+}
+
+void Utf8_16_Write::setEncoding(unsigned eType)
+{
+    m_eEncoding = eType;
+}
+
+void Utf8_16_Write::closeFile()
+{
+    delete[] m_pNewBuf;
+    m_pNewBuf = nullptr;
+    m_nBufSize = 0;
+
+    if (m_file.isOpen())
+    {
+        m_file.close();
+        if (m_file.error() != QFileDevice::NoError)
+            m_lastFileError = m_file.errorString();
+    }
+}
+
+QByteArray Utf8_16_Write::convert(const char* p, size_t _size)
+{
+    delete[] m_pNewBuf;
+    m_pNewBuf = nullptr;
+    m_nBufSize = 0;
+
+    try
+    {
+        switch (m_eEncoding)
+        {
+            case uni7Bit:
+            case uni8Bit:
+            case uniUTF8_NoBOM:
+            {
+                m_pNewBuf = new char[_size];
+                m_nBufSize = _size;
+                memcpy(m_pNewBuf, p, _size);
+            }
+            break;
+
+            case uniUTF8:
+            {
+                m_pNewBuf = new char[_size + 3];
+                m_nBufSize = _size + 3;
+                memcpy(m_pNewBuf, k_Boms[m_eEncoding], 3);
+                memcpy(m_pNewBuf + 3, p, _size);
+            }
+            break;
+
+            case uni16BE_NoBOM:
+            case uni16LE_NoBOM:
+            case uni16BE:
+            case uni16LE:
+            {
+                utf16* pCur = nullptr;
+                size_t allocSize = 0;
+
+                if (m_eEncoding == uni16BE || m_eEncoding == uni16LE)
+                {
+                    allocSize = sizeof(utf16) * (_size + 1);
+                    m_pNewBuf = new char[allocSize];
+                    memcpy(m_pNewBuf, k_Boms[m_eEncoding], 2);
+                    pCur = reinterpret_cast<utf16*>(m_pNewBuf + 2);
+                }
+                else
+                {
+                    allocSize = sizeof(utf16) * _size;
+                    m_pNewBuf = new char[allocSize];
+                    pCur = reinterpret_cast<utf16*>(m_pNewBuf);
+                }
+
+                Utf8_Iter iter8;
+                iter8.set(reinterpret_cast<const ubyte*>(p), _size, m_eEncoding);
+
+                for (; iter8; ++iter8)
+                {
+                    if (iter8.canGet())
+                    {
+                        iter8.get(pCur++);
+                    }
+                }
+                m_nBufSize = reinterpret_cast<char*>(pCur) - m_pNewBuf;
+            }
+            break;
+
+            default:
+                break;
+        }
+    }
+    catch (const std::bad_alloc&)
+    {
+        m_nBufSize = 0;
+    }
+
+    return QByteArray(m_pNewBuf, static_cast<int>(m_nBufSize));
+}
+
