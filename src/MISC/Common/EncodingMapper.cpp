@@ -19,6 +19,7 @@
 #include "EncodingMapper.h"
 
 #include "NppSciCompat.h"
+#include "ScintillaComponent.h"  // SC_CP_UTF8 constant
 #include <cstring>
 
 // Don't change the order
@@ -91,7 +92,7 @@ static bool isInListA(const char* token, const char* list)
                 word[j] = '\0';
                 j = 0;
 
-                if (qStrnicmp(token, word, std::strlen(word)) == 0)
+                if (qstrnicmp(token, word, std::strlen(word)) == 0)
                     return true;
             }
         }

@@ -44,6 +44,7 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QStringConverter>
+#include "NppTextCodec.h"
 #include <QUrl>
 
 #include "Buffer.h"
@@ -74,16 +75,16 @@ QString commafyInt(size_t n)
 // File I/O
 // ============================================================================
 
-QString getFileContent(const QString& file2read, bool* pbFailed)
+QByteArray getFileContent(const QString& file2read, bool* pbFailed)
 {
     if (pbFailed)
         *pbFailed = false;
 
-    if (!doesFileExist(file2read))
+    if (!doesFileExist(file2read, 0, nullptr))
     {
         if (pbFailed)
             *pbFailed = true;
-        return QString();
+        return QByteArray();
     }
 
     QFile file(file2read);
@@ -91,15 +92,12 @@ QString getFileContent(const QString& file2read, bool* pbFailed)
     {
         if (pbFailed)
             *pbFailed = true;
-        return QString();
+        return QByteArray();
     }
 
     QByteArray data = file.readAll();
     file.close();
-
-    // Convert to QString assuming UTF-8
-    QString content = QString::fromUtf8(data);
-    return content;
+    return data;
 }
 
 QString relativeFilePathToFullFilePath(const QString& relativeFilePath)
@@ -228,139 +226,171 @@ QString purgeMenuItemString(const QString& menuItemStr, bool keepAmpersand)
 // WcharMbcsConvertor
 // ============================================================================
 
-const QString& WcharMbcsConvertor::char2wchar(const char* mbcs2Convert, size_t codepage,
+// Static result string for returning const wchar_t* without dangling pointers
+static QString _staticResultStr;
+
+const wchar_t* WcharMbcsConvertor::char2wchar(const char* mbcs2Convert, int codepage,
     int lenMbcs, int* pLenWc, int* pBytesNotProcessed)
 {
     if (!mbcs2Convert)
-        return _wideCharStr;
+    {
+        _staticResultStr.clear();
+        if (pLenWc) *pLenWc = 0;
+        if (pBytesNotProcessed) *pBytesNotProcessed = 0;
+        return _staticResultStr.isEmpty() ? nullptr : reinterpret_cast<const wchar_t*>(_staticResultStr.utf16());
+    }
 
     if (lenMbcs == 0 || (lenMbcs == -1 && mbcs2Convert[0] == 0))
     {
-        _wideCharStr.clear();
+        _staticResultStr.clear();
         if (pLenWc) *pLenWc = 0;
         if (pBytesNotProcessed) *pBytesNotProcessed = 0;
-        return _wideCharStr;
+        return nullptr;
     }
 
-    QTextCodec* codec = QTextCodec::codecForMib(static_cast<int>(codepage));
+    // Qt6: use QTextDecoder for codepage conversion
+    QTextCodec* codec = QTextCodec::codecForMib(codepage);
     if (!codec)
         codec = QTextCodec::codecForName("UTF-8");
+    if (!codec)
+    {
+        _staticResultStr.clear();
+        return nullptr;
+    }
 
-    QByteArray input(mbcs2Convert, lenMbcs == -1 ? static_cast<int>(strlen(mbcs2Convert)) : lenMbcs);
-    _wideCharStr = codec->toUnicode(input);
+    QTextCodec::ConverterState state;
+    int inputLen = (lenMbcs == -1) ? static_cast<int>(qstrlen(mbcs2Convert)) : lenMbcs;
+    _staticResultStr = codec->toUnicode(mbcs2Convert, inputLen, &state);
 
     if (pLenWc)
-        *pLenWc = _wideCharStr.length();
+        *pLenWc = _staticResultStr.length();
     if (pBytesNotProcessed)
-        *pBytesNotProcessed = 0;
+        *pBytesNotProcessed = state.remainingChars;
 
-    return _wideCharStr;
+    return reinterpret_cast<const wchar_t*>(_staticResultStr.utf16());
 }
 
-const QString& WcharMbcsConvertor::char2wchar(const char* mbcs2Convert, size_t codepage,
+const wchar_t* WcharMbcsConvertor::char2wchar(const char* mbcs2Convert, int codepage,
     intptr_t* mstart, intptr_t* mend, int mbcsLen)
 {
     if (!mbcs2Convert)
     {
-        _wideCharStr.clear();
+        _staticResultStr.clear();
         *mstart = 0;
         *mend = 0;
-        return _wideCharStr;
+        return nullptr;
     }
 
     if (mbcsLen == 0 || (mbcsLen == -1 && mbcs2Convert[0] == 0))
     {
-        _wideCharStr.clear();
+        _staticResultStr.clear();
         *mstart = 0;
         *mend = 0;
-        return _wideCharStr;
+        return nullptr;
     }
 
-    QTextCodec* codec = QTextCodec::codecForMib(static_cast<int>(codepage));
+    QTextCodec* codec = QTextCodec::codecForMib(codepage);
     if (!codec)
         codec = QTextCodec::codecForName("UTF-8");
+    if (!codec)
+    {
+        _staticResultStr.clear();
+        *mstart = 0;
+        *mend = 0;
+        return nullptr;
+    }
 
-    QByteArray input(mbcs2Convert, mbcsLen == -1 ? static_cast<int>(strlen(mbcs2Convert)) : mbcsLen);
-    _wideCharStr = codec->toUnicode(input);
+    int inputLen = (mbcsLen == -1) ? static_cast<int>(qstrlen(mbcs2Convert)) : mbcsLen;
+    QTextCodec::ConverterState state;
+    _staticResultStr = codec->toUnicode(mbcs2Convert, inputLen, &state);
 
     // Convert byte offsets to character offsets
-    if (*mstart < input.size() && *mend <= input.size())
+    if (*mstart < inputLen && *mend <= inputLen)
     {
-        // Count characters before mstart
-        QTextCodec::ConverterState state;
-        codec->toUnicode(_wideCharStr.constData(), static_cast<int>(*mstart), &state);
-        *mstart = state.remainingChars;
+        QTextCodec::ConverterState s1, s2;
+        codec->toUnicode(mbcs2Convert, static_cast<int>(*mstart), &s1);
+        codec->toUnicode(mbcs2Convert, static_cast<int>(*mend), &s2);
+        *mstart -= s1.remainingChars;
+        *mend -= s2.remainingChars;
 
-        codec->toUnicode(_wideCharStr.constData(), static_cast<int>(*mend), &state);
-        *mend = state.remainingChars;
-
-        if (*mstart >= _wideCharStr.length() || *mend > _wideCharStr.length())
+        if (*mstart >= _staticResultStr.length() || *mend > _staticResultStr.length())
         {
             *mstart = 0;
             *mend = 0;
         }
     }
 
-    return _wideCharStr;
+    return reinterpret_cast<const wchar_t*>(_staticResultStr.utf16());
 }
 
-const QByteArray& WcharMbcsConvertor::wchar2char(const QString& wcharStr2Convert,
-    size_t codepage, int lenWc, int* pLenMbcs)
+// Static result buffers (avoids dangling pointer from returning member reference)
+static QByteArray _staticMbResult;
+
+const char* WcharMbcsConvertor::wchar2char(const wchar_t* wcharStr2Convert,
+    int codepage, int lenWc, int* pLenMbcs)
 {
-    if (wcharStr2Convert.isEmpty())
+    if (!wcharStr2Convert)
     {
-        _multiByteStr.clear();
+        _staticMbResult.clear();
         if (pLenMbcs) *pLenMbcs = 0;
-        return _multiByteStr;
+        return nullptr;
     }
 
-    QTextCodec* codec = QTextCodec::codecForMib(static_cast<int>(codepage));
+    _staticResultStr = QString::fromWCharArray(wcharStr2Convert, lenWc);
+    QTextCodec* codec = QTextCodec::codecForMib(codepage);
     if (!codec)
         codec = QTextCodec::codecForName("UTF-8");
+    if (!codec)
+    {
+        _staticMbResult.clear();
+        if (pLenMbcs) *pLenMbcs = 0;
+        return nullptr;
+    }
 
-    QStringView view(wcharStr2Convert);
-    if (lenWc != -1)
-        view = QStringView(wcharStr2Convert).left(lenWc);
-
-    _multiByteStr = codec->fromUnicode(view);
-
+    _staticMbResult = codec->fromUnicode(_staticResultStr);
     if (pLenMbcs)
-        *pLenMbcs = _multiByteStr.size();
-
-    return _multiByteStr;
+        *pLenMbcs = _staticMbResult.size();
+    return _staticMbResult.constData();
 }
 
-const QByteArray& WcharMbcsConvertor::wchar2char(const QString& wcharStr2Convert,
-    size_t codepage, intptr_t* mstart, intptr_t* mend, int wcharLenIn, int* lenOut)
+const char* WcharMbcsConvertor::wchar2char(const wchar_t* wcharStr2Convert,
+    int codepage, intptr_t* mstart, intptr_t* mend, int wcharLenIn, int* lenOut)
 {
-    if (wcharStr2Convert.isEmpty())
+    if (!wcharStr2Convert)
     {
-        _multiByteStr.clear();
+        _staticMbResult.clear();
         *mstart = 0;
         *mend = 0;
-        return _multiByteStr;
+        return nullptr;
     }
 
-    QTextCodec* codec = QTextCodec::codecForMib(static_cast<int>(codepage));
+    _staticResultStr = QString::fromWCharArray(wcharStr2Convert);
+    QStringView view(_staticResultStr);
+    if (wcharLenIn != -1)
+        view = QStringView(_staticResultStr).left(wcharLenIn);
+
+    QTextCodec* codec = QTextCodec::codecForMib(codepage);
     if (!codec)
         codec = QTextCodec::codecForName("UTF-8");
+    if (!codec)
+    {
+        _staticMbResult.clear();
+        *mstart = 0;
+        *mend = 0;
+        return nullptr;
+    }
 
-    QStringView view(wcharStr2Convert);
-    if (wcharLenIn != -1)
-        view = QStringView(wcharStr2Convert).left(wcharLenIn);
-
-    _multiByteStr = codec->fromUnicode(view);
-    int len = _multiByteStr.size();
+    _staticMbResult = codec->fromUnicode(view);
+    int len = _staticMbResult.size();
 
     // Convert character offsets to byte offsets
-    if (*mstart < wcharStr2Convert.length() && *mend < wcharStr2Convert.length())
+    if (*mstart < static_cast<intptr_t>(_staticResultStr.length()) &&
+        *mend < static_cast<intptr_t>(_staticResultStr.length()))
     {
-        QTextCodec::ConverterState stateStart;
-        codec->fromUnicode(wcharStr2Convert.left(static_cast<int>(*mstart)), &stateStart);
+        QTextCodec::ConverterState stateStart, stateEnd;
+        codec->fromUnicode(_staticResultStr.left(static_cast<int>(*mstart)), &stateStart);
+        codec->fromUnicode(_staticResultStr.left(static_cast<int>(*mend)), &stateEnd);
         *mstart = stateStart.stateData().size();
-
-        QTextCodec::ConverterState stateEnd;
-        codec->fromUnicode(wcharStr2Convert.left(static_cast<int>(*mend)), &stateEnd);
         *mend = stateEnd.stateData().size();
 
         if (*mstart >= len || *mend > len)
@@ -372,20 +402,41 @@ const QByteArray& WcharMbcsConvertor::wchar2char(const QString& wcharStr2Convert
 
     if (lenOut)
         *lenOut = len;
-
-    return _multiByteStr;
+    return _staticMbResult.constData();
 }
 
-const QByteArray& WcharMbcsConvertor::encode(int fromCodepage, int toCodepage,
+const char* WcharMbcsConvertor::encode(int fromCodepage, int toCodepage,
     const char* txt2Encode, int lenIn, int* pLenOut, int* pBytesNotProcessed)
 {
-    // First convert to wchar (QString), then to target encoding
-    char2wchar(txt2Encode, fromCodepage, lenIn, nullptr, pBytesNotProcessed);
-    return wchar2char(_wideCharStr, toCodepage, -1, pLenOut);
+    // Convert from source encoding to UTF-16 (QString), then to target encoding
+    const wchar_t* wide = char2wchar(txt2Encode, fromCodepage, lenIn, nullptr, pBytesNotProcessed);
+    if (!wide)
+    {
+        _staticMbResult.clear();
+        if (pLenOut) *pLenOut = 0;
+        return nullptr;
+    }
+
+    QTextCodec* toCodec = QTextCodec::codecForMib(toCodepage);
+    if (!toCodec)
+        toCodec = QTextCodec::codecForName("UTF-8");
+    if (!toCodec)
+    {
+        _staticMbResult.clear();
+        if (pLenOut) *pLenOut = 0;
+        return nullptr;
+    }
+
+    _staticMbResult = toCodec->fromUnicode(_staticResultStr);
+    if (pLenOut)
+        *pLenOut = _staticMbResult.size();
+    return _staticMbResult.constData();
 }
 
 QString WcharMbcsConvertor::toQString(const QByteArray& bytes, const char* codec)
 {
+    if (!codec || !codec[0])
+        return QString::fromUtf8(bytes);
     QTextCodec* c = QTextCodec::codecForName(codec);
     if (c)
         return c->toUnicode(bytes);
@@ -394,6 +445,8 @@ QString WcharMbcsConvertor::toQString(const QByteArray& bytes, const char* codec
 
 QByteArray WcharMbcsConvertor::fromQString(const QString& str, const char* codec)
 {
+    if (!codec || !codec[0])
+        return str.toUtf8();
     QTextCodec* c = QTextCodec::codecForName(codec);
     if (c)
         return c->fromUnicode(str);
@@ -407,12 +460,12 @@ QByteArray WcharMbcsConvertor::fromQString(const QString& str, const char* codec
 QString string2wstring(const QString& rString, int codepage)
 {
     if (codepage == 0 || codepage == -1)
-        return rString; // already QString
+        return rString;
 
     QTextCodec* codec = QTextCodec::codecForMib(codepage);
     if (!codec)
         return rString;
-    return codec->toUnicode(rString.toLatin1()); // fall back
+    return codec->toUnicode(rString.toLatin1());
 }
 
 QString wstring2string(const QString& rwString, int codepage)
@@ -893,7 +946,7 @@ QString getLastErrorAsString(int errorCode)
 // File existence
 // ============================================================================
 
-bool doesFileExist(const QString& filePath)
+bool doesFileExist(const QString& filePath, unsigned int, bool*)
 {
     return QFileInfo::exists(filePath) && QFileInfo(filePath).isFile();
 }
@@ -1072,14 +1125,7 @@ QString getDateTimeStrFrom(const QString& dateTimeFormat, const QDateTime& dt)
 // ============================================================================
 // Font
 // ============================================================================
-
-QFont createFont(const QString& fontName, int fontSize, bool isBold, QWidget* /*parent*/)
-{
-    QFont font(fontName, fontSize);
-    if (isBold)
-        font.setBold(true);
-    return font;
-}
+// createFont is defined inline in Common.h — no-op here (remove redefinition)
 
 bool removeReadOnlyFlagFromFileAttributes(const QString& fileFullPath)
 {
@@ -1185,8 +1231,8 @@ bool Version::isCompatibleTo(const Version& from, const Version& to) const
     return false;
 }
 
-ScopedCOMInit::ScopedCOMInit() : _bInitialized(false) {}
-ScopedCOMInit::~ScopedCOMInit() { _bInitialized = false; }
+// ScopedCOMInit is a Windows COM stub — no-op on Linux
+// class ScopedCOMInit { public: ScopedCOMInit() {} ~ScopedCOMInit() {} };
 
 bool ControlInfoTip::init(QWidget*, QWidget*, const QString&, bool, unsigned int, int)
 {

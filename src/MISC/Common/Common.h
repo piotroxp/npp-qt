@@ -85,6 +85,10 @@ bool allPatternsAreExclusion(const QStringList& patterns);
 
 class WcharMbcsConvertor {
 public:
+    // Qt6 convenience helpers (defined in Common.cpp)
+    static QString toQString(const QByteArray& bytes, const char* codec);
+    static QByteArray fromQString(const QString& str, const char* codec);
+
     static WcharMbcsConvertor& getInstance() {
         static WcharMbcsConvertor instance;
         return instance;

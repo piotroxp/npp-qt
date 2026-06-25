@@ -5,6 +5,7 @@
 #include <QLabel>
 #include <QProcess>
 #include <QScrollBar>
+#include <QFileDialog>
 
 RunDlg::RunDlg(QWidget* parent)
     : QDialog(parent)
@@ -73,7 +74,7 @@ void RunDlg::onRun()
             this, [this](int exitCode, QProcess::ExitStatus) {
         _outputEdit->appendPlainText(QStringLiteral("\n[Exit code: %1]").arg(exitCode));
         _runButton->setEnabled(true);
-        _outputEdit->verticalScrollBar()->scrollToBottom();
+        _outputEdit->verticalScrollBar()->setValue(_outputEdit->verticalScrollBar()->maximum());
     });
 
     proc->start(cmd);

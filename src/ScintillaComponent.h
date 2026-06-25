@@ -98,8 +98,8 @@ constexpr int SC_MARGE_SYMBOL        = 1;
 constexpr int SC_MARGE_CHANGEHISTORY = 2;
 constexpr int SC_MARGE_FOLDER        = 3;
 
-// Invalid buffer sentinel
-constexpr intptr_t BUFFER_INVALID    = 0;
+// Invalid buffer sentinel (nullptr-compatible, works with BufferID = Buffer*)
+constexpr std::nullptr_t BUFFER_INVALID = nullptr;
 
 // =============================================================================
 // Forward declarations
@@ -181,6 +181,10 @@ public:
     // Current buffer accessors
     Buffer* currentBuffer() const { return _currentBuffer; }
     void setCurrentBuffer(Buffer* buf);
+
+    // Win32 compatibility shims
+    Buffer* getCurrentBuffer() const { return currentBuffer(); }
+    intptr_t getCurrentLineNumber() const { return currentLine(); }
 
     // Attach the default (startup) document as a Buffer
     void attachDefaultDoc();
@@ -453,9 +457,6 @@ private:
 
     // setBorderEdge(show) — draws border around editor
     void setBorderEdge(bool show);
-
-    // Win32 compatibility: getCurrentBuffer() → currentBuffer()
-    Buffer* getCurrentBuffer() const { return currentBuffer(); }
 
     // Overload init(HINSTANCE, HWND) for Win32 API compatibility.
     // HINSTANCE and HWND are unused in Qt6 — the single-arg init() is sufficient.

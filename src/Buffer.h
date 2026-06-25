@@ -256,6 +256,9 @@ private:
     bool _isPinned = false;
 };
 
+// FileManager's status codes — defined here so FileManager methods can use it
+enum QtSavingStatus { QtSaveOK = 0, QtSaveOpenFailed = 1, QtSaveWritingFailed = 2, QtNotEnoughRoom = 3, QtReadOnlyForbidden = 4 };
+
 class FileManager final {
 public:
     void init(Notepad_plus* pNotepadPlus, ScintillaEditView* pscratchTilla);
@@ -277,7 +280,7 @@ public:
     void setLoadedBufferEncodingAndEol(Buffer* buf, const Utf8_16_Read& UnicodeConvertor, int encoding, int bkformat);
     bool reloadBuffer(BufferID id);
     bool reloadBufferDeferred(BufferID id);
-    int saveBuffer(BufferID id, const wchar_t* filename, bool isCopy = false);
+    QtSavingStatus saveBuffer(BufferID id, const wchar_t* filename, bool isCopy = false);
     bool backupCurrentBuffer();
     bool deleteBufferBackup(BufferID id);
     bool deleteFile(BufferID id);

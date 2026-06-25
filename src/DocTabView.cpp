@@ -20,7 +20,7 @@ void DocTabView::addBuffer(BufferID buffer)
     QString name = QString::fromWCharArray(buf->getCompactFileName());
     auto* page = new QWidget(this);
     addTab(page, name);
-    setTabData(count() - 1, QVariant::fromValue(static_cast<intptr_t>(buf)));
+    tabBar()->setTabData(count() - 1, QVariant::fromValue<quintptr>(reinterpret_cast<quintptr>(static_cast<const void*>(buf))));
     bufferUpdated(buf, BufferChangeMask);
 }
 
@@ -64,7 +64,7 @@ BufferID DocTabView::activeBuffer()
 BufferID DocTabView::findBufferByName(const wchar_t* fullfilename)
 {
     for (int i = 0; i < count(); ++i) {
-        BufferID bid = static_cast<BufferID>(tabData(i).toLongLong());
+        BufferID bid(reinterpret_cast<void*>(tabBar()->tabData(i).toULongLong()));
         Buffer* buf = MainFileManager.getBufferByID(bid);
         if (buf && QString::fromWCharArray(fullfilename).compare(
                 QString::fromWCharArray(buf->getFullPathName()), Qt::CaseInsensitive) == 0)
@@ -76,7 +76,7 @@ BufferID DocTabView::findBufferByName(const wchar_t* fullfilename)
 int DocTabView::getIndexByBuffer(BufferID id)
 {
     for (int i = 0; i < count(); ++i) {
-        BufferID bid = static_cast<BufferID>(tabData(i).toLongLong());
+        BufferID bid(reinterpret_cast<void*>(tabBar()->tabData(i).toULongLong()));
         if (bid == id) return i;
     }
     return -1;
@@ -85,12 +85,12 @@ int DocTabView::getIndexByBuffer(BufferID id)
 BufferID DocTabView::getBufferByIndex(size_t index)
 {
     if (index >= static_cast<size_t>(count())) return BUFFER_INVALID;
-    return static_cast<BufferID>(tabData(index).toLongLong());
+    return BufferID(reinterpret_cast<void*>(tabBar()->tabData(index).toULongLong()));
 }
 
 void DocTabView::setBuffer(size_t index, BufferID id)
 {
     if (index >= static_cast<size_t>(count())) return;
-    setTabData(index, QVariant::fromValue(static_cast<intptr_t>(id)));
+    tabBar()->setTabData(index, QVariant::fromValue<quintptr>(reinterpret_cast<quintptr>(id._p)));
     bufferUpdated(MainFileManager.getBufferByID(id), BufferChangeMask);
 }

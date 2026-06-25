@@ -22,11 +22,10 @@
 #include <QDirIterator>
 #include <QFileInfo>
 #include <QPluginLoader>
+#include <QMessageBox>
 
 #include <algorithm>
 #include <stdexcept>
-
-using Scintilla::SCNotification;
 
 PluginsManager::PluginsManager()
 {
@@ -36,9 +35,9 @@ PluginsManager::~PluginsManager()
 {
     // Unload all plugins
     for (auto& info : _pluginInfos) {
-        if (info->_loader) {
-            info->_loader->unload();
-            delete info->_loader;
+        if (info && info->_pluginLoader) {
+            info->_pluginLoader->unload();
+            delete info->_pluginLoader;
         }
     }
     _pluginInfos.clear();
@@ -46,10 +45,10 @@ PluginsManager::~PluginsManager()
 
 void PluginsManager::init(const NppData& nppData)
 {
-    _nppData = nppData;
+    _nppData = const_cast<NppData*>(&nppData);
 }
 
-bool PluginsManager::loadPlugins(const QString& dir)
+bool PluginsManager::loadPlugins(const QString& dir, const PluginViewList*, PluginViewList*)
 {
     if (dir.isEmpty()) {
         // Default plugin directory
@@ -121,19 +120,11 @@ int PluginsManager::loadPluginFromPath(const QString& pluginFilePath)
     }
 
     auto info = std::make_unique<PluginInfo>();
-    info->_loader = loader;
+    info->_pluginLoader = loader;
     info->_moduleName = fileName;
 
-    // Get plugin name
-    if (auto getName = loader->resolve("getName")) {
-        // Not a standard Qt interface — just store module name
-    }
-
-    // Create plugin menu
-    info->_pluginMenu = new QMenu(QFileInfo(fileName).baseName());
-
     int pluginIndex = static_cast<int>(_pluginInfos.size());
-    _pluginInfos.push_back(std::move(info));
+    _pluginInfos.push_back(QSharedPointer<PluginInfo>(info.release()));
     addInLoadedDlls(pluginFilePath, fileName);
 
     return pluginIndex;
@@ -144,11 +135,9 @@ void PluginsManager::runPluginCommand(size_t i)
     if (i >= static_cast<size_t>(_pluginsCommands.size()))
         return;
 
-    PluginInfo* info = _pluginsCommands[static_cast<int>(i)];
-    if (!info) return;
-
     // BLOCKED: depends on plugin DLL function table and NppCommands command dispatch
-    Q_UNUSED(info);
+    const PluginCommand& cmd = _pluginsCommands[static_cast<int>(i)];
+    Q_UNUSED(cmd);
 }
 
 void PluginsManager::runPluginCommand(const QString& pluginName, int commandID)
@@ -164,15 +153,10 @@ void PluginsManager::addInMenuFromPMIndex(int i)
     // BLOCKED: depends on PluginMenu population from plugin's funcsetInfo structure
 }
 
-QMenu* PluginsManager::initMenu(QMenu* hMenu)
+QMenu* PluginsManager::initMenu(QMenu* hMenu, bool enablePluginAdmin)
 {
+    Q_UNUSED(enablePluginAdmin);
     _hPluginsMenu = new QMenu(QObject::tr("Plugins"));
-
-    for (const auto& info : _pluginInfos) {
-        if (info && info->_pluginMenu) {
-            _hPluginsMenu->addMenu(info->_pluginMenu);
-        }
-    }
 
     if (hMenu) {
         hMenu->addMenu(_hPluginsMenu);
@@ -206,33 +190,24 @@ QString PluginsManager::getLoadedPluginNames() const
     return names.join(u',');
 }
 
-void PluginsManager::notify(size_t indexPluginInfo, const void* notification)
+void PluginsManager::notify(size_t indexPluginInfo, const SCNotification*)
 {
     if (indexPluginInfo >= static_cast<size_t>(_pluginInfos.size()))
         return;
-
-    PluginInfo* info = _pluginInfos[static_cast<int>(indexPluginInfo)].get();
-    if (info && info->_pBeNotified) {
-        info->_pBeNotified(static_cast<const SCNotification*>(notification));
-    }
+    // Plugin notification dispatch: requires plugin function table lookup
 }
 
-void PluginsManager::notify(const void* notification)
+void PluginsManager::notify(const SCNotification*)
 {
-    // Broadcast to all plugins
-    for (const auto& info : _pluginInfos) {
-        if (info && info->_pBeNotified) {
-            info->_pBeNotified(static_cast<const SCNotification*>(notification));
-        }
-    }
+    // Broadcast to all plugins: requires plugin function table lookup
 }
 
-void PluginsManager::relayNppMessages(unsigned int, quintptr, qintptr)
+void PluginsManager::relayNppMessages(unsigned int, uintptr_t, intptr_t)
 {
     // TODO: Convert SendMessage to Qt signal/slot
 }
 
-bool PluginsManager::relayPluginMessages(unsigned int, quintptr, qintptr)
+bool PluginsManager::relayPluginMessages(unsigned int, uintptr_t, intptr_t)
 {
     return false;
 }

@@ -22,6 +22,7 @@
 #include "ScintillaComponent.h"
 #include "DockingCont.h"
 #include "WinControls/PluginsAdmin.h"
+#include "StubDialogs.h"
 // Qt6 port
 #include <QWidget>
 #include <QMenu>
@@ -299,7 +300,7 @@ public:
 	std::vector<std::wstring> addNppPlugins(const wchar_t *extFilterName, const wchar_t *extFilter);
     int getHtmlXmlEncoding(const wchar_t *fileName) const;
 
-	HACCEL getAccTable() const {
+	QList<QKeySequence> getAccTable() const {
 		return _accelerator.getAccTable();
 	}
 

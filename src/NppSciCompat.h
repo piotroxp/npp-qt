@@ -223,7 +223,16 @@ namespace npp_sci {
     // ==== Universal styles ====
     constexpr int SCE_UNIVERSAL_FOUND_STYLE_SMART = 33;
 
+    // ==== Missing constants needed by AutoCompletion, SmartHighlighter, FindReplaceDlg, EncodingMapper ====
+    constexpr int SCI_AUTOCSHOW             = 2100;   // AutoCompletion.cpp
+    constexpr int SCI_AUTOCGETSEPARATOR     = 2108;   // auto-completion separator
+    constexpr int SCI_GETFIRSTVISIBLELINE  = 2152;   // SmartHighlighter.cpp
+    constexpr int SCI_SETSEARCHFLAGS        = 2198;   // FindReplaceDlg.cpp
+    // SC_CP_UTF8 defined globally in ScintillaComponent.h — no duplicate here
 }  // namespace npp_sci
+
+// Bring npp_sci constants into global namespace as bare names
+using namespace npp_sci;
 
 // Bring npp_sci constants into global namespace as bare names
 using namespace npp_sci;

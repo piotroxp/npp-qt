@@ -19,26 +19,28 @@
 #include <QFile>
 #include <QString>
 
-// unsigned is defined as enum class in Buffer.h; include it to avoid conflicts
-// Unicode mode constants (matching N++ original enum values)
-static const unsigned uniUnknown   = 0;
-static const unsigned uni8Bit       = 1;
-static const unsigned uniUTF8       = 2;
-static const unsigned uni16BE       = 3;
-static const unsigned uni16LE       = 4;
-static const unsigned uni16BE_NoBOM = 5;
-static const unsigned uni16LE_NoBOM = 6;
-static const unsigned uniUTF8_NoBOM = 7;
-static const unsigned uni7Bit       = 8;
-static const unsigned uniCookie     = 9;   // HTML meta charset
-static const unsigned uniEnd        = 10;  // array size sentinel
+// Unicode mode constants — prefixed to avoid conflict with NppConstants.h
+// (which defines uni16BE_NoBOM=3, uni16LE_NoBOM=5, uniUTF8_NoBOM=0, etc.)
+static const unsigned utf8_16_unknown   = 0;
+static const unsigned utf8_16_8bit      = 1;
+static const unsigned utf8_16_utf8      = 2;
+static const unsigned utf8_16_16be      = 3;
+static const unsigned utf8_16_16le      = 4;
+static const unsigned utf8_16_16be_nobom = 5;
+static const unsigned utf8_16_16le_nobom = 6;
+static const unsigned utf8_16_utf8_nobom = 7;
+static const unsigned utf8_16_7bit      = 8;
+static const unsigned utf8_16_cookie    = 9;  // HTML meta charset
+static const unsigned utf8_16_end       = 10; // array size sentinel
 
+// Note: utf8_16_* constants defined at top of file (lines 22–31).
+// Replace legacy 'uni8Bit' (UniMode::uni8Bit = 0) with utf8_16_8bit (= 1).
 class Utf8_16 {
 public:
     typedef unsigned short utf16; // 16 bits
     typedef unsigned char utf8;    // 8 bits
     typedef unsigned char ubyte;
-    static const utf8 k_Boms[uniEnd][3];
+    static const utf8 k_Boms[utf8_16_end][3];
 };
 
 // Reads UTF-16 and outputs UTF-8
@@ -62,7 +64,7 @@ protected:
     void pushout(ubyte c);
 
 protected:
-    unsigned m_eEncoding = uni8Bit;
+    unsigned m_eEncoding = utf8_16_8bit;
     eState m_eState = eStart;
     utf8 m_out[16];
     int m_out1st = 0;
@@ -91,7 +93,7 @@ protected:
     void pushout(utf16 c);
 
 protected:
-    unsigned m_eEncoding = uni8Bit;
+    unsigned m_eEncoding = utf8_16_8bit;
     eState m_eState = eStart;
     int m_code = 0;
     int m_count = 0;
@@ -135,7 +137,7 @@ protected:
     u78 utf8_7bits_8bits();
 
 private:
-    unsigned m_eEncoding = uni8Bit;
+    unsigned m_eEncoding = utf8_16_8bit;
     const unsigned char* m_pBuf = nullptr;
     char* m_pNewBuf = nullptr;
     size_t m_nNewBufSize = 0;
@@ -167,7 +169,7 @@ public:
     QString getLastFileError() const { return m_lastFileError; }
 
 protected:
-    unsigned m_eEncoding = uni8Bit;
+    unsigned m_eEncoding = utf8_16_8bit;
     QFile m_file;              // Qt replacement for Win32_IO_File
     char* m_pNewBuf = nullptr;
     size_t m_nBufSize = 0;

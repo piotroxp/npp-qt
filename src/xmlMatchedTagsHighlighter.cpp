@@ -79,9 +79,10 @@ XmlMatchedTagsHighlighter::FindResult XmlMatchedTagsHighlighter::findOpenTag(
     intptr_t searchStart = start;
     intptr_t searchEnd = end;
     bool forwardSearch = (start < end);
+    FindResult r;  // declared outside loop so it survives past the loop scope
 
     do {
-        FindResult r = findText(search.c_str(), searchStart, searchEnd, 0);
+        r = findText(search.c_str(), searchStart, searchEnd, 0);
         if (r.success) {
             intptr_t nextChar = _pEditView ? _pEditView->send(SCI_GETCHARAT, r.end) : 0;
             styleAt = _pEditView ? _pEditView->send(SCI_GETSTYLEAT, r.start) : 0;

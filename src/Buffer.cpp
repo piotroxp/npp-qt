@@ -181,7 +181,7 @@ void Buffer::setFileName(const wchar_t* fn)
         if (tabCompactLabelLen == 0 || wcslen(_fileName) <= static_cast<size_t>(tabCompactLabelLen))
             _compactFileName = _fileName;
         else
-            _compactFileName = QString::fromWCharArray(_fileName).left(tabCompactLabelLen - 3) + QString("...").toStdWString();
+            _compactFileName = QString::fromWCharArray(_fileName).left(tabCompactLabelLen - 3).toStdWString() + L"...";
     }
     _isFromNetwork = isNetworkPath(fn);
     LangType det = langFromExtension(getExtension(_fullPathName));
@@ -209,7 +209,7 @@ void Buffer::refreshCompactFileName()
         if (tcl == 0 || wcslen(_fileName) <= static_cast<size_t>(tcl))
             _compactFileName = _fileName;
         else
-            _compactFileName = QString::fromWCharArray(_fileName).left(tcl - 3) + QString("...").toStdWString();
+            _compactFileName = QString::fromWCharArray(_fileName).left(tcl - 3).toStdWString() + L"...";
     }
     doNotify(BufferChangeFilename);
 }
@@ -538,7 +538,7 @@ bool FileManager::backupCurrentBuffer()
         if (!bfp.isEmpty()) { QFile::remove(bfp); buffer->setBackupFileName({}); }
         return true;
     }
-    if (!_isModified) return true;
+    if (!buffer->_isModified) return true;
     _pscratchTilla->send(SCI_SETDOCPOINTER, 0, static_cast<sptr_t>(buffer->getDocument()));
     size_t lengthDoc = _pscratchTilla->send(SCI_GETLENGTH);
     char* buf = (char*)_pscratchTilla->send(SCI_GETCHARACTERPOINTER);
@@ -553,7 +553,7 @@ bool FileManager::backupCurrentBuffer()
     f.write(buf, lengthDoc);
     f.close();
     buffer->setTabCreatedTimeStringFromBakFile();
-    _isModified = false;
+    buffer->_isModified = false;
     _pscratchTilla->send(SCI_SETDOCPOINTER, 0, _scratchDocDefault);
     return true;
 }
@@ -569,8 +569,6 @@ bool FileManager::deleteBufferBackup(BufferID id)
     }
     return true;
 }
-
-enum QtSavingStatus { QtSaveOK = 0, QtSaveOpenFailed = 1, QtSaveWritingFailed = 2, QtNotEnoughRoom = 3, QtReadOnlyForbidden = 4 };
 
 QtSavingStatus FileManager::saveBuffer(BufferID id, const wchar_t* filename, bool isCopy)
 {
@@ -731,7 +729,8 @@ bool FileManager::loadFileData(Document doc, int64_t fileSize, const wchar_t* fn
         if (lf._encoding != -1) {
             _pscratchTilla->send(SCI_APPENDTEXT, len, reinterpret_cast<sptr_t>(data));
         } else {
-            int convLen = uc->convert(data, len);
+            uc->convert(data, len);  // populate internal buffer
+            int convLen = static_cast<int>(uc->getNewSize());
             _pscratchTilla->send(SCI_APPENDTEXT, static_cast<sptr_t>(convLen), reinterpret_cast<sptr_t>(uc->getNewBuf()));
         }
     } while (!fobj.atEnd());

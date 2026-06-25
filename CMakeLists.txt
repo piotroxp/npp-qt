@@ -7,7 +7,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core Xml)
 # QScintilla2 has no CMake config; link manually via pkg-config or library path
 find_library(QSCINTILLA2_LIB NAMES qscintilla2_qt6 PATHS /usr/lib/x86_64-linux-gnu)
 if(NOT QSCINTILLA2_LIB)
@@ -373,6 +373,7 @@ target_link_libraries(npp-qt
         Qt6::Widgets
         Qt6::Gui
         Qt6::Core
+        Qt6::Xml
         ${QSCINTILLA2_LIB}
 )
 

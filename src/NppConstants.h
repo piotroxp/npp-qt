@@ -419,11 +419,8 @@ using LPNMTOOLBARW = void*;     // NMTOOLBARW stub
 // Menu flags (Windows stubs)
 constexpr unsigned int MF_BYCOMMAND = 0;
 
-// Scintilla marker macros (direct SCI_ constants used directly)
-constexpr int SCI_MARKERADD = 2042;
-constexpr int SCI_MARKERDELETE = 2044;
-constexpr int SCI_MARKERGET = 2043;
-constexpr int SCI_MARKERDELETEALL = 2045;
+// Scintilla marker macros — now exclusively via npp_sci namespace in NppSciCompat.h
+// (using namespace npp_sci brings SCI_MARKERADD/DELETE/GET/DELETEALL into global scope)
 
 // Views
 constexpr int MAIN_VIEW = 0;

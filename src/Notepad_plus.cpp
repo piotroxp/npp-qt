@@ -50,7 +50,14 @@
 #include "Notepad_plus.h"
 
 // shlwapi.h removed
+#ifdef _WIN32
+#ifdef _WIN32
 #include <wininet.h>
+#else
+// Stub: wininet.h types not needed on non-Windows
+// URL helper is reimplemented via Qt in npp-qt
+#endif
+#endif
 
 #include <ctime>
 #include <memory>

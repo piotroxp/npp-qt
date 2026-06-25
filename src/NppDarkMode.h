@@ -246,6 +246,13 @@ public:
     static NppDarkMode& instance();
 };
 
+// Namespace-level delegate so code can use instance() without qualification.
+// Placed after the class definition so NppDarkMode is complete.
+inline NppDarkMode& instance()
+{
+    return NppDarkMode::instance();
+}
+
 // Helper: build a QRgb from 0xRRGGBB (big-endian hex literal)
 constexpr inline QRgb hexRgb(unsigned int rrggbb)
 {

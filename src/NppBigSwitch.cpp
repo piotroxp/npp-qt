@@ -49,9 +49,23 @@
 
 #include <algorithm>
 // shlwapi.h removed
+#ifdef _WIN32
+#ifdef _WIN32
 #include <uxtheme.h> // for EnableThemeDialogTexture
+#else
+// Stub: EnableThemeDialogTexture is Windows-only
+#define ETDT_DISABLE        0
+#define ETDT_ENABLE         1
+#define ETDT_APPLY_TYPE     2
+#define ETDT_DISABLETAB     3
+#define ETDT_ENABLETYPE     4
+#define ETDT_APPLYUTBUFFER  5
+#define WM_THEMECHANGED     0x031A
+static inline HRESULT EnableThemeDialogTexture(void*, DWORD) { return S_OK; }
+#endif
+#include <windowsx.h> // for GET_X_LPARAM, GET_Y_LPARAM
+#endif
 #include <format>
-#include <windowsx.h> // for GET_X_qintptr, GET_Y_qintptr
 #include <atomic>
 #include "Notepad_plus_Window.h"
 #include "TaskListDlg.h"

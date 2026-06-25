@@ -15,6 +15,7 @@
 #include <QFormLayout>
 #include <QLabel>
 #include <QPushButton>
+#include <QCheckBox>
 
 UserDefineDialog UserDefineDialog::_self;
 

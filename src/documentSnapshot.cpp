@@ -2,6 +2,7 @@
 #include "documentSnapshot.h"
 #include <QFile>
 #include <QTextStream>
+#include <QStringConverter>
 #include <QFileInfo>
 #include "md5.h"
 
@@ -13,7 +14,7 @@ bool DocumentSnapshot::capture(const QString& filePath)
 
     _filePath = filePath;
     QTextStream in(&file);
-    in.setCodec("UTF-8");
+    in.setEncoding(QStringConverter::Utf8);
     _content = in.readAll();
     _snapshotTime = QFileInfo(file).lastModified();
     _hash = MD5::hash(_content.toUtf8());
@@ -27,7 +28,7 @@ bool DocumentSnapshot::hasChanged() const
         return true;  // File gone = changed
 
     QTextStream in(&file);
-    in.setCodec("UTF-8");
+    in.setEncoding(QStringConverter::Utf8);
     QString current = in.readAll();
     return MD5::hash(current.toUtf8()) != _hash;
 }

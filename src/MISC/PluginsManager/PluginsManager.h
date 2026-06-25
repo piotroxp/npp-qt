@@ -22,9 +22,15 @@
 #include <QString>
 #include <QVector>
 #include <QPluginLoader>
+#include <QMenu>
+#include <QPointer>
 
 // Use NppSciCompat instead of raw Scintilla.h to avoid macro conflicts with Qsci
 #include "NppSciCompat.h"
+// SCNotification is defined in Scintilla.h (via NppNotification.h)
+#include <Qsci/qsciscintilla.h>
+// Provides SCNotification struct from Scintilla
+#include "NppNotification.h"
 
 #include "menuCmdID.h"
 
@@ -104,7 +110,7 @@ class PluginsManager
     friend class PluginsAdminDlg;
 public:
     PluginsManager();
-    ~PluginsManager() = default;
+    ~PluginsManager();
 
     void init(const NppData& nppData);
 
@@ -137,7 +143,7 @@ public:
     QString getLoadedPluginNames() const;
 
 private:
-    NppData _nppData;
+    NppData* _nppData = nullptr;
     QPointer<QMenu> _hPluginsMenu;
 
     QVector<QSharedPointer<PluginInfo>> _pluginInfos;

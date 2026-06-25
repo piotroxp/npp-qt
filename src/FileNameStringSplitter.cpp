@@ -4,55 +4,61 @@
 
 QString FileNameStringSplitter::baseName() const
 {
-    // Return everything after the last / or \\
-    int lastSlash = _str.lastIndexOf('/');
-    int lastBack = _str.lastIndexOf('\\');
-    int last = qMax(lastSlash, lastBack);
-    if (last < 0) return _str;
-    return _str.mid(last + 1);
+    // Return everything after the last / or \
+    const QChar fwd = QChar(u'/');
+    const QChar bck = QChar(u'\\');
+    int ixFwd = _str.lastIndexOf(fwd);
+    int ixBck = _str.lastIndexOf(bck);
+    int ix = qMax(ixFwd, ixBck);
+    if (ix < 0) return _str;
+    return _str.mid(ix + 1);
 }
 
 QString FileNameStringSplitter::dirName() const
 {
-    // Return everything before the last / or \\
-    int lastSlash = _str.lastIndexOf('/');
-    int lastBack = _str.lastIndexOf('\\');
-    int last = qMax(lastSlash, lastBack);
-    if (last < 0) return QString();
-    return _str.left(last);
+    // Return everything before the last / or \
+    const QChar fwd = QChar(u'/');
+    const QChar bck = QChar(u'\\');
+    int ixFwd = _str.lastIndexOf(fwd);
+    int ixBck = _str.lastIndexOf(bck);
+    int ix = qMax(ixFwd, ixBck);
+    if (ix < 0) return QString();
+    return _str.left(ix);
 }
 
 QString FileNameStringSplitter::extension() const
 {
     // Return everything after the last .
-    int dot = _str.lastIndexOf('.');
-    if (dot < 0) return QString();
-    return _str.mid(dot + 1);
+    int ixDot = _str.lastIndexOf(QChar(u'.'));
+    if (ixDot < 0) return QString();
+    return _str.mid(ixDot + 1);
 }
 
 QString FileNameStringSplitter::baseNameWithoutExtension() const
 {
     QString base = baseName();
-    int dot = base.lastIndexOf('.');
-    if (dot < 0) return base;
-    return base.left(dot);
+    int ixDot = base.lastIndexOf(QChar(u'.'));
+    if (ixDot < 0) return base;
+    return base.left(ixDot);
 }
 
 int FileNameStringSplitter::componentCount() const
 {
-    // Count path components separated by / or \\
-    int count = 0;
-    bool lastWasSep = true;  // Start after the first separator
+    // Count path components separated by / or \
+    int nComponents = 0;
+    const QChar fwd = QChar(u'/');
+    const QChar bck = QChar(u'\\');
+    bool prevSep = true;
     for (QChar c : _str) {
-        if (c == '/' || c == '\\') {
-            if (!lastWasSep) count++;
-            lastWasSep = true;
+        if (c == fwd || c == bck) {
+            if (!prevSep) nComponents++;
+            prevSep = true;
         } else {
-            lastWasSep = false;
+            prevSep = false;
         }
     }
-    if (!lastWasSep) count++;  // Count the last component
-    return count;
+    if (!prevSep) nComponents++;
+    return nComponents;
 }
 
 QString FileNameStringSplitter::operator[](int index) const
@@ -60,8 +66,10 @@ QString FileNameStringSplitter::operator[](int index) const
     if (index < 0) return QString();
     QStringList parts;
     QString s = _str;
-    s.replace('\\', '/');
-    parts = s.split('/', Qt::SkipEmptyParts);
+    const QChar bck = QChar(u'\\');
+    const QChar fwd = QChar(u'/');
+    s.replace(bck, fwd);
+    parts = s.split(fwd, Qt::SkipEmptyParts);
     if (index >= parts.size()) return QString();
     return parts[index];
 }
