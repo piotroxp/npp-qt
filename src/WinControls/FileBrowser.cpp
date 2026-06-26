@@ -18,6 +18,7 @@
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QClipboard>
+#include <QDesktopServices>
 #include <QCursor>
 #include <QFileSystemModel>
 #include <QSortFilterProxyModel>
@@ -244,9 +245,7 @@ QTreeWidgetItem* FileBrowserTreeWidget::getNextSibling(QTreeWidgetItem* item) co
 {
     if (!item) return nullptr;
     QTreeWidgetItem* parent = item->parent();
-    QTreeWidget* tree = treeWidget();
-    if (!tree) return nullptr;
-    if (!parent) parent = tree->invisibleRootItem();
+    if (!parent) parent = invisibleRootItem();
     int idx = parent->indexOfChild(item);
     if (idx >= 0 && idx < parent->childCount() - 1)
         return parent->child(idx + 1);
@@ -261,9 +260,7 @@ QTreeWidgetItem* FileBrowserTreeWidget::getParent(QTreeWidgetItem* item) const
 
 QTreeWidgetItem* FileBrowserTreeWidget::getSelection() const
 {
-    QTreeWidget* tree = treeWidget();
-    if (!tree) return nullptr;
-    QList<QTreeWidgetItem*> sel = tree->selectedItems();
+    QList<QTreeWidgetItem*> sel = selectedItems();
     return sel.isEmpty() ? nullptr : sel.first();
 }
 
@@ -289,7 +286,7 @@ void FileBrowserTreeWidget::setItemParam(QTreeWidgetItem* item, const QVariant& 
 void FileBrowserTreeWidget::removeItem(QTreeWidgetItem* item)
 {
     if (!item) return;
-    delete item->takeChildren();
+    qDeleteAll(item->takeChildren());
     delete item;
 }
 

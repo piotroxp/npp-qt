@@ -219,6 +219,8 @@ namespace npp_sci {
     constexpr int SCFIND_MATCHCASE   = 4;
     constexpr int SCFIND_WHOLEWORD   = 2;
     constexpr int SCFIND_REGEXP      = 0x00200000;
+    constexpr int SCFIND_POSIX       = 0x00400000;  // from Scintilla.iface
+    constexpr int SCFIND_REGEXP_DOTMATCHESNL = 0x10000000;  // from BoostRegexSearch.h
 
     // ==== Universal styles ====
     constexpr int SCE_UNIVERSAL_FOUND_STYLE_SMART = 33;

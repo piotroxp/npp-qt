@@ -187,8 +187,8 @@ void NppDarkMode::enableDarkScrollBarForWindowAndChildren(QWidget* w)
 {
     // Windows: EnableMenuShadow / dark scrollbar for taskbar.  No-op on Linux.
     if (w) {
-        setDarkScrollBar(w);
-        applyToChildWidgets(w);
+        instance().setDarkScrollBar(w);
+        instance().applyToChildWidgets(w);
     }
 }
 

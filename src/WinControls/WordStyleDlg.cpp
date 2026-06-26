@@ -6,6 +6,7 @@
 
 #include "WordStyleDlg.h"
 #include "NppDarkMode.h"
+#include "NppConstants.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -150,9 +151,9 @@ void WordStyleDlg::updateColour(bool which)
 
     QColor col;
     if (which == 0 && _pFgColour) {
-        col = _pFgColour->getCurrentColor();
+        col = _pFgColour->getColour();
     } else if (which == 1 && _pBgColour) {
-        col = _pBgColour->getCurrentColor();
+        col = _pBgColour->getColour();
     } else {
         return;
     }
@@ -339,8 +340,8 @@ void WordStyleDlg::setVisualFromStyleList()
     if (_underlineCheck) _underlineCheck->setChecked(si.fontStyle & 4);
 
     // Update colour pickers
-    if (_pFgColour) _pFgColour->setCurrentColor(si.fgColor);
-    if (_pBgColour) _pBgColour->setCurrentColor(si.bgColor);
+    if (_pFgColour) _pFgColour->setColour(si.fgColor);
+    if (_pBgColour) _pBgColour->setColour(si.bgColor);
 
     // Update keywords / extension
     if (_keywordsEdit) _keywordsEdit->setPlainText(si.keywords);

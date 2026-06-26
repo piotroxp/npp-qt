@@ -150,4 +150,7 @@ private:
     AsciiListView* _listView = nullptr;
     QColor _fgColor;
     QColor _bgColor;
+    QWidget* _hSelf = nullptr;
+    QWidget* _hParent = nullptr;
+    QApplication* _hInst = nullptr;
 };

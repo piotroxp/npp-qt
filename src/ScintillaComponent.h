@@ -29,6 +29,7 @@ class ScintillaComponent;
 #include <QVector>
 #include <QColor>
 #include <QApplication>
+#include "Buffer.h"
 #include <QScrollBar>
 #include <QEvent>
 #include "NppConstants.h"
@@ -148,6 +149,8 @@ public:
     explicit ScintillaComponent(QWidget* parent = nullptr);
     ~ScintillaComponent() override;
 
+    void redraw() { update(); }  // Force repaint — mirrors Win32 InvalidateRect/RedrawWindow
+
     // Semantic lift: Win32 init(hInst, hParent) → constructor + setup
     // Called once per editor instance to wire up the Scintilla widget.
     void init(QWidget* parent);
@@ -155,7 +158,7 @@ public:
     void destroy();
 
     // Semantic lift: getHSelf() → this ScintillaEditBase* (QWidget*)
-    ScintillaEditBase* getHSelf() const { return const_cast<ScintillaComponent*>(this); }
+    ScintillaEditBase* getHSelf() { return this; }
 
     // --- Core: execute() mirrors Win32 SendMessage ---
     // Translates Win32-style SendMessage(hwnd, msg, wParam, lParam) to Qt6.
@@ -359,6 +362,17 @@ public:
         send(SCI_SETTARGETSTART, start);
         send(SCI_SETTARGETEND, end);
     }
+
+    // --- DocumentMap / minimap helpers (stubs for Qt6 port) ---
+
+    // Returns the width of the text display zone (used by minimap for text rendering)
+    int getTextZoneWidth() const { return 0; }
+
+    // Syncs fold state from a buffer's stored line state vector
+    void syncFoldStateWith(const std::vector<size_t>& lineStateVector) { Q_UNUSED(lineStateVector); }
+
+    // Sets the Scintilla document pointer directly (mirrors SCI_SETDOCPOINTER)
+    void setDocPointer(intptr_t doc) { send(SCI_SETDOCPOINTER, 0, doc); }
 
 signals:
     // Forward Scintilla notifications as Qt signals.

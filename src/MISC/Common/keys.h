@@ -48,6 +48,7 @@ static const quint32 VK_SHIFT         = 0x10;
 static const quint32 VK_CONTROL       = 0x11;
 static const quint32 VK_MENU          = 0x12;
 static const quint32 VK_ESCAPE        = 0x1B;
+static const quint32 VK_CAPITAL       = 0x14;
 static const quint32 VK_SPACE         = 0x20;
 static const quint32 VK_END           = 0x23;
 static const quint32 VK_HOME          = 0x24;

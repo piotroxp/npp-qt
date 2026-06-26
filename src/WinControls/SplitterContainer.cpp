@@ -5,6 +5,8 @@
 #include "SplitterContainer.h"
 #include <QApplication>
 #include <QDebug>
+#include <QVBoxLayout>
+#include <QLayout>
 
 // =============================================================================
 // Splitter

@@ -3,6 +3,8 @@
 // Target: npp-qt/src/WinControls/TrayIcon.cpp
 
 #include "TrayIcon.h"
+#include <QApplication>
+#include <QStyle>
 
 TrayIconController::TrayIconController(QWidget* parent, const QString& tooltip)
     : QObject(parent)
@@ -19,7 +21,7 @@ TrayIconController::TrayIconController(QWidget* parent, const QString& tooltip)
 
     // Default icon if none set — use system-standard "document" icon
     if (_icon.isNull()) {
-        _icon = style()->standardIcon(QStyle::SP_FileIcon, nullptr, _trayIcon);
+        _icon = QApplication::style()->standardIcon(QStyle::SP_FileIcon);
     }
     _trayIcon->setIcon(_icon);
     _trayIcon->setToolTip(_toolTip);

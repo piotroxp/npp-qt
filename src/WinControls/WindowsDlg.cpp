@@ -359,7 +359,7 @@ intptr_t WindowsDlg::run_dlgProc(unsigned int message, intptr_t wParam, intptr_t
         break;
 
     case WM_CHAR_REPLACEMENT:
-        handleCharReplacement(static_cast<QChar>(wParam));
+        handleCharReplacement(QChar(static_cast<uint>(wParam)));
         return TRUE;
 
     case WM_DESTROY:
@@ -812,7 +812,7 @@ void WindowsDlg::onClose()
         closedRows.append(idx.row());
 
     // Remove from _idxMap
-    sort(closedRows.begin(), closedRows.end(), greater<int>());
+    std::sort(closedRows.begin(), closedRows.end(), std::greater<int>());
     for (int r : closedRows)
     {
         if (r >= 0 && r < _idxMap.size())

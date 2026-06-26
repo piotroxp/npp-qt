@@ -929,7 +929,7 @@ inline constexpr int NB_LANG = 100;
 class DynamicMenu final
 {
 public:
-    bool attach(/* QMenu* hMenu */ void* hMenu, unsigned int posBase, int lastCmd, const std::wstring& lastCmdLabel);
+    bool attach(QMenu* hMenu, unsigned int posBase, int lastCmd, const std::wstring& lastCmdLabel);
     bool createMenu() const;
     bool clearMenu() const;
     int getTopLevelItemNumber() const;

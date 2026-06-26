@@ -11,6 +11,7 @@
 #include "functionParser.h"
 // ScintillaEditView (typedef → ScintillaComponent) lives in parent src/
 #include "ScintillaComponent.h"
+#include "NppConstants.h"
 
 #include <QFile>
 #include <QXmlStreamReader>
@@ -33,7 +34,7 @@ bool FunctionParsersManager::init(const QString& xmlDirPath,
     bool isOK = getOverrideMapFromXmlTree(_xmlDirPath);
     if (isOK)
         return true;
-    else if (_xmlDirPath != _xmlInstalledPath && !_xmlInstalledPath.isEmpty())
+    else if (_xmlDirPath != _xmlDirInstalledPath && !_xmlDirInstalledPath.isEmpty())
         return getOverrideMapFromXmlTree(_xmlDirInstalledPath);
     else
         return false;
@@ -44,11 +45,7 @@ bool FunctionParsersManager::init(const QString& xmlDirPath,
 // Mirrors NppXml loading — uses QXmlStreamReader.
 // =============================================================================
 
-// Forward declaration of language enum (from Notepad_plus_msgs.h)
-// L_USER = 15, L_EXTERNAL = 95
-enum LangType : int;
-constexpr int L_USER = 15;
-constexpr int L_EXTERNAL = 95;
+// LangType and L_* constants are defined in NppConstants.h
 
 // Stub: load XML content from a file path
 // Full implementation would use QFile + QXmlStreamReader
@@ -440,7 +437,7 @@ void FunctionParser::funcParse(
     static constexpr int flags = SCFIND_REGEXP | SCFIND_POSIX | SCFIND_REGEXP_DOTMATCHESNL;
 
     (*ppEditView)->execute(SCI_SETSEARCHFLAGS, flags);
-    intptr_t targetStart = (*ppEditView)->searchInTarget(_functionExpr, begin, end);
+    intptr_t targetStart = (*ppEditView)->searchInTarget(QString::fromStdString(_functionExpr), begin, end);
 
     while (targetStart >= 0) {
         targetStart = (*ppEditView)->execute(SCI_GETTARGETSTART);
@@ -455,11 +452,8 @@ void FunctionParser::funcParse(
         foundInfo fi;
 
         if (_functionNameExprArray.empty() && _classNameExprArray.empty()) {
-            auto foundData = std::string(1024, '\0');
-            (*ppEditView)->getGenericText(foundData.data(), foundData.length(),
-                                          static_cast<long>(targetStart),
-                                          static_cast<long>(targetEnd));
-            fi._data = foundData;
+            QString foundText = (*ppEditView)->getTextAsString(targetStart, targetEnd);
+            fi._data = foundText.toStdString();
             fi._pos = targetStart;
         } else {
             intptr_t foundPos = -1;
@@ -489,7 +483,7 @@ void FunctionParser::funcParse(
         }
 
         begin = targetStart + foundTextLen;
-        targetStart = (*ppEditView)->searchInTarget(_functionExpr, begin, end);
+        targetStart = (*ppEditView)->searchInTarget(QString::fromStdString(_functionExpr), begin, end);
     }
 }
 
@@ -516,7 +510,7 @@ std::string FunctionParser::parseSubLevel(size_t begin, size_t end,
     static constexpr int flags = SCFIND_REGEXP | SCFIND_POSIX | SCFIND_REGEXP_DOTMATCHESNL;
 
     (*ppEditView)->execute(SCI_SETSEARCHFLAGS, flags);
-    intptr_t targetStart = (*ppEditView)->searchInTarget(dataToSearch[0], begin, end);
+    intptr_t targetStart = (*ppEditView)->searchInTarget(QString::fromStdString(dataToSearch[0]), begin, end);
 
     if (targetStart < 0) {
         foundPos = -1;
@@ -529,13 +523,9 @@ std::string FunctionParser::parseSubLevel(size_t begin, size_t end,
         return parseSubLevel(targetStart, targetEnd, dataToSearch, foundPos, ppEditView);
     }
 
-    auto foundStr = std::string(1024, '\0');
-    (*ppEditView)->getGenericText(foundStr.data(), foundStr.length(),
-                                   static_cast<long>(targetStart),
-                                   static_cast<long>(targetEnd));
-
+    QString foundText = (*ppEditView)->getTextAsString(targetStart, targetEnd);
     foundPos = targetStart;
-    return foundStr;
+    return foundText.toStdString();
 }
 
 // =============================================================================
@@ -550,7 +540,7 @@ bool FunctionParsersManager::parse(std::vector<foundInfo>& foundInfos,
     if (!fp)
         return false;
 
-    size_t docLen = (*_ppEditView)->getCurrentDocLen();
+    size_t docLen = (*_ppEditView)->execute(SCI_GETTEXTLENGTH);
     fp->parse(foundInfos, 0, docLen, _ppEditView);
 
     return true;
@@ -572,7 +562,7 @@ size_t FunctionZoneParser::getBodyClosePos(
     if (!(*ppEditView))
         return begin;
 
-    size_t docLen = (*ppEditView)->getCurrentDocLen();
+    size_t docLen = (*ppEditView)->execute(SCI_GETTEXTLENGTH);
     if (begin >= docLen)
         return docLen;
 
@@ -585,7 +575,7 @@ size_t FunctionZoneParser::getBodyClosePos(
     static constexpr int flags = SCFIND_REGEXP | SCFIND_POSIX | SCFIND_REGEXP_DOTMATCHESNL;
 
     (*ppEditView)->execute(SCI_SETSEARCHFLAGS, flags);
-    intptr_t targetStart = (*ppEditView)->searchInTarget(exprToSearch, begin, docLen);
+    intptr_t targetStart = (*ppEditView)->searchInTarget(QString::fromStdString(exprToSearch), begin, docLen);
 
     do {
         if (targetStart >= 0) {
@@ -605,7 +595,7 @@ size_t FunctionZoneParser::getBodyClosePos(
 
         if (cntOpen > 0) {
             intptr_t prevStart = targetStart;
-            targetStart = (*ppEditView)->searchInTarget(exprToSearch,
+            targetStart = (*ppEditView)->searchInTarget(QString::fromStdString(exprToSearch),
                                                           prevStart + 1, docLen);
             if (targetStart < 0)
                 cntOpen = 0;

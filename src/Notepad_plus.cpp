@@ -25,6 +25,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
+#include <QDirIterator>
 #include <QSettings>
 #include <QProcess>
 #include <QThread>
@@ -92,8 +93,6 @@ chrono::steady_clock::duration g_pluginsLoadingTime{};
 enum tb_stat {tb_saved, tb_unsaved, tb_ro, tb_monitored};
 #define DIR_LEFT true
 #define DIR_RIGHT false
-
-static constexpr int IDI_SEPARATOR_ICON = -1;
 
 static constexpr IconListButtonUnit toolBarIcons[]{
     {IDM_FILE_NEW,                     IDI_NEW_ICON,               IDI_NEW_ICON,                  IDI_NEW_ICON2,              IDI_NEW_ICON2,                 IDI_NEW_ICON_DM,               IDI_NEW_ICON_DM,                  IDI_NEW_ICON_DM2,              IDI_NEW_ICON_DM2,                 IDR_FILENEW},
@@ -176,8 +175,7 @@ Notepad_plus::Notepad_plus()
 	, _autoCompleteSub(&_subEditView)
 	, _smartHighlighter(&_findReplaceDlg)
 {
-	this = this;
-	ZeroMemory(&_prevSelectedRange, sizeof(_prevSelectedRange));
+	_prevSelectedRange = Scintilla::Range{};
 
 	NppParameters& nppParam = NppParameters::getInstance();
 	NppXml::Document nativeLangDocRoot = nppParam.getNativeLang();
@@ -201,25 +199,10 @@ Notepad_plus::Notepad_plus()
 	}
 
 	// Determine if user is administrator.
-	bool is_admin;
-	winVer ver = nppParam.getWinVersion();
-	if (ver >= WV_VISTA || ver == WV_UNKNOWN)
-	{
-		SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
-		PSID AdministratorsGroup;
-		is_admin = AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &AdministratorsGroup);
-		if (is_admin)
-		{
-			if (!CheckTokenMembership(NULL, AdministratorsGroup, &is_admin))
-				is_admin = false;
-			FreeSid(AdministratorsGroup);
-		}
-	}
-	else
-		is_admin = false;
-
-	nppParam.setAdminMode(is_admin == true);
-	_isAdministrator = is_admin ? true : false;
+	// Stubbed on Linux — admin detection via Windows API not available.
+	bool is_admin = false;
+	nppParam.setAdminMode(is_admin);
+	_isAdministrator = false;
 }
 
 Notepad_plus::~Notepad_plus()
@@ -250,11 +233,13 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	const unsigned int dpi = DPIManagerV2::getDpiForWindow(hwnd);
 
 	// Menu
-	_mainMenuHandle = // GetMenu -> QWidget::menuBar: hwnd);
+	_mainMenuHandle = hwnd->menuBar();
 	int langPos2BeRemoved = MENUINDEX_LANGUAGE + 1;
 	if (nppGUI._isLangMenuCompact)
 		langPos2BeRemoved = MENUINDEX_LANGUAGE;
-	::RemoveMenu(_mainMenuHandle, langPos2BeRemoved, 0);
+	QList<QAction*> actions = _mainMenuHandle->actions();
+	if (langPos2BeRemoved < actions.size())
+		_mainMenuHandle->removeAction(actions[langPos2BeRemoved]);
 
 	//Views
 	_pDocTab = &_mainDocTab;
@@ -563,20 +548,16 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 		QMenu* subMenu = hLangMenu;
 		const ExternalLangContainer* externalLangContainer = nppParam.getELCFromIndex(i);
 
-		int nbItem = ::GetMenuItemCount(subMenu);
+		int nbItem = subMenu->actions().size();
 		wchar_t buffer[MAX_EXTERNAL_LEXER_NAME_LEN]{L'\0'};
 		const wchar_t* lexerNameW = wmc.char2wchar(externalLangContainer->_name.c_str(), CP_ACP);
 
 		// Find the first separator which is between IDM_LANG_TEXT and languages
 		int x = 0;
-		MENUITEMINFO menuItemInfo{};
-		menuItemInfo.cbSize = sizeof(MENUITEMINFO);
-		menuItemInfo.fMask = MIIM_FTYPE;
-
 		for (; x < nbItem; ++x)
 		{
-			// GetMenuItemInfo -> QAction: subMenu, x, true, &menuItemInfo);
-			if (menuItemInfo.fType & MFT_SEPARATOR)
+			QAction* action = subMenu->actions().at(x);
+			if (action->isSeparator())
 			{
 				break;
 			}
@@ -584,18 +565,20 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 
 		// Find the location in existing language menu to insert to. This includes submenu if using compact language menu.
 		wchar_t firstLetter = towupper(lexerNameW[0]);
-		menuItemInfo.fMask = MIIM_SUBMENU;
 		for (++x; x < nbItem; ++x)
 		{
-			// GetMenuItemInfo -> QAction: subMenu, x, true, &menuItemInfo);
-			::GetMenuString(subMenu, x, buffer, MAX_EXTERNAL_LEXER_NAME_LEN, 0);
+			QAction* action = subMenu->actions().at(x);
+			QString qtext = action->text();
+			wcsncpy(buffer, qtext.left(MAX_EXTERNAL_LEXER_NAME_LEN - 1).toStdWString().c_str(), MAX_EXTERNAL_LEXER_NAME_LEN - 1);
+			buffer[MAX_EXTERNAL_LEXER_NAME_LEN - 1] = L'\0';
 
 			// Check if using compact language menu.
-			if (menuItemInfo.hSubMenu && buffer[0] == firstLetter)
+			QMenu* sub = action->menu();
+			if (sub && buffer[0] == firstLetter)
 			{
 				// Found the submenu for the language's first letter. Search in it instead.
-				subMenu = menuItemInfo.hSubMenu;
-				nbItem = ::GetMenuItemCount(subMenu);
+				subMenu = sub;
+				nbItem = subMenu->actions().size();
 				x = -1;
 			}
 			else if (lstrcmp(lexerNameW, buffer) < 0)
@@ -614,16 +597,22 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 			int cmdID = nppParam.langTypeToCommandID(nppGUI._excludedLangList[i]._langType);
 			const int itemSize = 256;
 			wchar_t itemName[itemSize];
-			::GetMenuString(hLangMenu, cmdID, itemName, itemSize, 0);
+			// GetMenuString by cmdID -> find action and get text
+			QAction* action = findActionById(hLangMenu, cmdID);
+			if (action)
+			{
+				QString qtext = action->text();
+				wcsncpy(itemName, qtext.left(itemSize - 1).toStdWString().c_str(), itemSize - 1);
+			}
 			nppGUI._excludedLangList[i]._cmdID = cmdID;
 			nppGUI._excludedLangList[i]._langName = itemName;
 			// DeleteMenu -> QMenu::removeAction: hLangMenu, cmdID, 0);
-			DrawMenuBar(hwnd);
+			// DrawMenuBar: Qt handles automatically
 		}
 	}
 
 	// Add User Defined Languages Entry
-	int udlpos = ::GetMenuItemCount(hLangMenu) - 1;
+	int udlpos = hLangMenu->actions().size() - 1;
 
 	for (int i = 0, len = nppParam.getNbUserLang(); i < len; ++i)
 	{
@@ -694,8 +683,10 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	{
 		if (tmp[i]._itemName.empty())
 		{
-			::GetMenuString(_mainMenuHandle, tmp[i]._cmdID, menuName, menuItemStrLenMax, 0);
-			tmp[i]._itemName = purgeMenuItemString(menuName);
+			// GetMenuString by cmdID -> find action and get text
+			QAction* a = findActionById(_mainMenuHandle, tmp[i]._cmdID);
+			if (a)
+				tmp[i]._itemName = purgeMenuItemString(a->text().toStdWString().c_str());
 		}
 	}
 
@@ -707,8 +698,10 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	{
 		if (tmp2[i]._itemName.empty())
 		{
-			::GetMenuString(_mainMenuHandle, tmp2[i]._cmdID, menuName, menuItemStrLenMax, 0);
-			tmp2[i]._itemName = purgeMenuItemString(menuName);
+			// GetMenuString by cmdID -> find action and get text
+			QAction* a2 = findActionById(_mainMenuHandle, tmp2[i]._cmdID);
+			if (a2)
+				tmp2[i]._itemName = purgeMenuItemString(a2->text().toStdWString().c_str());
 		}
 	}
 
@@ -752,7 +745,8 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	_toolBar.addToRebar(&_rebarTop);
 	_rebarTop.setIDVisible(REBAR_BAR_TOOLBAR, willBeShown);
 
-	checkMacroState();
+	// Route toolbar button clicks to Qt signals — no more Win32 NMTOOLBARW
+	connect(&_toolBar, &ToolBar::buttonClicked, this, &Notepad_plus::onToolbarButtonClicked);
 
 	//--Init dialogs--//
 	_findReplaceDlg.init(this->getHinst(), hwnd, &_pEditView);
@@ -1843,45 +1837,37 @@ void Notepad_plus::getMatchedFileNames(const wchar_t *dir, size_t level, const v
 {
 	level++;
 
-	wstring dirFilter(dir);
-	dirFilter += L"*.*";
-
-	WIN32_FIND_DATA foundData;
-	void* hFindFile = // FindFirstFile -> QDirIterator: dirFilter.c_str(), &foundData);
-	if (hFindFile != nullptr)
+	QDirIterator it(QString::fromWCharArray(dir), QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
+	while (it.hasNext())
 	{
-		do
+		it.next();
+		QFileInfo fi = it.fileInfo();
+		if (fi.isDir())
 		{
-			if (foundData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			if (!isInHiddenDir && fi.isHidden())
 			{
-				if (!isInHiddenDir && (foundData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN))
+				// do nothing
+			}
+			else if (isRecursive)
+			{
+				if (!matchInExcludeDirList(fi.fileName().toStdWString(), patterns, level))
 				{
-					// do nothing
-				}
-				else if (isRecursive)
-				{
-					if ((wcscmp(foundData.cFileName, L".") != 0) && 
-						(wcscmp(foundData.cFileName, L"..") != 0) &&
-						!matchInExcludeDirList(foundData.cFileName, patterns, level))
-					{
-						wstring pathDir(dir);
-						pathDir += foundData.cFileName;
-						pathDir += L"\\";
-						getMatchedFileNames(pathDir.c_str(), level, patterns, fileNames, isRecursive, isInHiddenDir);
-					}
+					wstring pathDir(dir);
+					pathDir += fi.fileName().toStdWString();
+					pathDir += L"/";
+					getMatchedFileNames(pathDir.c_str(), level, patterns, fileNames, isRecursive, isInHiddenDir);
 				}
 			}
-			else
+		}
+		else
+		{
+			if (matchInList(fi.fileName().toStdWString(), patterns))
 			{
-				if (matchInList(foundData.cFileName, patterns))
-				{
-					wstring pathFile(dir);
-					pathFile += foundData.cFileName;
-					fileNames.push_back(pathFile.c_str());
-				}
+				wstring pathFile(dir);
+				pathFile += fi.fileName().toStdWString();
+				fileNames.push_back(pathFile);
 			}
-		} while (// FindNextFile -> QDirIterator: hFindFile, &foundData));
-		// FindClose: hFindFile);
+		}
 	}
 }
 
@@ -2486,7 +2472,7 @@ int Notepad_plus::doSaveAll()
 	// In case Notepad++ is iconized into notification zone
 	if (!::IsWindowVisible(this->getHSelf()))
 	{
-		if (QWidget* w = qobject_cast<QWidget*>(const_cast<QWidget*>(this->getHSelf()))) w->show();
+		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
 
 		// Send sizing info to make window fit (specially to show tool bar.)
 		// SendMessage(WM_) -> Qt: SIZE, 0, 0);
@@ -2748,12 +2734,15 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 		const Style * pStyle = styleArray.findByID(bitmapOnStyleMenuItemsInfo[j].styleIndic);
 		if (pStyle)
 		{
-			HBITMAP hNewBitmap = generateSolidColourMenuItemIcon(pStyle->_bgColor);
+			QPixmap pixmap = generateSolidColourMenuItemIcon(pStyle->_bgColor);
+			QIcon icon(pixmap);
 
-			SetMenuItemBitmaps(_mainMenuHandle, bitmapOnStyleMenuItemsInfo[j].firstOfThisColorMenuId, 0, hNewBitmap, hNewBitmap);
+			QAction* firstAction = findActionById(_mainMenuHandle, bitmapOnStyleMenuItemsInfo[j].firstOfThisColorMenuId);
+			if (firstAction) firstAction->setIcon(icon);
 			for (int relatedMenuId : bitmapOnStyleMenuItemsInfo[j].sameColorMenuIds)
 			{
-				SetMenuItemBitmaps(_mainMenuHandle, relatedMenuId, 0, hNewBitmap, NULL);
+				QAction* a = findActionById(_mainMenuHandle, relatedMenuId);
+				if (a) a->setIcon(icon);
 			}
 		}
 	}
@@ -2762,8 +2751,9 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 	for (int i = 0; i < 5; ++i)
 	{
 		COLORREF colour = nppParam.getIndividualTabColor(i, NppDarkMode::isEnabled(), true);
-		HBITMAP hBitmap = generateSolidColourMenuItemIcon(colour);
-		SetMenuItemBitmaps(_mainMenuHandle, IDM_VIEW_TAB_COLOUR_1 + i, 0, hBitmap, hBitmap);
+		QPixmap pixmap = generateSolidColourMenuItemIcon(colour);
+		QAction* a = findActionById(_mainMenuHandle, IDM_VIEW_TAB_COLOUR_1 + i);
+		if (a) a->setIcon(QIcon(pixmap));
 	}
 }
 
@@ -2772,28 +2762,45 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 // If id is -1, then all the menu items are unchecked.
 bool doCheck(QMenu* mainHandle, int id)
 {
-	MENUITEMINFO mii{};
-	mii.cbSize = sizeof(MENUITEMINFO);
-	mii.fMask = MIIM_SUBMENU | MIIM_FTYPE | MIIM_ID | MIIM_STATE;
-
 	bool found = false;
-	int count = ::GetMenuItemCount(mainHandle);
-	for (int i = 0; i < count; i++)
+	QList<QAction*> actions = mainHandle->actions();
+	for (int i = 0; i < actions.size(); ++i)
 	{
-		// GetMenuItemInfo -> QAction: mainHandle, i, 0, &mii);
-		if (!(mii.fState & MFS_GRAYED) && (mii.fType == MFT_RADIOCHECK || mii.fType == MFT_STRING))
+		QAction* action = actions.at(i);
+		if (!action->isEnabled())
+			continue;
+		// Check if action is a normal menu item (not separator)
+		if (action->isSeparator())
+			continue;
+
+		bool checked = false;
+		if (action->menu())
 		{
-			bool checked = mii.hSubMenu ? doCheck(mii.hSubMenu, id) : (mii.wID == (unsigned int)id);
-			if (checked)
+			checked = doCheck(action->menu(), id);
+		}
+		else
+		{
+			checked = (action->data().toInt() == id);
+		}
+
+		if (checked)
+		{
+			// Qt: check the radio item and uncheck others at this level
+			for (int j = 0; j < actions.size(); ++j)
 			{
-				::CheckMenuRadioItem(mainHandle, 0, count, i, 0);
-				found = true;
+				if (!actions.at(j)->isSeparator())
+					actions.at(j)->setCheckable(j == i);
+				if (j == i)
+					actions.at(j)->setChecked(true);
+				else
+					actions.at(j)->setChecked(false);
 			}
-			else
-			{
-				mii.fState = 0;
-				// SetMenuItemInfo -> QAction: mainHandle, i, 0, &mii);
-			}
+			found = true;
+		}
+		else
+		{
+			action->setCheckable(false);
+			action->setChecked(false);
 		}
 	}
 	return found;
@@ -2814,13 +2821,13 @@ void Notepad_plus::checkLangsMenu(int id) const
 
 				for (int i = IDM_LANG_USER + 1 ; i <= IDM_LANG_USER_LIMIT ; ++i)
 				{
-					if (::GetMenuString(_mainMenuHandle, i, menuLangName, menuItemStrLenMax, 0))
+					// GetMenuString by cmdID -> find action and get text
+					QAction* a = findActionById(_mainMenuHandle, i);
+					if (a && !lstrcmp(userLangName, a->text().toStdWString().c_str()))
 					{
-						if (!lstrcmp(userLangName, menuLangName))
-						{
-							QMenu* _langMenuHandle = // GetSubMenu -> QMenu::actions: _mainMenuHandle, MENUINDEX_LANGUAGE);
-							doCheck(_langMenuHandle, i);
-							return;
+						QMenu* _langMenuHandle = // GetSubMenu -> QMenu::actions: _mainMenuHandle, MENUINDEX_LANGUAGE);
+						doCheck(_langMenuHandle, i);
+						return;
 						}
 					}
 				}
@@ -3131,7 +3138,10 @@ void Notepad_plus::setUniModeText()
 		cmdID += IDM_FORMAT_ENCODE;
 
 		wchar_t uniModeText[menuItemStrLenMax]{};
-		::GetMenuString(_mainMenuHandle, cmdID, uniModeText, menuItemStrLenMax, 0);
+		// GetMenuString by cmdID -> find action and get text
+		QAction* a = findActionById(_mainMenuHandle, cmdID);
+		if (a)
+			wcsncpy(uniModeText, a->text().left(menuItemStrLenMax - 1).toStdWString().c_str(), menuItemStrLenMax - 1);
 		uniModeTextString = uniModeText;
 		// Remove the shortcut text from the menu text.
 		const size_t tabPos = uniModeTextString.find_last_of('\t');
@@ -5255,8 +5265,33 @@ void Notepad_plus::checkUnicodeMenuItems() const
 
 		if (id != -1) 
 		{
-			unsigned int state = GetMenuState(_formatMenuHandle, IDM_FORMAT_ANSI, 0);
-			::CheckMenuRadioItem(_mainMenuHandle, (state & MFS_GRAYED) ? IDM_FORMAT_UTF_8 : IDM_FORMAT_ANSI, IDM_FORMAT_AS_UTF_8, id, 0);
+			// Check if ANSI encoding is available (not grayed)
+			QAction* ansiAction = findActionById(_formatMenuHandle, IDM_FORMAT_ANSI);
+			int firstRadioId = (ansiAction && !ansiAction->isEnabled()) ? IDM_FORMAT_UTF_8 : IDM_FORMAT_ANSI;
+			// Qt: use doCheck for radio item selection across the range
+			// Find the radio group and check the target ID
+			QList<QAction*> actions = _formatMenuHandle->actions();
+			for (QAction* a : actions)
+			{
+				if (a->menu())
+				{
+					doCheck(a->menu(), id);
+				}
+				else if (a->data().toInt() == id)
+				{
+					// Check the radio group
+					for (QAction* ra : actions)
+					{
+						if (!ra->isSeparator())
+						{
+							ra->setCheckable(true);
+							ra->setChecked(ra->data().toInt() == id);
+						}
+					}
+					break;
+				}
+			}
+			(void)firstRadioId;
 		}
 		// else if (id == -1) => um == uni16BE_NoBOM || um == uni16LE_NoBOM, let all items unchecked.
 	}
@@ -6122,7 +6157,10 @@ void Notepad_plus::postItToggle()
 		// get current status before switch to postIt
 		//check these always
 		{
-			_beforeSpecialView._isAlwaysOnTop = ::GetMenuState(_mainMenuHandle, IDM_VIEW_ALWAYSONTOP, 0) == 0;
+			// GetMenuState(menu, id, 0) == 0 means item is NOT checked
+			// Qt: check if action is checked
+			QAction* aotAction = findActionById(_mainMenuHandle, IDM_VIEW_ALWAYSONTOP);
+			_beforeSpecialView._isAlwaysOnTop = (aotAction && aotAction->isChecked());
 			_beforeSpecialView._isTabbarShown = // SendMessage(NPPM_) -> Qt: ISTABBARHIDDEN, 0, 0) != true;
 			_beforeSpecialView._isStatusbarShown = nppGUI._statusBarShow;
 			if (nppGUI._statusBarShow)
@@ -6542,11 +6580,12 @@ void Notepad_plus::drawAutocompleteColoursFromTheme(COLORREF fgColor, COLORREF b
 {
 	if (bgColor == 0xFFFFFF)
 	{
-		// default colors from PlatWin.cxx void ListBoxX::Draw(DRAWITEMSTRUCT *pDrawItem)
-		COLORREF autocompleteBg = ::GetSysColor(COLOR_WINDOW);
-		COLORREF selectedBg = ::GetSysColor(COLOR_HIGHLIGHT);
-		COLORREF autocompleteText = ::GetSysColor(COLOR_WINDOWTEXT);
-		COLORREF selectedText = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
+		// default colors: use Qt palette
+		QPalette pal = this->palette();
+		COLORREF autocompleteBg = pal.color(QPalette::Active, QPalette::Base).rgb();
+		COLORREF selectedBg = pal.color(QPalette::Active, QPalette::Highlight).rgb();
+		COLORREF autocompleteText = pal.color(QPalette::Active, QPalette::Text).rgb();
+		COLORREF selectedText = pal.color(QPalette::Active, QPalette::HighlightedText).rgb();
 
 		AutoCompletion::setColour(autocompleteBg, AutoCompletion::AutocompleteColorIndex::autocompleteBg);
 		AutoCompletion::setColour(selectedBg, AutoCompletion::AutocompleteColorIndex::selectedBg);
@@ -7159,25 +7198,30 @@ void Notepad_plus::setWorkingDir(const wchar_t *dir)
 int Notepad_plus::getLangFromMenuName(const wchar_t * langName)
 {
 	int	id	= 0;
-	wchar_t menuLangName[menuItemStrLenMax];
 
 	for ( int i = IDM_LANG_C; i <= IDM_LANG_USER; ++i )
-		if ( ::GetMenuString( _mainMenuHandle, i, menuLangName, menuItemStrLenMax, 0 ) )
-			if ( !lstrcmp( langName, menuLangName ) )
-			{
-				id	= i;
-				break;
-			}
+	{
+		// GetMenuString by cmdID -> find action and get text
+		QAction* a = findActionById(_mainMenuHandle, i);
+		if (a && !lstrcmp(langName, a->text().toStdWString().c_str()))
+		{
+			id	= i;
+			break;
+		}
+	}
 
 	if ( id == 0 )
 	{
 		for ( int i = IDM_LANG_USER + 1; i <= IDM_LANG_USER_LIMIT; ++i )
-			if ( ::GetMenuString( _mainMenuHandle, i, menuLangName, menuItemStrLenMax, 0 ) )
-				if ( !lstrcmp( langName, menuLangName ) )
-				{
-					id	= i;
-					break;
-				}
+		{
+			// GetMenuString by cmdID -> find action and get text
+			QAction* a = findActionById(_mainMenuHandle, i);
+			if (a && !lstrcmp(langName, a->text().toStdWString().c_str()))
+			{
+				id	= i;
+				break;
+			}
+		}
 	}
 
 	return id;
@@ -7192,8 +7236,10 @@ wstring Notepad_plus::getLangFromMenu(const Buffer * buf)
 	id = (NppParameters::getInstance()).langTypeToCommandID( buf->getLangType() );
 	if ( ( id != IDM_LANG_USER ) || !( buf->isUserDefineLangExt() ) )
 	{
-		::GetMenuString(_mainMenuHandle, id, menuLangName, menuItemStrLenMax, 0);
-		userLangName = menuLangName;
+		// GetMenuString by cmdID -> find action and get text
+		QAction* a = findActionById(_mainMenuHandle, id);
+		if (a)
+			userLangName = a->text().toStdWString();
 	}
 	else
 	{
@@ -7251,8 +7297,10 @@ bool Notepad_plus::reloadLang()
 	{
 		if (tmp[i]._itemName == L"")
 		{
-			::GetMenuString(_mainMenuHandle, tmp[i]._cmdID, menuName, menuItemStrLenMax, 0);
-			tmp[i]._itemName = purgeMenuItemString(menuName);
+			// GetMenuString by cmdID -> find action and get text
+			QAction* a = findActionById(_mainMenuHandle, tmp[i]._cmdID);
+			if (a)
+				tmp[i]._itemName = purgeMenuItemString(a->text().toStdWString().c_str());
 		}
 	}
 
@@ -7608,36 +7656,32 @@ void Notepad_plus::launchFileBrowser(const vector<wstring> & folders, const wstr
 void Notepad_plus::checkProjectMenuItem()
 {
 	QMenu* viewMenu = // GetSubMenu -> QMenu::actions: _mainMenuHandle, MENUINDEX_VIEW);
-	int viewMenuCount = ::GetMenuItemCount(viewMenu);
-	for (int i = 0; i < viewMenuCount; i++)
+	QList<QAction*> viewActions = viewMenu->actions();
+	for (int i = 0; i < viewActions.size(); i++)
 	{
-		QMenu* subMenu = // GetSubMenu -> QMenu::actions: viewMenu, i);
+		QMenu* subMenu = viewActions.at(i)->menu();
 		if (subMenu)
 		{
-			int subMenuCount = ::GetMenuItemCount(subMenu);
 			bool found = false;
 			bool checked = false;
-			for (int j = 0; j < subMenuCount; j++)
+			QList<QAction*> subActions = subMenu->actions();
+			for (int j = 0; j < subActions.size(); j++)
 			{
-				unsigned int const ids [] = {IDM_VIEW_PROJECT_PANEL_1, IDM_VIEW_PROJECT_PANEL_2, IDM_VIEW_PROJECT_PANEL_3};
-				unsigned int id = GetMenuItemID (subMenu, j);
-				for (size_t k = 0; k < static_cast<size_t>(sizeof(ids); k++)
+				int const ids [] = {IDM_VIEW_PROJECT_PANEL_1, IDM_VIEW_PROJECT_PANEL_2, IDM_VIEW_PROJECT_PANEL_3};
+				int actionId = subActions.at(j)->data().toInt();
+				for (size_t k = 0; k < sizeof(ids) / sizeof(ids[0]); k++)
 				{
-					if (id == ids [k])
+					if (actionId == ids[k])
 					{
 						found = true;
-						unsigned int s = GetMenuState(subMenu, j, 0);
-						if (s & 0)
-						{
-							checked = true;
-							break;
-						}
+						checked = subActions.at(j)->isChecked();
+						break;
 					}
 				}
 			}
 			if (found)
 			{
-				CheckMenuItem(viewMenu, i, (checked ? 0 : 0) | 0);
+				viewActions.at(i)->setChecked(checked);
 				break;
 			}
 		}
@@ -9035,9 +9079,10 @@ void Notepad_plus::updateCommandShortcuts()
 
 		if (menuName.length() == 0)
 		{
-			wchar_t szMenuName[menuItemStrLenMax];
-			if (::GetMenuString(_mainMenuHandle, csc.getID(), szMenuName, menuItemStrLenMax, 0))
-				menuName = purgeMenuItemString(szMenuName, true);
+			// GetMenuString by cmdID -> find action and get text
+			QAction* a = findActionById(_mainMenuHandle, csc.getID());
+			if (a)
+				menuName = purgeMenuItemString(a->text().toStdWString().c_str(), true);
 			else
 				menuName = csc.getShortcutName();
 		}
@@ -9060,7 +9105,6 @@ void Notepad_plus::updateCommandShortcuts()
 
 QPixmap Notepad_plus::generateSolidColourMenuItemIcon(COLORREF colour)
 {
-	QPaintDevice* hDC = nullptr; // GetDC(NULL) replaced
 	const int bitmapXYsize = 16;
 	// Use Qt QPixmap instead of Win32 HBITMAP
 	QPixmap pixmap(bitmapXYsize, bitmapXYsize);
@@ -9071,14 +9115,7 @@ QPixmap Notepad_plus::generateSolidColourMenuItemIcon(COLORREF colour)
 		QPainter p(&colored);
 		p.fillRect(1, 1, bitmapXYsize - 2, bitmapXYsize - 2, QColor::fromRgb(colour));
 	}
-	QPixmap hNewBitmap = colored; // QPixmap replaces HBITMAP
-	QPaintDevice* hDCn = nullptr; // CreateCompatibleDC replaced
-
-	// restore old bitmap so we can delete it to avoid leak
-	SelectObject(hDCn, hOldBitmap);
-	DeleteDC(hDCn);
-
-	return hNewBitmap; // QPixmap replaces HBITMAP
+	return colored;
 }
 
 void Notepad_plus::clearChangesHistory(int iView)
@@ -9188,110 +9225,92 @@ void Notepad_plus::changedHistoryGoTo(int idGoTo)
 	}
 }
 
-QMenu* Notepad_plus::createMenuFromMenu(QMenu* hSourceMenu, const std::vector<int>& commandIds)
+QMenu* Notepad_plus::createMenuFromMenu(QMenu* /*hSourceMenu*/, const std::vector<int>& commandIds)
 {
-	QMenu* hNewMenu = ::CreatePopupMenu();
+	QMenu* hNewMenu = new QMenu();
 	for (const auto& cmdID : commandIds)
 	{
 		if (cmdID == 0)
 		{
-			::AppendMenu(hNewMenu, 0, 0, nullptr);
+			hNewMenu->addSeparator();
 		}
 		else
 		{
-			MENUITEMINFO mii{};
-			mii.cbSize = sizeof(MENUITEMINFO);
-			mii.fMask = MIIM_STRING | MIIM_STATE;
-			mii.dwTypeData = nullptr;
-
-			if (// GetMenuItemInfo -> QAction: hSourceMenu, cmdID, false, &mii) == true)
+			// Find the action in _mainMenuHandle with this cmdID as data
+			QAction* srcAction = findActionById(_mainMenuHandle, cmdID);
+			if (srcAction)
 			{
-				++mii.cch;
-				wchar_t* szString = new wchar_t[mii.cch];
-				mii.dwTypeData = szString;
-
-				if (// GetMenuItemInfo -> QAction: hSourceMenu, cmdID, false, &mii) == true)
-				{
-					::AppendMenu(hNewMenu, MF_STRING | mii.fState, cmdID, mii.dwTypeData);
-					delete[] szString;
-				}
-				else
-				{
-					delete[] szString;
-					// DestroyMenu -> delete: hNewMenu);
-					return nullptr;
-				}
+				QAction* a = hNewMenu->addAction(srcAction->text());
+				a->setData(cmdID);
+				a->setEnabled(srcAction->isEnabled());
 			}
 			else
 			{
-				// DestroyMenu -> delete: hNewMenu);
-				return nullptr;
+				// Fallback: add disabled placeholder
+				QAction* a = hNewMenu->addAction(QString("ID=%1").arg(cmdID));
+				a->setEnabled(false);
 			}
 		}
 	}
 	return hNewMenu;
 }
 
-bool Notepad_plus::notifyTBShowMenu(LPNMTOOLBARW lpnmtb, const char* menuPosId)
+bool Notepad_plus::notifyTBShowMenu(int buttonId, const char* menuPosId)
 {
-	QRect rcItem{};
-	QRect rc = toolBar.getQRect(static_cast<int>(lpnmtb->iItem)); // ::SendMessage(TB_GETQRect, ...);
-	// MapWindowPoints -> QWidget::mapToGlobal
-	QWidget* fromWidget = qobject_cast<QWidget*>(lpnmtb->hdr.hwndFrom);
-	if (fromWidget) rcItem = fromWidget->mapToGlobal(rcItem.topLeft());
-
 	const MenuPosition& menuPos = MenuPosition::getMenuPosition(menuPosId);
-	QMenu* hSubMenuView = // GetSubMenu -> QMenu::actions: _mainMenuHandle, menuPos._x);
-	if (hSubMenuView != nullptr)
+	QMenu* hSubMenuView = nullptr;
+	if (menuPos._x >= 0) {
+		auto actions = _mainMenuHandle->actions();
+		if (menuPos._x < actions.size() && actions[menuPos._x]->menu())
+			hSubMenuView = actions[menuPos._x]->menu();
+	}
+	if (hSubMenuView)
 	{
-		QMenu* hPopupMenu = // GetSubMenu -> QMenu::actions: hSubMenuView, menuPos._y);
-		if (hPopupMenu != nullptr)
+		QMenu* hPopupMenu = nullptr;
+		if (menuPos._y >= 0) {
+			auto subActions = hSubMenuView->actions();
+			if (menuPos._y < subActions.size() && subActions[menuPos._y]->menu())
+				hPopupMenu = subActions[menuPos._y]->menu();
+		}
+		if (hPopupMenu)
 		{
-			TPMPARAMS tpm{};
-			tpm.cbSize = sizeof(TPMPARAMS);
-			tpm.rcExclude = rcItem;
-
-			const unsigned int flags = _nativeLangSpeaker.isRTL() ? (TPM_RIGHTALIGN | TPM_RIGHTBUTTON | TPM_LAYOUTRTL) : (TPM_LEFTALIGN | TPM_LEFTBUTTON);
-
-			::TrackPopupMenuEx(hPopupMenu,
-				flags | TPM_VERTICAL,
-				rcItem.left, rcItem.bottom, this->getHSelf(), &tpm);
-
+			QAction* selected = hPopupMenu->exec(QCursor::pos());
+			(void)selected; // selection handled via signal/slot in Qt
 			return true;
 		}
 	}
 	return false;
 }
 
-bool Notepad_plus::notifyTBShowMenu(LPNMTOOLBARW lpnmtb, const char* menuPosId, const std::vector<int>& cmdIDs)
+bool Notepad_plus::notifyTBShowMenu(int buttonId, const char* menuPosId, const std::vector<int>& cmdIDs)
 {
 	if (cmdIDs.empty())
-		return notifyTBShowMenu(lpnmtb, menuPosId);
-
-	QRect rcItem{};
-	QRect rc = toolBar.getQRect(static_cast<int>(lpnmtb->iItem)); // ::SendMessage(TB_GETQRect, ...);
-	// MapWindowPoints -> QWidget::mapToGlobal
-	QWidget* fromWidget = qobject_cast<QWidget*>(lpnmtb->hdr.hwndFrom);
-	if (fromWidget) rcItem = fromWidget->mapToGlobal(rcItem.topLeft());
+		return notifyTBShowMenu(buttonId, menuPosId);
 
 	QMenu* hPopupMenu = createMenuFromMenu(_mainMenuHandle, cmdIDs);
 	if (hPopupMenu != nullptr)
 	{
-		TPMPARAMS tpm{};
-		tpm.cbSize = sizeof(TPMPARAMS);
-		tpm.rcExclude = rcItem;
-
-		const unsigned int flags = _nativeLangSpeaker.isRTL() ? (TPM_RIGHTALIGN | TPM_RIGHTBUTTON | TPM_LAYOUTRTL) : (TPM_LEFTALIGN | TPM_LEFTBUTTON);
-
-		::TrackPopupMenuEx(hPopupMenu,
-			flags | TPM_VERTICAL,
-			rcItem.left, rcItem.bottom, this->getHSelf(), &tpm);
-
-		// DestroyMenu -> delete: hPopupMenu);
-
+		QAction* selected = hPopupMenu->exec(QCursor::pos());
+		(void)selected;
+		delete hPopupMenu;
 		return true;
 	}
 	return false;
+}
+
+void Notepad_plus::onToolbarButtonClicked(int cmdID)
+{
+	switch (cmdID)
+	{
+		case IDM_VIEW_ALL_CHARACTERS:
+		{
+			auto cmdIDs = { IDM_VIEW_TAB_SPACE, IDM_VIEW_EOL, IDM_VIEW_NPC, IDM_VIEW_NPC_CCUNIEOL, 0, IDM_VIEW_ALL_CHARACTERS };
+			notifyTBShowMenu(cmdID, "view-showSymbol", cmdIDs);
+			break;
+		}
+		default:
+			break;
+	}
 }
 
 void Notepad_plus::changeReadOnlyUserModeForAllOpenedTabs(const bool ro)
@@ -9314,4 +9333,21 @@ void Notepad_plus::changeReadOnlyUserModeForAllOpenedTabs(const bool ro)
 			}
 		}
 	}
+}
+
+QAction* Notepad_plus::findActionById(QMenu* menu, int cmdID) const
+{
+	if (!menu) return nullptr;
+	for (QAction* action : menu->actions())
+	{
+		if (action->data().toInt() == cmdID)
+			return action;
+		QMenu* sub = action->menu();
+		if (sub)
+		{
+			QAction* found = findActionById(sub, cmdID);
+			if (found) return found;
+		}
+	}
+	return nullptr;
 }

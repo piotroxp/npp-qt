@@ -20,6 +20,7 @@
 #include <QKeyEvent>
 #include <QFocusEvent>
 #include <QSortFilterProxyModel>
+#include <QScrollBar>
 #include <QAbstractItemModel>
 #include <QLabel>
 
@@ -142,6 +143,10 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
 
 private:
+    void onHeaderClicked(int logicalIndex);
+    void populateRow(int row, int tabIndex);
+    void rebuildTableFromMap();
+    void handleCharReplacement(QChar ch);
     void updateColumnNames();
     void fitColumnsToSize();
     void resetSelection();

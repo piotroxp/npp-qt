@@ -34,8 +34,9 @@ bool DirectoryWatcher::init()
             this, &DirectoryWatcher::onDirectoryChanged);
     connect(_watcher, &QFileSystemWatcher::fileChanged,
             this, &DirectoryWatcher::onFileChanged);
-    connect(_watcher, &QFileSystemWatcher::errorOccurred,
-            this, &DirectoryWatcher::onWatcherError);
+    // errorOccurred signal in Qt6: void errorOccurred(const QString& path, QFileSystemWatcher::Error error)
+    connect(_watcher, QOverload<const QString&, QFileSystemWatcher::Error>::of(&QFileSystemWatcher::errorOccurred),
+            this, [](const QString& path, QFileSystemWatcher::Error) { qWarning() << "File watcher error:" << path; });
     connect(_pollTimer, &QTimer::timeout,
             this, &DirectoryWatcher::onDirectoryChanged);
 
@@ -46,7 +47,7 @@ bool DirectoryWatcher::init()
             QDirIterator it(path, QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
             while (it.hasNext()) {
                 it.next();
-                _knownFiles.insert(it.filePath(), it.fileTime(QFileDevice::FileModificationTime));
+                _knownFiles.insert(it.filePath(), QFileInfo(it.filePath()).lastModified());
             }
         }
     }
@@ -120,7 +121,7 @@ void DirectoryWatcher::addDirectory(const QString& directoryPath,
             while (subit.hasNext()) {
                 subit.next();
                 _knownFiles.insert(subit.filePath(),
-                    subit.fileTime(QFileDevice::FileModificationTime));
+                    QFileInfo(subit.filePath()).lastModified())
             }
         }
     }
@@ -130,7 +131,7 @@ void DirectoryWatcher::addDirectory(const QString& directoryPath,
     while (it.hasNext()) {
         it.next();
         _knownFiles.insert(it.filePath(),
-            it.fileTime(QFileDevice::FileModificationTime));
+            QFileInfo(it.filePath()).lastModified())
     }
 }
 

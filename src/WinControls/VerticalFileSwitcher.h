@@ -212,6 +212,8 @@ signals:
 
 protected:
     intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam) override;
+    void showEvent(QShowEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private:
     void initPopupMenus();

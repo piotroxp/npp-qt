@@ -10,6 +10,8 @@
 
 #include "StaticDialog.h"
 #include "ScintillaComponent.h"
+#include "MISC/Common/keys.h"
+using namespace NppKeys;
 #include <QTableWidget>
 #include <QKeySequenceEdit>
 #include <QLineEdit>

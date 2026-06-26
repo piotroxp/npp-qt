@@ -5,6 +5,7 @@
 #include "TaskList.h"
 #include "DockingWnd.h"
 #include "NppDarkMode.h"
+#include <QSelectionModel>
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QListWidget>
@@ -509,7 +510,7 @@ intptr_t TaskListDlg::run_dlgProc(unsigned int message, intptr_t wParam, intptr_
 
         case NPPM_INTERNAL_REFRESHDARKMODE:
             // Force delegate repaint on dark mode change
-            _taskList.viewport()->update();
+            _listWidget->viewport()->update();
             return true;
 
         default:

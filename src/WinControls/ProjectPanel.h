@@ -18,6 +18,7 @@
 #include <QVector>
 #include <QString>
 #include <vector>
+#include <QToolBar>
 #include <memory>
 #include <string>
 

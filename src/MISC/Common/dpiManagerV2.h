@@ -27,6 +27,7 @@ public:
     int scale(int x) const { return scale(x, nullptr); }
     int unscale(int x) const { return unscale(x, nullptr); }
     int scaleFont(int pt) const { return scaleFontForFactor(pt); }
+    static int getDpiForWindow(QWidget* w) { return w ? w->logicalDpiY() : 96; }
 
 private:
     int _dpi = 96;

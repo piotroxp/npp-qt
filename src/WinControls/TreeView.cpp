@@ -8,6 +8,9 @@
 #include <QMimeData>
 #include <QDataStream>
 #include <QByteArray>
+#include <QDragEnterEvent>
+#include <QDragMoveEvent>
+#include <QDropEvent>
 
 TreeView::TreeView(QWidget* parent)
     : QTreeWidget(parent)
@@ -476,7 +479,7 @@ void TreeView::dropEvent(QDropEvent* event)
     event->acceptProposedAction();
 }
 
-QMimeData* TreeView::mimeData(const QList<QTreeWidgetItem*> items) const
+QMimeData* TreeView::mimeData(const QList<QTreeWidgetItem*>& items) const
 {
     if (items.isEmpty()) return nullptr;
     QMimeData* mime = new QMimeData();

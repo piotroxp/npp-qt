@@ -90,6 +90,9 @@ signals:
     // Emitted when a file is added to a watched directory.
     void fileAdded(const QString& fileName);
 
+    // Emitted when an error occurs.
+    void error(const QString& errorMsg);
+
     // Emitted when a file is removed from a watched directory.
     void fileRemoved(const QString& fileName);
 

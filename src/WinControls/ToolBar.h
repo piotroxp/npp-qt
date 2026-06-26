@@ -74,6 +74,8 @@ public:
     bool init(QApplication* app, QWidget* parent, ToolBarStatusType type,
               const ToolBarButtonUnit* buttonUnitArray, int arraySize);
     void destroy();
+    void initTheme() { /* Stubbed on Linux — no dark mode theme from .theme files */ }
+    void initHideButtonsConf() { /* Stubbed — no persisted hidden button state */ }
 
     void enable(int cmdID, bool doEnable) const;
     int getWidth() const;

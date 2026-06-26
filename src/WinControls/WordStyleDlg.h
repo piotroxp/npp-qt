@@ -31,9 +31,8 @@
 #include <memory>
 
 // Custom messages (mirrors Win32 WORDSTYLE_USER)
-#define WORDSTYLE_USER      (0x0400 + 5000)
-#define WM_UPDATESCINTILLAS (WORDSTYLE_USER + 1)
-#define WM_UPDATEMAINMENUBITMAPS (WORDSTYLE_USER + 2)
+static constexpr int WORDSTYLE_USER = 5400;
+// WM_UPDATESCINTILLAS and WM_UPDATEMAINMENUBITMAPS defined in NppConstants.h
 
 // Font style types (mirrors Win32 fontStyleType)
 enum fontStyleType { BOLD_STATUS, ITALIC_STATUS, UNDERLINE_STATUS };

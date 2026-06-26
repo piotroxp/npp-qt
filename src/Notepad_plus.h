@@ -331,6 +331,9 @@ public:
 
 	void changeReadOnlyUserModeForAllOpenedTabs(const bool ro);
 
+	// Helper: find QAction with matching data (cmdID) in a menu and its submenus
+	QAction* findActionById(QMenu* menu, int cmdID) const;
+
 private:
     Window* _pMainWindow = nullptr;
 	DockingManager _dockingManager;
@@ -716,14 +719,16 @@ private:
 	void createMonitoringThread(Buffer* pBuf);
 	void updateCommandShortcuts();
 
-	HBITMAP generateSolidColourMenuItemIcon(COLORREF colour);
+	QPixmap generateSolidColourMenuItemIcon(COLORREF colour);
+
+	void onToolbarButtonClicked(int cmdID);
 
 	void clearChangesHistory(int iView);
 	void changedHistoryGoTo(int idGoTo);
 
 	QMenu* createMenuFromMenu(QMenu* hSourceMenu, const std::vector<int>& commandIds);
-	bool notifyTBShowMenu(LPNMTOOLBARW lpnmtb, const char* menuPosId);
-	bool notifyTBShowMenu(LPNMTOOLBARW lpnmtb, const char* menuPosId, const std::vector<int>& cmdIDs);
+	bool notifyTBShowMenu(int buttonId, const char* menuPosId);
+	bool notifyTBShowMenu(int buttonId, const char* menuPosId, const std::vector<int>& cmdIDs);
 
 	int getIcoID(DockingDlgInterface* panel);
 	void loadPanelIcon(QApplication* hInst, DockingDlgInterface* panel, HICON* phIcon);

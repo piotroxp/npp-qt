@@ -2168,40 +2168,6 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 						return CDRF_DODEFAULT;
 					}
 
-					case TBN_DROPDOWN:
-					{
-						auto lpnmtb = reinterpret_cast<LPNMTOOLBARW>(lParam);
-						switch (lpnmtb->iItem)
-						{
-							case IDM_VIEW_ALL_CHARACTERS:
-							{
-								auto cmdIDs = { IDM_VIEW_TAB_SPACE, IDM_VIEW_EOL, IDM_VIEW_NPC, IDM_VIEW_NPC_CCUNIEOL, 0, IDM_VIEW_ALL_CHARACTERS };
-								notifyTBShowMenu(lpnmtb, "view-showSymbol", cmdIDs);
-								return TBDDRET_DEFAULT;
-							}
-
-							default:
-								break;
-						}
-						return TBDDRET_NODEFAULT;
-					}
-
-					case NM_RCLICK:
-					{
-						auto lpnmtb = reinterpret_cast<LPNMTOOLBARW>(lParam);
-						switch (lpnmtb->iItem)
-						{
-							case IDM_VIEW_ALL_CHARACTERS:
-							{
-								return notifyTBShowMenu(lpnmtb, "view-showSymbol");
-							}
-
-							default:
-								break;
-						}
-						return false;
-					}
-
 					default:
 						return false;
 				}

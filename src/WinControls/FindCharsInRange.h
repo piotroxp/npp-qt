@@ -8,6 +8,7 @@
 #include <QWidget>
 #include <QString>
 #include <QRadioButton>
+#include <QCheckBox>
 #include <QSpinBox>
 #include <QLineEdit>
 #include <QPushButton>

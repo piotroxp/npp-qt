@@ -27,7 +27,7 @@ DoubleBufferHelper::~DoubleBufferHelper()
 
 void DoubleBufferHelper::ensureBuffer(const QSize& requiredSize)
 {
-    if (!_buffer.valid() || _buffer.size() != requiredSize) {
+    if (_buffer.isNull() || _buffer.size() != requiredSize) {
         _buffer = QPixmap(requiredSize);
         _buffer.fill(Qt::transparent);
         _bufferSize = requiredSize;

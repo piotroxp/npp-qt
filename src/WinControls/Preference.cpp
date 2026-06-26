@@ -51,7 +51,7 @@ QVariant NppSettings::get(const QString& key, const QVariant& defaultValue) cons
 
 void NppSettings::set(const QString& key, const QVariant& value)
 {
-    _settings.setValue(key, value);
+    _settings[key] = value;
 }
 
 void NppSettings::save()
@@ -67,7 +67,7 @@ void NppSettings::load()
 {
     QSettings s(kSettingsOrg, kSettingsApp);
     for (const QString& key : s.allKeys()) {
-        _settings.setValue(key, s.value(key));
+        _settings[key] = s.value(key);
     }
 }
 

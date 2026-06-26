@@ -39,13 +39,13 @@ void ContextMenu::create(QWidget* parent, const QVector<MenuItemUnit>& menuItemA
         const MenuItemUnit& item = menuItemArray[i];
 
         // Handle folder nesting
-        if (item._parentFolderName.isEmpty()) {
+        if (item._parentFolderName.empty()) {
             currentFolderName.clear();
             currentFolder = nullptr;
             folderIndex = i;
         } else {
-            if (item._parentFolderName != currentFolderName) {
-                currentFolderName = item._parentFolderName;
+            if (QString::fromStdWString(item._parentFolderName) != currentFolderName) {
+                currentFolderName = QString::fromStdWString(item._parentFolderName);
                 currentFolder = new QMenu(currentFolderName, _menu);
                 _subMenus.append(currentFolder);
                 _menu->addMenu(currentFolder);
@@ -64,8 +64,8 @@ void ContextMenu::create(QWidget* parent, const QVector<MenuItemUnit>& menuItemA
             if (lastAction && !lastAction->isSeparator())
                 targetMenu->addSeparator();
         } else {
-            QAction* action = new QAction(item._itemName, _menu);
-            action->setData(item._cmdID);
+            QAction* action = new QAction(QString::fromStdWString(item._itemName), _menu);
+            action->setData(static_cast<int>(item._cmdID));
             action->setEnabled(true);
             connect(action, &QAction::triggered, this, [this, item]() {
                 emit itemClicked(item._cmdID);

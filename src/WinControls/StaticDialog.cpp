@@ -4,10 +4,15 @@
 
 #include "StaticDialog.h"
 #include "Window.h"
+#include "NppConstants.h"
 #include <QDialog>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
+
+// LOWORD/HIWORD macros (normally from <windows.h>)
+inline unsigned int LOWORD(unsigned int x) { return x & 0xFFFF; }
+inline unsigned int HIWORD(unsigned int x) { return (x >> 16) & 0xFFFF; }
 #include <QPushButton>
 #include <QLineEdit>
 #include <QComboBox>
@@ -199,7 +204,7 @@ const QString nppDirectoryVar = QStringLiteral("$(NPP_DIRECTORY)");
 const QString currentLineVar = QStringLiteral("$(CURRENT_LINE)");
 const QString currentColumnVar = QStringLiteral("$(CURRENT_COLUMN)");
 
-RunDialog::RunDlg()
+RunDialog::RunDialog()
     : StaticDialog()
 {
     setWindowTitle(QStringLiteral("Run"));

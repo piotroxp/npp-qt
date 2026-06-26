@@ -81,7 +81,9 @@ public:
     QSize adjustedSize() const;
 
     int getCurrentIndex() const { return _currentIndex; }
+    void setCurrentIndex(int index);
     int updateCurrentIndex();
+    QWidget* viewport() const { return _listWidget->viewport(); }
 
     // Populate items from TaskListInfo (called by parent after WM_GETTASKLISTINFO)
     void setItems(const TaskListInfo& info);
@@ -109,9 +111,12 @@ private:
     QListWidget* _listWidget = nullptr;
     QFont* _pFont = nullptr;
     QFont* _pFontSelected = nullptr;
+    QWidget* _hParent = nullptr;
+    void* _hImgLst = nullptr;
     int _nbItem = 0;
     int _currentIndex = 0;
     QSize _adjustedSize;
+    QString _initDir;
 
     friend class TaskListDelegate;
 };

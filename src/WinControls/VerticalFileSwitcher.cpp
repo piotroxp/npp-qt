@@ -695,64 +695,24 @@ void VerticalFileSwitcher::closeDoc(int bufferID, int iView) const
 // Mirrors Win32 VerticalFileSwitcher::run_dlgProc.
 // =============================================================================
 
-intptr_t VerticalFileSwitcher::run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam)
+intptr_t VerticalFileSwitcher::run_dlgProc(unsigned int, intptr_t, intptr_t)
 {
-    switch (message)
-    {
-    case WM_INITDIALOG:
+    return DockingDlgInterface::run_dlgProc(0, 0, 0);
+}
+
+void VerticalFileSwitcher::showEvent(QShowEvent* event)
+{
+    DockingDlgInterface::showEvent(event);
+    if (!event->spontaneous()) {
         _fileListView.initList();
         _fileListView.reload();
         startColumnSort();
-        return TRUE;
-
-    case WM_SIZE:
-    {
-        int width = static_cast<int>(wParam);
-        int height = (lParam >> 16) & 0xFFFF;
-        Q_UNUSED(height);
-        _fileListView.resizeColumns(width);
-        return TRUE;
     }
+}
 
-    case WM_DESTROY:
-        _fileListView.destroy();
-        delete _contextMenu;
-        _contextMenu = nullptr;
-        return TRUE;
-
-    case WM_CONTEXTMENU:
-    {
-        if (_fileListView.nbSelectedFiles() == 0 || _colHeaderRClick)
-        {
-            _contextMenu->exec(QCursor::pos());
-            _colHeaderRClick = false;
-        }
-        return TRUE;
-    }
-
-    case WM_PARENTNOTIFY:
-    {
-        // WM_MBUTTONUP redirected via WM_PARENTNOTIFY (Win32 subclassing)
-        if ((wParam & 0xFFFF) == WM_MBUTTONUP)
-        {
-            int x = lParam & 0xFFFF;
-            int y = (lParam >> 16) & 0xFFFF;
-            QPoint pt = _fileListView.viewport()->mapFromGlobal(QPoint(x, y));
-            QTableWidgetItem* it = _fileListView.itemAt(pt);
-            if (it)
-            {
-                int row = it->row();
-                int bufID = _fileListView.item(row, COL_NAME)->data(Qt::UserRole).toInt();
-                int view = _fileListView.item(row, COL_NAME)->data(Qt::UserRole + 1).toInt();
-                closeDoc(bufID, view);
-            }
-        }
-        return TRUE;
-    }
-
-    default:
-        break;
-    }
-    return DockingDlgInterface::run_dlgProc(message, wParam, lParam);
+void VerticalFileSwitcher::resizeEvent(QResizeEvent* event)
+{
+    DockingDlgInterface::resizeEvent(event);
+    _fileListView.resizeColumns(event->size().width());
 }
 

@@ -81,6 +81,7 @@ private slots:
     void saveFile();
     void saveFileAs();
     void closeFile();
+    void exit();
 
     void undo();
     void redo();

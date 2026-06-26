@@ -8,6 +8,7 @@
 #include <QKeySequence>
 #include <QApplication>
 #include <QVBoxLayout>
+#include <QTableWidget>
 #include <QHBoxLayout>
 #include <QFormLayout>
 #include <QTabWidget>
@@ -31,8 +32,8 @@
 KeySequenceEdit::KeySequenceEdit(QWidget* parent)
     : QKeySequenceEdit(parent) {}
 
-KeyCombo KeySequenceEdit::keyCombo() const {
-    KeyCombo kc;
+ShortcutKeyCombo KeySequenceEdit::keyCombo() const {
+    ShortcutKeyCombo kc;
     QKeySequence seq = keySequence();
     int mods = seq.isEmpty() ? 0 : seq[0];
     kc._isCtrl = (mods & Qt::ControlModifier);
@@ -47,7 +48,7 @@ KeyCombo KeySequenceEdit::keyCombo() const {
     return kc;
 }
 
-void KeySequenceEdit::setKeyCombo(const KeyCombo& kc) {
+void KeySequenceEdit::setKeyCombo(const ShortcutKeyCombo& kc) {
     if (!kc.isEnabled()) { clear(); return; }
     int mods = 0;
     if (kc._isCtrl) mods |= Qt::ControlModifier;
@@ -334,7 +335,7 @@ void ShortcutMapper::switchMapperTab(int categoryIndex)
     _tabWidget->setCurrentIndex(categoryIndex);
 }
 
-void ShortcutMapper::goTo SchwerCategory(int categoryIndex)
+void ShortcutMapper::goToSchwerCategory(int categoryIndex)
 {
     switchMapperTab(categoryIndex);
 }

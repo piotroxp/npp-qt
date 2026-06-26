@@ -7,7 +7,11 @@
 #include "NppDarkMode.h"
 #include "DockingWnd.h"
 #include "functionParser.h"  // for getLexerColors()
+#include "Notepad_plus_msgs.h"
 #include <QCoreApplication>
+
+// IDC_DEBUGINFO_COPYLINK — button ID for copy-link in Debug Info dialog
+constexpr int IDC_DEBUGINFO_COPYLINK = 901;
 
 // Win32 macro replacement (DockingWnd.h provides message constants, not LOWORD)
 #ifndef LOWORD

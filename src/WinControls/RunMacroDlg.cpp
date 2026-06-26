@@ -4,6 +4,7 @@
 
 #include "RunMacroDlg.h"
 #include "NppDarkMode.h"
+#include "NppConstants.h"
 #include <QVBoxLayout>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -44,13 +45,13 @@ void RunMacroDlg::initMacroList()
 void RunMacroDlg::onRunClicked()
 {
     emit runMacro(_macroIndex, _times);
-    accept();
+    hide();
 }
 
 void RunMacroDlg::onCancelClicked()
 {
     emit cancelled();
-    reject();
+    hide();
 }
 
 void RunMacroDlg::onMacroSelected(int index)

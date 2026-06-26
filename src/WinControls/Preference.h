@@ -101,7 +101,7 @@ private:
     QCheckBox* _cbHighlightLine = nullptr;
     QCheckBox* _cbHighlightCurrentWord = nullptr;
     QCheckBox* _cbShowWhiteSpace = nullptr;
-    QCheckBox* _cbShowEol = nullptr;
+    QCheckBox* _cbShowEOL = nullptr;
     QCheckBox* _cbAutoIndent = nullptr;
     QCheckBox* _cbSmartIndent = nullptr;
     QCheckBox* _cbCaretBlink = nullptr;

@@ -3,6 +3,11 @@
 // Target: npp-qt/src/WinControls/WindowsDlg.cpp
 
 #include "SizeableDlg.h"
+#include "NppConstants.h"
+
+#ifndef WM_GETMINMAXINFO
+#define WM_GETMINMAXINFO 0x0024
+#endif
 
 SizeableDlg::SizeableDlg(WINRECT* pWinMap)
     : StaticDialog()

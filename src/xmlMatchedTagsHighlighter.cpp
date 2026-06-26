@@ -25,7 +25,7 @@ vector<pair<intptr_t, intptr_t>> XmlMatchedTagsHighlighter::getAttributesPos(int
     // Use Scintilla to get text range
     _pEditView->send(SCI_GETTEXTRANGE, start,
         reinterpret_cast<sptr_t>(buf.data()));
-    buf[bufLen] = '\0';
+    buf.data()[bufLen] = '\0';
 
     enum State { attr_invalid, attr_key, attr_pre_assign, attr_assign,
                  attr_string, attr_single_quot_string, attr_value, attr_valid };
@@ -34,7 +34,7 @@ vector<pair<intptr_t, intptr_t>> XmlMatchedTagsHighlighter::getAttributesPos(int
     int oneMoreChar = 1;
 
     for (int i = 0; i < bufLen; ++i) {
-        char ch = buf[i];
+        char ch = buf.data()[i];
         switch (ch) {
             case ' ': case '\t': case '\n': case '\r':
                 if (state == attr_key) state = attr_pre_assign;

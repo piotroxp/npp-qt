@@ -198,7 +198,7 @@ void DockingContainer::drawCaption(QPainter& painter) {
     QFontMetrics fm(_captionFont);
     QString elidedText = fm.elidedText(_captionText, Qt::ElideRight, capRect.width() - closeButtonSize() - dpiScale(8));
     painter.setFont(_captionFont);
-    painter.setPen(palette().color(QPalette::Normal if _isActive else QPalette::Inactive, QPalette::WindowText));
+    painter.setPen(palette().color(_isActive ? QPalette::Normal : QPalette::Inactive, QPalette::WindowText));
     painter.drawText(capRect.adjusted(dpiScale(4), 0, -closeButtonSize() - dpiScale(4), 0),
                      Qt::AlignLeft | Qt::AlignVCenter, elidedText);
 
@@ -308,12 +308,12 @@ DockedWidgetData* DockingContainer::addDockedWidget(const DockedWidgetData& data
     int index = _clientStack->addWidget(pData->client);
 
     // Add tab
-    QString tabText = pData->name;
+    QString tabText = QString::fromStdWString(pData->pszName);
     if (!pData->addInfo.isEmpty()) {
         tabText += QStringLiteral(" - ") + pData->addInfo;
     }
 
-    _tabWidget->addTab(pData->client, pData->iconTab.isNull() ? QString() : pData->iconTab, tabText);
+    _tabWidget->addTab(pData->client, tabText);
     _tabWidget->setCurrentIndex(index);
 
     _widgetData.append(pData);
@@ -357,7 +357,7 @@ DockedWidgetData* DockingContainer::findDockedWidgetByWnd(QWidget* client) {
 
 DockedWidgetData* DockingContainer::findDockedWidgetByName(const QString& name) {
     for (auto* data : _widgetData) {
-        if (data->name == name) return data;
+        if (QString::fromStdWString(data->pszName) == name) return data;
     }
     return nullptr;
 }
@@ -490,7 +490,7 @@ void DockingContainer::setFloating(bool floating) {
 void DockingContainer::updateCaption() {
     DockedWidgetData* active = activeWidgetData();
     if (active) {
-        _captionText = active->name;
+        _captionText = QString::fromStdWString(active->pszName);
         if (!active->addInfo.isEmpty()) {
             _captionText += QStringLiteral(" - ") + active->addInfo;
         }
@@ -587,7 +587,7 @@ void DockingSplitter::mouseMoveEvent(QMouseEvent* event) {
 void DockingSplitter::paintEvent(QPaintEvent* event) {
     Q_UNUSED(event);
     QPainter painter(this);
-    painter.fillRect(rect(), (_isDragging ? palette().color(QPalette::Normal, QPalette::Mid) : palette().color(QPalette::Window, QPalette::Mid)));
+    painter.fillRect(rect(), palette().color(QPalette::Mid));
 }
 
 // =============================================================================
@@ -760,7 +760,7 @@ void DockingManager::setStyleCaption(bool captionOnTop) {
     }
 }
 
-int DockingManager::containerIndexOf(QWidget* client) {
+int DockingManager::containerIndexOf(QWidget* client) const {
     for (int i = 0; i < DOCKCONT_MAX; ++i) {
         if (_containers[i]->findDockedWidgetByWnd(client)) {
             return i;

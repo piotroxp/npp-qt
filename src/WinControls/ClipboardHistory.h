@@ -83,7 +83,7 @@ signals:
     void clipboardItemDoubleClicked(int index);
 
 private slots:
-    void onClipboardChanged();
+    void onClipboardChanged(QClipboard::Mode mode);
     void onItemDoubleClicked(QListWidgetItem* item);
     void onItemClicked(QListWidgetItem* item);
 

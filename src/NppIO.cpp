@@ -15,6 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Notepad_plus_Window.h"
+#include "Notepad_plus.h"
+#include "Buffer.h"
 #include "CustomFileDialog.h"
 #include "VerticalFileSwitcher.h"
 #include "functionListPanel.h"
@@ -150,6 +152,9 @@ void Notepad_plus::monitorFileOnChange(void * params)
 	return ERROR_SUCCESS;
 }
 
+// Read a shortcut link (.lnk) file — not supported on Linux.
+// On Windows, this would use IShellLink/IPersistFile COM interfaces.
+// On Linux, we simply return false since .lnk files are Windows-specific.
 bool resolveLinkFile(std::wstring& linkFilePath)
 {
 	// upperize for the following comparison because the ends_with is case sensitive unlike the Windows OS filesystem
@@ -158,47 +163,9 @@ bool resolveLinkFile(std::wstring& linkFilePath)
 	if (!linkFilePathUp.ends_with(L".LNK"))
 		return false; // we will not check the renamed shortcuts like "file.lnk.txt"
 
-	bool isResolved = false;
-
-	IShellLink* psl = nullptr;
-	wchar_t targetFilePath[MAX_PATH]{};
-	WIN32_FIND_DATA wfd{};
-
-	HRESULT hres = // CoInitialize: not needed in Qt;
-	if (SUCCEEDED(hres))
-	{
-		hres = // CoCreateInstance: use Qt or plugin loader — CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLink, (LPVOID*)&psl);
-		if (SUCCEEDED(hres))
-		{
-			IPersistFile* ppf = nullptr;
-			hres = psl->QueryInterface(IID_IPersistFile, (void**)&ppf);
-			if (SUCCEEDED(hres))
-			{
-				// Load the shortcut. 
-				hres = ppf->Load(linkFilePath.c_str(), STGM_READ);
-				if (SUCCEEDED(hres) && hres != S_false)
-				{
-					// Resolve the link. 
-					hres = psl->Resolve(nullptr, 0);
-					if (SUCCEEDED(hres) && hres != S_false)
-					{
-						// Get the path to the link target. 
-						hres = psl->GetPath(targetFilePath, MAX_PATH, (WIN32_FIND_DATA*)&wfd, SLGP_SHORTPATH);
-						if (SUCCEEDED(hres) && hres != S_false)
-						{
-							linkFilePath = targetFilePath;
-							isResolved = true;
-						}
-					}
-				}
-				ppf->Release();
-			}
-			psl->Release();
-		}
-		CoUninitialize();
-	}
-
-	return isResolved;
+	qWarning() << "Shortcut (.lnk) reading is not supported on Linux."
+	           << "Target:" << QString::fromStdWString(linkFilePath);
+	return false;
 }
 
 BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool isReadOnly, int encoding, const wchar_t *backupFileName, NppFileTime fileNameTimestamp)
@@ -410,7 +377,7 @@ BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool is
 					msg = stringReplace(msg, L"$STR_REPLACE1$", longFileName);
 					msg = stringReplace(msg, L"$STR_REPLACE2$", longFileDir);
 				}
-				QMessageBox::information(qobject_cast<QWidget*>(_pPublicInterface->getHSelf()), QString::fromWStdString(title), QString::fromWStdString(msg));
+				QMessageBox::information(qobject_cast<QWidget*>(_pPublicInterface->getHSelf()), QString::fromStdWString(title), QString::fromStdWString(msg));
 			}
 
 			if (!isCreateFileSuccessful)
@@ -724,7 +691,7 @@ bool Notepad_plus::doSave(BufferID id, const wchar_t * filename, bool isCopy)
 		if (!(NppParameters::getInstance()).isEndSessionCritical()) // can we report to the user?
 		{
 			wstring errorMessage = L"Save failed: unknown error (GetLastError stubbed in Qt6)";
-			QMessageBox::warning(qobject_cast<QWidget*>(_pPublicInterface->getHSelf()), QStringLiteral("Save failed"), QString::fromWStdString(errorMessage));
+			QMessageBox::warning(qobject_cast<QWidget*>(_pPublicInterface->getHSelf()), QStringLiteral("Save failed"), QString::fromStdWString(errorMessage));
 		}
 	}
 	else if (res == SavingStatus::SaveOpenFailed)

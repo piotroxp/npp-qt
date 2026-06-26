@@ -5,6 +5,8 @@
 #include "AnsiCharPanel.h"
 #include "NppDarkMode.h"
 #include "DockingWnd.h"
+#include "NppConstants.h"
+#include "Notepad_plus_msgs.h"
 
 // Win32 macro replacements for portability (LOWORD/HIWORD used in run_dlgProc)
 #ifndef LOWORD

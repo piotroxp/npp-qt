@@ -4,6 +4,7 @@
 
 #include "DocumentMap.h"
 #include "Window.h"
+#include "Buffer.h"
 #include <QApplication>
 #include <QBoxLayout>
 #include <QPainter>
@@ -11,14 +12,13 @@
 #include <QScreen>
 #include <QStyle>
 #include <QStyleOption>
-#include <QOpenGLWidget>
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
 static int dpiScale(int base) {
-    return static_cast<int>(base * QApplication::devicePixelRatio());
+    return static_cast<int>(base * qApp->devicePixelRatio());
 }
 
 // =============================================================================
@@ -144,8 +144,8 @@ ViewZoneDlg::ViewZoneDlg(QWidget* parent)
     setWindowFlags(windowFlags() & ~Qt::WindowTitleHint);
 
     _vzWidget = new ViewZoneWidget(this);
-    _vzWidget->setFocusColor(ViewZoneWidget::_focusColor);
-    _vzWidget->setFrostColor(ViewZoneWidget::_frostColor);
+    _vzWidget->setFocusColor(ViewZoneWidget::focusColorStatic());
+    _vzWidget->setFrostColor(ViewZoneWidget::frostColorStatic());
 
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -215,17 +215,17 @@ void DocumentSnapshotWidget::syncDisplay(Buffer* buf, const ScintillaEditView& s
 
     // Sync wrap/scroll
     MapPosition mp = buf->getMapPosition();
-    if (mp.isValid() && mp.canScroll()) {
+    if (mp._firstVisibleLine > 0 || mp._wrapColumn > 0) {
         scrollSnapshotWith(mp, scintSource.getTextZoneWidth());
     }
 
     _pPeekerView->defineDocType(buf->getLangType());
-    _pPeekerView->showMargin(ScintillaEditView::_SC_MARGE_FOLDER, false);
+    _pPeekerView->showMargin(SC_MARGE_FOLDER, false);
     _pPeekerView->showMargin(0, false);
     _pPeekerView->showMargin(1, false);
     _pPeekerView->showMargin(2, false);
     _pPeekerView->showMargin(3, false);
-    _pPeekerView->execute(SCI_SETCARETSTYLE, CARETSTYLE_INVISIBLE);
+    _pPeekerView->execute(2066, 0);  // SCI_SETCARETSTYLE, CARETSTYLE_INVISIBLE
 }
 
 void DocumentSnapshotWidget::scrollSnapshotWith(const MapPosition& mapPos, int textZoneWidth) {
@@ -432,7 +432,7 @@ void DocumentMap::setSyntaxHiliting()
         return;
     Buffer* buf = _pMapView->getCurrentBuffer();
     _pMapView->defineDocType(buf->getLangType());
-    _pMapView->showMargin(ScintillaEditView::_SC_MARGE_FOLDER, false);
+    _pMapView->showMargin(SC_MARGE_FOLDER, false);
     _pMapView->showMargin(0, false);
     _pMapView->showMargin(1, false);
     _pMapView->showMargin(2, false);

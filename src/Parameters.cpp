@@ -110,33 +110,33 @@ static constexpr WinMenuKeyDefinition winKeyDefs[]
 	//
 	{ VK_N,       IDM_FILE_NEW,                                 true,  false, false, nullptr },
 	{ VK_O,       IDM_FILE_OPEN,                                true,  false, false, nullptr },
-	{ VK_nullptr,    IDM_FILE_OPEN_FOLDER,                         false, false, false, L"Open containing folder in Explorer" },
-	{ VK_nullptr,    IDM_FILE_OPEN_CMD,                            false, false, false, L"Open containing folder in Command Prompt" },
-	{ VK_nullptr,    IDM_FILE_OPEN_DEFAULT_VIEWER,                 false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FILE_OPENFOLDERASWORKSPACE,                false, false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_OPEN_FOLDER,                         false, false, false, L"Open containing folder in Explorer" },
+	{ VK_NULL,    IDM_FILE_OPEN_CMD,                            false, false, false, L"Open containing folder in Command Prompt" },
+	{ VK_NULL,    IDM_FILE_OPEN_DEFAULT_VIEWER,                 false, false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_OPENFOLDERASWORKSPACE,                false, false, false, nullptr },
 	{ VK_R,       IDM_FILE_RELOAD,                              true,  false, false, nullptr },
 	{ VK_S,       IDM_FILE_SAVE,                                true,  false, false, nullptr },
 	{ VK_S,       IDM_FILE_SAVEAS,                              true,  true,  false, nullptr },
-	{ VK_nullptr,    IDM_FILE_SAVECOPYAS,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_SAVECOPYAS,                          false, false, false, nullptr },
 	{ VK_S,       IDM_FILE_SAVEALL,                             true,  false, true,  nullptr },
-	{ VK_nullptr,    IDM_FILE_RENAME,                              false, false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_RENAME,                              false, false, false, nullptr },
 	{ VK_W,       IDM_FILE_CLOSE,                               true,  false, false, nullptr },
 	{ VK_W,       IDM_FILE_CLOSEALL,                            true,  false, true,  nullptr },
-	{ VK_nullptr,    IDM_FILE_CLOSEALL_BUT_CURRENT,                false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FILE_CLOSEALL_BUT_PINNED,                 false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FILE_CLOSEALL_TOLEFT,                     false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FILE_CLOSEALL_TORIGHT,                    false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FILE_CLOSEALL_UNCHANGED,                  false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FILE_DELETE,                              false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FILE_LOADSESSION,                         false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FILE_SAVESESSION,                         false, false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_CLOSEALL_BUT_CURRENT,                false, false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_CLOSEALL_BUT_PINNED,                 false, false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_CLOSEALL_TOLEFT,                     false, false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_CLOSEALL_TORIGHT,                    false, false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_CLOSEALL_UNCHANGED,                  false, false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_DELETE,                              false, false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_LOADSESSION,                         false, false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_SAVESESSION,                         false, false, false, nullptr },
 	{ VK_P,       IDM_FILE_PRINT,                               true,  false, false, nullptr },
-	{ VK_nullptr,    IDM_FILE_PRINTNOW,                            false, false, false, nullptr },
+	{ VK_NULL,    IDM_FILE_PRINTNOW,                            false, false, false, nullptr },
 	{ VK_T,       IDM_FILE_RESTORELASTCLOSEDFILE,               true,  false, true,  L"Restore Recent Closed File" },
 	{ VK_F4,      IDM_FILE_EXIT,                                false, true,  false, nullptr },
 
-//	{ VK_nullptr,    IDM_EDIT_UNDO,                                false, false, false, nullptr },
-//	{ VK_nullptr,    IDM_EDIT_REDO,                                false, false, false, nullptr },
+//	{ VK_NULL,    IDM_EDIT_UNDO,                                false, false, false, nullptr },
+//	{ VK_NULL,    IDM_EDIT_REDO,                                false, false, false, nullptr },
 
 	{ VK_DELETE,  IDM_EDIT_CUT,                                 false, false, true,  nullptr },
 	{ VK_X,       IDM_EDIT_CUT,                                 true,  false, false, nullptr },
@@ -147,105 +147,105 @@ static constexpr WinMenuKeyDefinition winKeyDefs[]
 	{ VK_INSERT,  IDM_EDIT_PASTE,                               false, false, true,  nullptr },
 	{ VK_V,       IDM_EDIT_PASTE,                               true,  false, false, nullptr },
 
-//	{ VK_nullptr,    IDM_EDIT_DELETE,                              false, false, false, nullptr },
-//	{ VK_nullptr,    IDM_EDIT_SELECTALL,                           false, false, false, nullptr },
+//	{ VK_NULL,    IDM_EDIT_DELETE,                              false, false, false, nullptr },
+//	{ VK_NULL,    IDM_EDIT_SELECTALL,                           false, false, false, nullptr },
 	{ VK_B,       IDM_EDIT_BEGINENDSELECT,                      true,  false, true,  nullptr },
 	{ VK_B,       IDM_EDIT_BEGINENDSELECT_COLUMNMODE,           false, true,  true,  nullptr },
 
-	{ VK_nullptr,    IDM_EDIT_FULLPATHTOCLIP,                      false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_FILENAMETOCLIP,                      false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_CURRENTDIRTOCLIP,                    false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_COPY_ALL_NAMES,                      false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_COPY_ALL_PATHS,                      false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_FULLPATHTOCLIP,                      false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_FILENAMETOCLIP,                      false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_CURRENTDIRTOCLIP,                    false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_COPY_ALL_NAMES,                      false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_COPY_ALL_PATHS,                      false, false, false, nullptr },
 
-	{ VK_nullptr,    IDM_EDIT_INS_TAB,                             false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_RMV_TAB,                             false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_INS_TAB,                             false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_RMV_TAB,                             false, false, false, nullptr },
 	{ VK_U,       IDM_EDIT_UPPERCASE,                           true,  false, true,  nullptr },
 	{ VK_U,       IDM_EDIT_LOWERCASE,                           true,  false, false, nullptr },
 	{ VK_U,       IDM_EDIT_PROPERCASE_FORCE,                    false, true,  false, nullptr },
 	{ VK_U,       IDM_EDIT_PROPERCASE_BLEND,                    false, true,  true,  nullptr },
 	{ VK_U,       IDM_EDIT_SENTENCECASE_FORCE,                  true,  true,  false, nullptr },
 	{ VK_U,       IDM_EDIT_SENTENCECASE_BLEND,                  true,  true,  true,  nullptr },
-	{ VK_nullptr,    IDM_EDIT_INVERTCASE,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_RANDOMCASE,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_REMOVE_CONSECUTIVE_DUP_LINES,        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_REMOVE_ANY_DUP_LINES,                false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_INVERTCASE,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_RANDOMCASE,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_REMOVE_CONSECUTIVE_DUP_LINES,        false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_REMOVE_ANY_DUP_LINES,                false, false, false, nullptr },
 	{ VK_I,       IDM_EDIT_SPLIT_LINES,                         true,  false, false, nullptr },
 	{ VK_J,       IDM_EDIT_JOIN_LINES,                          true,  false, false, nullptr },
 	{ VK_UP,      IDM_EDIT_LINE_UP,                             true,  false, true,  nullptr },
 	{ VK_DOWN,    IDM_EDIT_LINE_DOWN,                           true,  false, true,  nullptr },
-	{ VK_nullptr,    IDM_EDIT_REMOVEEMPTYLINES,                    false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_REMOVEEMPTYLINESWITHBLANK,           false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_REMOVEEMPTYLINES,                    false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_REMOVEEMPTYLINESWITHBLANK,           false, false, false, nullptr },
 	{ VK_RETURN,  IDM_EDIT_BLANKLINEABOVECURRENT,               true,  true,  false, nullptr },
 	{ VK_RETURN,  IDM_EDIT_BLANKLINEBELOWCURRENT,               true,  true,  true,  nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_LENGTH_ASCENDING,          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_LENGTH_DESCENDING,         false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_LEXICOGRAPHIC_ASCENDING,   false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_LEXICOGRAPHIC_DESCENDING,  false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_LEXICO_CASE_INSENS_ASCENDING,   false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_LEXICO_CASE_INSENS_DESCENDING,  false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_LOCALE_ASCENDING,          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_LOCALE_DESCENDING,         false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_INTEGER_ASCENDING,         false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_INTEGER_DESCENDING,        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_DECIMALCOMMA_ASCENDING,    false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_DECIMALCOMMA_DESCENDING,   false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_DECIMALDOT_ASCENDING,      false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_DECIMALDOT_DESCENDING,     false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_REVERSE_ORDER,             false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SORTLINES_RANDOMLY,                  false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_LENGTH_ASCENDING,          false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_LENGTH_DESCENDING,         false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_LEXICOGRAPHIC_ASCENDING,   false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_LEXICOGRAPHIC_DESCENDING,  false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_LEXICO_CASE_INSENS_ASCENDING,   false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_LEXICO_CASE_INSENS_DESCENDING,  false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_LOCALE_ASCENDING,          false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_LOCALE_DESCENDING,         false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_INTEGER_ASCENDING,         false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_INTEGER_DESCENDING,        false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_DECIMALCOMMA_ASCENDING,    false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_DECIMALCOMMA_DESCENDING,   false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_DECIMALDOT_ASCENDING,      false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_DECIMALDOT_DESCENDING,     false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_REVERSE_ORDER,             false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SORTLINES_RANDOMLY,                  false, false, false, nullptr },
 	{ VK_Q,       IDM_EDIT_BLOCK_COMMENT,                       true,  false, false, nullptr },
 	{ VK_K,       IDM_EDIT_BLOCK_COMMENT_SET,                   true,  false, false, nullptr },
 	{ VK_K,       IDM_EDIT_BLOCK_UNCOMMENT,                     true,  false, true,  nullptr },
 	{ VK_Q,       IDM_EDIT_STREAM_COMMENT,                      true,  false, true,  nullptr },
-	{ VK_nullptr,    IDM_EDIT_STREAM_UNCOMMENT,                    false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_STREAM_UNCOMMENT,                    false, false, false, nullptr },
 	{ VK_SPACE,   IDM_EDIT_AUTOCOMPLETE,                        true,  false, false, nullptr },
 	{ VK_SPACE,   IDM_EDIT_AUTOCOMPLETE_PATH,                   true,  true,  false, nullptr },
 	{ VK_RETURN,  IDM_EDIT_AUTOCOMPLETE_CURRENTFILE,            true,  false, false, nullptr },
 	{ VK_SPACE,   IDM_EDIT_FUNCCALLTIP,                         true,  false, true,  nullptr },
 	{ VK_UP,      IDM_EDIT_FUNCCALLTIP_PREVIOUS,                false, true,  false, nullptr },
 	{ VK_DOWN,    IDM_EDIT_FUNCCALLTIP_NEXT,                    false, true,  false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_INSERT_DATETIME_SHORT,               false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_INSERT_DATETIME_qint32,                false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_INSERT_DATETIME_CUSTOMIZED,          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_TODOS,                             false, false, false, L"EOL Conversion to Windows (CR LF)" },
-	{ VK_nullptr,    IDM_FORMAT_TOUNIX,                            false, false, false, L"EOL Conversion to Unix (LF)" },
-	{ VK_nullptr,    IDM_FORMAT_TOMAC,                             false, false, false, L"EOL Conversion to Macintosh (CR)" },
-	{ VK_nullptr,    IDM_EDIT_TRIMTRAILING,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_TRIMLINEHEAD,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_TRIM_BOTH,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_EOL2WS,                              false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_TRIMALL,                             false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_TAB2SW,                              false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SW2TAB_ALL,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SW2TAB_LEADING,                      false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_PASTE_AS_HTML,                       false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_PASTE_AS_RTF,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_COPY_BINARY,                         false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_CUT_BINARY,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_PASTE_BINARY,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_OPENASFILE,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_OPENINFOLDER,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SEARCHONINTERNET,                    false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_CHANGESEARCHENGINE,                  false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_MULTISELECTALL,                      false, false, false, L"Multi-select All: Ignore Case and Whole Word" },
-	{ VK_nullptr,    IDM_EDIT_MULTISELECTALLMATCHCASE,             false, false, false, L"Multi-select All: Match Case Only" },
-	{ VK_nullptr,    IDM_EDIT_MULTISELECTALLWHOLEWORD,             false, false, false, L"Multi-select All: Match Whole Word Only" },
-	{ VK_nullptr,    IDM_EDIT_MULTISELECTALLMATCHCASEWHOLEWORD,    false, false, false, L"Multi-select All: Match Case and Whole Word" },
-	{ VK_nullptr,    IDM_EDIT_MULTISELECTNEXT,                     false, false, false, L"Multi-select Next: Ignore Case and Whole Word" },
-	{ VK_nullptr,    IDM_EDIT_MULTISELECTNEXTMATCHCASE,            false, false, false, L"Multi-select Next: Match Case Only" },
-	{ VK_nullptr,    IDM_EDIT_MULTISELECTNEXTWHOLEWORD,            false, false, false, L"Multi-select Next: Match Whole Word Only" },
-	{ VK_nullptr,    IDM_EDIT_MULTISELECTNEXTMATCHCASEWHOLEWORD,   false, false, false, L"Multi-select Next: Match Case and Whole Word" },
-	{ VK_nullptr,    IDM_EDIT_MULTISELECTUNDO,                     false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_MULTISELECTSSKIP,                    false, false, false, nullptr },
-//  { VK_nullptr,    IDM_EDIT_COLUMNMODETIP,                       false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_INSERT_DATETIME_SHORT,               false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_INSERT_DATETIME_LONG,                false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_INSERT_DATETIME_CUSTOMIZED,          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_TODOS,                             false, false, false, L"EOL Conversion to Windows (CR LF)" },
+	{ VK_NULL,    IDM_FORMAT_TOUNIX,                            false, false, false, L"EOL Conversion to Unix (LF)" },
+	{ VK_NULL,    IDM_FORMAT_TOMAC,                             false, false, false, L"EOL Conversion to Macintosh (CR)" },
+	{ VK_NULL,    IDM_EDIT_TRIMTRAILING,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_TRIMLINEHEAD,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_TRIM_BOTH,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_EOL2WS,                              false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_TRIMALL,                             false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_TAB2SW,                              false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SW2TAB_ALL,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SW2TAB_LEADING,                      false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_PASTE_AS_HTML,                       false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_PASTE_AS_RTF,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_COPY_BINARY,                         false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_CUT_BINARY,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_PASTE_BINARY,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_OPENASFILE,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_OPENINFOLDER,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SEARCHONINTERNET,                    false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_CHANGESEARCHENGINE,                  false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_MULTISELECTALL,                      false, false, false, L"Multi-select All: Ignore Case and Whole Word" },
+	{ VK_NULL,    IDM_EDIT_MULTISELECTALLMATCHCASE,             false, false, false, L"Multi-select All: Match Case Only" },
+	{ VK_NULL,    IDM_EDIT_MULTISELECTALLWHOLEWORD,             false, false, false, L"Multi-select All: Match Whole Word Only" },
+	{ VK_NULL,    IDM_EDIT_MULTISELECTALLMATCHCASEWHOLEWORD,    false, false, false, L"Multi-select All: Match Case and Whole Word" },
+	{ VK_NULL,    IDM_EDIT_MULTISELECTNEXT,                     false, false, false, L"Multi-select Next: Ignore Case and Whole Word" },
+	{ VK_NULL,    IDM_EDIT_MULTISELECTNEXTMATCHCASE,            false, false, false, L"Multi-select Next: Match Case Only" },
+	{ VK_NULL,    IDM_EDIT_MULTISELECTNEXTWHOLEWORD,            false, false, false, L"Multi-select Next: Match Whole Word Only" },
+	{ VK_NULL,    IDM_EDIT_MULTISELECTNEXTMATCHCASEWHOLEWORD,   false, false, false, L"Multi-select Next: Match Case and Whole Word" },
+	{ VK_NULL,    IDM_EDIT_MULTISELECTUNDO,                     false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_MULTISELECTSSKIP,                    false, false, false, nullptr },
+//  { VK_NULL,    IDM_EDIT_COLUMNMODETIP,                       false, false, false, nullptr },
 	{ VK_C,       IDM_EDIT_COLUMNMODE,                          false, true,  false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_CHAR_PANEL,                          false, false, false, L"Toggle Character Panel" },
-	{ VK_nullptr,    IDM_EDIT_CLIPBOARDHISTORY_PANEL,              false, false, false, L"Toggle Clipboard History" },
-	{ VK_nullptr,    IDM_EDIT_TOGGLEREADONLY,                      false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_SETREADONLYFORALLDOCS,               false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_CLEARREADONLYFORALLDOCS,             false, false, false, nullptr },
-	{ VK_nullptr,    IDM_EDIT_TOGGLESYSTEMREADONLY,                false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_CHAR_PANEL,                          false, false, false, L"Toggle Character Panel" },
+	{ VK_NULL,    IDM_EDIT_CLIPBOARDHISTORY_PANEL,              false, false, false, L"Toggle Clipboard History" },
+	{ VK_NULL,    IDM_EDIT_TOGGLEREADONLY,                      false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_SETREADONLYFORALLDOCS,               false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_CLEARREADONLYFORALLDOCS,             false, false, false, nullptr },
+	{ VK_NULL,    IDM_EDIT_TOGGLESYSTEMREADONLY,                false, false, false, nullptr },
 	{ VK_F,       IDM_SEARCH_FIND,                              true,  false, false, nullptr },
 	{ VK_F,       IDM_SEARCH_FINDINFILES,                       true,  false, true,  nullptr },
 	{ VK_F3,      IDM_SEARCH_FINDNEXT,                          false, false, false, nullptr },
@@ -262,26 +262,26 @@ static constexpr WinMenuKeyDefinition winKeyDefs[]
 	{ VK_G,       IDM_SEARCH_GOTOLINE,                          true,  false, false, nullptr },
 	{ VK_B,       IDM_SEARCH_GOTOMATCHINGBRACE,                 true,  false, false, nullptr },
 	{ VK_B,       IDM_SEARCH_SELECTMATCHINGBRACES,              true,  true,  false, nullptr },
-	{ VK_nullptr,    IDM_SEARCH_CHANGED_PREV,                      false, false, false, nullptr },
-	{ VK_nullptr,    IDM_SEARCH_CHANGED_NEXT,                      false, false, false, nullptr },
-	{ VK_nullptr,    IDM_SEARCH_CLEAR_CHANGE_HISTORY,              false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_CHANGED_PREV,                      false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_CHANGED_NEXT,                      false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_CLEAR_CHANGE_HISTORY,              false, false, false, nullptr },
 	{ VK_M,       IDM_SEARCH_MARK,                              true,  false, false, nullptr },
-	{ VK_nullptr,    IDM_SEARCH_MARKALLEXT1,                       false, false, false, L"Style all using 1st style" },
-	{ VK_nullptr,    IDM_SEARCH_MARKALLEXT2,                       false, false, false, L"Style all using 2nd style" },
-	{ VK_nullptr,    IDM_SEARCH_MARKALLEXT3,                       false, false, false, L"Style all using 3rd style" },
-	{ VK_nullptr,    IDM_SEARCH_MARKALLEXT4,                       false, false, false, L"Style all using 4th style" },
-	{ VK_nullptr,    IDM_SEARCH_MARKALLEXT5,                       false, false, false, L"Style all using 5th style" },
-	{ VK_nullptr,    IDM_SEARCH_MARKONEEXT1,                       false, false, false, L"Style one using 1st style" },
-	{ VK_nullptr,    IDM_SEARCH_MARKONEEXT2,                       false, false, false, L"Style one using 2nd style" },
-	{ VK_nullptr,    IDM_SEARCH_MARKONEEXT3,                       false, false, false, L"Style one using 3rd style" },
-	{ VK_nullptr,    IDM_SEARCH_MARKONEEXT4,                       false, false, false, L"Style one using 4th style" },
-	{ VK_nullptr,    IDM_SEARCH_MARKONEEXT5,                       false, false, false, L"Style one using 5th style" },
-	{ VK_nullptr,    IDM_SEARCH_UNMARKALLEXT1,                     false, false, false, L"Clear 1st style" },
-	{ VK_nullptr,    IDM_SEARCH_UNMARKALLEXT2,                     false, false, false, L"Clear 2nd style" },
-	{ VK_nullptr,    IDM_SEARCH_UNMARKALLEXT3,                     false, false, false, L"Clear 3rd style" },
-	{ VK_nullptr,    IDM_SEARCH_UNMARKALLEXT4,                     false, false, false, L"Clear 4th style" },
-	{ VK_nullptr,    IDM_SEARCH_UNMARKALLEXT5,                     false, false, false, L"Clear 5th style" },
-	{ VK_nullptr,    IDM_SEARCH_CLEARALLMARKS,                     false, false, false, L"Clear all styles" },
+	{ VK_NULL,    IDM_SEARCH_MARKALLEXT1,                       false, false, false, L"Style all using 1st style" },
+	{ VK_NULL,    IDM_SEARCH_MARKALLEXT2,                       false, false, false, L"Style all using 2nd style" },
+	{ VK_NULL,    IDM_SEARCH_MARKALLEXT3,                       false, false, false, L"Style all using 3rd style" },
+	{ VK_NULL,    IDM_SEARCH_MARKALLEXT4,                       false, false, false, L"Style all using 4th style" },
+	{ VK_NULL,    IDM_SEARCH_MARKALLEXT5,                       false, false, false, L"Style all using 5th style" },
+	{ VK_NULL,    IDM_SEARCH_MARKONEEXT1,                       false, false, false, L"Style one using 1st style" },
+	{ VK_NULL,    IDM_SEARCH_MARKONEEXT2,                       false, false, false, L"Style one using 2nd style" },
+	{ VK_NULL,    IDM_SEARCH_MARKONEEXT3,                       false, false, false, L"Style one using 3rd style" },
+	{ VK_NULL,    IDM_SEARCH_MARKONEEXT4,                       false, false, false, L"Style one using 4th style" },
+	{ VK_NULL,    IDM_SEARCH_MARKONEEXT5,                       false, false, false, L"Style one using 5th style" },
+	{ VK_NULL,    IDM_SEARCH_UNMARKALLEXT1,                     false, false, false, L"Clear 1st style" },
+	{ VK_NULL,    IDM_SEARCH_UNMARKALLEXT2,                     false, false, false, L"Clear 2nd style" },
+	{ VK_NULL,    IDM_SEARCH_UNMARKALLEXT3,                     false, false, false, L"Clear 3rd style" },
+	{ VK_NULL,    IDM_SEARCH_UNMARKALLEXT4,                     false, false, false, L"Clear 4th style" },
+	{ VK_NULL,    IDM_SEARCH_UNMARKALLEXT5,                     false, false, false, L"Clear 5th style" },
+	{ VK_NULL,    IDM_SEARCH_CLEARALLMARKS,                     false, false, false, L"Clear all styles" },
 	{ VK_1,       IDM_SEARCH_GOPREVMARKER1,                     true,  false, true,  L"Previous style of 1st style" },
 	{ VK_2,       IDM_SEARCH_GOPREVMARKER2,                     true,  false, true,  L"Previous style of 2nd style" },
 	{ VK_3,       IDM_SEARCH_GOPREVMARKER3,                     true,  false, true,  L"Previous style of 3rd style" },
@@ -294,51 +294,51 @@ static constexpr WinMenuKeyDefinition winKeyDefs[]
 	{ VK_4,       IDM_SEARCH_GONEXTMARKER4,                     true,  false, false, L"Next style of 4th style" },
 	{ VK_5,       IDM_SEARCH_GONEXTMARKER5,                     true,  false, false, L"Next style of 5th style" },
 	{ VK_0,       IDM_SEARCH_GONEXTMARKER_DEF,                  true,  false, false, L"Next style of Find Mark style" },
-	{ VK_nullptr,    IDM_SEARCH_STYLE1TOCLIP,                      false, false, false, L"Copy Styled Text of 1st Style" },
-	{ VK_nullptr,    IDM_SEARCH_STYLE2TOCLIP,                      false, false, false, L"Copy Styled Text of 2nd Style" },
-	{ VK_nullptr,    IDM_SEARCH_STYLE3TOCLIP,                      false, false, false, L"Copy Styled Text of 3rd Style" },
-	{ VK_nullptr,    IDM_SEARCH_STYLE4TOCLIP,                      false, false, false, L"Copy Styled Text of 4th Style" },
-	{ VK_nullptr,    IDM_SEARCH_STYLE5TOCLIP,                      false, false, false, L"Copy Styled Text of 5th Style" },
-	{ VK_nullptr,    IDM_SEARCH_ALLSTYLESTOCLIP,                   false, false, false, L"Copy Styled Text of All Styles" },
-	{ VK_nullptr,    IDM_SEARCH_MARKEDTOCLIP,                      false, false, false, L"Copy Styled Text of Find Mark style" },
+	{ VK_NULL,    IDM_SEARCH_STYLE1TOCLIP,                      false, false, false, L"Copy Styled Text of 1st Style" },
+	{ VK_NULL,    IDM_SEARCH_STYLE2TOCLIP,                      false, false, false, L"Copy Styled Text of 2nd Style" },
+	{ VK_NULL,    IDM_SEARCH_STYLE3TOCLIP,                      false, false, false, L"Copy Styled Text of 3rd Style" },
+	{ VK_NULL,    IDM_SEARCH_STYLE4TOCLIP,                      false, false, false, L"Copy Styled Text of 4th Style" },
+	{ VK_NULL,    IDM_SEARCH_STYLE5TOCLIP,                      false, false, false, L"Copy Styled Text of 5th Style" },
+	{ VK_NULL,    IDM_SEARCH_ALLSTYLESTOCLIP,                   false, false, false, L"Copy Styled Text of All Styles" },
+	{ VK_NULL,    IDM_SEARCH_MARKEDTOCLIP,                      false, false, false, L"Copy Styled Text of Find Mark style" },
 	{ VK_F2,      IDM_SEARCH_TOGGLE_BOOKMARK,                   true,  false, false, nullptr },
 	{ VK_F2,      IDM_SEARCH_NEXT_BOOKMARK,                     false, false, false, nullptr },
 	{ VK_F2,      IDM_SEARCH_PREV_BOOKMARK,                     false, false, true, nullptr  },
-	{ VK_nullptr,    IDM_SEARCH_CLEAR_BOOKMARKS,                   false, false, false, nullptr },
-	{ VK_nullptr,    IDM_SEARCH_CUTMARKEDLINES,                    false, false, false, nullptr },
-	{ VK_nullptr,    IDM_SEARCH_COPYMARKEDLINES,                   false, false, false, nullptr },
-	{ VK_nullptr,    IDM_SEARCH_PASTEMARKEDLINES,                  false, false, false, nullptr },
-	{ VK_nullptr,    IDM_SEARCH_DELETEMARKEDLINES,                 false, false, false, nullptr },
-	{ VK_nullptr,    IDM_SEARCH_DELETEUNMARKEDLINES,               false, false, false, nullptr },
-	{ VK_nullptr,    IDM_SEARCH_INVERSEMARKS,                      false, false, false, nullptr },
-	{ VK_nullptr,    IDM_SEARCH_FINDCHARINRANGE,                   false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_CLEAR_BOOKMARKS,                   false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_CUTMARKEDLINES,                    false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_COPYMARKEDLINES,                   false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_PASTEMARKEDLINES,                  false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_DELETEMARKEDLINES,                 false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_DELETEUNMARKEDLINES,               false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_INVERSEMARKS,                      false, false, false, nullptr },
+	{ VK_NULL,    IDM_SEARCH_FINDCHARINRANGE,                   false, false, false, nullptr },
 
-	{ VK_nullptr,    IDM_VIEW_ALWAYSONTOP,                         false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_ALWAYSONTOP,                         false, false, false, nullptr },
 	{ VK_F11,     IDM_VIEW_FULLSCREENTOGGLE,                    false, false, false, nullptr },
 	{ VK_F12,     IDM_VIEW_POSTIT,                              false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_DISTRACTIONFREE,                     false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_DISTRACTIONFREE,                     false, false, false, nullptr },
 
-	{ VK_nullptr,    IDM_VIEW_IN_FIREFOX,                          false, false, false, L"View current file in Firefox" },
-	{ VK_nullptr,    IDM_VIEW_IN_CHROME,                           false, false, false, L"View current file in Chrome" },
-	{ VK_nullptr,    IDM_VIEW_IN_IE,                               false, false, false, L"View current file in IE" },
-	{ VK_nullptr,    IDM_VIEW_IN_EDGE,                             false, false, false, L"View current file in Edge" },
+	{ VK_NULL,    IDM_VIEW_IN_FIREFOX,                          false, false, false, L"View current file in Firefox" },
+	{ VK_NULL,    IDM_VIEW_IN_CHROME,                           false, false, false, L"View current file in Chrome" },
+	{ VK_NULL,    IDM_VIEW_IN_IE,                               false, false, false, L"View current file in IE" },
+	{ VK_NULL,    IDM_VIEW_IN_EDGE,                             false, false, false, L"View current file in Edge" },
 
-	{ VK_nullptr,    IDM_VIEW_TAB_SPACE,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_EOL,                                 false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_ALL_CHARACTERS,                      false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_NPC,                                 false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_NPC_CCUNIEOL,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_INDENT_GUIDE,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_WRAP_SYMBOL,                         false, false, false, nullptr },
-//  { VK_nullptr,    IDM_VIEW_ZOOMIN,                              false, false, false, nullptr },
-//  { VK_nullptr,    IDM_VIEW_ZOOMOUT,                             false, false, false, nullptr },
-//  { VK_nullptr,    IDM_VIEW_ZOOMRESTORE,                         false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_GOTO_START,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_GOTO_END,                            false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_GOTO_ANOTHER_VIEW,                   false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_CLONE_TO_ANOTHER_VIEW,               false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_GOTO_NEW_INSTANCE,                   false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_LOAD_IN_NEW_INSTANCE,                false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_TAB_SPACE,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_EOL,                                 false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_ALL_CHARACTERS,                      false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_NPC,                                 false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_NPC_CCUNIEOL,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_INDENT_GUIDE,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_WRAP_SYMBOL,                         false, false, false, nullptr },
+//  { VK_NULL,    IDM_VIEW_ZOOMIN,                              false, false, false, nullptr },
+//  { VK_NULL,    IDM_VIEW_ZOOMOUT,                             false, false, false, nullptr },
+//  { VK_NULL,    IDM_VIEW_ZOOMRESTORE,                         false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_GOTO_START,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_GOTO_END,                            false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_GOTO_ANOTHER_VIEW,                   false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_CLONE_TO_ANOTHER_VIEW,               false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_GOTO_NEW_INSTANCE,                   false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_LOAD_IN_NEW_INSTANCE,                false, false, false, nullptr },
 
 	{ VK_NUMPAD1, IDM_VIEW_TAB1,                                true,  false, false, nullptr },
 	{ VK_NUMPAD2, IDM_VIEW_TAB2,                                true,  false, false, nullptr },
@@ -349,15 +349,15 @@ static constexpr WinMenuKeyDefinition winKeyDefs[]
 	{ VK_NUMPAD7, IDM_VIEW_TAB7,                                true,  false, false, nullptr },
 	{ VK_NUMPAD8, IDM_VIEW_TAB8,                                true,  false, false, nullptr },
 	{ VK_NUMPAD9, IDM_VIEW_TAB9,                                true,  false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_TAB_START,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_TAB_END,                             false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_TAB_START,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_TAB_END,                             false, false, false, nullptr },
 	{ VK_NEXT,    IDM_VIEW_TAB_NEXT,                            true,  false, false, nullptr },
 	{ VK_PRIOR,   IDM_VIEW_TAB_PREV,                            true,  false, false, nullptr },
 	{ VK_NEXT,    IDM_VIEW_TAB_MOVEFORWARD,                     true,  false, true,  nullptr },
 	{ VK_PRIOR,   IDM_VIEW_TAB_MOVEBACKWARD,                    true,  false, true,  nullptr },
 	{ VK_TAB,     IDC_PREV_DOC,                                 true,  false, true,  L"Switch to previous document" },
 	{ VK_TAB,     IDC_NEXT_DOC,                                 true,  false, false, L"Switch to next document" },
-	{ VK_nullptr,    IDM_VIEW_WRAP,                                false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_WRAP,                                false, false, false, nullptr },
 	{ VK_H,       IDM_VIEW_HIDELINES,                           false, true,  false, nullptr },
 	{ VK_F8,      IDM_VIEW_SWITCHTO_OTHER_VIEW,                 false, false, false, nullptr },
 
@@ -382,136 +382,136 @@ static constexpr WinMenuKeyDefinition winKeyDefs[]
 	{ VK_6,       IDM_VIEW_UNFOLD_6,                            false, true,  true,  L"Unfold Level 6" },
 	{ VK_7,       IDM_VIEW_UNFOLD_7,                            false, true,  true,  L"Unfold Level 7" },
 	{ VK_8,       IDM_VIEW_UNFOLD_8,                            false, true,  true,  L"Unfold Level 8" },
-	{ VK_nullptr,    IDM_VIEW_SUMMARY,                             false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_PROJECT_PANEL_1,                     false, false, false, L"Toggle Project Panel 1" },
-	{ VK_nullptr,    IDM_VIEW_PROJECT_PANEL_2,                     false, false, false, L"Toggle Project Panel 2" },
-	{ VK_nullptr,    IDM_VIEW_PROJECT_PANEL_3,                     false, false, false, L"Toggle Project Panel 3" },
-	{ VK_nullptr,    IDM_VIEW_FILEBROWSER,                         false, false, false, L"Toggle Folder as Workspace" },
-	{ VK_nullptr,    IDM_VIEW_DOC_MAP,                             false, false, false, L"Toggle Document Map" },
-	{ VK_nullptr,    IDM_VIEW_DOCLIST,                             false, false, false, L"Toggle Document List" },
-	{ VK_nullptr,    IDM_VIEW_FUNC_LIST,                           false, false, false, L"Toggle Function List" },
-	{ VK_nullptr,    IDM_VIEW_SWITCHTO_PROJECT_PANEL_1,            false, false, false, L"Switch to Project Panel 1" },
-	{ VK_nullptr,    IDM_VIEW_SWITCHTO_PROJECT_PANEL_2,            false, false, false, L"Switch to Project Panel 2" },
-	{ VK_nullptr,    IDM_VIEW_SWITCHTO_PROJECT_PANEL_3,            false, false, false, L"Switch to Project Panel 3" },
-	{ VK_nullptr,    IDM_VIEW_SWITCHTO_FILEBROWSER,                false, false, false, L"Switch to Folder as Workspace" },
-	{ VK_nullptr,    IDM_VIEW_SWITCHTO_FUNC_LIST,                  false, false, false, L"Switch to Function List" },
-	{ VK_nullptr,    IDM_VIEW_SWITCHTO_DOCLIST,                    false, false, false, L"Switch to Document List" },
-	{ VK_nullptr,    IDM_VIEW_TAB_COLOUR_NONE,                     false, false, false, L"Remove Tab Colour" },
-	{ VK_nullptr,    IDM_VIEW_TAB_COLOUR_1,                        false, false, false, L"Apply Tab Colour 1" },
-	{ VK_nullptr,    IDM_VIEW_TAB_COLOUR_2,                        false, false, false, L"Apply Tab Colour 2" },
-	{ VK_nullptr,    IDM_VIEW_TAB_COLOUR_3,                        false, false, false, L"Apply Tab Colour 3" },
-	{ VK_nullptr,    IDM_VIEW_TAB_COLOUR_4,                        false, false, false, L"Apply Tab Colour 4" },
-	{ VK_nullptr,    IDM_VIEW_TAB_COLOUR_5,                        false, false, false, L"Apply Tab Colour 5" },
-	{ VK_nullptr,    IDM_VIEW_SYNSCROLLV,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_SYNSCROLLH,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_SUMMARY,                             false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_PROJECT_PANEL_1,                     false, false, false, L"Toggle Project Panel 1" },
+	{ VK_NULL,    IDM_VIEW_PROJECT_PANEL_2,                     false, false, false, L"Toggle Project Panel 2" },
+	{ VK_NULL,    IDM_VIEW_PROJECT_PANEL_3,                     false, false, false, L"Toggle Project Panel 3" },
+	{ VK_NULL,    IDM_VIEW_FILEBROWSER,                         false, false, false, L"Toggle Folder as Workspace" },
+	{ VK_NULL,    IDM_VIEW_DOC_MAP,                             false, false, false, L"Toggle Document Map" },
+	{ VK_NULL,    IDM_VIEW_DOCLIST,                             false, false, false, L"Toggle Document List" },
+	{ VK_NULL,    IDM_VIEW_FUNC_LIST,                           false, false, false, L"Toggle Function List" },
+	{ VK_NULL,    IDM_VIEW_SWITCHTO_PROJECT_PANEL_1,            false, false, false, L"Switch to Project Panel 1" },
+	{ VK_NULL,    IDM_VIEW_SWITCHTO_PROJECT_PANEL_2,            false, false, false, L"Switch to Project Panel 2" },
+	{ VK_NULL,    IDM_VIEW_SWITCHTO_PROJECT_PANEL_3,            false, false, false, L"Switch to Project Panel 3" },
+	{ VK_NULL,    IDM_VIEW_SWITCHTO_FILEBROWSER,                false, false, false, L"Switch to Folder as Workspace" },
+	{ VK_NULL,    IDM_VIEW_SWITCHTO_FUNC_LIST,                  false, false, false, L"Switch to Function List" },
+	{ VK_NULL,    IDM_VIEW_SWITCHTO_DOCLIST,                    false, false, false, L"Switch to Document List" },
+	{ VK_NULL,    IDM_VIEW_TAB_COLOUR_NONE,                     false, false, false, L"Remove Tab Colour" },
+	{ VK_NULL,    IDM_VIEW_TAB_COLOUR_1,                        false, false, false, L"Apply Tab Colour 1" },
+	{ VK_NULL,    IDM_VIEW_TAB_COLOUR_2,                        false, false, false, L"Apply Tab Colour 2" },
+	{ VK_NULL,    IDM_VIEW_TAB_COLOUR_3,                        false, false, false, L"Apply Tab Colour 3" },
+	{ VK_NULL,    IDM_VIEW_TAB_COLOUR_4,                        false, false, false, L"Apply Tab Colour 4" },
+	{ VK_NULL,    IDM_VIEW_TAB_COLOUR_5,                        false, false, false, L"Apply Tab Colour 5" },
+	{ VK_NULL,    IDM_VIEW_SYNSCROLLV,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_SYNSCROLLH,                          false, false, false, nullptr },
 	{ VK_R,       IDM_EDIT_RTL,                                 true,  true,  false, nullptr },
 	{ VK_L,       IDM_EDIT_LTR,                                 true,  true,  false, nullptr },
-	{ VK_nullptr,    IDM_VIEW_MONITORING,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_VIEW_MONITORING,                          false, false, false, nullptr },
 
-	{ VK_nullptr,    IDM_FORMAT_ANSI,                              false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_AS_UTF_8,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_UTF_8,                             false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_UTF_16BE,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_UTF_16LE,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_ANSI,                              false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_AS_UTF_8,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_UTF_8,                             false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_UTF_16BE,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_UTF_16LE,                          false, false, false, nullptr },
 
-	{ VK_nullptr,    IDM_FORMAT_ISO_8859_6,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_WIN_1256,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_ISO_8859_13,                       false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_WIN_1257,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_ISO_8859_14,                       false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_ISO_8859_5,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_MAC_CYRILLIC,                      false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_KOI8R_CYRILLIC,                    false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_KOI8U_CYRILLIC,                    false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_WIN_1251,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_WIN_1250,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_437,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_720,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_737,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_775,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_850,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_852,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_855,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_857,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_858,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_860,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_861,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_862,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_863,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_865,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_866,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_DOS_869,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_BIG5,                              false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_GB2312,                            false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_ISO_8859_2,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_ISO_8859_7,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_WIN_1253,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_ISO_8859_8,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_WIN_1255,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_SHIFT_JIS,                         false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_EUC_KR,                            false, false, false, nullptr },
-	//{ VK_nullptr,    IDM_FORMAT_ISO_8859_10,                       false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_ISO_8859_15,                       false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_ISO_8859_4,                        false, false, false, nullptr },
-	//{ VK_nullptr,    IDM_FORMAT_ISO_8859_16,                       false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_ISO_8859_3,                        false, false, false, nullptr },
-	//{ VK_nullptr,    IDM_FORMAT_ISO_8859_11,                       false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_TIS_620,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_ISO_8859_9,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_WIN_1254,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_WIN_1252,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_ISO_8859_1,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_WIN_1258,                          false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_CONV2_ANSI,                        false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_CONV2_AS_UTF_8,                    false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_CONV2_UTF_8,                       false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_CONV2_UTF_16BE,                    false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORMAT_CONV2_UTF_16LE,                    false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_ISO_8859_6,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_WIN_1256,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_ISO_8859_13,                       false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_WIN_1257,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_ISO_8859_14,                       false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_ISO_8859_5,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_MAC_CYRILLIC,                      false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_KOI8R_CYRILLIC,                    false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_KOI8U_CYRILLIC,                    false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_WIN_1251,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_WIN_1250,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_437,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_720,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_737,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_775,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_850,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_852,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_855,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_857,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_858,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_860,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_861,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_862,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_863,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_865,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_866,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_DOS_869,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_BIG5,                              false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_GB2312,                            false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_ISO_8859_2,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_ISO_8859_7,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_WIN_1253,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_ISO_8859_8,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_WIN_1255,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_SHIFT_JIS,                         false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_EUC_KR,                            false, false, false, nullptr },
+	//{ VK_NULL,    IDM_FORMAT_ISO_8859_10,                       false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_ISO_8859_15,                       false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_ISO_8859_4,                        false, false, false, nullptr },
+	//{ VK_NULL,    IDM_FORMAT_ISO_8859_16,                       false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_ISO_8859_3,                        false, false, false, nullptr },
+	//{ VK_NULL,    IDM_FORMAT_ISO_8859_11,                       false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_TIS_620,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_ISO_8859_9,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_WIN_1254,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_WIN_1252,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_ISO_8859_1,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_WIN_1258,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_CONV2_ANSI,                        false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_CONV2_AS_UTF_8,                    false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_CONV2_UTF_8,                       false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_CONV2_UTF_16BE,                    false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORMAT_CONV2_UTF_16LE,                    false, false, false, nullptr },
 
-	{ VK_nullptr,    IDM_LANG_USER_DLG,                            false, false, false, nullptr },
-	{ VK_nullptr,    IDM_LANG_USER,                                false, false, false, nullptr },
-	{ VK_nullptr,    IDM_LANG_OPENUDLDIR,                          false, false, false, nullptr },
+	{ VK_NULL,    IDM_LANG_USER_DLG,                            false, false, false, nullptr },
+	{ VK_NULL,    IDM_LANG_USER,                                false, false, false, nullptr },
+	{ VK_NULL,    IDM_LANG_OPENUDLDIR,                          false, false, false, nullptr },
 
-	{ VK_nullptr,    IDM_SETTING_PREFERENCE,                       false, false, false, nullptr },
-	{ VK_nullptr,    IDM_LANGSTYLE_CONFIG_DLG,                     false, false, false, nullptr },
-	{ VK_nullptr,    IDM_SETTING_SHORTCUT_MAPPER,                  false, false, false, nullptr },
-	{ VK_nullptr,    IDM_SETTING_IMPORTPLUGIN,                     false, false, false, nullptr },
-	{ VK_nullptr,    IDM_SETTING_IMPORTSTYLETHEMES,                false, false, false, nullptr },
-	{ VK_nullptr,    IDM_SETTING_EDITCONTEXTMENU,                  false, false, false, nullptr },
+	{ VK_NULL,    IDM_SETTING_PREFERENCE,                       false, false, false, nullptr },
+	{ VK_NULL,    IDM_LANGSTYLE_CONFIG_DLG,                     false, false, false, nullptr },
+	{ VK_NULL,    IDM_SETTING_SHORTCUT_MAPPER,                  false, false, false, nullptr },
+	{ VK_NULL,    IDM_SETTING_IMPORTPLUGIN,                     false, false, false, nullptr },
+	{ VK_NULL,    IDM_SETTING_IMPORTSTYLETHEMES,                false, false, false, nullptr },
+	{ VK_NULL,    IDM_SETTING_EDITCONTEXTMENU,                  false, false, false, nullptr },
 
 	{ VK_R,       IDC_EDIT_TOGGLEMACRORECORDING,                true,  false, true,  L"Toggle macro recording" },
-	{ VK_nullptr,    IDM_MACRO_STARTRECORDINGMACRO,                false, false, false, nullptr },
-	{ VK_nullptr,    IDM_MACRO_STOPRECORDINGMACRO,                 false, false, false, nullptr },
+	{ VK_NULL,    IDM_MACRO_STARTRECORDINGMACRO,                false, false, false, nullptr },
+	{ VK_NULL,    IDM_MACRO_STOPRECORDINGMACRO,                 false, false, false, nullptr },
 	{ VK_P,       IDM_MACRO_PLAYBACKRECORDEDMACRO,              true,  false, true,  nullptr },
-	{ VK_nullptr,    IDM_MACRO_SAVECURRENTMACRO,                   false, false, false, nullptr },
-	{ VK_nullptr,    IDM_MACRO_RUNMULTIMACRODLG,                   false, false, false, nullptr },
+	{ VK_NULL,    IDM_MACRO_SAVECURRENTMACRO,                   false, false, false, nullptr },
+	{ VK_NULL,    IDM_MACRO_RUNMULTIMACRODLG,                   false, false, false, nullptr },
 
 	{ VK_F5,      IDM_EXECUTE,                                  false, false, false, nullptr },
 
-	{ VK_nullptr,    IDM_WINDOW_WINDOWS,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_WINDOW_SORT_FN_ASC,                       false, false, false, L"Sort by Name A to Z" },
-	{ VK_nullptr,    IDM_WINDOW_SORT_FN_DSC,                       false, false, false, L"Sort by Name Z to A" },
-	{ VK_nullptr,    IDM_WINDOW_SORT_FP_ASC,                       false, false, false, L"Sort by Path A to Z" },
-	{ VK_nullptr,    IDM_WINDOW_SORT_FP_DSC,                       false, false, false, L"Sort by Path Z to A" },
-	{ VK_nullptr,    IDM_WINDOW_SORT_FT_ASC,                       false, false, false, L"Sort by Type A to Z" },
-	{ VK_nullptr,    IDM_WINDOW_SORT_FT_DSC,                       false, false, false, L"Sort by Type Z to A" },
-	{ VK_nullptr,    IDM_WINDOW_SORT_FS_ASC,                       false, false, false, L"Sort by Content Length Ascending" },
-	{ VK_nullptr,    IDM_WINDOW_SORT_FS_DSC,                       false, false, false, L"Sort by Content Length Descending" },
+	{ VK_NULL,    IDM_WINDOW_WINDOWS,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_WINDOW_SORT_FN_ASC,                       false, false, false, L"Sort by Name A to Z" },
+	{ VK_NULL,    IDM_WINDOW_SORT_FN_DSC,                       false, false, false, L"Sort by Name Z to A" },
+	{ VK_NULL,    IDM_WINDOW_SORT_FP_ASC,                       false, false, false, L"Sort by Path A to Z" },
+	{ VK_NULL,    IDM_WINDOW_SORT_FP_DSC,                       false, false, false, L"Sort by Path Z to A" },
+	{ VK_NULL,    IDM_WINDOW_SORT_FT_ASC,                       false, false, false, L"Sort by Type A to Z" },
+	{ VK_NULL,    IDM_WINDOW_SORT_FT_DSC,                       false, false, false, L"Sort by Type Z to A" },
+	{ VK_NULL,    IDM_WINDOW_SORT_FS_ASC,                       false, false, false, L"Sort by Content Length Ascending" },
+	{ VK_NULL,    IDM_WINDOW_SORT_FS_DSC,                       false, false, false, L"Sort by Content Length Descending" },
 
-	{ VK_nullptr,    IDM_CMDLINEARGUMENTS,                         false, false, false, nullptr },
-	{ VK_nullptr,    IDM_HOMESWEETHOME,                            false, false, false, nullptr },
-	{ VK_nullptr,    IDM_PROJECTPAGE,                              false, false, false, nullptr },
-	{ VK_nullptr,    IDM_ONLINEDOCUMENT,                           false, false, false, nullptr },
-	{ VK_nullptr,    IDM_FORUM,                                    false, false, false, nullptr },
-//	{ VK_nullptr,    IDM_ONLINESUPPORT,                            false, false, false, nullptr },
-//	{ VK_nullptr,    IDM_PLUGINSHOME,                              false, false, false, nullptr },
+	{ VK_NULL,    IDM_CMDLINEARGUMENTS,                         false, false, false, nullptr },
+	{ VK_NULL,    IDM_HOMESWEETHOME,                            false, false, false, nullptr },
+	{ VK_NULL,    IDM_PROJECTPAGE,                              false, false, false, nullptr },
+	{ VK_NULL,    IDM_ONLINEDOCUMENT,                           false, false, false, nullptr },
+	{ VK_NULL,    IDM_FORUM,                                    false, false, false, nullptr },
+//	{ VK_NULL,    IDM_ONLINESUPPORT,                            false, false, false, nullptr },
+//	{ VK_NULL,    IDM_PLUGINSHOME,                              false, false, false, nullptr },
 
 	// The following two commands are not in menu if (nppGUI._doesExistUpdater == 0).
 	// They cannot be derived from menu then, only for this reason the text is specified here.
 	// In localized environments, the text comes preferably from xml Menu/Main/Commands.
-	{ VK_nullptr,    IDM_UPDATE_NPP,                               false, false, false, L"Update Notepad++" },
-	{ VK_nullptr,    IDM_CONFUPDATERPROXY,                         false, false, false, L"Set Updater Proxy..." },
-	{ VK_nullptr,    IDM_DEBUGINFO,                                false, false, false, nullptr },
+	{ VK_NULL,    IDM_UPDATE_NPP,                               false, false, false, L"Update Notepad++" },
+	{ VK_NULL,    IDM_CONFUPDATERPROXY,                         false, false, false, L"Set Updater Proxy..." },
+	{ VK_NULL,    IDM_DEBUGINFO,                                false, false, false, nullptr },
 	{ VK_F1,      IDM_ABOUT,                                    false, false, false, nullptr }
 };
 
@@ -652,8 +652,6 @@ static constexpr ScintillaKeyDefinition scintKeyDefs[]
 
 #define SESSION_BACKUP_EXT L".inCaseOfCorruption.bak"
 
-using PGNSI = void (WINAPI*)(LPSYSTEM_INFO);
-
 static int strVal(const char* str, int base)
 {
 	if (!str) return -1;
@@ -771,7 +769,7 @@ static void setBoolAttribute(NppXml::Element& elem, const char* name, bool isTru
 [[nodiscard]] static bool getBoolChildTextNode(const NppXml::Element& elemParent, bool defaultVal = false, const std::array<const char*, 2>& strs2cmp = STR_BOOL_YESNO)
 {
 	NppXml::Node n = NppXml::firstChild(elemParent);
-	if (n)
+	if (!n.isNull())
 	{
 		const char* val = NppXml::value(n);
 		if (val)
@@ -788,7 +786,7 @@ static void setBoolAttribute(NppXml::Element& elem, const char* name, bool isTru
 [[nodiscard]] static XmlAttrResult getResultChildTextNode(const NppXml::Element& elemParent, const std::array<const char*, 2>& strs2cmp = STR_BOOL_YESNO)
 {
 	NppXml::Node n = NppXml::firstChild(elemParent);
-	if (n)
+	if (!n.isNull())
 	{
 		const char* val = NppXml::value(n);
 		if (val)
@@ -854,10 +852,10 @@ void cutStringBy(const wchar_t* str2cut, std::vector<std::wstring>& patternVect,
 
 std::wstring LocalizationSwitcher::getLangFromXmlFileName(const wchar_t* fn)
 {
-	for (const auto& locDef : localizationDefs)
+	for (const auto& locDef : _localizationList)
 	{
-		if (wcscmp(fn, locDef._xmlFileName) == 0)
-			return locDef._langName;
+		if (wcscmp(fn, locDef.first.c_str()) == 0)
+			return locDef.second;
 	}
 	return L"";
 }
@@ -890,7 +888,7 @@ bool LocalizationSwitcher::switchToLang(const wchar_t *lang2switch) const
 	if (langPath.empty())
 		return false;
 
-	return // CopyFileW replaced(langPath.c_str(), _nativeLangPath.c_str(), false)  != false;
+	return QFile::copy(QString::fromStdWString(langPath), QString::fromStdWString(_nativeLangPath));
 }
 
 std::wstring ThemeSwitcher::getThemeFromXmlFileName(const wchar_t* xmlFullPath)
@@ -1036,114 +1034,23 @@ bool DynamicMenu::createMenu() const
 
 winVer NppParameters::getWindowsVersion()
 {
-	// OSVERSIONINFOEX osvi // stubbed for Qt6;
-	// SYSTEM_INFO si // stubbed for Qt6;
-	PGNSI pGNSI;
-
-	// ZeroMemory(&si, sizeof(SYSTEM_INFO));
-	// ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
-
-	// osvi.dwOSVersionInfoSize = ...;
-	const bool bOsVersionInfoEx = false; // Win32 version detection stubbed
-	if (!bOsVersionInfoEx)
-	{
-		osvi.dwOSVersionInfoSize = sizeof (OSVERSIONINFO);
-		if (false) // GetVersionExW stubbed
-			return WV_UNKNOWN;
-	}
-
-	pGNSI = reinterpret_cast<PGNSI>(// GetProcAddress replacednullptr, "GetNativeSystemInfo"));
-	if (pGNSI != nullptr)
-		// pGNSI stubbed
-		_platForm = PF_X64;
-	else
-		// GetSystemInfo stubbed
-		_platForm = PF_X64;
-
-	switch (si.wProcessorArchitecture)
-	{
-	case PF_IA64:
-		_platForm = PF_IA64;
-		break;
-
-	case PF_X64:
-		_platForm = PF_X64;
-		break;
-
-	case PF_X86:
-		_platForm = PF_X86;
-		break;
-
-	case PF_ARM64:
+	// On Linux, we cannot detect Windows versions. Use QSysInfo for platform detection.
+#if defined(Q_OS_WIN)
+	return WV_WIN10; // Windows detection not implemented in this stub
+#elif defined(Q_OS_LINUX)
+	_platForm = PF_X64;
+	const auto arch = QSysInfo::currentCpuArchitecture();
+	if (arch == "arm64")
 		_platForm = PF_ARM64;
-		break;
-
-	default:
-		_platForm = PF_UNKNOWN;
-	}
-
-   switch (osvi.dwPlatformId)
-   {
-		case 0 /* VER_PLATFORM_WIN32_NT stubbed */:
-		{
-			if (osvi.dwMajorVersion == 10 && osvi.dwMinorVersion == 0 && osvi.dwBuildNumber >= 22000)
-				return WV_WIN11;
-
-			if (osvi.dwMajorVersion == 10 && osvi.dwMinorVersion == 0)
-				return WV_WIN10;
-
-			if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 3)
-				return WV_WIN81;
-
-			if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 2)
-				return WV_WIN8;
-
-			if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 1)
-				return WV_WIN7;
-
-			if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 0)
-				return WV_VISTA;
-
-			if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 2)
-			{
-				if (osvi.wProductType == 1 && si.wProcessorArchitecture==PF_X64)
-					return WV_XPX64;
-				return WV_S2003;
-			}
-
-			if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 1)
-				return WV_XP;
-
-			if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 0)
-				return WV_W2K;
-
-			if (osvi.dwMajorVersion <= 4)
-				return WV_NT;
-			break;
-		}
-
-		// Test for the Windows Me/98/95.
-		case 0 /* VER_PLATFORM_WIN32_WINDOWS stubbed */:
-		{
-			if (osvi.dwMajorVersion == 4 && osvi.dwMinorVersion == 0)
-				return WV_95;
-
-			if (osvi.dwMajorVersion == 4 && osvi.dwMinorVersion == 10)
-				return WV_98;
-
-			if (osvi.dwMajorVersion == 4 && osvi.dwMinorVersion == 90)
-				return WV_ME;
-			break;
-		}
-
-		case VER_PLATFORM_WIN32s:
-			return WV_WIN32S;
-
-		default:
-			return WV_UNKNOWN;
-   }
-
-   return WV_UNKNOWN;
+	else if (arch == "x86_64")
+		_platForm = PF_X64;
+	else if (arch == "i386" || arch == "x86")
+		_platForm = PF_X86;
+	return WV_UNKNOWN; // Not a Windows system
+#else
+	_platForm = PF_UNKNOWN;
+	return WV_UNKNOWN;
+#endif
 }
 
 NppParameters::NppParameters()
@@ -1178,7 +1085,7 @@ NppParameters::NppParameters()
 	std::wstring notepadStylePath(_nppPath);
 	pathAppend(notepadStylePath, notepadStyleFile);
 
-	_asNotepadStyle = QFileInfo(QString::fromWStdString(notepadStylePath)).exists();
+	_asNotepadStyle = QFileInfo(QString::fromStdWString(notepadStylePath)).exists();
 
 	//Load initial accelerator key definitions
 	initMenuKeys();
@@ -1234,7 +1141,7 @@ bool NppParameters::reloadStylers(const wchar_t* stylePath)
 	{
 		NppXml::Document externalLexerDoc = getExternalLexerDoc()->at(i)._doc;
 		NppXml::Element root = NppXml::firstChildElement(externalLexerDoc, "NotepadPlus");
-		if (root)
+		if (!root.isNull())
 			feedStylerArray(root);
 	}
 	return true;
@@ -1246,11 +1153,11 @@ bool NppParameters::reloadLang()
 	std::wstring nativeLangPath(_localizationSwitcher._nativeLangPath);
 
 	// if "nativeLang.xml" does not exist, use npp path
-	if (!QFileInfo(nativeLangPath.c_str()))
+	if (!QFileInfo(QString::fromStdWString(nativeLangPath)))
 	{
 		nativeLangPath = _nppPath;
 		pathAppend(nativeLangPath, std::wstring(L"nativeLang.xml"));
-		if (!QFileInfo(nativeLangPath.c_str()))
+		if (!QFileInfo(QString::fromStdWString(nativeLangPath)))
 			return false;
 	}
 
@@ -1306,7 +1213,7 @@ bool NppParameters::load()
 	pathAppend(localConfPath, localConfFile);
 
 	// Test if doLocalConf.xml exists
-	_isLocal = (QFileInfo(localConfPath.c_str()) == true);
+	_isLocal = (QFileInfo(QString::fromStdWString(localConfPath)) == true);
 
 	// Under vista and windows 7, the usage of doLocalConf.xml is not allowed
 	// if Notepad++ is installed in "program files" directory, because of UAC
@@ -1377,7 +1284,7 @@ bool NppParameters::load()
 	//
 	// the 2nd priority: Cloud Choice Path
 	//
-	_isCloud = QFileInfo(cloudChoicePath.c_str());
+	_isCloud = QFileInfo(QString::fromStdWString(cloudChoicePath));
 	if (_isCloud)
 	{
 		// Read cloud choice
@@ -1432,31 +1339,26 @@ bool NppParameters::load()
 	pathAppend(modelLangsPath, L"langs.model.xml");
 
 	bool doRecover = false;
-	if (QFileInfo(langs_xml_path.c_str()))
+	QFileInfo fi_langs(QString::fromStdWString(langs_xml_path));
+	if (!fi_langs.exists())
 	{
-		WIN32_FILE_ATTRIBUTE_DATA attributes{};
-		attributes.dwFileAttributes = 0;
-		if (QFileInfo fi_langs(QString::fromWCharArray(langs_xml_path.c_str())) != 0)
+		doRecover = true;
+	}
+	else if (fi_langs.size() == 0)
+	{
+		if (_pNativeLangSpeaker)
 		{
-			if (fi_langs.size() == 0)
-			{
-				if (_pNativeLangSpeaker)
-				{
-					doRecover = _pNativeLangSpeaker->messageBox("LoadLangsFailed",
-						nullptr,
-						L"Load langs.xml failed!\rDo you want to recover your langs.xml?",
-						L"Configurator",
-						QMessageBox::Yes | QMessageBox::No);
-				}
-				else
-				{
-					doRecover = QMessageBox::(nullptr, L"Load langs.xml failed!\rDo you want to recover your langs.xml?", L"Configurator", QMessageBox::Yes | QMessageBox::No);
-				}
-			}
+			doRecover = _pNativeLangSpeaker->messageBox("LoadLangsFailed",
+				nullptr,
+				L"Load langs.xml failed!\rDo you want to recover your langs.xml?",
+				L"Configurator",
+				QMessageBox::Yes | QMessageBox::No);
+		}
+		else
+		{
+			doRecover = QMessageBox(nullptr, L"Load langs.xml failed!\rDo you want to recover your langs.xml?", L"Configurator", QMessageBox::Yes | QMessageBox::No);
 		}
 	}
-	else
-		doRecover = true;
 
 	if (doRecover)
 	{
@@ -1498,7 +1400,7 @@ bool NppParameters::load()
 	std::wstring srcConfigPath(_nppPath);
 	pathAppend(srcConfigPath, L"config.model.xml");
 
-	if (!QFileInfo(configPath.c_str()))
+	if (!QFileInfo(QString::fromStdWString(configPath)))
 		// CopyFile replacedsrcConfigPath.c_str(), configPath.c_str(), false);
 
 	_xmlUserDoc._path = configPath;
@@ -1521,14 +1423,14 @@ bool NppParameters::load()
 	_stylerPath = _userPath;
 	pathAppend(_stylerPath, L"stylers.xml");
 
-	if (!QFileInfo(_stylerPath.c_str()))
+	if (!QFileInfo(QString::fromStdWString(_stylerPath)))
 	{
 		std::wstring srcStylersPath(_nppPath);
 		pathAppend(srcStylersPath, L"stylers.model.xml");
 		// CopyFile replacedsrcStylersPath.c_str(), _stylerPath.c_str(), true);
 	}
 
-	if (_nppGUI._themeName.empty() || (!QFileInfo(_nppGUI._themeName.c_str())))
+	if (_nppGUI._themeName.empty() || (!QFileInfo(QString::fromStdWString(_nppGUI._themeName))))
 		_nppGUI._themeName.assign(_stylerPath);
 
 	_pXmlUserStylerDoc._path = _nppGUI._themeName;
@@ -1632,7 +1534,7 @@ bool NppParameters::load()
 	}
 	else // use %appdata% location, or (if absence then) npp installed location
 	{
-		if (!QFileInfo(nativeLangPath.c_str()))
+		if (!QFileInfo(QString::fromStdWString(nativeLangPath)))
 		{
 			nativeLangPath = _nppPath;
 			pathAppend(nativeLangPath, L"nativeLang.xml");
@@ -1669,11 +1571,11 @@ bool NppParameters::load()
 	_shortcutsPath = _userPath;
 	pathAppend(_shortcutsPath, SHORTCUTSXML_FILENAME);
 
-	if (!QFileInfo(_shortcutsPath.c_str()))
+	if (!QFileInfo(QString::fromStdWString(_shortcutsPath)))
 	{
 		std::wstring srcShortcutsPath(_nppPath);
 		pathAppend(srcShortcutsPath, SHORTCUTSXML_MODEL_FILENAME);
-		if (QFileInfo(srcShortcutsPath.c_str()))
+		if (QFileInfo(QString::fromStdWString(srcShortcutsPath)))
 			// CopyFile replacedsrcShortcutsPath.c_str(), _shortcutsPath.c_str(), true);
 		else
 			generateXmlFromScratch(_shortcutsPath.c_str(), SHORTCUT_XML_CONTENT);
@@ -1704,12 +1606,12 @@ bool NppParameters::load()
 	_contextMenuPath = _userPath;
 	pathAppend(_contextMenuPath, CONTEXTMENUXML_FILENAME);
 
-	if (!QFileInfo(_contextMenuPath.c_str()))
+	if (!QFileInfo(QString::fromStdWString(_contextMenuPath)))
 	{
 		std::wstring srcContextMenuPath(_nppPath);
 		pathAppend(srcContextMenuPath, CONTEXTMENUXML_MODEL_FILENAME);
 
-		if (QFileInfo(srcContextMenuPath.c_str()))
+		if (QFileInfo(QString::fromStdWString(srcContextMenuPath)))
 			// CopyFile replacedsrcContextMenuPath.c_str(), _contextMenuPath.c_str(), true);
 		else
 			generateXmlFromScratch(_contextMenuPath.c_str(), CONTEXTMENU_XML_CONTENT);
@@ -1759,10 +1661,10 @@ bool NppParameters::load()
 		{
 			std::wstring sessionInCaseOfCorruption_bak = _sessionPath;
 			sessionInCaseOfCorruption_bak += SESSION_BACKUP_EXT;
-			if (QFileInfo(sessionInCaseOfCorruption_bak.c_str()))
+			if (QFileInfo(QString::fromStdWString(sessionInCaseOfCorruption_bak)))
 			{
 				bool bFileSwapOk = false;
-				if (QFileInfo(_sessionPath.c_str()))
+				if (QFileInfo(QString::fromStdWString(_sessionPath)))
 				{
 					// an invalid session.xml file exists
 					bFileSwapOk = ::ReplaceFile(_sessionPath.c_str(), sessionInCaseOfCorruption_bak.c_str(), nullptr,
@@ -1817,12 +1719,12 @@ bool NppParameters::load()
 	issueFileName = nppLogNetworkDriveIssue;
 	issueFileName += L".xml";
 	pathAppend(filePath, issueFileName);
-	_doNppLogNetworkDriveIssue = QFileInfo(filePath.c_str());
+	_doNppLogNetworkDriveIssue = QFileInfo(QString::fromStdWString(filePath));
 	if (!_doNppLogNetworkDriveIssue)
 	{
 		filePath2 = _userPath;
 		pathAppend(filePath2, issueFileName);
-		_doNppLogNetworkDriveIssue = QFileInfo(filePath2.c_str());
+		_doNppLogNetworkDriveIssue = QFileInfo(QString::fromStdWString(filePath2));
 	}
 
 	//-------------------------------------------------------------//
@@ -1834,12 +1736,12 @@ bool NppParameters::load()
 	filePath = _nppPath;
 	std::wstring noRegForOSAppRestartTrigger = L"noRestartAutomatically.xml";
 	pathAppend(filePath, noRegForOSAppRestartTrigger);
-	_isRegForOSAppRestartDisabled = QFileInfo(filePath.c_str());
+	_isRegForOSAppRestartDisabled = QFileInfo(QString::fromStdWString(filePath));
 	if (!_isRegForOSAppRestartDisabled)
 	{
 		filePath = _userPath;
 		pathAppend(filePath, noRegForOSAppRestartTrigger);
-		_isRegForOSAppRestartDisabled = QFileInfo(filePath.c_str());
+		_isRegForOSAppRestartDisabled = QFileInfo(QString::fromStdWString(filePath));
 	}
 
 	//-------------------------------------------------------------//
@@ -1850,7 +1752,7 @@ bool NppParameters::load()
 	filePath = _nppPath;
 	std::wstring disableNppAutoUpdateFileName = L"disableNppAutoUpdate.xml";
 	pathAppend(filePath, disableNppAutoUpdateFileName);
-	_isNppAutoUpdateDisabled = QFileInfo(filePath.c_str());
+	_isNppAutoUpdateDisabled = QFileInfo(QString::fromStdWString(filePath));
 
 	return isAllLoaded;
 }
@@ -3947,7 +3849,7 @@ void NppParameters::removeCloudChoice() const
 	std::wstring cloudChoicePath = getSettingsFolder();
 
 	cloudChoicePath += L"\\cloud\\choice";
-	if (QFileInfo(cloudChoicePath.c_str()))
+	if (QFileInfo(QString::fromStdWString(cloudChoicePath)))
 	{
 		QFile::remove(cloudChoicePath.c_str());
 	}
@@ -3988,7 +3890,7 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 	// config.xml
 	std::wstring cloudConfigPath = cloudSettingsPath;
 	pathAppend(cloudConfigPath, L"config.xml");
-	if (!QFileInfo(cloudConfigPath.c_str()) && _xmlUserDoc._doc)
+	if (!QFileInfo(QString::fromStdWString(cloudConfigPath)) && _xmlUserDoc._doc)
 	{
 		isOK = NppXml::saveFile(_xmlUserDoc._doc, cloudConfigPath.c_str());
 		if (!isOK)
@@ -3998,7 +3900,7 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 	// stylers.xml
 	std::wstring cloudStylersPath = cloudSettingsPath;
 	pathAppend(cloudStylersPath, L"stylers.xml");
-	if (!QFileInfo(cloudStylersPath.c_str()) && _pXmlUserStylerDoc._doc)
+	if (!QFileInfo(QString::fromStdWString(cloudStylersPath)) && _pXmlUserStylerDoc._doc)
 	{
 		isOK = NppXml::saveFile(_pXmlUserStylerDoc._doc, cloudStylersPath.c_str());
 		if (!isOK)
@@ -4008,7 +3910,7 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 	// langs.xml
 	std::wstring cloudLangsPath = cloudSettingsPath;
 	pathAppend(cloudLangsPath, L"langs.xml");
-	if (!QFileInfo(cloudLangsPath.c_str()) && _pXmlDoc._doc)
+	if (!QFileInfo(QString::fromStdWString(cloudLangsPath)) && _pXmlDoc._doc)
 	{
 		isOK = NppXml::saveFile(_pXmlDoc._doc, cloudLangsPath.c_str());
 		if (!isOK)
@@ -4018,7 +3920,7 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 	// userDefineLang.xml
 	std::wstring cloudUserLangsPath = cloudSettingsPath;
 	pathAppend(cloudUserLangsPath, L"userDefineLang.xml");
-	if (!QFileInfo(cloudUserLangsPath.c_str()) && _pXmlUserLangDoc._doc)
+	if (!QFileInfo(QString::fromStdWString(cloudUserLangsPath)) && _pXmlUserLangDoc._doc)
 	{
 		isOK = NppXml::saveFile(_pXmlUserLangDoc._doc, cloudUserLangsPath.c_str());
 		if (!isOK)
@@ -4028,7 +3930,7 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 	// shortcuts.xml
 	std::wstring cloudShortcutsPath = cloudSettingsPath;
 	pathAppend(cloudShortcutsPath, SHORTCUTSXML_FILENAME);
-	if (!QFileInfo(cloudShortcutsPath.c_str()) && _pXmlShortcutDoc)
+	if (!QFileInfo(QString::fromStdWString(cloudShortcutsPath)) && _pXmlShortcutDoc)
 	{
 		isOK = NppXml::saveFileShortcut(_pXmlShortcutDoc, cloudShortcutsPath.c_str());
 		if (!isOK)
@@ -4038,7 +3940,7 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 	// contextMenu.xml
 	std::wstring cloudContextMenuPath = cloudSettingsPath;
 	pathAppend(cloudContextMenuPath, L"contextMenu.xml");
-	if (!QFileInfo(cloudContextMenuPath.c_str()) && _pXmlContextMenuDoc)
+	if (!QFileInfo(QString::fromStdWString(cloudContextMenuPath)) && _pXmlContextMenuDoc)
 	{
 		isOK = NppXml::saveFile(_pXmlContextMenuDoc, cloudContextMenuPath.c_str());
 		if (!isOK)
@@ -4048,7 +3950,7 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 	// nativeLang.xml
 	std::wstring cloudNativeLangPath = cloudSettingsPath;
 	pathAppend(cloudNativeLangPath, L"nativeLang.xml");
-	if (!QFileInfo(cloudNativeLangPath.c_str()) && _pXmlNativeLangDoc != nullptr)
+	if (!QFileInfo(QString::fromStdWString(cloudNativeLangPath)) && _pXmlNativeLangDoc != nullptr)
 	{
 		isOK = NppXml::saveFile(_pXmlNativeLangDoc, cloudNativeLangPath.c_str());
 		if (!isOK)
@@ -4111,7 +4013,7 @@ void NppParameters::writeDefaultUDL()
 	}
 	else if (deleteAll)
 	{
-		if (QFileInfo(_userDefineLangPath.c_str()))
+		if (QFileInfo(QString::fromStdWString(_userDefineLangPath)))
 		{
 			QFile::remove(_userDefineLangPath.c_str());
 		}
@@ -4129,7 +4031,7 @@ void NppParameters::writeNonDefaultUDL()
 			{
 				// no need to save, delete file
 				const std::wstring& docFilePath = udl._path;
-				if (!docFilePath.empty() && QFileInfo(docFilePath.c_str()))
+				if (!docFilePath.empty() && QFileInfo(QString::fromStdWString(docFilePath)))
 				{
 					QFile::remove(docFilePath.c_str());
 				}
@@ -5453,7 +5355,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			_nppGUI._tbIconInfo._tbUseMono = getBoolAttribute(childNode, "fluentMono", _nppGUI._tbIconInfo._tbUseMono);
 
 			NppXml::Node n = NppXml::firstChild(childNode);
-			if (n)
+			if (!n.isNull())
 			{
 				const char* val = NppXml::value(n);
 				if (val)
@@ -5545,7 +5447,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		else if (std::strcmp(nm, "Auto-detection") == 0)
 		{
 			NppXml::Node n = NppXml::firstChild(childNode);
-			if (n)
+			if (!n.isNull())
 			{
 				const char* val = NppXml::value(n);
 				if (val)
@@ -5575,7 +5477,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		else if (std::strcmp(nm, "TrayIcon") == 0)
 		{
 			NppXml::Node n = NppXml::firstChild(childNode);
-			if (n)
+			if (!n.isNull())
 			{
 				const char* val = NppXml::value(n);
 				if (val)
@@ -5618,7 +5520,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			std::strcmp(nm, "MaitainIndent") == 0) // typo - kept for the compatibility reason
 		{
 			NppXml::Node n = NppXml::firstChild(childNode);
-			if (n)
+			if (!n.isNull())
 			{
 				const char* val = NppXml::value(n);
 				if (val)
@@ -5651,7 +5553,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		else if (std::strcmp(nm, "SmartHighLight") == 0)
 		{
 			NppXml::Node n = NppXml::firstChild(childNode);
-			if (n)
+			if (!n.isNull())
 			{
 				_nppGUI._enableSmartHilite = getBoolChildTextNode(childNode, _nppGUI._enableSmartHilite);
 
@@ -5665,7 +5567,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		else if (std::strcmp(nm, "TagsMatchHighLight") == 0)
 		{
 			NppXml::Node n = NppXml::firstChild(childNode);
-			if (n)
+			if (!n.isNull())
 			{
 				_nppGUI._enableTagsMatchHilite = getBoolChildTextNode(childNode, _nppGUI._enableTagsMatchHilite);
 				_nppGUI._enableTagAttrsHilite = getBoolAttribute(childNode, "TagAttrHighLight", _nppGUI._enableTagAttrsHilite);
@@ -5686,7 +5588,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		else if (std::strcmp(nm, "URL") == 0)
 		{
 			NppXml::Node n = NppXml::firstChild(childNode);
-			if (n)
+			if (!n.isNull())
 			{
 				const char* val = NppXml::value(n);
 				if (val)
@@ -5714,7 +5616,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		else if (std::strcmp(nm, "uriCustomizedSchemes") == 0)
 		{
 			NppXml::Node n = NppXml::firstChild(childNode);
-			if (n)
+			if (!n.isNull())
 			{
 				const char* val = NppXml::value(n);
 				if (val)
@@ -5730,7 +5632,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		else if (std::strcmp(nm, "ScintillaViewsSplitter") == 0)
 		{
 			NppXml::Node n = NppXml::firstChild(childNode);
-			if (n)
+			if (!n.isNull())
 			{
 				const char* val = NppXml::value(n);
 				if (val)
@@ -6197,7 +6099,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		else if (std::strcmp(nm, "sessionExt") == 0)
 		{
 			NppXml::Node n = NppXml::firstChild(childNode);
-			if (n)
+			if (!n.isNull())
 			{
 				const char* val = NppXml::value(n);
 				if (val)
@@ -6208,7 +6110,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		else if (std::strcmp(nm, "workspaceExt") == 0)
 		{
 			NppXml::Node n = NppXml::firstChild(childNode);
-			if (n)
+			if (!n.isNull())
 			{
 				const char* val = NppXml::value(n);
 				if (val)
@@ -6219,7 +6121,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		else if (std::strcmp(nm, "noUpdate") == 0)
 		{
 			NppXml::Node n = NppXml::firstChild(childNode);
-			if (n)
+			if (!n.isNull())
 			{
 				using enum NppGUI::AutoUpdateMode;
 				const char* val = NppXml::value(n);
@@ -6482,7 +6384,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 					pathAppend(themePath, L"themes\\");
 					pathAppend(themePath, xmlFileName);
 
-					if (!isLocalOnly && !QFileInfo(themePath.c_str()))
+					if (!isLocalOnly && !QFileInfo(QString::fromStdWString(themePath)))
 					{
 						themePath = _nppPath;
 						pathAppend(themePath, L"themes\\");
@@ -6494,14 +6396,14 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 					themePath = isLocalOnly ? _nppPath : _userPath;
 					pathAppend(themePath, L"stylers.xml");
 
-					if (!isLocalOnly && !QFileInfo(themePath.c_str()))
+					if (!isLocalOnly && !QFileInfo(QString::fromStdWString(themePath)))
 					{
 						themePath = _nppPath;
 						pathAppend(themePath, L"stylers.xml");
 					}
 				}
 
-				if (QFileInfo(themePath.c_str()))
+				if (QFileInfo(QString::fromStdWString(themePath)))
 				{
 					_nppGUI._themeName.assign(themePath);
 				}

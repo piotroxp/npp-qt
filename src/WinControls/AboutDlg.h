@@ -33,6 +33,7 @@ public:
     intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam) override;
 
 private:
+    void applyDarkMode();
     void updateIcon();
 
     QIcon _chameleonIcon;

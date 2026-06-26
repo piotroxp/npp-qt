@@ -54,6 +54,8 @@ public:
     void setFrostColor(const QColor& col);
     static void setFocusColorStatic(const QColor& col);
     static void setFrostColorStatic(const QColor& col);
+    static QColor focusColorStatic() { return _focusColor; }
+    static QColor frostColorStatic() { return _frostColor; }
 
     // Zone drawing (mirrors ViewZoneDlg::drawZone)
     void drawZone(int higherY, int lowerY);

@@ -140,7 +140,11 @@ ClipboardDataInfo ClipboardHistoryPanel::getClipboadDataFromSystem()
 
     if (mimeData->hasText()) {
         QString text = mimeData->text();
-        QByteArray utf16 = text.utf16(); // UTF-16LE like Win32 CF_UNICODETEXT
+        // Convert QString to UTF-16LE bytes (like Win32 CF_UNICODETEXT)
+        QByteArray utf16;
+        utf16.reserve(text.length() * 2);
+        const auto* utf16Ptr = reinterpret_cast<const char*>(text.utf16());
+        utf16 = QByteArray(utf16Ptr, text.length() * 2);
         for (int i = 0; i < utf16.size(); ++i) {
             clipboardData._data.append(static_cast<unsigned char>(utf16[i]));
         }
@@ -188,7 +192,7 @@ void ClipboardHistoryPanel::addToClipboadHistory(const ClipboardDataInfo& cbd)
     } else {
         // Treat as UTF-16LE (like Win32 CF_UNICODETEXT)
         displayStr = QString::fromUtf16(
-            reinterpret_cast<const ushort*>(sa.getPointer()),
+            reinterpret_cast<const char16_t*>(sa.getPointer()),
             sa.getLength() / 2
         );
     }

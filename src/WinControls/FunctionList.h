@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <vector>
 #include <QWidget>
 #include <QTreeWidget>
 #include <QLineEdit>
@@ -21,6 +22,7 @@
 #include <QPainter>
 #include <QStyleOption>
 #include <QStyle>
+#include <vector>
 
 struct TreeStateNode;
 struct SearchParameters;
@@ -119,6 +121,7 @@ public slots:
     void onPreferencesClicked();
     void onInitialSortAction();
     void onSearchTextChanged(const QString& text);
+    void onEditorUiChanged();
 
 signals:
     void closeRequested();
@@ -172,7 +175,7 @@ private:
     QString _preferenceTipStr = QStringLiteral("Preferences");
 
     // Parsed function info
-    QVector<foundInfo> _foundFuncInfos;
+    std::vector<foundInfo> _foundFuncInfos;
 
     // Stored string pointers (for LPARAM compatibility)
     QVector<QString*> _posStrs;

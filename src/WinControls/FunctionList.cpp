@@ -6,6 +6,7 @@
 #include "functionParser.h"
 #include "Window.h"
 #include "NppDarkMode.h"
+#include "NppSciCompat.h"
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -19,7 +20,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QFile>
-#include <QTextCodec>
+#include <vector>
 
 // =============================================================================
 // FunctionListTreeWidget
@@ -72,7 +73,7 @@ void FunctionListTreeWidget::removeAllItems() {
 
 void FunctionListTreeWidget::removeItem(QTreeWidgetItem* item) {
     if (item) {
-        delete takeChild(item->parent() ? item->parent()->indexOfChild(item) : indexOfTopLevelItem(item));
+        delete item;
     }
 }
 
@@ -293,8 +294,12 @@ void FunctionListPanel::onEditorUiChanged()
     if (_searchEdit && _searchEdit->text().isEmpty())
         reload();
 }
+
+void FunctionListPanel::cleanup() {
     for (QString* s : _posStrs)
         delete s;
+    _posStrs.clear();
+}
 }
 
 void FunctionListPanel::init(QApplication* app, QWidget* parent) {
@@ -470,8 +475,10 @@ void FunctionListPanel::reload() {
 
     // ── Wire: call the real function parser ─────────────────────────────────
     // Get current document language from Scintilla
-    int lexerLanguage = (*_ppEditView)->send(SCI_GETLEXER);
-    int langType = (*_ppEditView)->send(SCI_GETPROPERTY, reinterpret_cast<intptr_t>("lexer.lang"), 0);
+    // SCI_GETLEXER = 4012, SCI_GETPROPERTY = 4004 (Scintilla.h)
+    int lexerLanguage = (*_ppEditView)->send(4012);
+    Q_UNUSED(lexerLanguage);
+    int langType = (*_ppEditView)->send(4004, reinterpret_cast<unsigned long>("lexer.lang"), 0);
 
     // Try to find a parser for this language via the manager
     // associationMap.xml maps langType → parser rule file
