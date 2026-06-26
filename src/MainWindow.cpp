@@ -319,6 +319,7 @@ void MainWindow::closeFile()
 
 void MainWindow::exit() { close(); }
 
+
 // TODO: pending NppCommands wiring
 void MainWindow::undo() {}
 // TODO: pending NppCommands wiring

@@ -45,6 +45,7 @@
 
 // Toolbar icon set 1
 #define IDI_NEW_ICON                     201
+#define IDI_NEW_ICON2                    301  // Toolbar filled variant (original: resource.h IDI_NEW_ICON2)
 #define IDI_OPEN_ICON                    202
 #define IDI_CLOSE_ICON                   203
 #define IDI_CLOSEALL_ICON               204
@@ -78,6 +79,7 @@
 
 // Toolbar icon set 1 - Dark mode variants
 #define IDI_NEW_ICON_DM                251
+#define IDI_NEW_ICON_DM2               351  // Toolbar filled dark-mode variant (original: resource.h IDI_NEW_ICON_DM2)
 #define IDI_OPEN_ICON_DM               252
 #define IDI_SAVE_ICON_DM              255
 #define IDI_VIEW_DOC_MAP_ICON_DM      292

@@ -132,27 +132,10 @@ protected:
 };
 
 // =============================================================================
-// Win32 Message Constants — top-level constexpr for unqualified access
-// These mirror the Win32 message IDs used in run_dlgProc switch statements.
+// Win32 Message Constants — defined centrally in NppConstants.h
+// (WM_INITDIALOG, WM_COMMAND, WM_SIZE, WM_DESTROY, WM_CLOSE, WM_PAINT, etc.)
+// Do not redefine here; include NppConstants.h instead.
 // =============================================================================
-constexpr unsigned int WM_INITDIALOG              = 0x0110;
-constexpr unsigned int WM_COMMAND                  = 0x0111;
-constexpr unsigned int WM_SIZE                    = 0x0005;
-constexpr unsigned int WM_DESTROY                 = 0x0002;
-constexpr unsigned int WM_CLOSE                  = 0x0010;
-constexpr unsigned int WM_PAINT                  = 0x000F;
-constexpr unsigned int WM_ERASEBKGND             = 0x0014;
-constexpr unsigned int WM_NOTIFY                  = 0x004E;
-constexpr unsigned int WM_CONTEXTMENU             = 0x007B;
-constexpr unsigned int WM_MBUTTONUP              = 0x0200;
-constexpr unsigned int WM_PARENTNOTIFY            = 0x0210;
-constexpr unsigned int WM_CHAR                    = 0x0102;
-constexpr unsigned int WM_RBUTTONUP               = 0x0205;
-constexpr unsigned int WM_MOUSEWHEEL             = 0x020A;
-// Custom NPPM internal message — used to refresh dark mode on child controls
-// NPPM_INTERNAL_REFRESHDARKMODE defined in NppConstants.h
-// Custom Windows dialog type-ahead search message
-constexpr unsigned int WM_CHAR_REPLACEMENT        = 0x1220;
 
 // =============================================================================
 // DockingContainer — a dockable panel with tabs and caption (lifted from DockingCont)

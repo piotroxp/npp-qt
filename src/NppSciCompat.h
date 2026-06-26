@@ -229,10 +229,121 @@ namespace npp_sci {
     constexpr int SCI_GETFIRSTVISIBLELINE  = 2152;   // SmartHighlighter.cpp
     constexpr int SCI_SETSEARCHFLAGS        = 2198;   // FindReplaceDlg.cpp
     // SC_CP_UTF8 defined globally in ScintillaComponent.h — no duplicate here
-}  // namespace npp_sci
 
-// Bring npp_sci constants into global namespace as bare names
-using namespace npp_sci;
+    // ==== Additional SCI_* constants needed by Parameters.cpp ====
+    constexpr int SCI_SELECTALL              = 2013;
+    constexpr int SCI_CLEAR                  = 2003;
+    constexpr int SCI_UNDO                   = 2001;
+    constexpr int SCI_REDO                   = 2002;
+    constexpr int SCI_NEWLINE                = 2329;
+    constexpr int SCI_TAB                    = 2327;
+    constexpr int SCI_BACKTAB                = 2328;
+    constexpr int SCI_FORMFEED               = 2330;
+    constexpr int SCI_ZOOMIN                 = 2333;
+    constexpr int SCI_ZOOMOUT                = 2334;
+    constexpr int SCI_SETZOOM               = 2373;
+    constexpr int SCI_GETZOOM               = 2374;
+    constexpr int SCI_EDITTOGGLEOVERTYPE     = 2324;
+    constexpr int SCI_MOVECARETINSIDEVIEW    = 2401;
+    constexpr int SCI_LINEDOWN               = 2300;
+    constexpr int SCI_LINEDOWNEXTEND         = 2302;
+    constexpr int SCI_LINEDOWNRECTEXTEND     = 2427;
+    constexpr int SCI_LINESCROLLDOWN         = 2340;
+    constexpr int SCI_LINEUP                 = 2301;
+    constexpr int SCI_LINEUPEXTEND           = 2303;
+    constexpr int SCI_LINEUPRECTEXTEND       = 2428;
+    constexpr int SCI_LINESCROLLUP           = 2341;
+    constexpr int SCI_CHARLEFT               = 2304;
+    constexpr int SCI_CHARLEFTEXTEND        = 2305;
+    constexpr int SCI_CHARRIGHT             = 2306;
+    constexpr int SCI_CHARRIGHTEXTEND       = 2307;
+    constexpr int SCI_WORDLEFT              = 2268;
+    constexpr int SCI_WORDLEFTEXTEND        = 2269;
+    constexpr int SCI_WORDRIGHT             = 2270;
+    constexpr int SCI_WORDRIGHTEXTEND       = 2271;
+    constexpr int SCI_HOME                  = 2310;
+    constexpr int SCI_HOMEEXTEND            = 2311;
+    constexpr int SCI_LINEEND               = 2312;
+    constexpr int SCI_LINEENDEXTEND        = 2313;
+    constexpr int SCI_DOCUMENTSTART         = 2315;
+    constexpr int SCI_DOCUMENTSTARTEXTEND  = 2316;
+    constexpr int SCI_DOCUMENTEND           = 2317;
+    constexpr int SCI_DOCUMENTENDEXTEND    = 2318;
+    constexpr int SCI_PAGEUP               = 2320;
+    constexpr int SCI_PAGEUPEXTEND         = 2321;
+    constexpr int SCI_PAGEDOWN             = 2322;
+    constexpr int SCI_PAGEDOWNEXTEND       = 2323;
+    constexpr int SCI_CUT                   = 2172;
+    constexpr int SCI_COPY                   = 2173;
+    constexpr int SCI_PASTE                  = 2174;
+    constexpr int SCI_GETSELTEXT             = 2161;
+    constexpr int SCI_CANCEL                = 2325;
+    constexpr int SCI_PARADOWN              = 2413;
+    constexpr int SCI_PARADOWNEXTEND        = 2414;
+    constexpr int SCI_PARAUP                = 2415;
+    constexpr int SCI_PARAUPEXTEND          = 2416;
+    constexpr int SCI_CHARLEFTRECTEXTEND    = 2428;
+    constexpr int SCI_CHARRIGHTRECTEXTEND   = 2429;
+    constexpr int SCI_WORDLEFTEND            = 2439;
+    constexpr int SCI_WORDLEFTENDEXTEND      = 2440;
+    constexpr int SCI_WORDRIGHTEND           = 2441;
+    constexpr int SCI_WORDRIGHTENDEXTEND     = 2442;
+    constexpr int SCI_WORDPARTLEFT           = 2390;
+    constexpr int SCI_WORDPARTLEFTEXTEND     = 2391;
+    constexpr int SCI_WORDPARTRIGHT          = 2392;
+    constexpr int SCI_WORDPARTRIGHTEXTEND    = 2393;
+    constexpr int SCI_HOMERECTEXTEND         = 2430;
+    constexpr int SCI_HOMEDISPLAY            = 2345;
+    constexpr int SCI_HOMEDISPLAYEXTEND      = 2346;
+    constexpr int SCI_HOMEWRAP              = 2349;
+    constexpr int SCI_HOMEWRAPEXTEND         = 2450;
+    constexpr int SCI_VCHOME                 = 2331;
+    constexpr int SCI_VCHOMEEXTEND           = 2332;
+    constexpr int SCI_VCHOMERECTEXTEND        = 2431;
+    constexpr int SCI_VCHOMEDISPLAY           = 2652;
+    constexpr int SCI_VCHOMEDISPLAYEXTEND     = 2653;
+    constexpr int SCI_VCHOMEWRAP             = 2453;
+    constexpr int SCI_VCHOMEWRAPEXTEND        = 2454;
+    constexpr int SCI_LINEENDWRAPEXTEND       = 2452;
+    constexpr int SCI_LINEENDRECTEXTEND       = 2432;
+    constexpr int SCI_LINEENDDISPLAY          = 2347;
+    constexpr int SCI_LINEENDDISPLAYEXTEND    = 2348;
+
+    // Style get foreground/background colour (2481, 2482)
+    constexpr int SCI_STYLEGETFORE             = 2481;
+    constexpr int SCI_STYLEGETBACK             = 2482;
+
+    // Missing constants from Scintilla.h (not in QScintilla subset)
+    // Scrolling / selection navigation
+    constexpr int SCI_SCROLLCARET               = 2169;
+    constexpr int SCI_PAGEUPRECTEXTEND         = 2433;
+    constexpr int SCI_PAGEDOWNRECTEXTEND        = 2434;
+    constexpr int SCI_STUTTEREDPAGEUP           = 2435;
+    constexpr int SCI_STUTTEREDPAGEUPEXTEND     = 2436;
+    constexpr int SCI_STUTTEREDPAGEDOWN         = 2437;
+    constexpr int SCI_STUTTEREDPAGEDOWNEXTEND   = 2438;
+
+    // Line/selection editing
+    constexpr int SCI_LINESJOIN                 = 2288;
+    constexpr int SCI_DELETEBACK                = 2326;
+    constexpr int SCI_DELETEBACKNOTLINE         = 2344;
+    constexpr int SCI_DELWORDLEFT               = 2335;
+    constexpr int SCI_DELWORDRIGHT             = 2336;
+    constexpr int SCI_DELWORDRIGHTEND          = 2518;
+    constexpr int SCI_DELLINELEFT              = 2395;
+    constexpr int SCI_DELLINERIGHT             = 2396;
+    constexpr int SCI_LINECUT                  = 2337;
+    constexpr int SCI_LINEDELETE               = 2338;
+    constexpr int SCI_LINETRANSPOSE            = 2339;
+    constexpr int SCI_LINEDUPLICATE           = 2404;
+    constexpr int SCI_LINECOPY                = 2455;
+    constexpr int SCI_SELECTIONDUPLICATE       = 2469;
+    constexpr int SCI_ROTATESELECTION          = 2606;
+    constexpr int SCI_SWAPMAINANCHORCARET      = 2607;
+
+    // Line end types (added for NPP 8.6+)
+    constexpr int SCI_LINEENDWRAP              = 2451;
+}  // namespace npp_sci
 
 // Bring npp_sci constants into global namespace as bare names
 using namespace npp_sci;
@@ -241,3 +352,7 @@ using namespace npp_sci;
 #ifndef lstrcmp
 #define lstrcmp strcmp
 #endif
+
+// Bring all npp_sci constexpr constants into global namespace
+// so bare SCI_* names (as used throughout the codebase) resolve correctly.
+using namespace npp_sci;

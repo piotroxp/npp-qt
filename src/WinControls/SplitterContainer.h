@@ -111,7 +111,7 @@ public:
 
     // Ratio (0.0 - 1.0)
     void setRatio(double ratio);
-    double ratio() const { return _ratio; }
+    double ratio() const;
 
     // Orientation
     bool isVertical() const { return _splitter->orientation() == Qt::Vertical; }

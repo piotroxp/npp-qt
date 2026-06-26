@@ -49,6 +49,7 @@
 #include "Notepad_plus_msgs.h"
 #include "Buffer.h"
 #include "NppDarkMode.h"
+#include "MISC/Common/keys.h"
 #include "NppXml.h"
 #include "ToolBar.h"
 #include "colors.h"
@@ -859,7 +860,7 @@ public:
         const wchar_t *_xmlFileName = nullptr;
     };
     bool addLanguageFromXml(const std::wstring& xmlFullPath);
-    static std::wstring getLangFromXmlFileName(const wchar_t* fn);
+    std::wstring getLangFromXmlFileName(const wchar_t* fn);
     std::wstring getXmlFilePathFromLangName(const wchar_t *langName) const;
     bool switchToLang(const wchar_t *lang2switch) const;
     size_t size() const { return _localizationList.size(); }
@@ -1059,7 +1060,7 @@ public:
     bool isRemappingShortcut() const { return !_shortcuts.empty(); }
     std::vector<CommandShortcut>& getUserShortcuts() { return _shortcuts; }
     void addUserModifiedIndex(size_t index);
-    std::vector<MacroShortcut>& getMacroList() { return _macros; }
+    std::vector<QPointer<MacroShortcut>>& getMacroList() { return _macros; }
     std::vector<UserCommand>& getUserCommandList() { return _userCommands; }
     std::vector<PluginCmdShortcut>& getPluginCommandList() { return _pluginCommands; }
     std::vector<size_t>& getPluginModifiedKeyIndices() { return _pluginCustomizedCmds; }
@@ -1262,7 +1263,7 @@ private:
     bool _isAnyShortcutModified = false;
     std::vector<CommandShortcut> _shortcuts;
     std::vector<size_t> _customizedShortcuts;
-    std::vector<MacroShortcut> _macros;
+    std::vector<QPointer<MacroShortcut>> _macros;
     std::vector<UserCommand> _userCommands;
     std::vector<PluginCmdShortcut> _pluginCommands;
     std::vector<size_t> _pluginCustomizedCmds;

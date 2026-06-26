@@ -1,8 +1,9 @@
 // Ported to Qt6
 #pragma once
-#include <QMenu>    // Must precede QQueue (QList→qmetatype.h registers QPointer<T> with T complete)
 #include <QQueue>
 #include <QObject>
+
+class QMenu;  // forward — full type only needed in .cpp
 
 class LastRecentFileList : public QObject {
     Q_OBJECT
@@ -39,8 +40,8 @@ private:
     int _userMax = 30;
     int _size = 0;
     int _nativeLangEncoding = -1;
-    QPointer<QMenu> _hParentMenu;
-    QPointer<QMenu> _hMenu;
+    QMenu* _hParentMenu = nullptr;
+    QMenu* _hMenu = nullptr;
     int _posBase = -1;
     int _idBase = -1;
     QVector<bool> _idFreeArray;

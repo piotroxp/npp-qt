@@ -118,7 +118,7 @@ void NativeLangSpeaker::init(const QString& languageFilePath, bool loadIfEnglish
         QXmlStreamReader xml(&file);
         while (!xml.atEnd()) {
             if (xml.readNext() == QXmlStreamReader::StartElement)
-                if (xml.name() == "Native-Langue") {
+                if (xml.name() == u"Native-Langue") {
                     QString rtl = xml.attributes().value("RTL").toString();
                     _isRTL = (rtl == QStringLiteral("yes"));
                     if (_isRTL) {
@@ -356,3 +356,9 @@ QString NativeLangSpeaker::getDlgLangMenuStr(const char*, const char*, int, cons
 QString NativeLangSpeaker::getCmdLangStr(const QVector<const char*>&, int, const QString& def) const { return def; }
 QString NativeLangSpeaker::getAttrNameStr(const QString& def, const char*, const char*, const char*) const { return def; }
 QString NativeLangSpeaker::getAttrNameByIdStr(const QString& def, const QString&, const char*, const char*, const char*) { return def; }
+
+void NativeLangSpeaker::alert(const QString& message) const
+{
+    // Show a modal warning message box — original Win32 MessageBox wrapper
+    QMessageBox::warning(nullptr, QStringLiteral("Notepad++"), message, QMessageBox::Ok);
+}

@@ -18,6 +18,7 @@
 #include <QAction>
 #include <QVector>
 #include <QSortFilterProxyModel>
+#include <QStyledItemDelegate>  // ShortcutTableDelegate base class
 #include <vector>
 #include <string>
 

@@ -19,6 +19,7 @@
 #include <QLabel>
 #include <QVBoxLayout>
 #include <QPainter>
+#include <QStyledItemDelegate>  // TaskListDelegate / ShortcutTableDelegate base class
 #include <vector>
 #include <string>
 
@@ -54,7 +55,7 @@ struct TaskListInfo {
 // Custom message for getting task list info from parent
 // Win32: SendMessage(_hParent, WM_GETTASKLISTINFO, &TaskListInfo, 0)
 // Qt: parent sends TaskListInfo via signal or direct method call
-const int WM_GETTASKLISTINFO = QEvent::User + 8100;
+// WM_GETTASKLISTINFO is defined centrally in NppConstants.h
 
 // =============================================================================
 // TaskList — document switcher widget (mirrors Win32 TaskList)

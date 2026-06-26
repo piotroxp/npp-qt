@@ -5,6 +5,7 @@
 #include "ToolBar.h"
 #include <QApplication>
 #include <QMenu>
+#include <QVBoxLayout>
 
 ToolBar::ToolBar(QWidget* parent) : QToolBar(parent)
 {
@@ -158,7 +159,7 @@ bool ReBar::addBand(ReBarBandInfo* bandInfo, bool useID)
     if (id == -1) return false;
     bandInfo->_id = id;
     ToolBar* toolbar = new ToolBar(this);
-    toolbar->setTitle(bandInfo->_text);
+    toolbar->setWindowTitle(bandInfo->_text);
     layout()->addWidget(toolbar);
     _bandActions[id] = new QAction(this);
     _bandActions[id]->setVisible(bandInfo->_visible);

@@ -1,5 +1,5 @@
 // Semantic Lift: Win32 WinMgr → Qt6 WinMgr layout engine
-// Original: PowerEditor/src/WinControls/WindowsDlg/WinMgr.h
+// Original: PowerEditor/src/WinControls/WindowsDlg/WinMgr.h + WinRect.cpp
 // Target: npp-qt/src/WinControls/WinMgr.h
 //
 // WinMgr provides declarative row/column layout for dialogs.
@@ -19,6 +19,7 @@
 #include <vector>
 #include <cassert>
 #include <algorithm>
+#include <cstring>  // for memset
 
 // ============================================================================
 // Geometry helpers (mirrors Win32 RECT/SIZE/POINT)
@@ -63,17 +64,34 @@ inline QSize maxsize(QSize a, QSize b) {
 #define RCMARGINS(w, h) ((w) | ((h) << 16))
 // MAKELONG: pack two 16-bit values into a 32-bit long
 #define MAKELONG(a, b) (static_cast<long>((static_cast<unsigned int>(static_cast<unsigned short>(a))) | \
-    (static_cast<unsigned int>(static_cast<unsigned short>(b)) << 16))
+    (static_cast<unsigned int>(static_cast<unsigned short>(b)) << 16)))
 
 class WINRECT {
 public:
-    unsigned short flags = 0;
-    int nID = -1;
-    long param = 0;
+    // Constructor (mirrors Win32 WINRECT::WINRECT)
+    WINRECT(unsigned short f = 0, int id = -1, long p = 0) {
+        memset(this, 0, sizeof(WINRECT));
+        flags = f;
+        nID = id;
+        param = p;
+    }
 
-    QRect rc; // current rectangle
+    // Type() — returns the WRCT_* type (mirrors Win32 Type())
+    unsigned short Type() const { return static_cast<unsigned short>(flags & WRCF_TYPEMASK); }
 
-    WINRECT(unsigned short f, int id, long p) : flags(f), nID(id), param(p) {}
+    // Navigation (mirrors Win32 next/prev pointers, now inline)
+    WINRECT* Prev() { return prev; }
+    WINRECT* Next() { return next; }
+    WINRECT* Children() { return IsGroup() ? this + 1 : nullptr; }
+    WINRECT* Parent();
+
+    // Getters/setters (mirrors Win32)
+    unsigned short GetFlags() const { return flags; }
+    unsigned short SetFlags(unsigned short f) { return flags = f; }
+    long GetParam() const { return param; }
+    long SetParam(long p) { return param = p; }
+    int GetID() const { return nID; }
+    int SetID(int id) { return nID = id; }
 
     bool IsGroup() const { return (flags & WRCF_GROUPMASK) && (flags & WRCF_GROUPMASK) != WRCF_ENDGROUP; }
     bool IsEndGroup() const { return flags == 0 || flags == WRCF_ENDGROUP; }
@@ -88,10 +106,39 @@ public:
     void SetWidth(int w) { rc.setWidth(w); }
     int HeightOrWidth(bool bHeight) const { return bHeight ? rc.height() : rc.width(); }
     void SetHeightOrWidth(int hw, bool bHeight) { bHeight ? SetHeight(hw) : SetWidth(hw); }
-    int GetParam() const { return param; }
-    int GetID() const { return nID; }
+    int GetParam() { return param; }  // overload for const version above
     QRect& GetRect() { return rc; }
     void SetRect(const QRect& r) { rc = r; }
+
+    // For TOFIT types, param is the TOFIT size (mirrors Win32)
+    bool HasToFitSize() const { return param != 0; }
+    QSize GetToFitSize() const { return QSize(static_cast<int>(static_cast<quint16>(param & 0xFFFF)), static_cast<int>(static_cast<quint16>((param >> 16) & 0xFFFF))); }
+    void SetToFitSize(QSize sz) { param = static_cast<long>((static_cast<quint32>(sz.width()) & 0xFFFF) | ((static_cast<quint32>(sz.height()) & 0xFFFF) << 16)); }
+
+    // Margins (mirrors Win32)
+    bool GetMargins(int& w, int& h) {
+        if (IsGroup()) {
+            w = static_cast<short>(static_cast<quint16>(param & 0xFFFF));
+            h = static_cast<short>(static_cast<quint16>((param >> 16) & 0xFFFF));
+            return true;
+        }
+        w = h = 0;
+        return false;
+    }
+
+    // InitMap — set up next/prev linked list (mirrors Win32 WINRECT::InitMap)
+    static WINRECT* InitMap(WINRECT* pWinMap, const WINRECT* parent = nullptr);
+
+protected:
+    // Linked-list pointers (mirrors Win32 next/prev — essential for traversal)
+    WINRECT* next = nullptr;
+    WINRECT* prev = nullptr;
+
+    // Data (mirrors Win32)
+    QRect rc;                     // current rectangle position/size
+    unsigned short flags = 0;    // WRCT_* + WRCF_* flags
+    int nID = -1;                 // window ID
+    long param = 0;               // type-dependent parameter
 };
 
 // ============================================================================
@@ -182,7 +229,44 @@ public:
     CWinGroupIterator() : pCur(nullptr) {}
     explicit CWinGroupIterator(WINRECT* pg) { if (pg->IsGroup()) pCur = pg + 1; }
 
-    WINRECT* Next() { if (pCur && !pCur->IsEndGroup()) { pCur = pCur + 1; } else return nullptr; return pCur; }
+    // Advance to next WINRECT in group
+    CWinGroupIterator& operator++() {
+        if (pCur && !pCur->IsEndGroup()) {
+            if (pCur->IsGroup()) {
+                // Skip into group then past it
+                pCur++;
+                while (!pCur->IsEndGroup()) {
+                    if (pCur->IsGroup())
+                        pCur++;
+                    else
+                        pCur++;
+                }
+            }
+            pCur++;
+        } else {
+            pCur = nullptr;
+        }
+        return *this;
+    }
+
+    WINRECT* Next() {
+        if (pCur && !pCur->IsEndGroup()) {
+            if (pCur->IsGroup()) {
+                pCur++;
+                while (!pCur->IsEndGroup()) {
+                    if (pCur->IsGroup())
+                        pCur++;
+                    else
+                        pCur++;
+                }
+            }
+            pCur++;
+        } else {
+            return nullptr;
+        }
+        return pCur;
+    }
+
     WINRECT* pWINRECT() { return pCur; }
     explicit operator bool() const { return pCur != nullptr; }
     WINRECT* operator->() { return pCur; }

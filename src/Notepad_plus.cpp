@@ -2486,7 +2486,7 @@ int Notepad_plus::doSaveAll()
 	// In case Notepad++ is iconized into notification zone
 	if (!::IsWindowVisible(this->getHSelf()))
 	{
-		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
+		if (QWidget* w = qobject_cast<QWidget*>(const_cast<QWidget*>(this->getHSelf()))) w->show();
 
 		// Send sizing info to make window fit (specially to show tool bar.)
 		// SendMessage(WM_) -> Qt: SIZE, 0, 0);
@@ -5772,17 +5772,17 @@ void Notepad_plus::syncZoom()
 bool Notepad_plus::addCurrentMacro()
 {
 	NppParameters& nppParams = NppParameters::getInstance();
-	vector<MacroShortcut> & theMacros = nppParams.getMacroList();
+	vector<QPointer<MacroShortcut>> & theMacros = nppParams.getMacroList();
 
 	int nbMacro = static_cast<int32_t>(theMacros.size());
 	
 	DynamicMenu& macroMenu = nppParams.getMacroMenuItems();
 	int nbTopLevelItem = macroMenu.getTopLevelItemNumber();
 	int cmdID = ID_MACRO + nbMacro;
-	MacroShortcut ms(Shortcut(), _macro, cmdID);
-	ms.init(this->getHinst(), this->getHSelf());
+	auto ms = std::make_unique<MacroShortcut>(Shortcut(), _macro, cmdID);
+	ms->init(this->getHinst(), this->getHSelf());
 
-	if (ms.doDialog() != -1)
+	if (ms->doDialog() != -1)
 	{
 		QMenu* hMacroMenu = // GetSubMenu -> QMenu::actions: _mainMenuHandle, MENUINDEX_MACRO);
 		unsigned int posBase = macroMenu.getPosBase();
@@ -5800,9 +5800,9 @@ bool Notepad_plus::addCurrentMacro()
 
 			// InsertMenu -> QMenu::addAction: hMacroMenu, posBase + nbTopLevelItem + 2, 0, IDM_SETTING_SHORTCUT_MAPPER_MACRO, nativeLangShortcutMapperMacro.c_str());
         }
-		theMacros.push_back(ms);
-		macroMenu.push_back(MenuItemUnit(cmdID, QString::fromUtf8(ms.getName().c_str())));
-		// InsertMenu -> QMenu::addAction: hMacroMenu, static_cast<UINT>(posBase + nbTopLevelItem), 0, cmdID, string2wstring(ms.toMenuItemString(), CP_UTF8).c_str());
+		theMacros.push_back(ms.release());
+		macroMenu.push_back(MenuItemUnit(cmdID, QString::fromUtf8(ms->getName().c_str())));
+		// InsertMenu -> QMenu::addAction: hMacroMenu, static_cast<UINT>(posBase + nbTopLevelItem), 0, cmdID, string2wstring(ms->toMenuItemString(), CP_UTF8).c_str());
 		_accelerator.updateShortcuts();
 		nppParams.setShortcutDirty();
 		return true;

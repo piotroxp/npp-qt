@@ -61,6 +61,9 @@ public:
     void getMainMenuEntryName(QString& dest, QMenu* hMenu, const char* menuId,
                             const QString& defaultDest);
     void resetShortcutMenuNameMap() { _shortcutMenuEntryNameMap.clear(); }
+    // alert() — show a simple message box using the loaded native language strings
+    void alert(const QString& message) const;
+
     int messageBox(const char* msgBoxTagName, QWidget* parent, const QString& defaultMessage,
                   const QString& defaultTitle, int msgBoxType, int intInfo = 0,
                   const QString& strInfo = QString()) const;

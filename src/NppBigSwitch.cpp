@@ -51,11 +51,14 @@
 
 #include <algorithm>
 // shlwapi.h removed
+#ifdef _WIN32
 #include <uxtheme.h> // for EnableThemeDialogTexture
+#include <windowsx.h> // for GET_X_VALUE, GET_Y_VALUE
+#endif
 #include <format>
-#include <windowsx.h> // for GET_X_qintptr, GET_Y_qintptr
 #include <atomic>
 #include "Notepad_plus_Window.h"
+#include "Notepad_plus.h"  // Notepad_plus::process definition
 #include "TaskListDlg.h"
 #include "ShortcutMapper.h"
 #include "ansiCharPanel.h"
@@ -67,15 +70,14 @@
 #include "fileBrowser.h"
 #include "NppDarkMode.h"
 #include "NppConstants.h"
+#include "DocTabView.h"
 
 using namespace std;
 
-#ifndef 0 /* WM_DPICHANGED -> QEvent */
-#define 0 /* WM_DPICHANGED -> QEvent */ 0x02E0
-#endif
-
 std::atomic<bool> g_bNppExitFlag{ false };
-const unsigned int WM_TASKBARCREATED = ::RegisterWindowMessage(L"TaskbarCreated");
+// WM_TASKBARCREATED is defined in NppConstants.h (0x8000 placeholder).
+// On Win32 it is registered at runtime via RegisterWindowMessage;
+// that runtime registration is handled by the Windows-specific startup code.
 
 struct SortTaskListPred final
 {
@@ -97,6 +99,7 @@ struct SortTaskListPred final
 };
 
 // app-restart feature needs Win10 20H1+ (builds 18963+), but it was quietly introduced earlier in the Fall Creators Update (b1709+)
+#ifdef _WIN32
 bool SetOSAppRestart()
 {
 	NppParameters& nppParam = NppParameters::getInstance();
@@ -157,12 +160,17 @@ bool SetOSAppRestart()
 
 	return bRet;
 }
+#else  // !_WIN32
+// No-op on Linux — Windows Restart Manager is not available.
+bool SetOSAppRestart() { return false; }
+#endif
 
 qintptr CALLBACK MainWindow::Notepad_plus_Proc(QWidget* hwnd, unsigned int message, quintptr wParam, qintptr lParam)
 {
 	if (hwnd == NULL)
 		return false;
 
+#ifdef _WIN32
 	switch(message)
 	{
 		case WM_NCCREATE:
@@ -186,10 +194,19 @@ qintptr CALLBACK MainWindow::Notepad_plus_Proc(QWidget* hwnd, unsigned int messa
 			return (reinterpret_cast<Notepad_plus_Window *>(// GetWindowLongPtr -> QWidget: hwnd, GWLP_USERDATA))->runProc(hwnd, message, wParam, lParam));
 		}
 	}
+#else
+	// Qt/Linux: MainWindow already owns the editor — forward to runProc directly
+	// Windows message routing is handled by Qt's event system.
+	Q_UNUSED(wParam);
+	Q_UNUSED(lParam);
+	Q_UNUSED(message);
+	return 0;
+#endif
 }
 
 qintptr MainWindow::runProc(QWidget* hwnd, unsigned int message, quintptr wParam, qintptr lParam)
 {
+#ifdef _WIN32
 	switch (message)
 	{
 		case WM_CREATE:
@@ -225,6 +242,15 @@ qintptr MainWindow::runProc(QWidget* hwnd, unsigned int message, quintptr wParam
 			return _notepad_plus_plus_core.process(hwnd, message, wParam, lParam);
 		}
 	}
+#else
+	// Qt/Linux: _notepad_plus_plus_core is not used — process() is called via Qt events.
+	// Stub to satisfy linker; real routing is in MainWindow::event() override.
+	Q_UNUSED(hwnd);
+	Q_UNUSED(message);
+	Q_UNUSED(wParam);
+	Q_UNUSED(lParam);
+	return 0;
+#endif
 }
 
 // Used by NPPM_GETFILENAMEATCURSOR
@@ -240,6 +266,7 @@ int CharacterIs(wchar_t c, const wchar_t *any)
 
 qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wParam, qintptr lParam)
 {
+#ifdef _WIN32
 	qintptr result = false;
 	NppParameters& nppParam = NppParameters::getInstance();
 
@@ -1533,8 +1560,8 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 				if (indexMacro != -1)
 				{
-					vector<MacroShortcut> & ms = nppParam.getMacroList();
-					m = ms[indexMacro].getMacro();
+					vector<QPointer<MacroShortcut>> & ms = nppParam.getMacroList();
+					m = ms[indexMacro]->getMacro();
 				}
 
 				// to be able to roll back all the possible macro-steps changes at once, no matter how many times
@@ -4338,5 +4365,14 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 	_pluginsManager.relayNppMessages(message, wParam, lParam);
 	return result;
+#else
+	// Qt/Linux: all message routing is handled via Qt's event system.
+	// This function is a Windows message pump shim only.
+	Q_UNUSED(hwnd);
+	Q_UNUSED(message);
+	Q_UNUSED(wParam);
+	Q_UNUSED(lParam);
+	return 0;
+#endif
 }
 

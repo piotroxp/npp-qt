@@ -165,6 +165,19 @@ template <> /*static*/ wchar_t WcharMbcsConvertor::StringBuffer<wchar_t>::_nullS
 
 QString pathRemoveFileSpec(QString& path);
 QString pathAppend(QString& strDest, const QString& str2append);
+// Overload for std::wstring + const wchar_t* (Windows compatibility shim)
+inline std::wstring& pathAppend(std::wstring& strDest, const wchar_t* str2append)
+{
+    strDest += str2append;
+    return strDest;
+}
+
+// Overload for std::wstring + std::wstring
+inline std::wstring& pathAppend(std::wstring& strDest, const std::wstring& str2append)
+{
+    strDest += str2append;
+    return strDest;
+}
 QColor getCtrlBgColor(QWidget* widget);
 QString stringToUpper(QString strToConvert);
 QString stringToLower(QString strToConvert);

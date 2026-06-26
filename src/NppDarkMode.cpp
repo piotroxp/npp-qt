@@ -176,6 +176,37 @@ NppDarkMode& NppDarkMode::instance()
     return *s_instance;
 }
 
+// ── Windows-specific dark mode helpers (no-ops on Linux) ─────────────────────
+
+bool NppDarkMode::isExperimentalSupported()
+{
+    return false;  // Windows 10 dark mode explorer experimental flag — not applicable on Linux
+}
+
+void NppDarkMode::enableDarkScrollBarForWindowAndChildren(QWidget* w)
+{
+    // Windows: EnableMenuShadow / dark scrollbar for taskbar.  No-op on Linux.
+    if (w) {
+        setDarkScrollBar(w);
+        applyToChildWidgets(w);
+    }
+}
+
+void NppDarkMode::setDarkTitleBar(QWidget*)
+{
+    // Windows: setDarkTitleBar via DwmSetWindowAttribute.  N/A on Linux.
+}
+
+void NppDarkMode::autoSubclassWindowMenuBar(QWidget*)
+{
+    // Windows: subclass menu bar for dark mode.  N/A on Linux.
+}
+
+void NppDarkMode::autoSubclassCtlColor(QWidget*)
+{
+    // Windows: WM_CTLCOLOR* subclassing for dark mode.  N/A on Linux.
+}
+
 // ── Enable ─────────────────────────────────────────────────────────────────
 
 bool NppDarkMode::isEnabled() const

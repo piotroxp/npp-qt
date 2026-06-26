@@ -4278,8 +4278,8 @@ void Notepad_plus::command(int id)
 			else if ((id >= ID_MACRO) && (id < ID_MACRO_LIMIT))
 			{
 				int i = id - ID_MACRO;
-				vector<MacroShortcut> & theMacros = (NppParameters::getInstance()).getMacroList();
-				macroPlayback(theMacros[i].getMacro());
+				vector<QPointer<MacroShortcut>> & theMacros = (NppParameters::getInstance()).getMacroList();
+				macroPlayback(theMacros[i]->getMacro());
 			}
 			else if ((id >= ID_USER_CMD) && (id < ID_USER_CMD_LIMIT))
 			{

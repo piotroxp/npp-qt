@@ -5,6 +5,8 @@
 #include <QObject>
 #include <QShortcut>
 #include "../NppConstants.h"
+#include "keys.h"      // NppKeys::VK_* virtual key constants
+using namespace NppKeys;  // bare VK_* names used throughout shortcut.h
 #include <QString>
 #include <QVector>
 // NppSciCompat.h defines all needed SCI_* constants as constexpr.

@@ -31,6 +31,11 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
+    // Windows API compatibility — _hSelf holds the window handle (this on Qt)
+    QWidget* _hSelf = nullptr;
+    // Core editor instance — in Qt, MainWindow is the editor; this is a no-op placeholder
+    Notepad_plus* _notepad_plus_plus_core = nullptr;
+
 public:
     MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
@@ -65,6 +70,10 @@ protected:
     void dropEvent(QDropEvent* event) override;
     bool event(QEvent* event) override;
 
+    // Windows message / Qt event handler dispatch (NppBigSwitch.cpp)
+    qintptr Notepad_plus_Proc(QWidget* hwnd, unsigned int message, quintptr wParam, qintptr lParam);
+    qintptr runProc(QWidget* hwnd, unsigned int message, quintptr wParam, qintptr lParam);
+
 private slots:
     void newFile();
     void openFile();
@@ -72,7 +81,6 @@ private slots:
     void saveFile();
     void saveFileAs();
     void closeFile();
-    void exit();
 
     void undo();
     void redo();

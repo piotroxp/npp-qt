@@ -13,38 +13,7 @@
 
 CWinMgr::CWinMgr(WINRECT* pWinMap) : m_map(pWinMap)
 {
-    // Initialize next/prev pointers (mirrors WINRECT::InitMap)
-    if (m_map) {
-        WINRECT* pwrc = m_map;
-        WINRECT* prev = nullptr;
-
-        while (!pwrc->IsEndGroup()) {
-            pwrc->next = nullptr;
-            if (prev) prev->next = pwrc;
-            pwrc->prev = prev;
-            prev = pwrc;
-
-            if (pwrc->IsGroup()) {
-                // Skip into group (already handled by +1 offset)
-                pwrc++;
-                while (!pwrc->IsEndGroup()) {
-                    pwrc->prev = nullptr;
-                    pwrc->next = nullptr;
-                    if (pwrc->IsGroup()) {
-                        pwrc++;
-                    } else {
-                        pwrc++;
-                    }
-                }
-            }
-            pwrc++;
-        }
-        // Set prev on last real entry
-        while (prev && prev->prev) {
-            if (!prev->prev->next) prev->prev->next = prev;
-            prev = prev->prev;
-        }
-    }
+    WINRECT::InitMap(m_map);
 }
 
 WINRECT* CWinMgr::FindRect(int nID)
@@ -87,9 +56,8 @@ void CWinMgr::InitToFitSizeFromCurrent(QWidget* widget)
     // For each TOFIT window, set its desired size from current widget size
     for (WINRECT* w = m_map; !w->IsEnd(); ++w) {
         if (w->Type() == WRCT_TOFIT && !w->IsGroup()) {
-            // Get current widget size — for now, use 50x50 as default
-            // Real impl would call GetWindowRect
-            w->param = MAKELONG(50, 50);
+            // Get current widget size — use 50x50 as default if no widget found
+            w->SetToFitSize(QSize(50, 50));
         }
     }
     CalcLayout(widget);
@@ -106,7 +74,7 @@ void CWinMgr::CalcGroup(WINRECT* group, QRect rcTotal, QWidget* widget)
     // First pass: set all rects to minimum size
     CWinGroupIterator it(group);
     while (it) {
-        WINRECT* wrc = it;
+        WINRECT* wrc = &(*it);
         int hwMin = wrc->GetParam();
         if (wrc->Type() == WRCT_FIXED && wrc->GetParam() < 0) {
             hwMin = 0; // negative = min is 0
@@ -121,7 +89,7 @@ void CWinMgr::CalcGroup(WINRECT* group, QRect rcTotal, QWidget* widget)
     it = CWinGroupIterator(group);
     WINRECT* pRestRect = nullptr;
     while (it) {
-        WINRECT* wrc = it;
+        WINRECT* wrc = &(*it);
         if (wrc->Type() == WRCT_REST) {
             pRestRect = wrc;
         } else {
@@ -147,7 +115,7 @@ void CWinMgr::CalcGroup(WINRECT* group, QRect rcTotal, QWidget* widget)
     // Recurse into subgroups
     it = CWinGroupIterator(group);
     while (it) {
-        WINRECT* wrc = it;
+        WINRECT* wrc = &(*it);
         if (wrc->IsGroup())
             CalcGroup(wrc, wrc->GetRect(), widget);
         ++it;
@@ -160,6 +128,7 @@ void CWinMgr::AdjustSize(WINRECT* wrc, bool bRow, int& hwRemaining, QWidget* wid
     int hw = wrc->GetParam();
     if (wrc->Type() == WRCT_REST) {
         const QRect& rc = wrc->GetRect();
+        Q_UNUSED(rc);
         hw = hwRemaining + wrc->HeightOrWidth(bRow);
     }
     int hwCurrent = wrc->HeightOrWidth(bRow);
@@ -174,7 +143,7 @@ void CWinMgr::PositionRects(WINRECT* pGroup, const QRect& rcTotal, bool bRow)
 
     CWinGroupIterator it(pGroup);
     while (it) {
-        WINRECT* wrc = it;
+        WINRECT* wrc = &(*it);
         QRect& rc = wrc->GetRect();
 
         if (bRow) {
@@ -234,5 +203,5 @@ QLayout* CWinMgr::createLayout(QWidget* parent)
     Q_UNUSED(parent);
     // Simplified: create a QVBoxLayout from the WINRECT table
     // Full implementation would mirror the full recursive layout algorithm
-    return new QVBoxLayout();
+    return new QVBoxLayout(parent);
 }

@@ -27,10 +27,10 @@ void LastRecentFileList::initMenu(QMenu* hMenu, int idBase, int posBase, bool do
 void LastRecentFileList::switchMode()
 {
     if (_hMenu) _hMenu->clear();
-    if (_hParentMenu && !_hParentMenu.isNull()) {
+    if (_hParentMenu) {
         _hMenu = _hParentMenu;
         _hParentMenu = nullptr;
-    } else if (_hMenu && !_hMenu.isNull()) {
+    } else if (_hMenu) {
         _hParentMenu = _hMenu;
         _hMenu = new QMenu();
     }

@@ -244,6 +244,13 @@ private:
 public:
     // Exposed via second public section so MOC-generated members stay isolated
     static NppDarkMode& instance();
+
+    // Dark mode feature flags (Win32-specific behaviour stubs for Linux)
+    static bool isExperimentalSupported();
+    static void enableDarkScrollBarForWindowAndChildren(QWidget*);
+    static void setDarkTitleBar(QWidget*);
+    static void autoSubclassWindowMenuBar(QWidget*);
+    static void autoSubclassCtlColor(QWidget*);
 };
 
 // Namespace-level delegate so code can use instance() without qualification.

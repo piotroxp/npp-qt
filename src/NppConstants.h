@@ -156,6 +156,10 @@ inline constexpr int UDD_DOCKED = 0;
 // Position
 inline constexpr int POS_VERTICAL = 0;
 
+// Virtual key codes used in ShortcutMapper & shortcut.h
+
+// Virtual key codes used in ShortcutMapper & shortcut.h
+
 // Platform
 struct Platform {};
 
@@ -163,38 +167,8 @@ struct Platform {};
 inline constexpr int UDD_DOCKED_UNDO = 0;
 
 // Virtual key codes (Win32 VK_* → Qt::Key_* mappings)
-inline constexpr int VK_SPACE = 0x20;
-inline constexpr int VK_RETURN = 0x0D;
-inline constexpr int VK_ESCAPE = 0x1B;
-inline constexpr int VK_END = 0x23;
-inline constexpr int VK_HOME = 0x24;
-inline constexpr int VK_LEFT = 0x25;
-inline constexpr int VK_UP = 0x26;
-inline constexpr int VK_RIGHT = 0x27;
-inline constexpr int VK_DOWN = 0x28;
-inline constexpr int VK_nullptr = 0x00; // Sentinel: no keyboard shortcut
-inline constexpr int VK_INSERT = 0x2D;
-inline constexpr int VK_PRIOR  = 0x21; // Page Up
-inline constexpr int VK_NEXT   = 0x22; // Page Down
-inline constexpr int VK_DELETE = 0x2E;
-inline constexpr int VK_TAB = 0x09;
-inline constexpr int VK_BACK = 0x08;
-inline constexpr int VK_F1 = 0x70;
-inline constexpr int VK_F2 = 0x71;
-inline constexpr int VK_F3 = 0x72;
-inline constexpr int VK_F4 = 0x73;
-inline constexpr int VK_F5 = 0x74;
-inline constexpr int VK_F6 = 0x75;
-inline constexpr int VK_F7 = 0x76;
-inline constexpr int VK_F8 = 0x77;
-inline constexpr int VK_F9 = 0x78;
-inline constexpr int VK_F10 = 0x79;
-inline constexpr int VK_F11 = 0x7A;
-inline constexpr int VK_F12 = 0x7B;
-inline constexpr int VK_CAPITAL = 0x14;  // Caps Lock
-inline constexpr int VK_SHIFT = 0x10;
-inline constexpr int VK_CONTROL = 0x11;
-inline constexpr int VK_MENU = 0x12;    // ALT key
+
+// Letter key virtual key codes (missing from above, needed by Parameters.cpp)
 
 // Win32 type aliases for cross-platform compatibility
 using DWORD = unsigned long;
@@ -255,6 +229,20 @@ using DWORD_PTR = quint64;
 #define MAX_PATH 260
 #define INVALID_HANDLE_VALUE nullptr
 
+// Calling convention shim (no-op on non-Windows)
+#ifndef WINAPI
+#define WINAPI
+#endif
+#ifndef CALLBACK
+#define CALLBACK
+#endif
+
+// IDC_* command IDs used by Parameters.cpp for shortcut bindings
+// (mirrors Win32 IDC_* resource IDs — values must not clash with IDM_* menu commands)
+constexpr int IDC_PREV_DOC                  = 0x10000001;
+constexpr int IDC_NEXT_DOC                  = 0x10000002;
+constexpr int IDC_EDIT_TOGGLEMACRORECORDING = 0x10000003;
+
 // Win32 error codes
 inline constexpr DWORD ERROR_SUCCESS = 0;
 inline constexpr DWORD ERROR_FILE_NOT_FOUND = 2;
@@ -275,9 +263,12 @@ inline constexpr DWORD MOVEFILE_REPLACE_EXISTING = 0x01;
 inline constexpr DWORD MOVEFILE_COPY_ALLOWED = 0x02;
 inline constexpr DWORD MOVEFILE_WRITE_THROUGH = 0x08;
 
-// Platform function pointer type
-using PFUNKNOWN = void*;
+// Platform architecture flags (original: NppConstants.h)
 inline constexpr int PF_UNKNOWN = 0;
+inline constexpr int PF_X86     = 100;
+inline constexpr int PF_X64    = 101;
+inline constexpr int PF_IA64   = 102;
+inline constexpr int PF_ARM64  = 103;
 
 // LangType enum — original Win32 ordering from N++ Notepad_plus_msgs.h
 // Plain enum (not enum class) so L_TEXT, L_PHP, etc. are in enclosing scope
@@ -323,6 +314,27 @@ enum winVer {
 };
 extern WinVersion currentWinVer;
 inline WinVersion winVersion() { return currentWinVer; }
+
+// LangIdxStyle — Scintilla lexer keyword list index (original: NppConstants.h LangIdxStyle enum)
+enum LangIdxStyle {
+    LANG_INDEX_INSTR = 0,
+    LANG_INDEX_INSTR2 = 1,
+    LANG_INDEX_TYPE = 2,
+    LANG_INDEX_TYPE2 = 3,
+    LANG_INDEX_TYPE3 = 4,
+    LANG_INDEX_TYPE4 = 5,
+    LANG_INDEX_TYPE5 = 6,
+    LANG_INDEX_TYPE6 = 7,
+    LANG_INDEX_TYPE7 = 8,
+    LANG_INDEX_SUBSTYLE1 = 9,
+    LANG_INDEX_SUBSTYLE2 = 10,
+    LANG_INDEX_SUBSTYLE3 = 11,
+    LANG_INDEX_SUBSTYLE4 = 12,
+    LANG_INDEX_SUBSTYLE5 = 13,
+    LANG_INDEX_SUBSTYLE6 = 14,
+    LANG_INDEX_SUBSTYLE7 = 15,
+    LANG_INDEX_SUBSTYLE8 = 16
+};
 
 // EolType — line ending format
 enum class EolType { EolWindows = 0, EolUnix = 1, EolMac = 2, unknown = -1, osdefault = 0 };
@@ -465,3 +477,87 @@ struct FindersInfo { void* dummy = nullptr; };
 
 // TrayIconController (corrected spelling)
 class TrayIconController;
+
+// Windows message constants — standard messages (0x0000–0x0400 range)
+// These are normally defined by <windows.h>; defined here for Linux builds.
+// NPP-specific WM_* constants are defined in ScintillaComponent.h.
+// Using inline constexpr so multiple definitions across TU (via headers) are allowed.
+#ifndef WM_CREATE
+inline constexpr unsigned int WM_NULL              = 0x0000;
+inline constexpr unsigned int WM_CREATE            = 0x0001;
+inline constexpr unsigned int WM_DESTROY            = 0x0002;
+inline constexpr unsigned int WM_MOVE              = 0x0003;
+inline constexpr unsigned int WM_SIZE              = 0x0005;
+inline constexpr unsigned int WM_ACTIVATE          = 0x0006;
+inline constexpr unsigned int WM_SETFOCUS          = 0x0007;
+inline constexpr unsigned int WM_KILLFOCUS         = 0x0008;
+inline constexpr unsigned int WM_ENABLE            = 0x000A;
+inline constexpr unsigned int WM_SETREDRAW         = 0x000B;
+inline constexpr unsigned int WM_SETTEXT           = 0x000C;
+inline constexpr unsigned int WM_GETTEXT           = 0x000D;
+inline constexpr unsigned int WM_GETTEXTLENGTH    = 0x000E;
+inline constexpr unsigned int WM_PAINT             = 0x000F;
+inline constexpr unsigned int WM_CLOSE             = 0x0010;
+inline constexpr unsigned int WM_QUERYENDSESSION   = 0x0011;
+inline constexpr unsigned int WM_QUIT              = 0x0012;
+inline constexpr unsigned int WM_QUERYOPEN         = 0x0013;
+inline constexpr unsigned int WM_ERASEBKGND        = 0x0014;
+inline constexpr unsigned int WM_ENDSESSION        = 0x0016;
+inline constexpr unsigned int WM_SHOWWINDOW        = 0x0018;
+inline constexpr unsigned int WM_SETTINGCHANGE     = 0x001A;
+inline constexpr unsigned int WM_ACTIVATEAPP      = 0x001C;
+inline constexpr unsigned int WM_FONTCHANGE        = 0x001D;
+inline constexpr unsigned int WM_TIMECHANGE         = 0x001E;
+inline constexpr unsigned int WM_NCCREATE          = 0x0081;
+inline constexpr unsigned int WM_NCDESTROY         = 0x0082;
+inline constexpr unsigned int WM_NCHITTEST         = 0x0084;
+inline constexpr unsigned int WM_NCACTIVATE        = 0x0086;
+inline constexpr unsigned int WM_SYNCPAINT         = 0x0088;
+inline constexpr unsigned int WM_NCLBUTTONDOWN     = 0x00A1;
+inline constexpr unsigned int WM_NCRBUTTONDOWN     = 0x00A4;
+inline constexpr unsigned int WM_NCRBUTTONUP       = 0x00A5;
+inline constexpr unsigned int WM_COMMAND            = 0x0111;
+inline constexpr unsigned int WM_SYSCOMMAND        = 0x0112;
+inline constexpr unsigned int WM_INITMENUPOPUP     = 0x0117;
+inline constexpr unsigned int WM_MENUSELECT        = 0x011F;
+inline constexpr unsigned int WM_INITDIALOG        = 0x0110;
+inline constexpr unsigned int WM_ENTERMENULOOP     = 0x0211;
+inline constexpr unsigned int WM_EXITMENULOOP      = 0x0212;
+inline constexpr unsigned int WM_SIZING            = 0x0214;
+inline constexpr unsigned int WM_MOVING            = 0x0216;
+inline constexpr unsigned int WM_ENTERSIZEMOVE     = 0x0231;
+inline constexpr unsigned int WM_EXITSIZEMOVE       = 0x0232;
+inline constexpr unsigned int WM_DROPFILES         = 0x0233;
+inline constexpr unsigned int WM_CONTEXTMENU       = 0x007B;
+inline constexpr unsigned int WM_COPY              = 0x0301;
+inline constexpr unsigned int WM_NOTIFY            = 0x004E;
+inline constexpr unsigned int WM_DPICHANGED         = 0x02E0;
+inline constexpr unsigned int WM_LBUTTONUP         = 0x0202;
+inline constexpr unsigned int WM_LBUTTONDBLCLK     = 0x0203;
+inline constexpr unsigned int WM_RBUTTONUP         = 0x0205;
+inline constexpr unsigned int WM_MBUTTONUP         = 0x0208;
+inline constexpr unsigned int WM_MBUTTONDBLCLK    = 0x0209;
+inline constexpr unsigned int WM_MOUSEWHEEL        = 0x020A;
+inline constexpr unsigned int WM_XBUTTONUP         = 0x020C;
+inline constexpr unsigned int WM_XBUTTONDBLCLK    = 0x020D;
+inline constexpr unsigned int WM_APPCOMMAND        = 0x0319;
+inline constexpr unsigned int WM_SETFONT           = 0x0030;
+inline constexpr unsigned int WM_GETFONT           = 0x0031;
+inline constexpr unsigned int WM_DRAWITEM          = 0x002B;
+inline constexpr unsigned int WM_MEASUREITEM       = 0x002C;
+inline constexpr unsigned int WM_DELETEITEM         = 0x002D;
+inline constexpr unsigned int WM_VKEYTOITEM        = 0x002E;
+inline constexpr unsigned int WM_CHARTOITEM         = 0x002F;
+inline constexpr unsigned int WM_PARENTNOTIFY       = 0x0210;
+inline constexpr unsigned int WM_CHAR              = 0x0102;
+
+// NPP custom messages — ScintillaComponent.h uses SCINTILLA_USER (2000) base.
+// WM_TASKBARCREATED is registered at runtime on Win32; placeholder here.
+inline constexpr unsigned int WM_GETTASKLISTINFO   = 0x0403;
+inline constexpr unsigned int WM_UPDATEMAINMENUBITMAPS = 0x0404;
+inline constexpr unsigned int WM_UPDATESCINTILLAS  = 0x0405;
+inline constexpr unsigned int WM_SYSTRAY_MENU     = 0x0406;
+inline constexpr unsigned int WM_MACRODLGRUNMACRO = 0x0411;
+inline constexpr unsigned int WM_TASKBARCREATED   = 0x8000;
+inline constexpr unsigned int WM_CHAR_REPLACEMENT = 0x1220;  // type-ahead search in dialogs
+#endif  // WM_CREATE
