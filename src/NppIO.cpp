@@ -2891,7 +2891,7 @@ bool Notepad_plus::fileLoadSession(const wchar_t *fn)
 
 const wchar_t * Notepad_plus::fileSaveSession(size_t nbFile, wchar_t ** fileNames, const wchar_t *sessionFile2save, bool includeFileBrowser)
 {
-	if (sessionFile2save && (lstrlen(sessionFile2save) > 0))
+	if (sessionFile2save && (std::wcslen(sessionFile2save) > 0))
 	{
 		Session currentSession;
 		if ((nbFile) && (fileNames))

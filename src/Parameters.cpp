@@ -1115,7 +1115,7 @@ bool NppParameters::reloadStylers(const wchar_t* stylePath)
 	{
 		if (!_pNativeLangSpeaker)
 		{
-			QMessageBox::(nullptr, _pXmlUserStylerDoc._path.c_str(), L"Load stylers.xml failed", QMessageBox::Ok);
+			QMessageBox::critical(nullptr, QString::fromWCharArray(_pXmlUserStylerDoc._path.c_str()), QStringLiteral("Load stylers.xml failed"), QMessageBox::Ok);
 		}
 		else
 		{
@@ -1320,7 +1320,7 @@ bool NppParameters::load()
 			std::wstring errMsg = L"The given path\r";
 			errMsg += _cmdSettingsDir;
 			errMsg += L"\nvia command line \"-settingsDir=\" is not a valid directory.\rThis argument will be ignored.";
-			QMessageBox::(nullptr, errMsg.c_str(), L"Invalid directory", QMessageBox::Ok);
+			QMessageBox::warning(nullptr, QStringLiteral("Invalid directory"), QString::fromWCharArray(errMsg.c_str()), QMessageBox::Ok);
 		}
 		else
 		{
@@ -1451,7 +1451,7 @@ bool NppParameters::load()
 		}
 		else
 		{
-			QMessageBox::(nullptr, _stylerPath.c_str(), L"Load stylers.xml failed", QMessageBox::Ok);
+			QMessageBox::critical(nullptr, QStringLiteral("Load stylers.xml failed"), QString::fromWCharArray(_stylerPath.c_str()), QMessageBox::Ok);
 		}
 		delete _pXmlUserStylerDoc._doc;
 		_pXmlUserStylerDoc._doc = nullptr;
@@ -1664,17 +1664,28 @@ bool NppParameters::load()
 			if (QFileInfo(QString::fromStdWString(sessionInCaseOfCorruption_bak)))
 			{
 				bool bFileSwapOk = false;
-				if (QFileInfo(QString::fromStdWString(_sessionPath)))
+				QString sessionPath = QString::fromStdWString(_sessionPath);
+				QString sessionBackup = QString::fromStdWString(sessionInCaseOfCorruption_bak);
+
+				if (QFileInfo::exists(sessionPath))
 				{
-					// an invalid session.xml file exists
-					bFileSwapOk = ::ReplaceFile(_sessionPath.c_str(), sessionInCaseOfCorruption_bak.c_str(), nullptr,
-						0, 0, 0);
+					// Session file exists but is corrupt: rename it to backup path, rename good backup to session path
+					// Use a temp intermediate file to avoid collisions on same filesystem
+					QString corruptBackup = sessionPath + QStringLiteral(".corrupt_backup");
+					if (QFile::rename(sessionPath, corruptBackup))
+					{
+						bFileSwapOk = QFile::rename(sessionBackup, sessionPath);
+						if (!bFileSwapOk)
+						{
+							// Restore on failure
+							QFile::rename(corruptBackup, sessionPath);
+						}
+					}
 				}
 				else
 				{
-					// no session.xml file
-					bFileSwapOk = ::MoveFileEx(sessionInCaseOfCorruption_bak.c_str(), _sessionPath.c_str(),
-						0);
+					// No session file — just rename the backup to become the session
+					bFileSwapOk = QFile::rename(sessionBackup, sessionPath);
 				}
 
 				if (bFileSwapOk)
@@ -2020,6 +2031,7 @@ bool NppParameters::updateFromModelXml(NppXml::Element& rootUser, ConfXml whichC
 	const int userModelLastModifDate = NppXml::intAttribute(rootUser, "modelFileLastModifiedDate", 0);
 
 	// read the actual timestamp from the model file; if there's a problem reading the attributes, just exit out (don't need to warn the user, since the main XML has already been loaded)
+#ifdef _WIN32
 	WIN32_FILE_ATTRIBUTE_DATA attributes{};
 	// GetFileAttributesExW stubbed — use QFileInfo
 		return false;
@@ -2027,6 +2039,15 @@ bool NppParameters::updateFromModelXml(NppXml::Element& rootUser, ConfXml whichC
 	int modifiedDate = 0;
 	if (!fileTimeToYMD(attributes.ftLastWriteTime, modifiedDate))
 		return false;
+#else
+	// Qt6: use QFileInfo to get modification date
+	QFileInfo modelInfo(QString::fromStdWString(modelXmlPath));
+	if (!modelInfo.exists() || !modelInfo.isReadable())
+		return false;
+	int modifiedDate = modelInfo.lastModified().date().year() * 10000
+		+ modelInfo.lastModified().date().month() * 100
+		+ modelInfo.lastModified().date().day();
+#endif
 
 	// if modifiedDate is not later than user stored model timestamp, no need to check more.
 	// Note: in case of absence of attribute "modelModifDate", userModelModifTimestamp will be 0
@@ -4189,12 +4210,11 @@ void NppParameters::writeSession(const Session& session, const wchar_t* fileName
 
 		// Make sure backup file is not read-only, if it exists
 		removeReadOnlyFlagFromFileAttributes(backupPathName);
-		doesBackupCopyExist = CopyFile(sessionPathName, backupPathName, false);
+		doesBackupCopyExist = QFile::copy(QString::fromWCharArray(sessionPathName), QString::fromWCharArray(backupPathName));
 		if (!doesBackupCopyExist && !isEndSessionCritical())
 		{
-			std::wstring errTitle = L"Session file backup error: ";
-			errTitle += GetLastErrorAsString(0);
-			QMessageBox::(nullptr, sessionPathName, errTitle.c_str(), QMessageBox::Ok);
+			QMessageBox::warning(nullptr, QStringLiteral("Session file backup error"),
+				QStringLiteral("Failed to create backup copy of session file."), QMessageBox::Ok);
 		}
 	}
 
@@ -4325,11 +4345,17 @@ void NppParameters::writeSession(const Session& session, const wchar_t* fileName
 		if (doesBackupCopyExist) // session backup file exists, restore it
 		{
 			if (!isEndSessionCritical())
-				QMessageBox::(nullptr, backupPathName, L"Saving session error - restoring from the backup:", QMessageBox::Ok | QMessageBox::Warning);
+				QMessageBox::warning(nullptr, QStringLiteral("Saving session error - restoring from the backup:"),
+					QString::fromWCharArray(backupPathName), QMessageBox::Ok);
 
-			std::wstring sessionPathNameFail2Load = sessionPathName;
-			sessionPathNameFail2Load += L".fail2Load";
-			ReplaceFile(sessionPathName, backupPathName, sessionPathNameFail2Load.c_str(), 0, 0, 0);
+			QString sessionPath = QString::fromWCharArray(sessionPathName);
+			QString failPath = sessionPath + QStringLiteral(".fail2Load");
+			QString backup = QString::fromWCharArray(backupPathName);
+
+			// ReplaceFile: backup current session to fail2Load, then move backup into place
+			QFile::copy(sessionPath, failPath);
+			QFile::remove(sessionPath);
+			QFile::copy(backup, sessionPath);
 		}
 	}
 	/*
@@ -5827,12 +5853,12 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 
 			{
 				using enum UniMode;
-				int i = NppXml::intAttribute(childNode, "encoding", static_cast<int>(uniUTF8_NoBOM));
+				int i = NppXml::intAttribute(childNode, "encoding", static_cast<int>(UniMode::uniUTF8_NoBOM));
 				if (isCurrentSystemCodepageUTF8() // "Beta: Use Unicode UTF-8 for worldwide language support" option is checked in Windows
-					&& static_cast<UniMode>(i) == uni8Bit) // Notepad++ default new document setting is ANSI
+					&& static_cast<UniMode>(i) == UniMode::uni8Bit) // Notepad++ default new document setting is ANSI
 				{
 					// Force Notepad++ default new document setting from ANSI to UTF-8
-					i = static_cast<int>(uniUTF8);
+					i = static_cast<int>(UniMode::uniUTF8);
 				}
 				_nppGUI._newDocDefaultSettings._unicodeMode = static_cast<UniMode>(i);
 			}
@@ -5995,7 +6021,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		{
 			_nppGUI._printSettings._printLineNumber = getBoolAttribute(childNode, "lineNumber", _nppGUI._printSettings._printLineNumber);
 
-			_nppGUI._printSettings._printOption = getRangeDefaultAttribute<int>(childNode, "printOption", SC_PRINT_NORMAL, SC_PRINT_COLOURONWHITE, _nppGUI._printSettings._printOption);
+			_nppGUI._printSettings._printOption = getRangeDefaultAttribute<int>(childNode, "printOption", npp_sci::SC_PRINT_NORMAL, npp_sci::SC_PRINT_COLOURONWHITE, _nppGUI._printSettings._printOption);
 
 			_nppGUI._printSettings._headerLeft = string2wstring(NppXml::attribute(childNode, "headerLeft", ""));
 			_nppGUI._printSettings._headerMiddle = string2wstring(NppXml::attribute(childNode, "headerMiddle", ""));

@@ -234,12 +234,12 @@ void DocumentSnapshotWidget::scrollSnapshotWith(const MapPosition& mapPos, int t
 
     bool changed = false;
 
-    if (mapPos._height != -1 && _rc.bottom != _rc.top + static_cast<long>(mapPos._height)) {
-        _rc.bottom = _rc.top + static_cast<long>(mapPos._height);
+    if (mapPos._height != -1 && _rc.bottom() != _rc.top() + mapPos._height) {
+        _rc.setBottom(_rc.top() + mapPos._height);
         changed = true;
     }
-    if (mapPos._width != -1 && _rc.right != _rc.left + static_cast<long>(mapPos._width)) {
-        _rc.right = _rc.left + static_cast<long>(mapPos._width);
+    if (mapPos._width != -1 && _rc.right() != _rc.left() + mapPos._width) {
+        _rc.setRight(_rc.left() + mapPos._width);
         changed = true;
     }
 

@@ -1,5 +1,6 @@
 // npp-qt: Win32→Qt6 semantic lift — see SEMANTIC_LIFT_MAP.md
 #include "ScintillaEditBase.h"
+#include "NppSciCompat.h"  // npp_sci namespace (SCI_* constants)
 #include <QWheelEvent>
 #include <QKeyEvent>
 #include <QDebug>
@@ -57,7 +58,7 @@ QString ScintillaEditBase::selectedText() const
 
 int ScintillaEditBase::length() const
 {
-    return static_cast<int>(send(SCI_GETLENGTH));
+    return static_cast<int>(send(npp_sci::SCI_GETLENGTH));
 }
 
 void ScintillaEditBase::selectAll()
@@ -67,12 +68,12 @@ void ScintillaEditBase::selectAll()
 
 size_t ScintillaEditBase::selectionStart() const
 {
-    return static_cast<size_t>(send(SCI_GETSELECTIONSTART));
+    return static_cast<size_t>(send(npp_sci::SCI_GETSELECTIONSTART));
 }
 
 size_t ScintillaEditBase::selectionEnd() const
 {
-    return static_cast<size_t>(send(SCI_GETSELECTIONEND));
+    return static_cast<size_t>(send(npp_sci::SCI_GETSELECTIONEND));
 }
 
 void ScintillaEditBase::gotoPos(int pos)
@@ -93,7 +94,7 @@ int ScintillaEditBase::currentPos() const
 
 int ScintillaEditBase::currentLine() const
 {
-    return static_cast<int>(send(SCI_GETCURRENTLINE));
+    return static_cast<int>(send(npp_sci::SCI_GETCURRENTLINE));
 }
 
 int ScintillaEditBase::lineCount() const
@@ -124,7 +125,7 @@ void ScintillaEditBase::keyPressEvent(QKeyEvent* e)
 
 void ScintillaEditBase::autoCompleteCancel()
 {
-    send(SCI_AUTOCCANCEL);
+    send(npp_sci::SCI_AUTOCCANCEL);
 }
 
 void ScintillaEditBase::autoCompleteSelect(const QString& text)

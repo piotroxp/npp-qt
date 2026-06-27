@@ -16,9 +16,9 @@
 #include <QEvent>
 #include <QtGlobal>       // for qintptr / quintptr
 #include <cstdint>       // for intptr_t / uintptr_t
+#include "NppSciCompat.h"
 #include <Qsci/qsciprinter.h>
 #include <Qsci/qsciscintilla.h>
-#include "NppSciCompat.h"
 
 // sptr_t / uptr_t — Scintilla integer types (mirrors Scintilla.h)
 // Guard against redefinition (Scintilla.h also defines these via SCINTILLA_SPTR_T_DEFINED)

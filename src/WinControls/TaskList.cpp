@@ -5,7 +5,7 @@
 #include "TaskList.h"
 #include "DockingWnd.h"
 #include "NppDarkMode.h"
-#include <QSelectionModel>
+#include <QItemSelectionModel>
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QListWidget>

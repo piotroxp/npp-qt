@@ -778,5 +778,11 @@ void NppDarkMode::setTitleBarLight(QWidget* w)
     Q_UNUSED(w);
 }
 
+// Stub: returns 0 (no alt icon set) on Linux
+int NppDarkMode::getTabIconSet(bool /*isDarkMode*/)
+{
+    return 0;
+}
+
 } // namespace NppDarkMode
 

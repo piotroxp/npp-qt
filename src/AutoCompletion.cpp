@@ -30,16 +30,16 @@ AutoCompletion::AutoCompletion(ScintillaComponent* pEditView)
 
 AutoCompletion::~AutoCompletion() = default;
 
-void AutoCompletion::setColour(int colour, int colorIndex)
+void AutoCompletion::setColour(QRgb colour, AutocompleteColorIndex colorIndex)
 {
     switch (colorIndex) {
-        case 0: _autocompleteText = colour; break;
-        case 1: _autocompleteBg = colour; break;
-        case 2: _selectedText = colour; break;
-        case 3: _selectedBg = colour; break;
-        case 4: _calltipBg = colour; break;
-        case 5: _calltipText = colour; break;
-        case 6: _calltipHighlight = colour; break;
+        case AutocompleteColorIndex::autocompleteText: _autocompleteText = colour; break;
+        case AutocompleteColorIndex::autocompleteBg: _autocompleteBg = colour; break;
+        case AutocompleteColorIndex::selectedText: _selectedText = colour; break;
+        case AutocompleteColorIndex::selectedBg: _selectedBg = colour; break;
+        case AutocompleteColorIndex::calltipBg: _calltipBg = colour; break;
+        case AutocompleteColorIndex::calltipText: _calltipText = colour; break;
+        case AutocompleteColorIndex::calltipHighlight: _calltipHighlight = colour; break;
     }
 }
 

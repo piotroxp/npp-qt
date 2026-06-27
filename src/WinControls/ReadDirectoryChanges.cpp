@@ -34,9 +34,8 @@ bool DirectoryWatcher::init()
             this, &DirectoryWatcher::onDirectoryChanged);
     connect(_watcher, &QFileSystemWatcher::fileChanged,
             this, &DirectoryWatcher::onFileChanged);
-    // errorOccurred signal in Qt6: void errorOccurred(const QString& path, QFileSystemWatcher::Error error)
-    connect(_watcher, QOverload<const QString&, QFileSystemWatcher::Error>::of(&QFileSystemWatcher::errorOccurred),
-            this, [](const QString& path, QFileSystemWatcher::Error) { qWarning() << "File watcher error:" << path; });
+    // Note: Qt6 QFileSystemWatcher has no errorOccurred signal.
+    // File/directory change errors are implicitly handled — no explicit error reporting needed.
     connect(_pollTimer, &QTimer::timeout,
             this, &DirectoryWatcher::onDirectoryChanged);
 
@@ -121,7 +120,7 @@ void DirectoryWatcher::addDirectory(const QString& directoryPath,
             while (subit.hasNext()) {
                 subit.next();
                 _knownFiles.insert(subit.filePath(),
-                    QFileInfo(subit.filePath()).lastModified())
+                    QFileInfo(subit.filePath()).lastModified());
             }
         }
     }
@@ -131,7 +130,7 @@ void DirectoryWatcher::addDirectory(const QString& directoryPath,
     while (it.hasNext()) {
         it.next();
         _knownFiles.insert(it.filePath(),
-            QFileInfo(it.filePath()).lastModified())
+            QFileInfo(it.filePath()).lastModified());
     }
 }
 

@@ -41,8 +41,8 @@ static inline QPair<QColor, QColor> getLexerColors(ScintillaEditView* sci)
 
     // Style 0 is the default style (lexer neutral)
     // send() returns sptr_t (64-bit); SCI_STYLEGETFORE/BACK returns a COLORREF as sptr_t
-    QRgb fgRgb = static_cast<QRgb>(sci->send(SCI_STYLEGETFORE, 0));
-    QRgb bgRgb = static_cast<QRgb>(sci->send(SCI_STYLEGETBACK, 0));
+    QRgb fgRgb = static_cast<QRgb>(sci->send(npp_sci::SCI_STYLEGETFORE, 0));
+    QRgb bgRgb = static_cast<QRgb>(sci->send(npp_sci::SCI_STYLEGETBACK, 0));
     QColor fg = QColor::fromRgba(fgRgb);
     QColor bg = QColor::fromRgba(bgRgb);
 

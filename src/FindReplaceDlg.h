@@ -106,6 +106,8 @@ public:
     const std::wstring& getText2search() const;
     const FindOption& getCurrentOptions() const { return _options; }
     static FindOption _options;
+    // Win32 compat: _env was a pointer default; use static _options as default
+    static FindOption* _env;
 
 signals:
     void searchCompleted(int count);

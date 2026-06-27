@@ -20,7 +20,7 @@
 #include <QString>
 
 // Unicode mode constants — prefixed to avoid conflict with NppConstants.h
-// (which defines uni16BE_NoBOM=3, uni16LE_NoBOM=5, uniUTF8_NoBOM=0, etc.)
+// (which defines UniMode::uni16BE_NoBOM=3, UniMode::uni16LE_NoBOM=5, UniMode::uniUTF8_NoBOM=0, etc.)
 static const unsigned utf8_16_unknown   = 0;
 static const unsigned utf8_16_8bit      = 1;
 static const unsigned utf8_16_utf8      = 2;

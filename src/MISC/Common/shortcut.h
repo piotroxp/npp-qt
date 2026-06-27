@@ -25,23 +25,23 @@ struct KeyCombo {
 
 static inline quint32 keyTranslate(quint32 keyIn) {
     switch (keyIn) {
-        case 0x28: return SCK_DOWN;
-        case 0x26: return SCK_UP;
-        case 0x25: return SCK_LEFT;
-        case 0x27: return SCK_RIGHT;
-        case 0x24: return SCK_HOME;
-        case 0x23: return SCK_END;
-        case 0x21: return SCK_PRIOR;
-        case 0x22: return SCK_NEXT;
-        case 0x2E: return SCK_DELETE;
-        case 0x2D: return SCK_INSERT;
-        case 0x1B: return SCK_ESCAPE;
-        case 0x08: return SCK_BACK;
-        case 0x09: return SCK_TAB;
-        case 0x0D: return SCK_RETURN;
-        case 0x6B: return SCK_ADD;
-        case 0x6D: return SCK_SUBTRACT;
-        case 0x6F: return SCK_DIVIDE;
+        case 0x28: return npp_sci::SCK_DOWN;
+        case 0x26: return npp_sci::SCK_UP;
+        case 0x25: return npp_sci::SCK_LEFT;
+        case 0x27: return npp_sci::SCK_RIGHT;
+        case 0x24: return npp_sci::SCK_HOME;
+        case 0x23: return npp_sci::SCK_END;
+        case 0x21: return npp_sci::SCK_PRIOR;
+        case 0x22: return npp_sci::SCK_NEXT;
+        case 0x2E: return npp_sci::SCK_DELETE;
+        case 0x2D: return npp_sci::SCK_INSERT;
+        case 0x1B: return npp_sci::SCK_ESCAPE;
+        case 0x08: return npp_sci::SCK_BACK;
+        case 0x09: return npp_sci::SCK_TAB;
+        case 0x0D: return npp_sci::SCK_RETURN;
+        case 0x6B: return npp_sci::SCK_ADD;
+        case 0x6D: return npp_sci::SCK_SUBTRACT;
+        case 0x6F: return npp_sci::SCK_DIVIDE;
         default:   return keyIn;
     }
 }

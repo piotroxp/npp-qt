@@ -1272,3 +1272,11 @@ int scaleFontForFactor(int pt, unsigned int textScaleFactor)
     return pt * static_cast<int>(textScaleFactor) / static_cast<int>(defaultFactor);
 }
 } // namespace DPIManagerV2
+
+std::wstring GetLastErrorAsString(unsigned long errorCode)
+{
+    if (errorCode == 0)
+        return std::wstring(L"No error");
+    // On non-Windows, return a generic error string
+    return std::wstring(L"Error code: ") + std::to_wstring(errorCode);
+}

@@ -28,6 +28,18 @@ class AutoCompletion : public QObject
 {
     Q_OBJECT
 public:
+    enum class AutocompleteColorIndex {
+        autocompleteText,
+        autocompleteBg,
+        selectedText,
+        selectedBg,
+        calltipBg,
+        calltipText,
+        calltipHighlight
+    };
+
+    static void setColour(QRgb colour2Set, AutocompleteColorIndex i);
+
     explicit AutoCompletion(ScintillaComponent* pEditView);
     ~AutoCompletion() override;
 

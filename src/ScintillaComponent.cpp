@@ -854,11 +854,6 @@ void ScintillaComponent::scroll(int columns, int lines)
     // The Scintilla content scrolls within the scroll area.
 }
 
-intptr_t ScintillaComponent::currentLine() const
-{
-    return send(SCI_GETCURRENTLINE);
-}
-
 intptr_t ScintillaComponent::currentColumn() const
 {
     size_t caret = send(SCI_GETCURRENTPOS);

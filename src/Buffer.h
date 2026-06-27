@@ -59,8 +59,20 @@ enum class DocFileStatus { DOC_REGULAR = 0x01, DOC_UNNAMED = 0x02, DOC_DELETED =
 // LangType is defined in NppConstants.h (included above)
 
 
-enum class UniMode { uni8Bit = 0, uniUTF8 = 1, uni16BE = 2, uni16LE = 3,
-    uniCookie = 4, uniUTF8_NoBOM = 5, uni16BE_NoBOM = 6, uni16LE_NoBOM = 7, uni7Bit = 8 };
+enum class UniMode {
+    uni8Bit = 0, uniUTF8 = 1, uni16BE = 2, uni16LE = 3,
+    uniCookie = 4, uniUTF8_NoBOM = 5, uni16BE_NoBOM = 6, uni16LE_NoBOM = 7,
+    // Aliases for code that uses bare identifiers
+    uni7Bit = uni8Bit
+};
+
+// NOTE: Do NOT add `using enum UniMode;` here — NppConstants.h redefines
+// uniUTF8_NoBOM/uniCookie as inline constexpr int and including both
+// would cause conflicts. Files that need bare enum values should:
+//   1. include Buffer.h, and
+//   2. add their own `using enum UniMode;` in a local scope, OR
+//   3. use UniMode::uni8Bit etc. (preferred)
+// Bring enum values into scope ONLY within Buffer.h's implementation block.
 
 // Buffer change notification masks
 constexpr int BufferChangeNone       = 0x000;
@@ -88,9 +100,24 @@ struct Position {
     int _wrapMode = 0;
 };
 
+// Map position structure — shared between Buffer and DocumentMap
+// Used for minimap / document map scrolling sync
 struct MapPosition {
-    intptr_t _firstVisibleLine = 0;
-    intptr_t _wrapColumn = 0;
+    int _firstVisibleLine = 0;
+    int _wrapColumn = 0;
+    int _height = -1;   // visible line height in pixels (-1 = unchanged)
+    int _width = -1;    // visible column width (-1 = unchanged)
+    int _iView = 0;     // view index (0 = main, 1 = sub)
+    bool _isWrap = false;
+    int  _wrapIndentMode = 0;
+    int  _firstVisibleDisplayLine = 0;
+    int  _firstVisibleDocLine = 0;
+    int  _nbLine = 0;
+    int  _lastVisibleDocLine = 0;
+
+    MapPosition() : _firstVisibleLine(0), _wrapColumn(0), _height(-1), _width(-1), _iView(0), _isWrap(false), _wrapIndentMode(0), _firstVisibleDisplayLine(0), _firstVisibleDocLine(0), _nbLine(0), _lastVisibleDocLine(0) {}
+    MapPosition(int line, int height, int width, int iView)
+        : _firstVisibleLine(line), _wrapColumn(0), _height(height), _width(width), _iView(iView), _isWrap(false), _wrapIndentMode(0), _firstVisibleDisplayLine(0), _firstVisibleDocLine(0), _nbLine(0), _lastVisibleDocLine(0) {}
 };
 
 class Buffer : public QObject {

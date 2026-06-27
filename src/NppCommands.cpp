@@ -226,30 +226,28 @@ void Notepad_plus::command(int id)
 
 		case IDM_FILE_OPEN_FOLDER:
 		{
-			HRESULT hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+			bool opened = false;
+			QString folderPath = QString::fromStdWString(
+				std::filesystem::path(_pEditView->getCurrentBuffer()->getFullPathName()).parent_path().string()
+			);
 
-			ScopedCOMInit com;
-			if (com.isInitialized())
+#ifdef _WIN32
+			ITEMIDLIST* pidl = nullptr;
+			HRESULT hr = ::SHParseDisplayName(_pEditView->getCurrentBuffer()->getFullPathName(), nullptr, &pidl, 0, nullptr);
+			if (SUCCEEDED(hr))
 			{
-				ITEMIDLIST* pidl = nullptr;
-				hr = ::SHParseDisplayName(_pEditView->getCurrentBuffer()->getFullPathName(), nullptr, &pidl, 0, nullptr);
+				hr = ::SHOpenFolderAndSelectItems(pidl, 0, nullptr, 0);
 				if (SUCCEEDED(hr))
-				{
-					hr = ::SHOpenFolderAndSelectItems(pidl, 0, nullptr, 0);
-					// CoTaskMemFree -> delete: pidl);
-				}
+					opened = true;
+				// CoTaskMemFree -> delete: pidl);
 			}
-
-			if (hr == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
+			if (!opened)
+#endif
 			{
-				// fallback (but without selecting the current file)
-				// - either the COM cannot be used or the above shell APIs mysteriously fail on some systems
-				//   with the "file not found" even though the file is there
-				// - do not use this fallback for any other possible error (like E_INVALIDARG, etc.)
-				QDesktopServices::openUrl(QUrl::fromLocalFile(,
-					std::filesystem::path(_pEditView->getCurrentBuffer()->getFullPathName()).parent_path().c_str(), nullptr, nullptr, Qt::WindowState::WindowActiveNORMAL);
+				// Fallback: open the folder (without selecting the current file)
+				// Works on all platforms via the default file manager
+				QDesktopServices::openUrl(QUrl::fromLocalFile(folderPath));
 			}
-
 			break;
 		}
 
@@ -289,7 +287,7 @@ void Notepad_plus::command(int id)
 			// Opens file in its default viewer. 
             // Has the same effect as double–clicking this file in Windows Explorer.
             BufferID buf = _pEditView->getCurrentBufferID();
-			QApplication* res = QDesktopServices::openUrl(QUrl::fromLocalFile(, buf->getFullPathName(), NULL, NULL, Qt::WindowState::WindowActive);
+			QApplication* res = QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdWString(buf->getFullPathName())));
 
 			// As per MSDN (https://msdn.microsoft.com/en-us/library/windows/desktop/bb762153(v=vs.85).aspx)
 			// If the function succeeds, it returns a value greater than 32.
@@ -307,7 +305,7 @@ void Notepad_plus::command(int id)
 				errorMsg += intToString(retResult);
 				errorMsg += L"\n----------------------------------------------------------";
 				
-				QMessageBox::warning(qobject_cast<QWidget*>(_pPublicInterface->getHSelf()),  errorMsg.c_str(), L"ShellExecute - ERROR", 0 | 0);
+				QMessageBox::warning(qobject_cast<QWidget*>(_pPublicInterface->getHSelf()), QStringLiteral("ShellExecute - ERROR"), QString::fromWCharArray(errorMsg.c_str()), QMessageBox::Ok);
 			}
 		}
 		break;
@@ -566,59 +564,18 @@ void Notepad_plus::command(int id)
 				return;
 			}
 
-			// Allocate a global memory object for the text.
-			void* hglbCopy = ::GlobalAlloc(GMEM_MOVEABLE, (textLen + 1) * sizeof(unsigned char));
-			if (!hglbCopy)
-			{
-				// CloseClipboard: ;
-				return;
-			}
+			// Allocate a buffer for the clipboard text.
+			QByteArray clipboardData(reinterpret_cast<const char*>(pBinText.get()), static_cast<int>(textLen));
 
-			// Lock the handle and copy the text to the buffer.
-			unsigned char *lpucharCopy = (unsigned char *)// GlobalLock -> pointer: hglbCopy);
-			if (!lpucharCopy)
-			{
-				// GlobalFree -> delete: hglbCopy);
-				// CloseClipboard: ;
-				return;
-			}
-			memcpy(lpucharCopy, pBinText.get(), textLen * sizeof(unsigned char));
-			lpucharCopy[textLen] = 0;    // null character
+			// Place the data on the clipboard.
+			QClipboard* clipboard = QApplication::clipboard();
+			QMimeData* mimeData = new QMimeData();
+			mimeData->setData(QStringLiteral("application/x-qt-rawbinary"), clipboardData);
+			clipboard->setMimeData(mimeData);
 
-			// GlobalUnlock: hglbCopy);
-
-			pBinText.reset(nullptr); // free possible big membuf ASAP
-
-			// Place the handle on the clipboard.
-			if (!// SetClipboardData -> QClipboard::setText: 0, hglbCopy))
-			{
-				// GlobalFree -> delete: hglbCopy);
-				// CloseClipboard: ;
-				return;
-			}
-
-			// Allocate a global memory object for the text length.
-			void* hglbLenCopy = ::GlobalAlloc(GMEM_MOVEABLE, sizeof(unsigned long));
-			if (!hglbLenCopy)
-			{
-				// CloseClipboard: ;
-				return;
-			}
-
-			// Lock the handle and copy the text to the buffer.
-			unsigned long *lpLenCopy = (unsigned long *)// GlobalLock -> pointer: hglbLenCopy);
-			if (!lpLenCopy)
-			{
-				// CloseClipboard: ;
-				return;
-			}
-			*lpLenCopy = static_cast<unsigned long>(textLen);
-
-			// GlobalUnlock: hglbLenCopy);
-
-			// Place the handle on the clipboard.
-			unsigned int cf_nppTextLen = ::RegisterClipboardFormat(CF_NPPTEXTLEN);
-			// SetClipboardData -> QClipboard::setText: cf_nppTextLen, hglbLenCopy);
+			// Store the exact byte length as a separate mime data entry for binary paste fidelity.
+			QByteArray lenData(reinterpret_cast<const char*>(&textLen), sizeof(size_t));
+			mimeData->setData(QStringLiteral("application/x-npp-textlen"), lenData);
 
 			// CloseClipboard: ;
 
@@ -658,43 +615,26 @@ void Notepad_plus::command(int id)
 		case IDM_EDIT_PASTE_BINARY:
 		{
 			std::lock_guard<std::mutex> lock(command_mutex);
-			if (!IsClipboardFormatAvailable(0))
-				return;
+			QClipboard* clipboard = QApplication::clipboard();
+			const QMimeData* mime = clipboard->mimeData();
 
-			if (!OpenClipboard(NULL))
-				return;
-
-			void* hglb = GetClipboardData(0);
-			if (hglb != NULL)
+			// Check for our custom binary format (set by IDM_EDIT_COPY_BINARY)
+			if (mime->hasFormat(QStringLiteral("application/x-qt-rawbinary")))
 			{
-				char *lpchar = (char *)GlobalLock(hglb);
-				if (lpchar != NULL)
-				{
-					unsigned int cf_nppTextLen = RegisterClipboardFormat(CF_NPPTEXTLEN);
-					if (IsClipboardFormatAvailable(cf_nppTextLen))
-					{
-						void* hglbLen = GetClipboardData(cf_nppTextLen);
-						if (hglbLen != NULL)
-						{
-							unsigned long *lpLen = (unsigned long *)GlobalLock(hglbLen);
-							if (lpLen != NULL)
-							{
-								_pEditView->execute(SCI_REPLACESEL, 0, reinterpret_cast<qintptr>(""));
-								_pEditView->execute(SCI_ADDTEXT, *lpLen, reinterpret_cast<qintptr>(lpchar));
+				QByteArray rawData = mime->data(QStringLiteral("application/x-qt-rawbinary"));
+				QByteArray lenData = mime->data(QStringLiteral("application/x-npp-textlen"));
+				size_t pasteLen = lenData.isEmpty() ? rawData.size()
+				                                   : *reinterpret_cast<const size_t*>(lenData.constData());
 
-								GlobalUnlock(hglbLen);
-							}
-						}
-					}
-					else
-					{
-						_pEditView->execute(SCI_REPLACESEL, 0, reinterpret_cast<qintptr>(lpchar));
-					}
-					GlobalUnlock(hglb);
-				}
+				_pEditView->execute(SCI_REPLACESEL, 0, reinterpret_cast<qintptr>(""));
+				_pEditView->execute(SCI_ADDTEXT, pasteLen, reinterpret_cast<qintptr>(rawData.constData()));
 			}
-			CloseClipboard();
-
+			else if (mime->hasText())
+			{
+				// Plain text clipboard — paste as-is
+				_pEditView->execute(SCI_REPLACESEL, 0, reinterpret_cast<qintptr>(""));
+				_pEditView->execute(SCI_PASTE);
+			}
 		}
 		break;
 
@@ -703,7 +643,7 @@ void Notepad_plus::command(int id)
 			_pEditView->execute(SCI_BEGINUNDOACTION);
 
 			const int selCount = static_cast<int>(_pEditView->execute(SCI_GETSELECTIONS));
-			const bool useBullet = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+			const bool useBullet = QApplication::queryKeyboardModifiers().testFlag(Qt::ShiftModifier);
 
 			const int codePage = static_cast<int>(_pEditView->execute(SCI_GETCODEPAGE));
 			const bool isUnicode = (codePage == SC_CP_UTF8);
@@ -754,69 +694,58 @@ void Notepad_plus::command(int id)
 				return;
 
 			QWidget* hwnd = _pPublicInterface->getHSelf();
+			QString currentWord = _pEditView->getWordOnCaret();
+			if (currentWord.isEmpty())
+				return;
 
-			const int strSize = CURRENTWORD_MAXLENGTH;
-			auto currentWord = std::make_unique<wchar_t[]>(strSize);
-			std::fill_n(currentWord.get(), strSize, L'\0');
-
-			// SendMessage(NPPM_) -> Qt: GETFILENAMEATCURSOR, CURRENTWORD_MAXLENGTH, reinterpret_cast<qintptr>(currentWord.get()));
-			
-			wchar_t cmd2Exec[CURRENTWORD_MAXLENGTH] = { '\0' };
+			QString targetPath;
 			if (id == IDM_EDIT_OPENINFOLDER)
 			{
-				if (!::GetWindowsDirectoryW(cmd2Exec, MAX_PATH))
-					return;
-
-				PathAppend(cmd2Exec, L"explorer.exe");
-
-				if (!doesFileExist(cmd2Exec))
-					return;
+				// Open the folder containing the word (or the word itself if it's a path)
+				QFileInfo fi(currentWord);
+				if (fi.isAbsolute())
+					targetPath = fi.isDir() ? currentWord : fi.absolutePath();
+				else
+					targetPath = QDir::current().absoluteFilePath(fi.absolutePath());
 			}
 			else
 			{
-				// SendMessage(NPPM_) -> Qt: GETNPPFULLFILEPATH, CURRENTWORD_MAXLENGTH, reinterpret_cast<qintptr>(cmd2Exec));
+				// Open as file: use the word as a path
+				QFileInfo fi(currentWord);
+				if (fi.isAbsolute())
+					targetPath = currentWord;
+				else
+					targetPath = QDir::current().absoluteFilePath(currentWord);
 			}
 
-			// Full file path: could be a folder or a file
-			if (doesPathExist(currentWord.get()))
+			// OpenINFOLDER with a relative path: prepend with current directory
+			if (id == IDM_EDIT_OPENINFOLDER && !QFileInfo::exists(targetPath))
 			{
-				wstring fullFilePath = id == IDM_EDIT_OPENINFOLDER ? L"/select," : L"";
-				fullFilePath += L"\"";
-				fullFilePath += currentWord.get();
-				fullFilePath += L"\"";
-
-				if (id == IDM_EDIT_OPENINFOLDER ||
-					(id == IDM_EDIT_OPENASFILE && !doesDirectoryExist(currentWord.get())))
-					// ShellExecute -> QDesktopServices: hwnd, L"open", cmd2Exec, fullFilePath.c_str(), L".", Qt::WindowState::WindowActive);
+				// Concatenate with current file's directory
+				QString currentFile = QString::fromWCharArray(
+					_pEditView->getCurrentBuffer()->getFullPathName().c_str());
+				QFileInfo curFi(currentFile);
+				QString combined = curFi.absolutePath() + QDir::separator() + currentWord;
+				if (QFileInfo::exists(combined))
+					targetPath = QFileInfo(combined).absolutePath();
 			}
-			else // Relative file path - need concatenate with current full file path
+
+			if (targetPath.isEmpty())
+				return;
+
+			// Check file exists for OPENASFILE
+			if (id == IDM_EDIT_OPENASFILE && !QFileInfo::exists(targetPath))
 			{
-				auto currentDir = std::make_unique<wchar_t[]>(strSize);
-				std::fill_n(currentDir.get(), strSize, L'\0');
-
-				// SendMessage(NPPM_) -> Qt: GETCURRENTDIRECTORY, CURRENTWORD_MAXLENGTH, reinterpret_cast<qintptr>(currentDir.get()));
-
-				wstring fullFilePath = id == IDM_EDIT_OPENINFOLDER ? L"/select," : L"";
-				fullFilePath += L"\"";
-				fullFilePath += currentDir.get();
-				fullFilePath += L"\\";
-				fullFilePath += currentWord.get();
-
-				if ((id == IDM_EDIT_OPENASFILE && 
-					(!doesFileExist(fullFilePath.c_str() + 1)))) // + 1 for skipping the 1st char '"'
-				{
-					_nativeLangSpeaker.messageBox("FilePathNotFoundWarning",
-						_pPublicInterface->getHSelf(),
-						L"The file you're trying to open doesn't exist.",
-						L"File Open",
-						0 | 0);
-					return;
-				}
-				// else id == IDM_EDIT_OPENINFOLDER - do it anyway. (even the last part does not exist, it doesn't matter)
-
-				fullFilePath += L"\"";
-				// ShellExecute -> QDesktopServices: hwnd, L"open", cmd2Exec, fullFilePath.c_str(), L".", Qt::WindowState::WindowActive);
+				_nativeLangSpeaker.messageBox("FilePathNotFoundWarning",
+					_pPublicInterface->getHSelf(),
+					L"The file you're trying to open doesn't exist.",
+					L"File Open",
+					0 | 0);
+				return;
 			}
+
+			// Open folder or file with default system handler
+			QDesktopServices::openUrl(QUrl::fromLocalFile(targetPath));
 		}
 		break;
 
@@ -874,29 +803,24 @@ void Notepad_plus::command(int id)
 		case IDM_EDIT_PASTE_AS_HTML:
 		{
 			std::lock_guard<std::mutex> lock(command_mutex);
-			unsigned int f = RegisterClipboardFormat(id==IDM_EDIT_PASTE_AS_HTML?CF_HTML:CF_RTF);
+			QClipboard* clipboard = QApplication::clipboard();
+			const QMimeData* mime = clipboard->mimeData();
 
-			if (!IsClipboardFormatAvailable(f))
-				return;
-
-			if (!OpenClipboard(NULL))
-				return;
-
-			void* hglb = GetClipboardData(f);
-			if (hglb != NULL)
+			if (id == IDM_EDIT_PASTE_AS_RTF)
 			{
-				LPSTR lptstr = (LPSTR)GlobalLock(hglb);
-				if (lptstr != NULL)
-				{
-					// Call the application-defined ReplaceSelection
-					// function to insert the text and repaint the
-					// window.
-					_pEditView->execute(SCI_REPLACESEL, 0, reinterpret_cast<qintptr>(lptstr));
-
-					GlobalUnlock(hglb);
-				}
+				if (!mime->hasFormat(QStringLiteral("application/rtf")))
+					return;
+				QByteArray rtfData = mime->data(QStringLiteral("application/rtf"));
+				_pEditView->execute(SCI_REPLACESEL, 0, reinterpret_cast<qintptr>(rtfData.constData()));
 			}
-			CloseClipboard();
+			else
+			{
+				// CF_HTML clipboard format includes a header; Qt uses standard HTML.
+				if (!mime->hasHtml())
+					return;
+				QString htmlText = mime->html();
+				_pEditView->execute(SCI_REPLACESEL, 0, reinterpret_cast<qintptr>(htmlText.toUtf8().constData()));
+			}
 		}
 		break;
 
@@ -1569,7 +1493,7 @@ void Notepad_plus::command(int id)
 
 			auto str = _pEditView->getSelectedTextToWChar(false);
 			if (!str.empty())         // the selected text is not empty, then use it
-				_incrementFindDlg.setSearchText(str.c_str(), _pEditView->getCurrentBuffer()->getUnicodeMode() != uni8Bit);
+				_incrementFindDlg.setSearchText(str.c_str(), _pEditView->getCurrentBuffer()->getUnicodeMode() != UniMode::uni8Bit);
 
 			_incrementFindDlg.display();
 		}
@@ -2288,7 +2212,10 @@ void Notepad_plus::command(int id)
 			{
 				if (_isAdministrator)
 				{
-					MessageBox(_pPublicInterface->getHSelf(), GetLastErrorAsString(GetLastError()).c_str(),	L"Changing file read-only attribute failed", 0 | 0);
+					QMessageBox::warning(qobject_cast<QWidget*>(_pPublicInterface->getHSelf()),
+						QStringLiteral("Changing file read-only attribute failed"),
+						QString::fromWCharArray(GetLastErrorAsString(0).c_str()),
+						QMessageBox::Ok);
 				}
 				else
 				{
@@ -2309,8 +2236,8 @@ void Notepad_plus::command(int id)
 		case IDM_EDIT_MULTISELECTALLMATCHCASEWHOLEWORD:
 		{
 			_multiSelectFlag = id == IDM_EDIT_MULTISELECTALL ? 0 :
-				(id == IDM_EDIT_MULTISELECTALLMATCHCASE ? SCFIND_MATCHCASE :
-					(id == IDM_EDIT_MULTISELECTALLWHOLEunsigned short ? SCFIND_WHOLEWORD: SCFIND_MATCHCASE| SCFIND_WHOLEWORD));
+				(id == IDM_EDIT_MULTISELECTALLMATCHCASE ? npp_sci::SCFIND_MATCHCASE :
+					(id == IDM_EDIT_MULTISELECTALLWHOLEWORD ? npp_sci::SCFIND_WHOLEWORD : npp_sci::SCFIND_MATCHCASE | npp_sci::SCFIND_WHOLEWORD));
 
 			// Don't use _pEditView->hasSelection() because when multi-selection is active and main selection has no selection,
 			// it will cause an infinite loop on SCI_MULTIPLESELECTADDEACH. See:
@@ -2333,8 +2260,8 @@ void Notepad_plus::command(int id)
 		case IDM_EDIT_MULTISELECTNEXTMATCHCASEWHOLEWORD:
 		{
 			_multiSelectFlag = id == IDM_EDIT_MULTISELECTNEXT ? 0 :
-				(id == IDM_EDIT_MULTISELECTNEXTMATCHCASE ? SCFIND_MATCHCASE :
-					(id == IDM_EDIT_MULTISELECTNEXTWHOLEunsigned short ? SCFIND_WHOLEunsigned short : SCFIND_MATCHCASE | SCFIND_WHOLEWORD));
+				(id == IDM_EDIT_MULTISELECTNEXTMATCHCASE ? npp_sci::SCFIND_MATCHCASE :
+					(id == IDM_EDIT_MULTISELECTNEXTWHOLEWORD ? npp_sci::SCFIND_WHOLEWORD : npp_sci::SCFIND_MATCHCASE | npp_sci::SCFIND_WHOLEWORD));
 
 			_pEditView->execute(SCI_TARGETWHOLEDOCUMENT);
 			_pEditView->execute(SCI_SETSEARCHFLAGS, _multiSelectFlag);
@@ -2388,10 +2315,11 @@ void Notepad_plus::command(int id)
 
 	    case IDM_VIEW_ALWAYSONTOP:
 		{
-			int check = (::GetMenuState(_mainMenuHandle, id, 0) == 0)?0:0;
-			// CheckMenuItem -> QAction::setChecked: _mainMenuHandle, id, 0 | check);
-			// SetWindowPos -> QWidget::setWindowFlags
-	if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->setWindowFlags(check == 0 ? Qt::WindowStaysOnTopHint : Qt::Widget);
+			bool isChecked = false;
+			if (QAction* action = findActionById(_mainMenuHandle, id))
+				isChecked = action->isChecked();
+			if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf()))
+				w->setWindowFlags(isChecked ? Qt::WindowStaysOnTopHint : Qt::Widget);
 		}
 		break;
 
@@ -2500,6 +2428,11 @@ void Notepad_plus::command(int id)
 					appPathsEntryName = L"IEXPLORE.EXE";
 				}
 
+				wstring fullCurrentPath = L"\"";
+				fullCurrentPath += currentBuf->getFullPathName();
+				fullCurrentPath += L"\"";
+
+#ifdef _WIN32
 				wchar_t valData[MAX_PATH] = {'\0'};
 				unsigned int valDataLen = MAX_PATH * sizeof(wchar_t);
 				unsigned int valType = 0;
@@ -2509,26 +2442,11 @@ void Notepad_plus::command(int id)
 				::RegOpenKeyEx(0, appEntry.c_str(), 0, 0, &hKey2Check);
 				// RegQueryValueEx -> QSettings: hKey2Check, L"", nullptr, &valType, reinterpret_cast<LPBYTE>(valData), &valDataLen);
 
-				wstring fullCurrentPath = L"\"";
-				fullCurrentPath += currentBuf->getFullPathName();
-				fullCurrentPath += L"\"";
-
 				if (hKey2Check && valData[0] != '\0')
 				{
-					QDesktopServices::openUrl(QUrl::fromLocalFile(, valData, fullCurrentPath.c_str(), NULL, Qt::WindowState::WindowActiveNORMAL);
+					QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromWCharArray(valData), QString::fromWCharArray(fullCurrentPath.c_str())));
 				}
-				else if (id == IDM_VIEW_IN_EDGE)
-				{
-					// Try the Legacy version
-
-					// Don't put the quotes for Edge, otherwise it doesn't work
-					//fullCurrentPath = L"\"";
-					fullCurrentPath = currentBuf->getFullPathName();
-					//fullCurrentPath += L"\"";
-
-					QDesktopServices::openUrl(QUrl::fromLocalFile(, L"shell:Appsfolder\\Microsoft.MicrosoftEdge_8wekyb3d8bbwe!MicrosoftEdge", fullCurrentPath.c_str(), NULL, Qt::WindowState::WindowActive);
-				} 
-				else 
+				else
 				{
 					_nativeLangSpeaker.messageBox("ViewInBrowser",
 						_pPublicInterface->getHSelf(),
@@ -2538,12 +2456,17 @@ void Notepad_plus::command(int id)
 				}
 				// RegCloseKey: hKey2Check);
 			}
+#else
+			// On non-Windows, open with the default desktop handler
+			QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdWString(currentBuf->getFullPathName())));
+#endif
 		}
 		break;
 
 		case IDM_VIEW_TAB_SPACE:
 		{
-			const bool isChecked = !(::GetMenuState(_mainMenuHandle, id, 0) == 0);
+			QAction* a = findActionById(_mainMenuHandle, id);
+			const bool isChecked = a ? a->isChecked() : false;
 			checkMenuItem(id, isChecked);
 
 			_mainEditView.showWSAndTab(isChecked);
@@ -2562,7 +2485,8 @@ void Notepad_plus::command(int id)
 
 		case IDM_VIEW_EOL:
 		{
-			const bool isChecked = !(::GetMenuState(_mainMenuHandle, id, 0) == 0);
+			QAction* a = findActionById(_mainMenuHandle, id);
+			const bool isChecked = a ? a->isChecked() : false;
 			checkMenuItem(id, isChecked);
 
 			_mainEditView.showEOL(isChecked);
@@ -2581,7 +2505,8 @@ void Notepad_plus::command(int id)
 
 		case IDM_VIEW_NPC:
 		{
-			const bool isChecked = !(::GetMenuState(_mainMenuHandle, id, 0) == 0);
+			QAction* a = findActionById(_mainMenuHandle, id);
+			const bool isChecked = a ? a->isChecked() : false;
 			checkMenuItem(id, isChecked);
 
 			auto& svp1 = const_cast<ScintillaViewParams&>(NppParameters::getInstance().getSVP());
@@ -2603,7 +2528,8 @@ void Notepad_plus::command(int id)
 
 		case IDM_VIEW_NPC_CCUNIEOL:
 		{
-			const bool isChecked = !(::GetMenuState(_mainMenuHandle, id, 0) == 0);
+			QAction* a = findActionById(_mainMenuHandle, id);
+			const bool isChecked = a ? a->isChecked() : false;
 			checkMenuItem(id, isChecked);
 
 			auto& svp1 = const_cast<ScintillaViewParams&>(NppParameters::getInstance().getSVP());
@@ -2635,7 +2561,8 @@ void Notepad_plus::command(int id)
 
 		case IDM_VIEW_ALL_CHARACTERS:
 		{
-			const bool isChecked = !(::GetMenuState(_mainMenuHandle, id, 0) == 0);
+			QAction* a = findActionById(_mainMenuHandle, id);
+			const bool isChecked = a ? a->isChecked() : false;
 			checkMenuItem(id, isChecked);
 			checkMenuItem(IDM_VIEW_TAB_SPACE, isChecked);
 			checkMenuItem(IDM_VIEW_EOL, isChecked);
@@ -2962,25 +2889,25 @@ void Notepad_plus::command(int id)
 			switch (id)
 			{
 				case IDM_FORMAT_AS_UTF_8:
-					shouldBeDirty = originalUm != uni8Bit;
-					um = uniUTF8_NoBOM;
+					shouldBeDirty = originalUm != UniMode::uni8Bit;
+					um = UniMode::uniUTF8_NoBOM;
 					break;
 
 				case IDM_FORMAT_UTF_8:
-					um = uniUTF8;
+					um = UniMode::uniUTF8;
 					break;
 
 				case IDM_FORMAT_UTF_16BE:
-					um = uni16BE;
+					um = UniMode::uni16BE;
 					break;
 
 				case IDM_FORMAT_UTF_16LE:
-					um = uni16LE;
+					um = UniMode::uni16LE;
 					break;
 
 				default : // IDM_FORMAT_ANSI
-					shouldBeDirty = originalUm != uniUTF8_NoBOM;
-					um = uni8Bit;
+					shouldBeDirty = originalUm != UniMode::uniUTF8_NoBOM;
+					um = UniMode::uni8Bit;
 			}
 
 			if (originalEncoding != -1)
@@ -3023,7 +2950,7 @@ void Notepad_plus::command(int id)
 
 				buf->setEncoding(-1);
 
-				if (um == uni8Bit)
+				if (um == UniMode::uni8Bit)
 				{
 					NppParameters& nppParams = NppParameters::getInstance();
 					_pEditView->execute(SCI_SETCODEPAGE, !nppParams.isCurrentSystemCodepageUTF8() ? CP_ACP : SC_CP_UTF8);
@@ -3138,7 +3065,7 @@ void Notepad_plus::command(int id)
             if (!buf->isDirty())
             {
 				buf->setEncoding(encoding);
-				buf->setUnicodeMode(uniUTF8_NoBOM);
+				buf->setUnicodeMode(UniMode::uniUTF8_NoBOM);
 
 				MainFileManager.disableAutoDetectEncoding4Loading();
 				fileReload();
@@ -3169,7 +3096,7 @@ void Notepad_plus::command(int id)
                     }
                     else
                     {
-					    if (um == uni8Bit)
+					    if (um == UniMode::uni8Bit)
 						    return;
 
                         // set scintilla to ANSI
@@ -3182,16 +3109,16 @@ void Notepad_plus::command(int id)
                     if (encoding != -1)
                     {
                         buf->setDirty(true);
-                        buf->setUnicodeMode(uniUTF8_NoBOM);
+                        buf->setUnicodeMode(UniMode::uniUTF8_NoBOM);
                         buf->setEncoding(-1);
                         return;
                     }
 
 					idEncoding = IDM_FORMAT_AS_UTF_8;
-					if (um == uniUTF8_NoBOM)
+					if (um == UniMode::uniUTF8_NoBOM)
 						return;
 
-					if (um != uni8Bit)
+					if (um != UniMode::uni8Bit)
 					{
 						// SendMessage(WM_) -> Qt: COMMAND, idEncoding, 0);
 						_pEditView->execute(SCI_EMPTYUNDOBUFFER);
@@ -3205,16 +3132,16 @@ void Notepad_plus::command(int id)
                     if (encoding != -1)
                     {
                         buf->setDirty(true);
-                        buf->setUnicodeMode(uniUTF8);
+                        buf->setUnicodeMode(UniMode::uniUTF8);
                         buf->setEncoding(-1);
                         return;
                     }
 
 					idEncoding = IDM_FORMAT_UTF_8;
-					if (um == uniUTF8)
+					if (um == UniMode::uniUTF8)
 						return;
 
-					if (um != uni8Bit)
+					if (um != UniMode::uni8Bit)
 					{
 						// SendMessage(WM_) -> Qt: COMMAND, idEncoding, 0);
 						_pEditView->execute(SCI_EMPTYUNDOBUFFER);
@@ -3228,16 +3155,16 @@ void Notepad_plus::command(int id)
                     if (encoding != -1)
                     {
                         buf->setDirty(true);
-                        buf->setUnicodeMode(uni16BE);
+                        buf->setUnicodeMode(UniMode::uni16BE);
                         buf->setEncoding(-1);
                         return;
                     }
 
 					idEncoding = IDM_FORMAT_UTF_16BE;
-					if (um == uni16BE)
+					if (um == UniMode::uni16BE)
 						return;
 
-					if (um != uni8Bit)
+					if (um != UniMode::uni8Bit)
 					{
 						// SendMessage(WM_) -> Qt: COMMAND, idEncoding, 0);
 						_pEditView->execute(SCI_EMPTYUNDOBUFFER);
@@ -3251,15 +3178,15 @@ void Notepad_plus::command(int id)
                     if (encoding != -1)
                     {
                         buf->setDirty(true);
-                        buf->setUnicodeMode(uni16LE);
+                        buf->setUnicodeMode(UniMode::uni16LE);
                         buf->setEncoding(-1);
                         return;
                     }
 
 					idEncoding = IDM_FORMAT_UTF_16LE;
-					if (um == uni16LE)
+					if (um == UniMode::uni16LE)
 						return;
-					if (um != uni8Bit)
+					if (um != UniMode::uni8Bit)
 					{
 						// SendMessage(WM_) -> Qt: COMMAND, idEncoding, 0);
 						_pEditView->execute(SCI_EMPTYUNDOBUFFER);
@@ -3271,37 +3198,12 @@ void Notepad_plus::command(int id)
 
 			if (idEncoding != -1)
 			{
-				// try to save the current clipboard 0 content 1st
-				void* hglbClipboardCopy = NULL;
-				if (// OpenClipboard -> QClipboard: _pPublicInterface->getHSelf()))
-				{
-					void* hClipboardData = // GetClipboardData -> QClipboard::text: 0);
-					if (hClipboardData) // NULL if there is no previous 0 data in
-					{
-						LPVOID pClipboardData = // GlobalLock -> pointer: hClipboardData);
-						if (pClipboardData)
-						{
-							size_t clipboardDataSize = ::GlobalSize(pClipboardData);
-							hglbClipboardCopy = ::GlobalAlloc(GMEM_MOVEABLE, clipboardDataSize);
-							if (hglbClipboardCopy)
-							{
-								LPVOID pClipboardCopy = // GlobalLock -> pointer: hglbClipboardCopy);
-								if (pClipboardCopy)
-								{
-									::memcpy(pClipboardCopy, pClipboardData, clipboardDataSize);
-									// GlobalUnlock: hglbClipboardCopy);
-								}
-								else
-								{
-									// GlobalFree -> delete: hglbClipboardCopy);
-									hglbClipboardCopy = NULL;
-								}
-							}
-							// GlobalUnlock: hClipboardData);
-						}
-					}
-					// CloseClipboard: ;
-				}
+				// Save the current clipboard content before conversion paste
+				QClipboard* clipboard = QApplication::clipboard();
+				QString savedText = clipboard->text();
+				QByteArray savedClipboard; // empty = no saved data
+				if (!savedText.isEmpty())
+					savedClipboard = savedText.toUtf8();
 
 				_pEditView->saveCurrentPos();
 
@@ -3325,40 +3227,14 @@ void Notepad_plus::command(int id)
 				_pEditView->execute(SCI_PASTE);
 				_pEditView->restoreCurrentPosPreStep();
 
-				// Restore the previous Clipboard data if any
-				if (hglbClipboardCopy)
+				// Restore the previous clipboard data (or clear if none was saved)
+				if (!savedClipboard.isEmpty())
 				{
-					bool bAllOk = false;
-					if (// OpenClipboard -> QClipboard: _pPublicInterface->getHSelf()))
-					{
-						LPVOID pClipboardCopy = // GlobalLock -> pointer: hglbClipboardCopy);
-						if (pClipboardCopy)
-						{
-							if (// EmptyClipboard: )
-							{
-								if (// SetClipboardData -> QClipboard::setText: 0, pClipboardCopy))
-									bAllOk = true;
-							}
-							// GlobalUnlock: hglbClipboardCopy);
-						}
-						// CloseClipboard: ;
-					}
-					if (!bAllOk)
-					{
-						// when we failed to pass the data back to the Clipboard,
-						// we have to free our copy here otherwise there will be memory leak
-						// GlobalFree -> delete: hglbClipboardCopy);
-						hglbClipboardCopy = NULL;
-					}
+					clipboard->setText(QString::fromUtf8(savedClipboard));
 				}
 				else
 				{
-					// no previous Clipboard data, clear the ones used by the Scintilla's conversion
-					if (// OpenClipboard -> QClipboard: _pPublicInterface->getHSelf()))
-					{
-						// EmptyClipboard: ;
-						// CloseClipboard: ;
-					}
+					clipboard->clear();
 				}
 
 				//Do not free anything, EmptyClipboard does that
@@ -4046,7 +3922,7 @@ void Notepad_plus::command(int id)
 			if ((toRTL && isRTL) || (!toRTL && !isRTL))
 			{
 				if (! ((NppParameters::getInstance()).getNppGUI())._muteSounds)
-					::MessageBeep(0);
+					QApplication::beep();
 
 				return;
 			}
@@ -4219,7 +4095,7 @@ void Notepad_plus::command(int id)
 		{
 			_pPublicInterface->setIsPrelaunch(false);
 			_pTrayIco->doTrayIcon(REMOVE);
-			if (!::IsWindowVisible(_pPublicInterface->getHSelf()))
+			if (!!_pPublicInterface->getHSelf()->isVisible())
 				// SendMessage(WM_) -> Qt: CLOSE, 0,0);
 		}
 		break;
@@ -4259,8 +4135,10 @@ void Notepad_plus::command(int id)
 			}
 			else if ((id > IDM_LANG_USER) && (id < IDM_LANG_USER_LIMIT))
 			{
-				wchar_t langName[menuItemStrLenMax];
-				::GetMenuString(_mainMenuHandle, id, langName, menuItemStrLenMax, 0);
+				wchar_t langName[menuItemStrLenMax]{};
+				QAction* a = findActionById(_mainMenuHandle, id);
+				if (a)
+					wcsncpy(langName, a->text().left(menuItemStrLenMax - 1).toStdWString().c_str(), menuItemStrLenMax - 1);
 				_pEditView->getCurrentBuffer()->setLangType(L_USER, langName);
 				if (_pDocMap)
 				{

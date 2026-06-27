@@ -110,6 +110,7 @@ public:
     bool isEnabledForPlugins() const;
     void setEnabled(bool on);
     void setEnabledForPlugins(bool on);
+    static int getTabIconSet(bool isDarkMode);
 
     // ── Color palette ───────────────────────────────────────────────────────
     Colors colors() const;
@@ -293,6 +294,23 @@ public:
     int styleHint(StyleHint hint, const QStyleOption* option = nullptr,
                   const QWidget* widget = nullptr,
                   QStyleHintReturn* returnData = nullptr) const override;
+
+    // ── Static convenience shims (Win32 API names → instance calls) ──────────
+    static QBrush getBackgroundBrush()      { return instance().backgroundBrush(); }
+    static QBrush getCtrlBackgroundBrush()  { return instance().ctrlBackgroundBrush(); }
+    static QBrush getHotBackgroundBrush()   { return instance().hotBackgroundBrush(); }
+    static QBrush getPureBackgroundBrush()   { return instance().pureBackgroundBrush(); }
+    static QBrush getDlgBackgroundBrush()    { return instance().pureBackgroundBrush(); }  // dialog bg
+    static QBrush getEdgeBrush()            { return instance().edgeBrush(); }
+    static QPen   getEdgePen()              { return instance().edgePen(); }
+    static QPen   getHotEdgePen()           { return instance().hotEdgePen(); }
+    static QPen   getDarkerTextPen()        { return instance().darkerTextPen(); }
+    static QRgb   getTextColor()            { return instance().textColor(); }
+    static QRgb   getDarkerTextColor()      { return instance().darkerTextColor(); }
+    static QRgb   getBackgroundColor()      { return instance().backgroundColor(); }
+    static QRgb   getCtrlBackgroundColor()  { return instance().ctrlBackgroundColor(); }
+    static QRgb   getHotBackgroundColor()  { return instance().hotBackgroundColor(); }
+    static bool   isWindows11()             { return false; }  // no-op on non-Windows
 };
 
 } // namespace NppDarkMode

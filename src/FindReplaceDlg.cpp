@@ -22,6 +22,7 @@
 #include <QDirIterator>
 
 FindOption FindReplaceDlg::_options;
+FindOption* FindReplaceDlg::_env = &_options;  // Win32 compat: _env defaulted to _options
 
 FindReplaceDlg::FindReplaceDlg() : QWidget() {}
 

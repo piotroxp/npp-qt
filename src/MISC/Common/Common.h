@@ -336,3 +336,14 @@ private:
 inline int invokeNppUacOp(const QString&) { return 0; }
 bool fileTimeToYMD(const QDateTime& ft, int& yyyymmdd);
 void expandEnv(QString& path2Expand);
+std::wstring GetLastErrorAsString(unsigned long errorCode = 0);
+
+// Windows-safe wcscpy_s shim → std::wcscpy on non-Win32
+#ifndef wcscpy_s
+inline wchar_t* wcscpy_s(wchar_t* dest, size_t destSize, const wchar_t* src) {
+    return std::wcscpy(dest, src);
+}
+inline wchar_t* wcscpy_s(wchar_t* dest, const wchar_t* src) {
+    return std::wcscpy(dest, src);
+}
+#endif

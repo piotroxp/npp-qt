@@ -33,7 +33,7 @@ void SmartHighlighter::highlightViewWithWord(ScintillaComponent* sci, const std:
         isCaseSensentive = nppGUI._smartHiliteCaseSensitive;
     }
 
-    int flags = (isCaseSensentive ? SCFIND_MATCHCASE : 0) | (isWordOnly ? SCFIND_WHOLEWORD : 0);
+    int flags = (isCaseSensentive ? npp_sci::SCFIND_MATCHCASE : 0) | (isWordOnly ? npp_sci::SCFIND_WHOLEWORD : 0);
 
     for (intptr_t currentLine = firstLine; currentLine < lastLine; ++currentLine) {
         intptr_t docLine = sci->send(SCI_DOCLINEFROMVISIBLE, currentLine);

@@ -479,8 +479,6 @@ int main(int argc, char** argv)
 {
     g_nppStartTimePoint = std::chrono::steady_clock::now();
 
-    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
     QApplication app(argc, argv);
 
     // Notepad++ UAC OPS — handled by launching this executable as a helper ///////////

@@ -71,7 +71,7 @@ void CustomFileDialog::setExtFilter(const QString& extText, const QString& exts)
     QString expanded = expandExtPatterns(exts);
 
     // Check if this is a wildcard (*.*) filter.
-    if (expanded.contains(QStringLiteral("*.*")) && !expanded.contains(u" "*_s)) {
+    if (expanded.contains(QStringLiteral("*.*")) && !expanded.contains(u" ")) {
         _wildcardIndex = _filterSpec.size();
     }
 
@@ -91,7 +91,7 @@ QString CustomFileDialog::expandExtPatterns(const QString& exts)
         if (p.startsWith(QStringLiteral(".")) && !p.startsWith(QStringLiteral(".."))) {
             p = QStringLiteral("*") + p;
         }
-        if (!result.isEmpty()) result += u';'_s;
+        if (!result.isEmpty()) result += QChar(u';');
         result += p;
     }
     return result;
@@ -107,7 +107,7 @@ void CustomFileDialog::setDefFileName(const QString& fileName)
     _initialFileName = fileName;
     // If the file name lacks an extension, append the default extension.
     if (!hasExt(fileName) && !_defExt.isEmpty()) {
-        _initialFileName = fileName + u'.'_s + _defExt;
+        _initialFileName = fileName + QChar(u'.') + _defExt;
     }
 }
 
@@ -185,9 +185,9 @@ QString CustomFileDialog::firstExt(const QString& extSpec)
     if (extSpec.isEmpty()) return QString();
     // Return the first extension: everything from the first '.' up to
     // the first ';' (or end of string).
-    int dotPos = extSpec.indexOf(u'.'_s);
+    int dotPos = extSpec.indexOf(QChar(u'.'));
     if (dotPos < 0) return extSpec;
-    int semiPos = extSpec.indexOf(u';'_s, dotPos);
+    int semiPos = extSpec.indexOf(QChar(u';'), dotPos);
     if (semiPos < 0) return extSpec.mid(dotPos);
     return extSpec.mid(dotPos, semiPos - dotPos);
 }
@@ -195,7 +195,7 @@ QString CustomFileDialog::firstExt(const QString& extSpec)
 bool CustomFileDialog::replaceExt(QString& name, const QString& ext)
 {
     if (name.isEmpty() || ext.isEmpty()) return false;
-    int dotPos = name.lastIndexOf(u'.'_s);
+    int dotPos = name.lastIndexOf(QChar(u'.'));
     if (dotPos >= 0) {
         name.truncate(dotPos);
     }
@@ -205,7 +205,7 @@ bool CustomFileDialog::replaceExt(QString& name, const QString& ext)
 
 bool CustomFileDialog::hasExt(const QString& name)
 {
-    return name.lastIndexOf(u'.'_s) >= 0;
+    return name.lastIndexOf(QChar(u'.')) >= 0;
 }
 
 QString CustomFileDialog::directoryOf(const QString& filePath)
@@ -258,7 +258,7 @@ QString CustomFileDialog::doSaveDlg()
         suggestedName.isEmpty()
             ? startFolder
             : (QFileInfo(suggestedName).isAbsolute() ? suggestedName
-                                                     : startFolder + u'/' + suggestedName),
+                                                     : startFolder + QChar(u'/') + suggestedName),
         buildQtFilter(),
         &selectedFilter,
         QFileDialog::Option(0));
@@ -286,7 +286,7 @@ QString CustomFileDialog::doSaveDlg()
                 result += ext;
             }
         } else if (!_defExt.isEmpty()) {
-            result += u'.'_s + _defExt;
+            result += QChar(u'.') + _defExt;
         }
     }
 

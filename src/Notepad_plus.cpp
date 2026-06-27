@@ -29,6 +29,8 @@
 #include <QSettings>
 #include <QProcess>
 #include <QThread>
+#include <QMutex>
+#include <thread>
 #include <QElapsedTimer>
 #include <QDesktopServices>
 #include <QClipboard>
@@ -51,14 +53,8 @@
 #include "Notepad_plus.h"
 
 // shlwapi.h removed
-#ifdef _WIN32
-#ifdef _WIN32
-#include <wininet.h>
-#else
-// Stub: wininet.h types not needed on non-Windows
-// URL helper is reimplemented via Qt in npp-qt
-#endif
-#endif
+// wininet.h removed — no WinInet APIs used; URL helpers reimplemented via Qt
+// (originally: InternetOpen, InternetCloseHandle, InternetReadFile, etc.)
 
 #include <ctime>
 #include <memory>
@@ -95,79 +91,79 @@ enum tb_stat {tb_saved, tb_unsaved, tb_ro, tb_monitored};
 #define DIR_RIGHT false
 
 static constexpr IconListButtonUnit toolBarIcons[]{
-    {IDM_FILE_NEW,                     IDI_NEW_ICON,               IDI_NEW_ICON,                  IDI_NEW_ICON2,              IDI_NEW_ICON2,                 IDI_NEW_ICON_DM,               IDI_NEW_ICON_DM,                  IDI_NEW_ICON_DM2,              IDI_NEW_ICON_DM2,                 IDR_FILENEW},
-    {IDM_FILE_OPEN,                    IDI_OPEN_ICON,              IDI_OPEN_ICON,                 IDI_OPEN_ICON2,             IDI_OPEN_ICON2,                IDI_OPEN_ICON_DM,              IDI_OPEN_ICON_DM,                 IDI_OPEN_ICON_DM2,             IDI_OPEN_ICON_DM2,                IDR_FILEOPEN},
-    {IDM_FILE_SAVE,                    IDI_SAVE_ICON,              IDI_SAVE_DISABLE_ICON,         IDI_SAVE_ICON2,             IDI_SAVE_DISABLE_ICON2,        IDI_SAVE_ICON_DM,              IDI_SAVE_DISABLE_ICON_DM,         IDI_SAVE_ICON_DM2,             IDI_SAVE_DISABLE_ICON_DM2,        IDR_FILESAVE},
-    {IDM_FILE_SAVEALL,                 IDI_SAVEALL_ICON,           IDI_SAVEALL_DISABLE_ICON,      IDI_SAVEALL_ICON2,          IDI_SAVEALL_DISABLE_ICON2,     IDI_SAVEALL_ICON_DM,           IDI_SAVEALL_DISABLE_ICON_DM,      IDI_SAVEALL_ICON_DM2,          IDI_SAVEALL_DISABLE_ICON_DM2,     IDR_SAVEALL},
-    {IDM_FILE_CLOSE,                   IDI_CLOSE_ICON,             IDI_CLOSE_ICON,                IDI_CLOSE_ICON2,            IDI_CLOSE_ICON2,               IDI_CLOSE_ICON_DM,             IDI_CLOSE_ICON_DM,                IDI_CLOSE_ICON_DM2,            IDI_CLOSE_ICON_DM2,               IDR_CLOSEFILE},
-    {IDM_FILE_CLOSEALL,                IDI_CLOSEALL_ICON,          IDI_CLOSEALL_ICON,             IDI_CLOSEALL_ICON2,         IDI_CLOSEALL_ICON2,            IDI_CLOSEALL_ICON_DM,          IDI_CLOSEALL_ICON_DM,             IDI_CLOSEALL_ICON_DM2,         IDI_CLOSEALL_ICON_DM2,            IDR_CLOSEALL},
-    {IDM_FILE_PRINT,                   IDI_PRINT_ICON,             IDI_PRINT_ICON,                IDI_PRINT_ICON2,            IDI_PRINT_ICON2,               IDI_PRINT_ICON_DM,             IDI_PRINT_ICON_DM,                IDI_PRINT_ICON_DM2,            IDI_PRINT_ICON_DM2,               IDR_PRINT},
+    {IDM_FILE_NEW,                     IDI_NEW_ICON,               IDI_NEW_ICON,                  IDI_NEW_ICON2,              IDI_NEW_ICON2,                 IDI_NEW_ICON_DM,               IDI_NEW_ICON_DM,                  IDI_NEW_ICON_DM2,              IDI_NEW_ICON_DM2,                 nullptr, nullptr, IDR_FILENEW},
+    {IDM_FILE_OPEN,                    IDI_OPEN_ICON,              IDI_OPEN_ICON,                 IDI_OPEN_ICON2,             IDI_OPEN_ICON2,                IDI_OPEN_ICON_DM,              IDI_OPEN_ICON_DM,                 IDI_OPEN_ICON_DM2,             IDI_OPEN_ICON_DM2,                nullptr, nullptr, IDR_FILEOPEN},
+    {IDM_FILE_SAVE,                    IDI_SAVE_ICON,              IDI_SAVE_DISABLE_ICON,         IDI_SAVE_ICON2,             IDI_SAVE_DISABLE_ICON2,        IDI_SAVE_ICON_DM,              IDI_SAVE_DISABLE_ICON_DM,         IDI_SAVE_ICON_DM2,             IDI_SAVE_DISABLE_ICON_DM2,        nullptr, nullptr, IDR_FILESAVE},
+    {IDM_FILE_SAVEALL,                 IDI_SAVEALL_ICON,           IDI_SAVEALL_DISABLE_ICON,      IDI_SAVEALL_ICON2,          IDI_SAVEALL_DISABLE_ICON2,     IDI_SAVEALL_ICON_DM,           IDI_SAVEALL_DISABLE_ICON_DM,      IDI_SAVEALL_ICON_DM2,          IDI_SAVEALL_DISABLE_ICON_DM2,     nullptr, nullptr, IDR_SAVEALL},
+    {IDM_FILE_CLOSE,                   IDI_CLOSE_ICON,             IDI_CLOSE_ICON,                IDI_CLOSE_ICON2,            IDI_CLOSE_ICON2,               IDI_CLOSE_ICON_DM,             IDI_CLOSE_ICON_DM,                IDI_CLOSE_ICON_DM2,            IDI_CLOSE_ICON_DM2,               nullptr, nullptr, IDR_CLOSEFILE},
+    {IDM_FILE_CLOSEALL,                IDI_CLOSEALL_ICON,          IDI_CLOSEALL_ICON,             IDI_CLOSEALL_ICON2,         IDI_CLOSEALL_ICON2,            IDI_CLOSEALL_ICON_DM,          IDI_CLOSEALL_ICON_DM,             IDI_CLOSEALL_ICON_DM2,         IDI_CLOSEALL_ICON_DM2,            nullptr, nullptr, IDR_CLOSEALL},
+    {IDM_FILE_PRINT,                   IDI_PRINT_ICON,             IDI_PRINT_ICON,                IDI_PRINT_ICON2,            IDI_PRINT_ICON2,               IDI_PRINT_ICON_DM,             IDI_PRINT_ICON_DM,                IDI_PRINT_ICON_DM2,            IDI_PRINT_ICON_DM2,               nullptr, nullptr, IDR_PRINT},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
-    {IDM_EDIT_CUT,                     IDI_CUT_ICON,               IDI_CUT_DISABLE_ICON,          IDI_CUT_ICON2,              IDI_CUT_DISABLE_ICON2,         IDI_CUT_ICON_DM,               IDI_CUT_DISABLE_ICON_DM,          IDI_CUT_ICON_DM2,              IDI_CUT_DISABLE_ICON_DM2,         IDR_CUT},
-    {IDM_EDIT_COPY,                    IDI_COPY_ICON,              IDI_COPY_DISABLE_ICON,         IDI_COPY_ICON2,             IDI_COPY_DISABLE_ICON2,        IDI_COPY_ICON_DM,              IDI_COPY_DISABLE_ICON_DM,         IDI_COPY_ICON_DM2,             IDI_COPY_DISABLE_ICON_DM2,        IDR_COPY},
-    {IDM_EDIT_PASTE,                   IDI_PASTE_ICON,             IDI_PASTE_DISABLE_ICON,        IDI_PASTE_ICON2,            IDI_PASTE_DISABLE_ICON2,       IDI_PASTE_ICON_DM,             IDI_PASTE_DISABLE_ICON_DM,        IDI_PASTE_ICON_DM2,            IDI_PASTE_DISABLE_ICON_DM2,       IDR_PASTE},
+    {IDM_EDIT_CUT,                     IDI_CUT_ICON,               IDI_CUT_DISABLE_ICON,          IDI_CUT_ICON2,              IDI_CUT_DISABLE_ICON2,         IDI_CUT_ICON_DM,               IDI_CUT_DISABLE_ICON_DM,          IDI_CUT_ICON_DM2,              IDI_CUT_DISABLE_ICON_DM2,         nullptr, nullptr, IDR_CUT},
+    {IDM_EDIT_COPY,                    IDI_COPY_ICON,              IDI_COPY_DISABLE_ICON,         IDI_COPY_ICON2,             IDI_COPY_DISABLE_ICON2,        IDI_COPY_ICON_DM,              IDI_COPY_DISABLE_ICON_DM,         IDI_COPY_ICON_DM2,             IDI_COPY_DISABLE_ICON_DM2,        nullptr, nullptr, IDR_COPY},
+    {IDM_EDIT_PASTE,                   IDI_PASTE_ICON,             IDI_PASTE_DISABLE_ICON,        IDI_PASTE_ICON2,            IDI_PASTE_DISABLE_ICON2,       IDI_PASTE_ICON_DM,             IDI_PASTE_DISABLE_ICON_DM,        IDI_PASTE_ICON_DM2,            IDI_PASTE_DISABLE_ICON_DM2,       nullptr, nullptr, IDR_PASTE},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
-    {IDM_EDIT_UNDO,                    IDI_UNDO_ICON,              IDI_UNDO_DISABLE_ICON,         IDI_UNDO_ICON2,             IDI_UNDO_DISABLE_ICON2,        IDI_UNDO_ICON_DM,              IDI_UNDO_DISABLE_ICON_DM,         IDI_UNDO_ICON_DM2,             IDI_UNDO_DISABLE_ICON_DM2,        IDR_UNDO},
-    {IDM_EDIT_REDO,                    IDI_REDO_ICON,              IDI_REDO_DISABLE_ICON,         IDI_REDO_ICON2,             IDI_REDO_DISABLE_ICON2,        IDI_REDO_ICON_DM,              IDI_REDO_DISABLE_ICON_DM,         IDI_REDO_ICON_DM2,             IDI_REDO_DISABLE_ICON_DM2,        IDR_REDO},
+    {IDM_EDIT_UNDO,                    IDI_UNDO_ICON,              IDI_UNDO_DISABLE_ICON,         IDI_UNDO_ICON2,             IDI_UNDO_DISABLE_ICON2,        IDI_UNDO_ICON_DM,              IDI_UNDO_DISABLE_ICON_DM,         IDI_UNDO_ICON_DM2,             IDI_UNDO_DISABLE_ICON_DM2,        nullptr, nullptr, IDR_UNDO},
+    {IDM_EDIT_REDO,                    IDI_REDO_ICON,              IDI_REDO_DISABLE_ICON,         IDI_REDO_ICON2,             IDI_REDO_DISABLE_ICON2,        IDI_REDO_ICON_DM,              IDI_REDO_DISABLE_ICON_DM,         IDI_REDO_ICON_DM2,             IDI_REDO_DISABLE_ICON_DM2,        nullptr, nullptr, IDR_REDO},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
-    {IDM_SEARCH_FIND,                  IDI_FIND_ICON,              IDI_FIND_ICON,                 IDI_FIND_ICON2,             IDI_FIND_ICON2,                IDI_FIND_ICON_DM,              IDI_FIND_ICON_DM,                 IDI_FIND_ICON_DM2,             IDI_FIND_ICON_DM2,                IDR_FIND},
-    {IDM_SEARCH_REPLACE,               IDI_REPLACE_ICON,           IDI_REPLACE_ICON,              IDI_REPLACE_ICON2,          IDI_REPLACE_ICON2,             IDI_REPLACE_ICON_DM,           IDI_REPLACE_ICON_DM,              IDI_REPLACE_ICON_DM2,          IDI_REPLACE_ICON_DM2,             IDR_REPLACE},
+    {IDM_SEARCH_FIND,                  IDI_FIND_ICON,              IDI_FIND_ICON,                 IDI_FIND_ICON2,             IDI_FIND_ICON2,                IDI_FIND_ICON_DM,              IDI_FIND_ICON_DM,                 IDI_FIND_ICON_DM2,             IDI_FIND_ICON_DM2,                nullptr, nullptr, IDR_FIND},
+    {IDM_SEARCH_REPLACE,               IDI_REPLACE_ICON,           IDI_REPLACE_ICON,              IDI_REPLACE_ICON2,          IDI_REPLACE_ICON2,             IDI_REPLACE_ICON_DM,           IDI_REPLACE_ICON_DM,              IDI_REPLACE_ICON_DM2,          IDI_REPLACE_ICON_DM2,             nullptr, nullptr, IDR_REPLACE},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-    {IDM_VIEW_ZOOMIN,                  IDI_ZOOMIN_ICON,            IDI_ZOOMIN_ICON,               IDI_ZOOMIN_ICON2,           IDI_ZOOMIN_ICON2,              IDI_ZOOMIN_ICON_DM,            IDI_ZOOMIN_ICON_DM,               IDI_ZOOMIN_ICON_DM2,           IDI_ZOOMIN_ICON_DM2,              IDR_ZOOMIN},
-    {IDM_VIEW_ZOOMOUT,                 IDI_ZOOMOUT_ICON,           IDI_ZOOMOUT_ICON,              IDI_ZOOMOUT_ICON2,          IDI_ZOOMOUT_ICON2,             IDI_ZOOMOUT_ICON_DM,           IDI_ZOOMOUT_ICON_DM,              IDI_ZOOMOUT_ICON_DM2,          IDI_ZOOMOUT_ICON_DM2,             IDR_ZOOMOUT},
+    {IDM_VIEW_ZOOMIN,                  IDI_ZOOMIN_ICON,            IDI_ZOOMIN_ICON,               IDI_ZOOMIN_ICON2,           IDI_ZOOMIN_ICON2,              IDI_ZOOMIN_ICON_DM,            IDI_ZOOMIN_ICON_DM,               IDI_ZOOMIN_ICON_DM2,           IDI_ZOOMIN_ICON_DM2,              nullptr, nullptr, IDR_ZOOMIN},
+    {IDM_VIEW_ZOOMOUT,                 IDI_ZOOMOUT_ICON,           IDI_ZOOMOUT_ICON,              IDI_ZOOMOUT_ICON2,          IDI_ZOOMOUT_ICON2,             IDI_ZOOMOUT_ICON_DM,           IDI_ZOOMOUT_ICON_DM,              IDI_ZOOMOUT_ICON_DM2,          IDI_ZOOMOUT_ICON_DM2,             nullptr, nullptr, IDR_ZOOMOUT},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-    {IDM_VIEW_SYNSCROLLV,              IDI_SYNCV_ICON,             IDI_SYNCV_DISABLE_ICON,        IDI_SYNCV_ICON2,            IDI_SYNCV_DISABLE_ICON2,       IDI_SYNCV_ICON_DM,             IDI_SYNCV_DISABLE_ICON_DM,        IDI_SYNCV_ICON_DM2,            IDI_SYNCV_DISABLE_ICON_DM2,       IDR_SYNCV},
-    {IDM_VIEW_SYNSCROLLH,              IDI_SYNCH_ICON,             IDI_SYNCH_DISABLE_ICON,        IDI_SYNCH_ICON2,            IDI_SYNCH_DISABLE_ICON2,       IDI_SYNCH_ICON_DM,             IDI_SYNCH_DISABLE_ICON_DM,        IDI_SYNCH_ICON_DM2,            IDI_SYNCH_DISABLE_ICON_DM2,       IDR_SYNCH},
+    {IDM_VIEW_SYNSCROLLV,              IDI_SYNCV_ICON,             IDI_SYNCV_DISABLE_ICON,        IDI_SYNCV_ICON2,            IDI_SYNCV_DISABLE_ICON2,       IDI_SYNCV_ICON_DM,             IDI_SYNCV_DISABLE_ICON_DM,        IDI_SYNCV_ICON_DM2,            IDI_SYNCV_DISABLE_ICON_DM2,       nullptr, nullptr, IDR_SYNCV},
+    {IDM_VIEW_SYNSCROLLH,              IDI_SYNCH_ICON,             IDI_SYNCH_DISABLE_ICON,        IDI_SYNCH_ICON2,            IDI_SYNCH_DISABLE_ICON2,       IDI_SYNCH_ICON_DM,             IDI_SYNCH_DISABLE_ICON_DM,        IDI_SYNCH_ICON_DM2,            IDI_SYNCH_DISABLE_ICON_DM2,       nullptr, nullptr, IDR_SYNCH},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-    {IDM_VIEW_WRAP,                    IDI_VIEW_WRAP_ICON,         IDI_VIEW_WRAP_ICON,            IDI_VIEW_WRAP_ICON2,        IDI_VIEW_WRAP_ICON2,           IDI_VIEW_WRAP_ICON_DM,         IDI_VIEW_WRAP_ICON_DM,            IDI_VIEW_WRAP_ICON_DM2,        IDI_VIEW_WRAP_ICON_DM2,           IDR_WRAP},
-    {IDM_VIEW_ALL_CHARACTERS,          IDI_VIEW_ALL_CHAR_ICON,     IDI_VIEW_ALL_CHAR_ICON,        IDI_VIEW_ALL_CHAR_ICON2,    IDI_VIEW_ALL_CHAR_ICON2,       IDI_VIEW_ALL_CHAR_ICON_DM,     IDI_VIEW_ALL_CHAR_ICON_DM,        IDI_VIEW_ALL_CHAR_ICON_DM2,    IDI_VIEW_ALL_CHAR_ICON_DM2,       IDR_INVISIBLECHAR},
-    {IDM_VIEW_INDENT_GUIDE,            IDI_VIEW_INDENT_ICON,       IDI_VIEW_INDENT_ICON,          IDI_VIEW_INDENT_ICON2,      IDI_VIEW_INDENT_ICON2,         IDI_VIEW_INDENT_ICON_DM,       IDI_VIEW_INDENT_ICON_DM,          IDI_VIEW_INDENT_ICON_DM2,      IDI_VIEW_INDENT_ICON_DM2,         IDR_INDENTGUIDE},
+    {IDM_VIEW_WRAP,                    IDI_VIEW_WRAP_ICON,         IDI_VIEW_WRAP_ICON,            IDI_VIEW_WRAP_ICON2,        IDI_VIEW_WRAP_ICON2,           IDI_VIEW_WRAP_ICON_DM,         IDI_VIEW_WRAP_ICON_DM,            IDI_VIEW_WRAP_ICON_DM2,        IDI_VIEW_WRAP_ICON_DM2,           nullptr, nullptr, IDR_WRAP},
+    {IDM_VIEW_ALL_CHARACTERS,          IDI_VIEW_ALL_CHAR_ICON,     IDI_VIEW_ALL_CHAR_ICON,        IDI_VIEW_ALL_CHAR_ICON2,    IDI_VIEW_ALL_CHAR_ICON2,       IDI_VIEW_ALL_CHAR_ICON_DM,     IDI_VIEW_ALL_CHAR_ICON_DM,        IDI_VIEW_ALL_CHAR_ICON_DM2,    IDI_VIEW_ALL_CHAR_ICON_DM2,       nullptr, nullptr, IDR_INVISIBLECHAR},
+    {IDM_VIEW_INDENT_GUIDE,            IDI_VIEW_INDENT_ICON,       IDI_VIEW_INDENT_ICON,          IDI_VIEW_INDENT_ICON2,      IDI_VIEW_INDENT_ICON2,         IDI_VIEW_INDENT_ICON_DM,       IDI_VIEW_INDENT_ICON_DM,          IDI_VIEW_INDENT_ICON_DM2,      IDI_VIEW_INDENT_ICON_DM2,         nullptr, nullptr, IDR_INDENTGUIDE},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
-    {IDM_LANG_USER_DLG,                IDI_VIEW_UD_DLG_ICON,       IDI_VIEW_UD_DLG_ICON,          IDI_VIEW_UD_DLG_ICON2,      IDI_VIEW_UD_DLG_ICON2,         IDI_VIEW_UD_DLG_ICON_DM,       IDI_VIEW_UD_DLG_ICON_DM,          IDI_VIEW_UD_DLG_ICON_DM2,      IDI_VIEW_UD_DLG_ICON_DM2,         IDR_SHOWPANNEL},
-    {IDM_VIEW_DOC_MAP,                 IDI_VIEW_DOC_MAP_ICON,      IDI_VIEW_DOC_MAP_ICON,         IDI_VIEW_DOC_MAP_ICON2,     IDI_VIEW_DOC_MAP_ICON2,        IDI_VIEW_DOC_MAP_ICON_DM,      IDI_VIEW_DOC_MAP_ICON_DM,         IDI_VIEW_DOC_MAP_ICON_DM2,     IDI_VIEW_DOC_MAP_ICON_DM2,        IDR_DOCMAP},
-    {IDM_VIEW_DOCLIST,                 IDI_VIEW_DOCLIST_ICON,      IDI_VIEW_DOCLIST_ICON,         IDI_VIEW_DOCLIST_ICON2,     IDI_VIEW_DOCLIST_ICON2,        IDI_VIEW_DOCLIST_ICON_DM,      IDI_VIEW_DOCLIST_ICON_DM,         IDI_VIEW_DOCLIST_ICON_DM2,     IDI_VIEW_DOCLIST_ICON_DM2,        IDR_DOCLIST},
-    {IDM_VIEW_FUNC_LIST,               IDI_VIEW_FUNCLIST_ICON,     IDI_VIEW_FUNCLIST_ICON,        IDI_VIEW_FUNCLIST_ICON2,    IDI_VIEW_FUNCLIST_ICON2,       IDI_VIEW_FUNCLIST_ICON_DM,     IDI_VIEW_FUNCLIST_ICON_DM,        IDI_VIEW_FUNCLIST_ICON_DM2,    IDI_VIEW_FUNCLIST_ICON_DM2,       IDR_FUNC_LIST},
-    {IDM_VIEW_FILEBROWSER,             IDI_VIEW_FILEBROWSER_ICON,  IDI_VIEW_FILEBROWSER_ICON,     IDI_VIEW_FILEBROWSER_ICON2, IDI_VIEW_FILEBROWSER_ICON2,    IDI_VIEW_FILEBROWSER_ICON_DM,  IDI_VIEW_FILEBROWSER_ICON_DM,     IDI_VIEW_FILEBROWSER_ICON_DM2, IDI_VIEW_FILEBROWSER_ICON_DM2,    IDR_FILEBROWSER},
+    {IDM_LANG_USER_DLG,                IDI_VIEW_UD_DLG_ICON,       IDI_VIEW_UD_DLG_ICON,          IDI_VIEW_UD_DLG_ICON2,      IDI_VIEW_UD_DLG_ICON2,         IDI_VIEW_UD_DLG_ICON_DM,       IDI_VIEW_UD_DLG_ICON_DM,          IDI_VIEW_UD_DLG_ICON_DM2,      IDI_VIEW_UD_DLG_ICON_DM2,         nullptr, nullptr, IDR_SHOWPANNEL},
+    {IDM_VIEW_DOC_MAP,                 IDI_VIEW_DOC_MAP_ICON,      IDI_VIEW_DOC_MAP_ICON,         IDI_VIEW_DOC_MAP_ICON2,     IDI_VIEW_DOC_MAP_ICON2,        IDI_VIEW_DOC_MAP_ICON_DM,      IDI_VIEW_DOC_MAP_ICON_DM,         IDI_VIEW_DOC_MAP_ICON_DM2,     IDI_VIEW_DOC_MAP_ICON_DM2,        nullptr, nullptr, IDR_DOCMAP},
+    {IDM_VIEW_DOCLIST,                 IDI_VIEW_DOCLIST_ICON,      IDI_VIEW_DOCLIST_ICON,         IDI_VIEW_DOCLIST_ICON2,     IDI_VIEW_DOCLIST_ICON2,        IDI_VIEW_DOCLIST_ICON_DM,      IDI_VIEW_DOCLIST_ICON_DM,         IDI_VIEW_DOCLIST_ICON_DM2,     IDI_VIEW_DOCLIST_ICON_DM2,        nullptr, nullptr, IDR_DOCLIST},
+    {IDM_VIEW_FUNC_LIST,               IDI_VIEW_FUNCLIST_ICON,     IDI_VIEW_FUNCLIST_ICON,        IDI_VIEW_FUNCLIST_ICON2,    IDI_VIEW_FUNCLIST_ICON2,       IDI_VIEW_FUNCLIST_ICON_DM,     IDI_VIEW_FUNCLIST_ICON_DM,        IDI_VIEW_FUNCLIST_ICON_DM2,    IDI_VIEW_FUNCLIST_ICON_DM2,       nullptr, nullptr, IDR_FUNC_LIST},
+    {IDM_VIEW_FILEBROWSER,             IDI_VIEW_FILEBROWSER_ICON,  IDI_VIEW_FILEBROWSER_ICON,     IDI_VIEW_FILEBROWSER_ICON2, IDI_VIEW_FILEBROWSER_ICON2,    IDI_VIEW_FILEBROWSER_ICON_DM,  IDI_VIEW_FILEBROWSER_ICON_DM,     IDI_VIEW_FILEBROWSER_ICON_DM2, IDI_VIEW_FILEBROWSER_ICON_DM2,    nullptr, nullptr, IDR_FILEBROWSER},
  
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
-    {IDM_VIEW_MONITORING,              IDI_VIEW_MONITORING_ICON,   IDI_VIEW_MONITORING_DIS_ICON,  IDI_VIEW_MONITORING_ICON2,  IDI_VIEW_MONITORING_DIS_ICON2, IDI_VIEW_MONITORING_ICON_DM,   IDI_VIEW_MONITORING_DIS_ICON_DM,  IDI_VIEW_MONITORING_ICON_DM2,  IDI_VIEW_MONITORING_DIS_ICON_DM2, IDR_FILEMONITORING},
+    {IDM_VIEW_MONITORING,              IDI_VIEW_MONITORING_ICON,   IDI_VIEW_MONITORING_DIS_ICON,  IDI_VIEW_MONITORING_ICON2,  IDI_VIEW_MONITORING_DIS_ICON2, IDI_VIEW_MONITORING_ICON_DM,   IDI_VIEW_MONITORING_DIS_ICON_DM,  IDI_VIEW_MONITORING_ICON_DM2,  IDI_VIEW_MONITORING_DIS_ICON_DM2, nullptr, nullptr, IDR_FILEMONITORING},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
-    {IDM_MACRO_STARTRECORDINGMACRO,    IDI_STARTRECORD_ICON,       IDI_STARTRECORD_DISABLE_ICON,  IDI_STARTRECORD_ICON2,      IDI_STARTRECORD_DISABLE_ICON2, IDI_STARTRECORD_ICON_DM,       IDI_STARTRECORD_DISABLE_ICON_DM,  IDI_STARTRECORD_ICON_DM2,      IDI_STARTRECORD_DISABLE_ICON_DM2, IDR_STARTRECORD},
-    {IDM_MACRO_STOPRECORDINGMACRO,     IDI_STOPRECORD_ICON,        IDI_STOPRECORD_DISABLE_ICON,   IDI_STOPRECORD_ICON2,       IDI_STOPRECORD_DISABLE_ICON2,  IDI_STOPRECORD_ICON_DM,        IDI_STOPRECORD_DISABLE_ICON_DM,   IDI_STOPRECORD_ICON_DM2,       IDI_STOPRECORD_DISABLE_ICON_DM2,  IDR_STOPRECORD},
-    {IDM_MACRO_PLAYBACKRECORDEDMACRO,  IDI_PLAYRECORD_ICON,        IDI_PLAYRECORD_DISABLE_ICON,   IDI_PLAYRECORD_ICON2,       IDI_PLAYRECORD_DISABLE_ICON2,  IDI_PLAYRECORD_ICON_DM,        IDI_PLAYRECORD_DISABLE_ICON_DM,   IDI_PLAYRECORD_ICON_DM2,       IDI_PLAYRECORD_DISABLE_ICON_DM2,  IDR_PLAYRECORD},
-    {IDM_MACRO_RUNMULTIMACRODLG,       IDI_MMPLAY_ICON,            IDI_MMPLAY_DIS_ICON,           IDI_MMPLAY_ICON2,           IDI_MMPLAY_DIS_ICON2,          IDI_MMPLAY_ICON_DM,            IDI_MMPLAY_DIS_ICON_DM,           IDI_MMPLAY_ICON_DM2,           IDI_MMPLAY_DIS_ICON_DM2,          IDR_M_PLAYRECORD},
-    {IDM_MACRO_SAVECURRENTMACRO,       IDI_SAVERECORD_ICON,        IDI_SAVERECORD_DISABLE_ICON,   IDI_SAVERECORD_ICON2,       IDI_SAVERECORD_DISABLE_ICON2,  IDI_SAVERECORD_ICON_DM,        IDI_SAVERECORD_DISABLE_ICON_DM,   IDI_SAVERECORD_ICON_DM2,       IDI_SAVERECORD_DISABLE_ICON_DM2,  IDR_SAVERECORD}
+    {IDM_MACRO_STARTRECORDINGMACRO,    IDI_STARTRECORD_ICON,       IDI_STARTRECORD_DISABLE_ICON,  IDI_STARTRECORD_ICON2,      IDI_STARTRECORD_DISABLE_ICON2, IDI_STARTRECORD_ICON_DM,       IDI_STARTRECORD_DISABLE_ICON_DM,  IDI_STARTRECORD_ICON_DM2,      IDI_STARTRECORD_DISABLE_ICON_DM2, nullptr, nullptr, IDR_STARTRECORD},
+    {IDM_MACRO_STOPRECORDINGMACRO,     IDI_STOPRECORD_ICON,        IDI_STOPRECORD_DISABLE_ICON,   IDI_STOPRECORD_ICON2,       IDI_STOPRECORD_DISABLE_ICON2,  IDI_STOPRECORD_ICON_DM,        IDI_STOPRECORD_DISABLE_ICON_DM,   IDI_STOPRECORD_ICON_DM2,       IDI_STOPRECORD_DISABLE_ICON_DM2,  nullptr, nullptr, IDR_STOPRECORD},
+    {IDM_MACRO_PLAYBACKRECORDEDMACRO,  IDI_PLAYRECORD_ICON,        IDI_PLAYRECORD_DISABLE_ICON,   IDI_PLAYRECORD_ICON2,       IDI_PLAYRECORD_DISABLE_ICON2,  IDI_PLAYRECORD_ICON_DM,        IDI_PLAYRECORD_DISABLE_ICON_DM,   IDI_PLAYRECORD_ICON_DM2,       IDI_PLAYRECORD_DISABLE_ICON_DM2,  nullptr, nullptr, IDR_PLAYRECORD},
+    {IDM_MACRO_RUNMULTIMACRODLG,       IDI_MMPLAY_ICON,            IDI_MMPLAY_DIS_ICON,           IDI_MMPLAY_ICON2,           IDI_MMPLAY_DIS_ICON2,          IDI_MMPLAY_ICON_DM,            IDI_MMPLAY_DIS_ICON_DM,           IDI_MMPLAY_ICON_DM2,           IDI_MMPLAY_DIS_ICON_DM2,          nullptr, nullptr, IDR_M_PLAYRECORD},
+    {IDM_MACRO_SAVECURRENTMACRO,       IDI_SAVERECORD_ICON,        IDI_SAVERECORD_DISABLE_ICON,   IDI_SAVERECORD_ICON2,       IDI_SAVERECORD_DISABLE_ICON2,  IDI_SAVERECORD_ICON_DM,        IDI_SAVERECORD_DISABLE_ICON_DM,   IDI_SAVERECORD_ICON_DM2,       IDI_SAVERECORD_DISABLE_ICON_DM2,  nullptr, nullptr, IDR_SAVERECORD}
 };
 
 Notepad_plus::Notepad_plus()
@@ -215,6 +211,7 @@ Notepad_plus::~Notepad_plus()
 	(NppParameters::getInstance()).destroyInstance();
 
 	delete _pTrayIco;
+	delete _trayContextMenu;
 	delete _pAnsiCharPanel;
 	delete _pClipboardHistoryPanel;
 	delete _pDocumentListPanel;
@@ -479,9 +476,30 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 
 	if (nppGUI._isMinimizedToTray != sta_none && _pTrayIco == nullptr)
 	{
-		HICON icon = nullptr;
-		MainWindow::loadTrayIcon(this->getHinst(), &icon);
-		_pTrayIco = new trayIconControler(hwnd, IDI_M30ICON, NPPM_INTERNAL_MINIMIZED_TRAY, icon, L"");
+		_pTrayIco = new TrayIconController(this->getHSelf(), QStringLiteral("Notepad++"));
+
+		// Build system-tray context menu (Qt6 QSystemTrayIcon → Shell_NotifyIcon replacement)
+		_trayContextMenu = new QMenu(this);
+		QAction* aNewDoc = _trayContextMenu->addAction(tr("New &Document"));
+		aNewDoc->setData(IDM_SYSTRAYPOPUP_NEWDOC);
+		QAction* aOpenFile = _trayContextMenu->addAction(tr("Open &File"));
+		aOpenFile->setData(IDM_SYSTRAYPOPUP_OPENFILE);
+		_trayContextMenu->addSeparator();
+		QAction* aActivate = _trayContextMenu->addAction(tr("&Activate Notepad++"));
+		aActivate->setData(IDM_SYSTRAYPOPUP_ACTIVATE);
+		_trayContextMenu->addSeparator();
+		QAction* aClose = _trayContextMenu->addAction(tr("&Close"));
+		aClose->setData(IDM_SYSTRAYPOPUP_CLOSE);
+
+		_nativeLangSpeaker.changeLangTrayIconContexMenu(_trayContextMenu);
+
+		_pTrayIco->setContextMenu(_trayContextMenu);
+
+		// Wire QSystemTrayIcon signals → Qt slots (replaces Win32 NPPM_INTERNAL_MINIMIZED_TRAY routing)
+		connect(_pTrayIco, &TrayIconController::trayIconDoubleClicked, this, &Notepad_plus::onTrayIconDoubleClicked);
+		connect(_pTrayIco, &TrayIconController::trayIconRightClicked, this, &Notepad_plus::onTrayIconRightClicked);
+		connect(_pTrayIco, &TrayIconController::trayIconMiddleClicked, this, &Notepad_plus::onTrayIconMiddleClicked);
+		connect(_trayContextMenu, &QMenu::triggered, this, &Notepad_plus::onTrayMenuAction);
 	}
 
 	checkSyncState();
@@ -939,6 +957,7 @@ bool Notepad_plus::saveGUIParams()
 
 	// When window is maximized GetWindowPlacement returns window's last non maximized coordinates.
 	// Save them so that those will be used when window is restored next time.
+#ifdef _WIN32
 	WINDOWPLACEMENT posInfo{};
 	posInfo.length = sizeof(WINDOWPLACEMENT);
 	::GetWindowPlacement(this->getHSelf(), &posInfo);
@@ -958,6 +977,27 @@ bool Notepad_plus::saveGUIParams()
 		nppGUI._findWindowPos.right = posInfo.rcNormalPosition.right;
 		nppGUI._findWindowPos.bottom = posInfo.rcNormalPosition.bottom;
 	}
+#else
+	// Qt6 equivalent: use QWidget geometry and window state
+	if (QWidget* self = qobject_cast<QWidget*>(this->getHSelf())) {
+		QRect geo = self->geometry();
+		nppGUI._appPos.left   = geo.left();
+		nppGUI._appPos.top    = geo.top();
+		nppGUI._appPos.right  = geo.width();
+		nppGUI._appPos.bottom = geo.height();
+		nppGUI._isMaximized   = (self->windowState() & Qt::WindowMaximized) != 0;
+	}
+	if (_findReplaceDlg.getHSelf() != NULL)
+	{
+		if (QWidget* fr = qobject_cast<QWidget*>(_findReplaceDlg.getHSelf())) {
+			QRect geo = fr->geometry();
+			nppGUI._findWindowPos.left   = geo.left();
+			nppGUI._findWindowPos.top    = geo.top();
+			nppGUI._findWindowPos.right  = geo.right();
+			nppGUI._findWindowPos.bottom = geo.bottom();
+		}
+	}
+#endif
 
 	saveDockingParams();
 	nppParams.createXmlTreeFromGUIParams();
@@ -1247,7 +1287,7 @@ void Notepad_plus::setCodePageForInvisibleView(Buffer const *pBuffer)
 {
 	intptr_t detectedCp = _invisibleEditView.execute(SCI_GETCODEPAGE);
 	intptr_t cp2set = SC_CP_UTF8;
-	if (pBuffer->getUnicodeMode() == uni8Bit)
+	if (pBuffer->getUnicodeMode() == UniMode::uni8Bit)
 	{
 		cp2set = (detectedCp == SC_CP_UTF8 ? CP_ACP : detectedCp);
 	}
@@ -1749,7 +1789,7 @@ void Notepad_plus::removeEmptyLine(bool isBlankContained)
 			return;
 	}
 	_pEditView->execute(SCI_SETSEARCHFLAGS, SCFIND_REGEXP|SCFIND_POSIX);
-	auto posFound = _pEditView->searchInTarget(str2Search, lstrlen(str2Search), startPos, endPos);
+	auto posFound = _pEditView->searchInTarget(str2Search, std::wcslen(str2Search), startPos, endPos);
 	if (posFound >= 0)
 		_pEditView->replaceTarget(L"", posFound, endPos);
 }
@@ -2434,7 +2474,7 @@ int Notepad_plus::doSaveOrNot(const wchar_t* fn, bool isMulti)
 	}
 	else
 	{
-		if (!::IsWindowVisible(this->getHSelf()))
+		if (!this->getHSelf()->isVisible())
 		{
 			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
 
@@ -2470,7 +2510,7 @@ int Notepad_plus::doSaveOrNot(const wchar_t* fn, bool isMulti)
 int Notepad_plus::doSaveAll()
 {
 	// In case Notepad++ is iconized into notification zone
-	if (!::IsWindowVisible(this->getHSelf()))
+	if (!this->getHSelf()->isVisible())
 	{
 		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
 
@@ -3110,17 +3150,17 @@ void Notepad_plus::setUniModeText()
 	{
 		switch (um)
 		{
-			case uniUTF8:
+			case UniMode::uniUTF8:
 				uniModeTextString = L"UTF-8-BOM"; break;
-			case uni16BE:
+			case UniMode::uni16BE:
 				uniModeTextString = L"UTF-16 BE BOM"; break;
-			case uni16LE:
+			case UniMode::uni16LE:
 				uniModeTextString = L"UTF-16 LE BOM"; break;
-			case uni16BE_NoBOM:
+			case UniMode::uni16BE_NoBOM:
 				uniModeTextString = L"UTF-16 Big Endian"; break;
-			case uni16LE_NoBOM:
+			case UniMode::uni16LE_NoBOM:
 				uniModeTextString = L"UTF-16 Little Endian"; break;
-			case uniUTF8_NoBOM:
+			case UniMode::uniUTF8_NoBOM:
 				uniModeTextString = L"UTF-8"; break;
 			default :
 				uniModeTextString = L"ANSI";
@@ -4270,7 +4310,7 @@ size_t Notepad_plus::getSelectedCharNumber(UniMode u)
 {
 	size_t result = 0;
 	size_t numSel = _pEditView->execute(SCI_GETSELECTIONS);
-	if (u == uniUTF8 || u == uniUTF8_NoBOM)
+	if (u == UniMode::uniUTF8 || u == UniMode::uniUTF8_NoBOM)
 	{
 		for (size_t i = 0; i < numSel; ++i)
 		{
@@ -4306,7 +4346,7 @@ size_t Notepad_plus::getSelectedCharNumber(UniMode u)
 			if (_pEditView->execute(SCI_GETEOLMODE) == SC_EOL_CRLF) line2 *= 2;
 			result -= line2;
 		}
-		if (u != uni8Bit && u != uni7Bit) result *= 2;
+		if (u != UniMode::uni8Bit && u != uni7Bit) result *= 2;
 	}
 	return result;
 }
@@ -4331,7 +4371,7 @@ static inline size_t countUtf8Characters(const unsigned char *buf, size_t pos, s
 
 size_t Notepad_plus::getCurrentDocCharCount(UniMode u)
 {
-	if (u != uniUTF8 && u != uniUTF8_NoBOM)
+	if (u != UniMode::uniUTF8 && u != UniMode::uniUTF8_NoBOM)
 	{
 		size_t numLines = _pEditView->execute(SCI_GETLINECOUNT);
 		auto result = _pEditView->execute(SCI_GETLENGTH);
@@ -4375,17 +4415,17 @@ size_t Notepad_plus::getCurrentDocCharCount(UniMode u)
 
 bool Notepad_plus::isFormatUnicode(UniMode u)
 {
-	return (u != uni8Bit && u != uni7Bit && u != uniUTF8 && u != uniUTF8_NoBOM);
+	return (u != UniMode::uni8Bit && u != uni7Bit && u != UniMode::uniUTF8 && u != UniMode::uniUTF8_NoBOM);
 }
 
 int Notepad_plus::getBOMSize(UniMode u)
 {
 	switch(u)
 	{
-		case uni16LE:
-		case uni16BE:
+		case UniMode::uni16LE:
+		case UniMode::uni16BE:
 			return 2;
-		case uniUTF8:
+		case UniMode::uniUTF8:
 			return 3;
 		default:
 			return 0;
@@ -4523,97 +4563,88 @@ void Notepad_plus::updateStatusBar()
 
 void Notepad_plus::dropFiles(QMimeData* hdrop)
 {
-	if (hdrop)
+	if (!hdrop)
+		return;
+
+	// Use Qt's URL-based drag-drop API — QMimeData::urls() gives us file paths directly
+	QList<QUrl> urls = hdrop->urls();
+	if (urls.isEmpty())
+		return;
+
+	// Determine in which view the file(s) is (are) dropped by checking which view contains the cursor
+	// (the actual drop position is captured by the Qt drag-drop event and stored in theQMimeData)
+	QWidget* focused = QApplication::focusWidget();
+	bool droppedOnMain = (focused == _mainEditView.getHSelf() || focused == _mainDocTab.getHSelf());
+	bool droppedOnSub  = (focused == _subEditView.getHSelf()  || focused == _subDocTab.getHSelf());
+
+	if (droppedOnMain)
+		switchEditViewTo(MAIN_VIEW);
+	else if (droppedOnSub)
+		switchEditViewTo(SUB_VIEW);
+	// else: do not change the current Notepad++ edit-view
+
+	vector<wstring> folderPaths;
+	vector<wstring> filePaths;
+	for (const QUrl& url : urls)
 	{
-		// Determine in which view the file(s) is (are) dropped
-		QPoint p{};
-		::DragQueryPoint(hdrop, &p);
-		QWidget* hWin = ::ChildWindowFromPointEx(this->getHSelf(), p, CWP_SKIPINVISIBLE);
-		if (!hWin) return;
+		QString localPath = url.toLocalFile();
+		if (localPath.isEmpty())
+			continue;
 
-		if ((_mainEditView.getHSelf() == hWin) || (_mainDocTab.getHSelf() == hWin))
-			switchEditViewTo(MAIN_VIEW);
-		else if ((_subEditView.getHSelf() == hWin) || (_subDocTab.getHSelf() == hWin))
-			switchEditViewTo(SUB_VIEW);
-		//else
-			// do not change the current Notepad++ edit-view
+		if (QFileInfo::exists(localPath) && QFileInfo(localPath).isDir())
+		{
+			wstring ws = localPath.toStdWString();
+			if (!ws.empty() && ws.back() != L'\\' && ws.back() != L'/')
+				ws += L'\\';
+			folderPaths.push_back(ws);
+		}
+		else
+		{
+			filePaths.push_back(localPath.toStdWString());
+		}
+	}
 
-		int filesDropped = ::DragQueryFileW(hdrop, 0xffffffff, NULL, 0);
+	NppParameters& nppParam = NppParameters::getInstance();
+	bool isOldMode = nppParam.getNppGUI()._isFolderDroppedOpenFiles;
 
-		vector<wstring> folderPaths;
-		vector<wstring> filePaths;
-		for (int i = 0; i < filesDropped; ++i)
+	if (filePaths.empty() && folderPaths.empty())
+	{
+		// no valid paths, do nothing
+	}
+	else if (isOldMode || folderPaths.empty())
+	{
+		// old mode or new mode + only files: open each file
+		BufferID lastOpened = BUFFER_INVALID;
+		for (const wstring& path : filePaths)
 		{
-			wchar_t pathDropped[MAX_PATH]{};
-			::DragQueryFileW(hdrop, i, pathDropped, MAX_PATH);
-			if (doesDirectoryExist(pathDropped))
-			{
-				size_t len = lstrlenW(pathDropped);
-				if ((len > 0) && (pathDropped[len - 1] != wchar_t('\\')))
-				{
-					if (len + 1 >= MAX_PATH)
-						continue; // not enough space for the trailing backslash, try next
-					pathDropped[len] = wchar_t('\\');
-					pathDropped[len + 1] = wchar_t('\0');
-				}
-				folderPaths.push_back(pathDropped);
-			}
-			else
-			{
-				filePaths.push_back(pathDropped);
-			}
+			BufferID test = doOpen(path.c_str());
+			if (test != BUFFER_INVALID)
+				lastOpened = test;
 		}
-		
-		NppParameters& nppParam = NppParameters::getInstance();
-		bool isOldMode = nppParam.getNppGUI()._isFolderDroppedOpenFiles;
+		if (lastOpened != BUFFER_INVALID)
+			switchToFile(lastOpened);
+	}
+	else if (!isOldMode && !folderPaths.empty() && !filePaths.empty())
+	{
+		// new mode with both folders and files: display error
+		_nativeLangSpeaker.messageBox("DroppingFolderAsProjectModeWarning",
+			this->getHSelf(),
+			L"You can only drop files or folders but not both, because you're in dropping Folder as Project mode.\rYou have to enable \"Open all files of folder instead of launching Folder as Workspace on folder dropping\" in \"Default Directory\" section of Preferences dialog to make this operation work.",
+			L"Invalid action",
+			0);
+	}
+	else if (!isOldMode && !folderPaths.empty() && filePaths.empty())
+	{
+		// new mode with only folders: launch folder as project
+		wstring emptyStr;
+		launchFileBrowser(folderPaths, emptyStr);
+	}
 
-		if ((filePaths.size() == 0) && (folderPaths.size() == 0))
-		{
-			// invalid paths, do nothing
-		}
-		else if (isOldMode || folderPaths.size() == 0) // old mode or new mode + only files
-		{
-			BufferID lastOpened = BUFFER_INVALID;
-			for (int i = 0; i < filesDropped; ++i)
-			{
-				wchar_t pathDropped[MAX_PATH]{};
-				::DragQueryFileW(hdrop, i, pathDropped, MAX_PATH);
-				BufferID test = doOpen(pathDropped);
-				if (test != BUFFER_INVALID)
-					lastOpened = test;
-			}
-
-			if (lastOpened != BUFFER_INVALID)
-			{
-				switchToFile(lastOpened);
-			}
-		}
-		else if (!isOldMode && (folderPaths.size() != 0 && filePaths.size() != 0)) // new mode && both folders & files
-		{
-			// display error & do nothing
-			_nativeLangSpeaker.messageBox("DroppingFolderAsProjectModeWarning",
-				this->getHSelf(),
-				L"You can only drop files or folders but not both, because you're in dropping Folder as Project mode.\rYou have to enable \"Open all files of folder instead of launching Folder as Workspace on folder dropping\" in \"Default Directory\" section of Preferences dialog to make this operation work.",
-				L"Invalid action",
-				0 | 0);
-		}
-		else if (!isOldMode && (folderPaths.size() != 0 && filePaths.size() == 0)) // new mode && only folders
-		{
-			// process new mode
-			wstring emptyStr;
-			launchFileBrowser(folderPaths, emptyStr);
-		}
-
-		// DragFinish: hdrop);
-		// Put Notepad_plus to forefront
-		// May not work for Win2k, but OK for lower versions
-		// Note: how to drop a file to an iconic window?
-		// Actually, it is the Send To command that generates a drop.
-		if (// IsIconic -> QWidget::isMinimized: this->getHSelf()))
-		{
-			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->showNormal();
-		}
-		// SetForegroundWindow -> QWidget::activateWindow: this->getHSelf());
+	// Bring window to foreground if it was minimized
+	if (qobject_cast<QWidget*>(this->getHSelf())->isMinimized())
+	{
+		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf()))
+			w->showNormal();
 	}
 }
 
@@ -5242,15 +5273,15 @@ void Notepad_plus::checkUnicodeMenuItems() const
 	int id = -1;
 	switch (um)
 	{
-		case uniUTF8       : id = IDM_FORMAT_UTF_8; break;
-		case uni16BE       : id = IDM_FORMAT_UTF_16BE; break;
-		case uni16LE       : id = IDM_FORMAT_UTF_16LE; break;
-		case uniUTF8_NoBOM : id = IDM_FORMAT_AS_UTF_8; break;
-		case uni8Bit       : id = IDM_FORMAT_ANSI; break;
+		case UniMode::uniUTF8       : id = IDM_FORMAT_UTF_8; break;
+		case UniMode::uni16BE       : id = IDM_FORMAT_UTF_16BE; break;
+		case UniMode::uni16LE       : id = IDM_FORMAT_UTF_16LE; break;
+		case UniMode::uniUTF8_NoBOM : id = IDM_FORMAT_AS_UTF_8; break;
+		case UniMode::uni8Bit       : id = IDM_FORMAT_ANSI; break;
 
 		case uni7Bit:
-		case uni16BE_NoBOM:
-		case uni16LE_NoBOM:
+		case UniMode::uni16BE_NoBOM:
+		case UniMode::uni16LE_NoBOM:
 		case uniEnd:
 		default:
 			break;
@@ -5293,7 +5324,7 @@ void Notepad_plus::checkUnicodeMenuItems() const
 			}
 			(void)firstRadioId;
 		}
-		// else if (id == -1) => um == uni16BE_NoBOM || um == uni16LE_NoBOM, let all items unchecked.
+		// else if (id == -1) => um == UniMode::uni16BE_NoBOM || um == UniMode::uni16LE_NoBOM, let all items unchecked.
 	}
 	else // encoding is used
 	{
@@ -6006,6 +6037,7 @@ void Notepad_plus::fullScreenToggle()
 {
 	if (!_beforeSpecialView._isFullScreen)	//toggle fullscreen on
 	{
+#ifdef _WIN32
 		_beforeSpecialView._winPlace.length = sizeof(_beforeSpecialView._winPlace);
 		::GetWindowPlacement(this->getHSelf(), &_beforeSpecialView._winPlace);
 
@@ -6030,6 +6062,16 @@ void Notepad_plus::fullScreenToggle()
 				fullscreenArea.bottom -= fullscreenArea.top;
 			}
 		}
+#else
+		// Qt6: save current window geometry and determine fullscreen area from primary screen
+		if (QWidget* self = qobject_cast<QWidget*>(this->getHSelf())) {
+			_beforeSpecialView._savedGeom = self->geometry();
+		}
+		QRect fullscreenArea{};
+		if (QScreen* screen = qApp->primaryScreen()) {
+			fullscreenArea = screen->geometry();
+		}
+#endif
 
 		//Setup GUI
         int bs = buttonStatus_fullscreen;
@@ -6060,27 +6102,31 @@ void Notepad_plus::fullScreenToggle()
 			if (!_beforeSpecialView._preStyle)
 			{
 				//something went wrong, use default settings
+#ifdef _WIN32
 				_beforeSpecialView._preStyle = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
+#endif
 			}
 		}
 
 		//Set fullscreen window, highest non-top z-order, show the window and redraw it (refreshing the windowmanager cache as well)
-		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
+		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) {
+			w->setWindowFlags(w->windowFlags() | Qt::Window);
+			w->setGeometry(fullscreenArea);
+			w->show();
+		}
 		// SetWindowPos -> QWidget: this->getHSelf(), HWND_TOP, fullscreenArea.left, fullscreenArea.top, fullscreenArea.right, fullscreenArea.bottom, SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
 		// SetForegroundWindow -> QWidget::activateWindow: this->getHSelf());
 
         // show restore button
         _restoreButton.doDialog(_nativeLangSpeaker.isRTL());
 
-		QRect rect{};
-        GetWindowRect(_restoreButton.getHSelf(), &rect);
-	    int w = rect.right - rect.left;
-	    int h = rect.bottom - rect.top;
+		QRect rect = _restoreButton.getHSelf()->frameGeometry();
+        int w = rect.width();
+	    int h = rect.height();
 
-        QRect nppRect;
-        GetWindowRect(this->getHSelf(), &nppRect);
-        int x = nppRect.right - w;
-        int y = nppRect.top;
+        QRect nppRect = this->getHSelf()->frameGeometry();
+        int x = nppRect.right() - w;
+        int y = nppRect.top();
         // MoveWindow -> QWidget::setGeometry: _restoreButton.getHSelf(), x, y, w, h, false);
 
         _pEditView->grabFocus();
@@ -6114,6 +6160,7 @@ void Notepad_plus::fullScreenToggle()
 			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
 		}
 
+#ifdef _WIN32
 		if (_beforeSpecialView._winPlace.length)
 		{
 			if (_beforeSpecialView._winPlace.showCmd == Qt::WindowState::WindowActiveMAXIMIZED)
@@ -6129,6 +6176,17 @@ void Notepad_plus::fullScreenToggle()
 		{
 			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
 		}
+#else
+		// Qt6: restore from saved geometry
+		if (_beforeSpecialView._savedGeom.isValid()) {
+			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) {
+				w->setGeometry(_beforeSpecialView._savedGeom);
+				w->show();
+			}
+		} else {
+			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
+		}
+#endif
 	}
 	//// SetForegroundWindow -> QWidget::activateWindow: this->getHSelf());
 	_beforeSpecialView._isFullScreen = !_beforeSpecialView._isFullScreen;
@@ -6137,12 +6195,12 @@ void Notepad_plus::fullScreenToggle()
     {
         // show restore button on the right position
         QRect rect{};
-        GetWindowRect(_restoreButton.getHSelf(), &rect);
+        _restoreButton.getHSelf()->frameGeometry();
         int w = rect.right - rect.left;
         int h = rect.bottom - rect.top;
 
         QRect nppRect;
-        GetWindowRect(this->getHSelf(), &nppRect);
+        this->getHSelf()->frameGeometry();
         int x = nppRect.right - w - w;
         int y = nppRect.top + 1;
         // MoveWindow -> QWidget::setGeometry: _restoreButton.getHSelf(), x, y, w, h, false);
@@ -6199,7 +6257,9 @@ void Notepad_plus::postItToggle()
 			if (!_beforeSpecialView._preStyle)
 			{
 				//something went wrong, use default settings
+#ifdef _WIN32
 				_beforeSpecialView._preStyle = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
+#endif
 			}
 			//Redraw the window and refresh windowmanager cache, don't do anything else, sizing is done later on
 			// SetWindowPos -> QWidget: this->getHSelf(), HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
@@ -6209,13 +6269,12 @@ void Notepad_plus::postItToggle()
         // show restore button
         _restoreButton.doDialog(_nativeLangSpeaker.isRTL());
 
-        QRect rect{};
-        GetWindowRect(_restoreButton.getHSelf(), &rect);
-	    int w = rect.right - rect.left;
-	    int h = rect.bottom - rect.top;
+        QRect rect = _restoreButton.getHSelf()->frameGeometry();
+        int w = rect.width();
+	    int h = rect.height();
 
         QRect nppRect;
-        GetWindowRect(this->getHSelf(), &nppRect);
+        this->getHSelf()->frameGeometry();
         int x = nppRect.right - w - w;
         int y = nppRect.top + 1;
         // MoveWindow -> QWidget::setGeometry: _restoreButton.getHSelf(), x, y, w, h, false);
@@ -6544,7 +6603,7 @@ bool Notepad_plus::dumpFiles(const wchar_t * outdir, const wchar_t * fileprefix)
 		else
 			somedirty = true;
 
-		const wchar_t * unitext = (docbuf->getUnicodeMode() != uni8Bit)?L"_utf8":L"";
+		const wchar_t * unitext = (docbuf->getUnicodeMode() != UniMode::uni8Bit)?L"_utf8":L"";
 		wsprintf(savePath, L"%s\\%s%03d%s.dump", outdir, fileprefix, static_cast<int>(i), unitext);
 
 		SavingStatus res = MainFileManager.saveBuffer(docbuf->getID(), savePath);
@@ -6655,10 +6714,14 @@ void Notepad_plus::prepareBufferChangedDialog(Buffer * buffer)
 
 	// prevent flickering issue by "manually" clicking and activating the _pEditView
 	// (mouse events seem to get lost / improperly handled when showing the dialog)
-	auto curPos = _pEditView->execute(SCI_GETCURRENTPOS);
-	::PostMessage(_pEditView->getHSelf(), 0 /* WM_LBUTTONDOWN -> QMouseEvent */, 0, 0);
-	::PostMessage(_pEditView->getHSelf(), 0 /* WM_LBUTTONUP -> QMouseEvent */, 0, 0);
-	::PostMessage(_pEditView->getHSelf(), SCI_SETSEL, curPos, curPos);
+	// Win32: PostMessage(hwnd, WM_LBUTTONDOWN/UP, ...) + SCI_SETSEL
+	// Qt: activateWindow + grabFocus + execute(SCI_SETSEL)
+	if (QWidget* w = qobject_cast<QWidget*>(_pEditView->getHSelf()))
+	{
+		w->activateWindow();
+		w->grabFocus();
+	}
+	_pEditView->execute(SCI_SETSEL, curPos, curPos);
 }
 
 void Notepad_plus::notifyBufferChanged(Buffer * buffer, int mask)
@@ -7426,7 +7489,7 @@ void Notepad_plus::launchClipboardHistoryPanel()
 		// define the default docking behaviour
 		data.uMask = DWS_DF_CONT_RIGHT | DWS_ICONTAB | DWS_USEOWNDARKMODE;
 
-		loadPanelIcon(this->getHinst(), _pClipboardHistoryPanel, &data.hIconTab);
+		loadPanelIcon(this->getHinst(), _pClipboardHistoryPanel, &data.iconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -7481,7 +7544,7 @@ void Notepad_plus::launchDocumentListPanel(bool changeFromBtnCmd)
 		// define the default docking behaviour
 		data.uMask = DWS_DF_CONT_LEFT | DWS_ICONTAB | DWS_USEOWNDARKMODE;
 
-		loadPanelIcon(this->getHinst(), _pDocumentListPanel, &data.hIconTab);
+		loadPanelIcon(this->getHinst(), _pDocumentListPanel, &data.iconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -7562,7 +7625,7 @@ void Notepad_plus::launchAnsiCharPanel()
 		// define the default docking behaviour
 		data.uMask = DWS_DF_CONT_RIGHT | DWS_ICONTAB | DWS_USEOWNDARKMODE;
 
-		loadPanelIcon(this->getHinst(), _pAnsiCharPanel, &data.hIconTab);
+		loadPanelIcon(this->getHinst(), _pAnsiCharPanel, &data.iconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -7607,7 +7670,7 @@ void Notepad_plus::launchFileBrowser(const vector<wstring> & folders, const wstr
 		// define the default docking behaviour
 		data.uMask = DWS_DF_CONT_LEFT | DWS_ICONTAB | DWS_USEOWNDARKMODE;
 		
-		loadPanelIcon(this->getHinst(), _pFileBrowser, &data.hIconTab);
+		loadPanelIcon(this->getHinst(), _pFileBrowser, &data.iconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -7706,7 +7769,7 @@ void Notepad_plus::launchProjectPanel(int cmdID, ProjectPanel ** pProjPanel, int
 		// define the default docking behaviour
 		data.uMask = DWS_DF_CONT_LEFT | DWS_ICONTAB | DWS_USEOWNDARKMODE;
 
-		loadPanelIcon(this->getHinst(), (*pProjPanel), &data.hIconTab);
+		loadPanelIcon(this->getHinst(), (*pProjPanel), &data.iconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -7764,7 +7827,7 @@ void Notepad_plus::launchDocMap()
 		// define the default docking behaviour
 		data.uMask = DWS_DF_CONT_RIGHT | DWS_ICONTAB | DWS_USEOWNDARKMODE;
 
-		loadPanelIcon(this->getHinst(), _pDocMap, &data.hIconTab);
+		loadPanelIcon(this->getHinst(), _pDocMap, &data.iconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -7807,7 +7870,7 @@ void Notepad_plus::launchFunctionList()
 		
 		NppParameters& nppParam = NppParameters::getInstance();
 
-		loadPanelIcon(this->getHinst(), _pFuncList, &data.hIconTab);
+		loadPanelIcon(this->getHinst(), _pFuncList, &data.iconTab);
 
 		data.pszModuleName = NPP_INTERNAL_FUNCTION_STR;
 
@@ -7849,7 +7912,7 @@ struct TextTrollerParams
 	ScintillaEditView *_pCurrentView;
 	const wchar_t*_text2display;
 	BufferID _targetBufID;
-	void* _mutex;
+	QMutex* _mutex;
 };
 
 static const QuoteParams quotes[] =
@@ -8212,12 +8275,12 @@ unsigned int WINAPI Notepad_plus::threadTextPlayer(void *params)
 		y = 0;
 	}
 
+	static QMutex textTrollerMutex;
 	static TextTrollerParams trollerParams;
 	trollerParams._pCurrentView = pCurrentView;
 	BufferID targetBufID = pCurrentView->getCurrentBufferID();
 	trollerParams._targetBufID = targetBufID;
-	void* mutex = ::CreateMutex(NULL, false, L"nppTextWriter");
-	trollerParams._mutex = mutex;
+	trollerParams._mutex = &textTrollerMutex;
 
     // Get the current scintilla
     QWidget* curScintilla = pCurrentView->getHSelf();
@@ -8226,7 +8289,7 @@ unsigned int WINAPI Notepad_plus::threadTextPlayer(void *params)
 	vector<int> generatedRans;
 	wchar_t previousChar = '\0';
 
-	for (size_t i = 0, len = lstrlen(text2display); i < len ; ++i)
+	for (size_t i = 0, len = std::wcslen(text2display); i < len ; ++i)
     {
 		int ranNum = getRandomNumber(maxRange);
 		int action = act_doNothing;
@@ -8249,14 +8312,15 @@ unsigned int WINAPI Notepad_plus::threadTextPlayer(void *params)
 				++nbTrolling;
 				trollerParams._text2display = wtf[wtfIndex];
 
-				ReleaseMutex(mutex);
+				textTrollerMutex.unlock();
 
-				void* hThread = ::CreateThread(NULL, 0, threadTextTroller, &trollerParams, 0, NULL);
+				std::thread t(&Notepad_plus::threadTextTroller, &trollerParams);
+				t.detach();
 
 				int sleepTime = 1000 / x * y;
 				QThread::msleep(sleepTime);
 
-				WaitForSingleObject(mutex, 0xFFFFFFFF);
+				textTrollerMutex.lock();
 
 				// CloseHandle: hThread);
 				//writeLog(L"c:\\tmp\\log.txt", "trolling end");
@@ -8299,7 +8363,7 @@ unsigned int WINAPI Notepad_plus::threadTextPlayer(void *params)
 		curScintilla->send(SCI_GOTOPOS, curScintilla->send(SCI_GETLENGTH, 0, 0), 0);
 
 		// Display quoter
-		for (size_t i = 0, len = lstrlen(quoter); i < len; ++i)
+		for (size_t i = 0, len = std::wcslen(quoter); i < len; ++i)
 		{
 			int ranNum = getRandomNumber(maxRange);
 
@@ -8325,7 +8389,7 @@ unsigned int WINAPI Notepad_plus::threadTextPlayer(void *params)
 unsigned int WINAPI Notepad_plus::threadTextTroller(void *params)
 {
 	TextTrollerParams *textTrollerParams = static_cast<TextTrollerParams *>(params);
-	WaitForSingleObject(textTrollerParams->_mutex, 0xFFFFFFFF);
+	textTrollerParams->_mutex->lock();
 
 	// random seed generation needs only one time.
 	srand(static_cast<UINT>(time(NULL)));
@@ -8335,7 +8399,7 @@ unsigned int WINAPI Notepad_plus::threadTextTroller(void *params)
 	QWidget* curScintilla = pCurrentView->getHSelf();
 	BufferID targetBufID = textTrollerParams->_targetBufID;
 
-	for (size_t i = 0, len = lstrlen(text2display); i < len; ++i)
+	for (size_t i = 0, len = std::wcslen(text2display); i < len; ++i)
     {
         int ranNum = getRandomNumber(maxRange);
 		if (text2display[i] == ' ' || text2display[i] == '.')
@@ -8346,7 +8410,7 @@ unsigned int WINAPI Notepad_plus::threadTextTroller(void *params)
 		BufferID currentBufID = pCurrentView->getCurrentBufferID();
 		if (currentBufID != targetBufID)
 		{
-			ReleaseMutex(textTrollerParams->_mutex);
+			textTrollerParams->_mutex->unlock();
 			return true;
 		}
 
@@ -8360,7 +8424,7 @@ unsigned int WINAPI Notepad_plus::threadTextTroller(void *params)
 	int delMethod = n%4;
 	if (delMethod == 0)
 	{
-		size_t len = lstrlen(text2display);
+		size_t len = std::wcslen(text2display);
 		for (size_t j = 0; j < len; ++j)
 		{
 			if (!deleteBack(pCurrentView, targetBufID))
@@ -8369,7 +8433,7 @@ unsigned int WINAPI Notepad_plus::threadTextTroller(void *params)
 	}
 	else if (delMethod == 1)
 	{
-		size_t len = lstrlen(text2display);
+		size_t len = std::wcslen(text2display);
 		curScintilla->send(SCI_GOTOPOS, curScintilla->send(SCI_GETLENGTH, 0, 0) - len, 0);
 		for (size_t j = 0; j < len; ++j)
 		{
@@ -8379,7 +8443,7 @@ unsigned int WINAPI Notepad_plus::threadTextTroller(void *params)
 	}
 	else if (delMethod == 2)
 	{
-		for (size_t j = 0, len = lstrlen(text2display); j < len; ++j)
+		for (size_t j = 0, len = std::wcslen(text2display); j < len; ++j)
 		{
 			if (!selectBack(pCurrentView, targetBufID))
 				break;
@@ -8391,7 +8455,7 @@ unsigned int WINAPI Notepad_plus::threadTextTroller(void *params)
 	else
 	{
 		auto currentPos = pCurrentView->send(SCI_GETSELECTIONSTART, 0, 0);
-		pCurrentView->send(SCI_SETSELECTION, currentPos, currentPos - lstrlen(text2display));
+		pCurrentView->send(SCI_SETSELECTION, currentPos, currentPos - std::wcslen(text2display));
 		BufferID currentBufID = pCurrentView->getCurrentBufferID();
 		if (currentBufID != targetBufID)
 			return true;
@@ -8400,7 +8464,7 @@ unsigned int WINAPI Notepad_plus::threadTextTroller(void *params)
 		pCurrentView->send(SCI_DELETEBACK, 0, 0);
 	}
 
-	ReleaseMutex(textTrollerParams->_mutex);
+	textTrollerParams->_mutex->unlock();
 	return ERROR_SUCCESS;
 }
 
@@ -8482,9 +8546,8 @@ void Notepad_plus::showQuote(const QuoteParams* quote) const
 	params._nppHandle = Notepad_plus::this->getHSelf();
 	params._pCurrentView = _pEditView;
 
-	void* hThread = ::CreateThread(NULL, 0, threadTextPlayer, &params, 0, NULL);
-	if (hThread)
-		// CloseHandle: hThread);
+	std::thread t(&Notepad_plus::threadTextPlayer, &params);
+	t.detach();
 }
 
 void Notepad_plus::minimizeDialogs()
@@ -8715,28 +8778,33 @@ int Notepad_plus::getIcoID(DockingDlgInterface* panel)
 	return panel->getIconIDs().at(2);
 }
 
-void Notepad_plus::loadPanelIcon(QApplication* hInst, DockingDlgInterface* panel, HICON* phIcon)
+void Notepad_plus::loadPanelIcon(QApplication* hInst, DockingDlgInterface* panel, QIcon** phIcon)
 {
-	const int icoID = getIcoID(panel);
-	const int iconSize = DPIManagerV2::scale(g_dockingContTabIconSize, panel->getHSelf());
-	DPIManagerV2::loadIcon(hInst, MAKEINTRESOURCE(icoID), iconSize, iconSize, phIcon, LR_LOADMAP3DCOLORS | LR_LOADTRANSPARENT);
+	Q_UNUSED(hInst);
+	// HICON* is QIcon* — load from Qt resource or use panel icon
+	if (*phIcon == nullptr)
+	{
+		// Placeholder: use panel's window icon or a default icon
+		*phIcon = new QIcon(panel->getHSelf()->windowIcon()));
+	}
 }
 
 void Notepad_plus::refreshPanelIcon(QApplication* hInst, DockingDlgInterface* panel)
 {
+	Q_UNUSED(hInst);
 	QWidget* hWnd = panel->getHSelf();
 	for (const auto& docCont : _dockingManager.getContainerInfo())
 	{
 		auto data = docCont->findDockedWidgetByWnd(hWnd);
 		if (data != nullptr)
 		{
-			if (data->hIconTab != nullptr)
+			if (data->iconTab != nullptr)
 			{
-				::DestroyIcon(data->hIconTab);
-				data->hIconTab = nullptr;
+				delete reinterpret_cast<QIcon*>(data->iconTab);
+				data->iconTab = nullptr;
 			}
 
-			loadPanelIcon(hInst, panel, &data->hIconTab);
+			loadPanelIcon(hInst, panel, &data->iconTab);
 			break;
 		}
 	}
@@ -9221,7 +9289,7 @@ void Notepad_plus::changedHistoryGoTo(int idGoTo)
 		bool isSilent = NppParameters::getInstance().getNppGUI()._muteSounds;
 
 		if (!isSilent)
-			::MessageBeep(MB_ICONEXCLAMATION);
+			QApplication::beep();
 	}
 }
 
@@ -9351,3 +9419,57 @@ QAction* Notepad_plus::findActionById(QMenu* menu, int cmdID) const
 	}
 	return nullptr;
 }
+
+// =============================================================================
+// Tray icon slots — Win32 Shell_NotifyIcon → Qt6 QSystemTrayIcon
+// Replaces NPPM_INTERNAL_MINIMIZED_TRAY message routing in NppBigSwitch.cpp
+// =============================================================================
+
+void Notepad_plus::onTrayIconDoubleClicked()
+{
+	// WM_LBUTTONDBLCLK → QSystemTrayIcon::DoubleClick: restore window
+	_pEditView->grabFocus();
+	_dockingManager.showFloatingContainers(true);
+	restoreMinimizeDialogs();
+
+	if (!this->isPrelaunch())
+		_pTrayIco->removeFromTray();
+}
+
+void Notepad_plus::onTrayIconRightClicked()
+{
+	// WM_RBUTTONUP → QSystemTrayIcon::Context: show context menu
+	if (_trayContextMenu)
+		_trayContextMenu->popup(QCursor::pos());
+}
+
+void Notepad_plus::onTrayIconMiddleClicked()
+{
+	// WM_MBUTTONUP → QSystemTrayIcon::MiddleClick: new doc + paste
+	command(IDM_SYSTRAYPOPUP_NEW_AND_PASTE);
+}
+
+void Notepad_plus::onTrayMenuAction(QAction* action)
+{
+	int cmdID = action->data().toInt();
+	switch (cmdID)
+	{
+		case IDM_SYSTRAYPOPUP_NEWDOC:
+			command(IDM_SYSTRAYPOPUP_NEWDOC);
+			break;
+		case IDM_SYSTRAYPOPUP_OPENFILE:
+			command(IDM_SYSTRAYPOPUP_OPENFILE);
+			break;
+		case IDM_SYSTRAYPOPUP_ACTIVATE:
+			// SetForegroundWindow -> QWidget::activateWindow()
+			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf()))
+				w->activateWindow();
+			break;
+		case IDM_SYSTRAYPOPUP_CLOSE:
+			command(IDM_SYSTRAYPOPUP_CLOSE);
+			break;
+		default:
+			break;
+	}
+}
+

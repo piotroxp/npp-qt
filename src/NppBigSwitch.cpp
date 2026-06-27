@@ -232,7 +232,7 @@ qintptr MainWindow::runProc(QWidget* hwnd, unsigned int message, quintptr wParam
 			}
 			catch (std::exception& ex)
 			{
-				::MessageBoxA(hwnd, ex.what(), "Exception On WM_CREATE", 0);
+				QMessageBox::critical(hwnd, QStringLiteral("Exception On WM_CREATE"), QString::fromLatin1(ex.what()));
 				exit(-1);
 			}
 			break;
@@ -963,7 +963,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 			// otherwise we check if the wstring buffer size is enough for the wstring to copy.
 			if (wParam != 0)
 			{
-				if (lstrlen(fileStr) >= int(wParam))
+				if (std::wcslen(fileStr) >= int(wParam))
 				{
 					return false;
 				}
@@ -1090,7 +1090,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 			// otherwise we check if the wstring buffer size is enough for the wstring to copy.
 			if (wParam != 0)
 			{
-				if (lstrlen(str) >= int(wParam))
+				if (std::wcslen(str) >= int(wParam))
 				{
 					return false;
 				}
@@ -1396,7 +1396,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 				nmhdr.hwndFrom = (whichView == MAIN_VIEW)?_mainDocTab.getHSelf():_subDocTab.getHSelf();
 
-				nmhdr.idFrom = ::GetDlgCtrlID(nmhdr.hwndFrom);
+				nmhdr.idFrom = reinterpret_cast<quintptr>(nmhdr.hwndFrom); // control ID (widget pointer as unique id)
 				// SendMessage(WM_) -> Qt: NOTIFY, nmhdr.idFrom, reinterpret_cast<qintptr>(&nmhdr));
 			}
 			return true;
@@ -1468,7 +1468,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 			bool addZeroPadding = wParam == true;
 			if (addZeroPadding)
 			{
-				size_t nbDigit = lstrlen(auxVerStr);
+				size_t nbDigit = std::wcslen(auxVerStr);
 				if (nbDigit > 0 && nbDigit <= 3)
 				{
 					if (nbDigit == 3)
@@ -2015,7 +2015,12 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 						auto caretPos = _pEditView->execute(SCI_GETCURRENTPOS);
 						p.x = static_cast<LONG>(_pEditView->execute(SCI_POINTXFROMPOSITION, 0, caretPos));
 						p.y = static_cast<LONG>(_pEditView->execute(SCI_POINTYFROMPOSITION, 0, caretPos));
-						::ClientToScreen(activeViewHwnd, &p);
+						// ClientToScreen: convert client coords to screen coords
+					if (activeViewHwnd)
+					{
+						QWidget* w = reinterpret_cast<QWidget*>(activeViewHwnd);
+						p = w->mapToGlobal(p);
+					}
 					}
 					scintillaContextmenu.display(p);
 
@@ -2038,7 +2043,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 						auto nmtbcd = reinterpret_cast<LPNMTBCUSTOMDRAW>(lParam);
 						static int roundCornerValue = 0;
 
-						switch (nmtbcd->nmcd.dwDrawStage)
+						switch (nmtbcd->dwDrawStage)
 						{
 							case CDDS_PREPAINT:
 							{
@@ -2050,7 +2055,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 										roundCornerValue = 5;
 									}
 
-									::FillRect(nmtbcd->nmcd.hdc, &nmtbcd->nmcd.rc, NppDarkMode::getDlgBackgroundBrush());
+									{ QPainter p(nmtbcd->hdc); p.fillRect(nmtbcd->rc, NppDarkMode::instance().pureBackgroundBrush()); }
 									lr |= CDRF_NOTIFYITEMDRAW;
 								}
 
@@ -2070,7 +2075,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 								nmtbcd->nStringBkMode = TRANSPARENT;
 								nmtbcd->nHLStringBkMode = TRANSPARENT;
 
-								QRect rcItem{ nmtbcd->nmcd.rc };
+								QRect rcItem{ nmtbcd->rc };
 								QRect rcDrop{};
 
 								TBBUTTONINFO tbi{};
@@ -2081,49 +2086,49 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 								const bool isDropDown = (tbi.fsStyle & BTNS_DROPDOWN) == BTNS_DROPDOWN;
 								if (isDropDown)
 								{
-									quintptr idx = _toolBar.actionIndexFromId(nmtbcd->nmcd.dwItemSpec); // TB_COMMANDTOINDEX
+									quintptr idx = _toolBar.actionIndexFromId(nmtbcd->dwItemSpec); // TB_COMMANDTOINDEX
 									QRect rcDrop = _toolBar.actionGeometry(idx); // TB_GETITEMDROPDOWNQRect
 
 									rcItem.right = rcDrop.left;
 								}
 
-								if ((nmtbcd->nmcd.uItemState & CDIS_HOT) == CDIS_HOT)
+								if ((nmtbcd->uItemState & CDIS_HOT) == CDIS_HOT)
 								{
-									auto holdBrush = // SelectObject -> QPainter: nmtbcd->nmcd.hdc, NppDarkMode::getHotBackgroundBrush());
-									auto holdPen = // SelectObject -> QPainter: nmtbcd->nmcd.hdc, NppDarkMode::getHotEdgePen());
+									auto holdBrush = // SelectObject -> QPainter: nmtbcd->hdc, NppDarkMode::getHotBackgroundBrush());
+									auto holdPen = // SelectObject -> QPainter: nmtbcd->hdc, NppDarkMode::getHotEdgePen());
 
-									::RoundRect(nmtbcd->nmcd.hdc, rcItem.left, rcItem.top, rcItem.right, rcItem.bottom, roundCornerValue, roundCornerValue);
+									{ QPainter p(nmtbcd->hdc); p.drawRoundedRect(rcItem, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
 
 									if (isDropDown)
 									{
-										::RoundRect(nmtbcd->nmcd.hdc, rcDrop.left, rcDrop.top, rcDrop.right, rcDrop.bottom, roundCornerValue, roundCornerValue);
+										{ QPainter p(nmtbcd->hdc); p.drawRoundedRect(rcDrop, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
 									}
 
-									// SelectObject -> QPainter: nmtbcd->nmcd.hdc, holdBrush);
-									// SelectObject -> QPainter: nmtbcd->nmcd.hdc, holdPen);
+									// SelectObject -> QPainter: nmtbcd->hdc, holdBrush);
+									// SelectObject -> QPainter: nmtbcd->hdc, holdPen);
 
-									nmtbcd->nmcd.uItemState &= ~(CDIS_CHECKED | CDIS_HOT);
+									nmtbcd->uItemState &= ~(CDIS_CHECKED | CDIS_HOT);
 								}
-								else if ((nmtbcd->nmcd.uItemState & CDIS_CHECKED) == CDIS_CHECKED)
+								else if ((nmtbcd->uItemState & CDIS_CHECKED) == CDIS_CHECKED)
 								{
-									auto holdBrush = // SelectObject -> QPainter: nmtbcd->nmcd.hdc, NppDarkMode::getCtrlBackgroundBrush());
-									auto holdPen = // SelectObject -> QPainter: nmtbcd->nmcd.hdc, NppDarkMode::getEdgePen());
+									auto holdBrush = // SelectObject -> QPainter: nmtbcd->hdc, NppDarkMode::getCtrlBackgroundBrush());
+									auto holdPen = // SelectObject -> QPainter: nmtbcd->hdc, NppDarkMode::getEdgePen());
 
-									::RoundRect(nmtbcd->nmcd.hdc, rcItem.left, rcItem.top, rcItem.right, rcItem.bottom, roundCornerValue, roundCornerValue);
+									{ QPainter p(nmtbcd->hdc); p.drawRoundedRect(rcItem, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
 
 									if (isDropDown)
 									{
-										::RoundRect(nmtbcd->nmcd.hdc, rcDrop.left, rcDrop.top, rcDrop.right, rcDrop.bottom, roundCornerValue, roundCornerValue);
+										{ QPainter p(nmtbcd->hdc); p.drawRoundedRect(rcDrop, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
 									}
 
-									// SelectObject -> QPainter: nmtbcd->nmcd.hdc, holdBrush);
-									// SelectObject -> QPainter: nmtbcd->nmcd.hdc, holdPen);
+									// SelectObject -> QPainter: nmtbcd->hdc, holdBrush);
+									// SelectObject -> QPainter: nmtbcd->hdc, holdPen);
 
-									nmtbcd->nmcd.uItemState &= ~CDIS_CHECKED;
+									nmtbcd->uItemState &= ~CDIS_CHECKED;
 								}
 
 								qintptr lr = TBCDRF_USECDCOLORS;
-								if ((nmtbcd->nmcd.uItemState & CDIS_SELECTED) == CDIS_SELECTED)
+								if ((nmtbcd->uItemState & CDIS_SELECTED) == CDIS_SELECTED)
 								{
 									lr |= TBCDRF_NOBACKGROUND;
 								}
@@ -2142,20 +2147,19 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 								const unsigned int dpi = DPIManagerV2::getDpiForWindow(hwnd);
 								LOGFONT lf{ DPIManagerV2::getDefaultGUIFontForDpi(dpi) };
 								HFONT hFont = CreateFontIndirect(&lf);
-								auto holdFont = static_cast<HFONT>(// SelectObject -> QPainter: nmtbcd->nmcd.hdc, hFont));
+								auto holdFont = static_cast<HFONT>(// SelectObject -> QPainter: nmtbcd->hdc, hFont));
 
 								QRect rcArrow{};
-								quintptr idx = _toolBar.actionIndexFromId(nmtbcd->nmcd.dwItemSpec); // TB_COMMANDTOINDEX
+								quintptr idx = _toolBar.actionIndexFromId(nmtbcd->dwItemSpec); // TB_COMMANDTOINDEX
 								QRect rcArrow = _toolBar.actionGeometry(idx); // TB_GETITEMDROPDOWNQRect
 								rcArrow.left += DPIManagerV2::scale(1, dpi);
 								rcArrow.bottom -= DPIManagerV2::scale(3, dpi);
 
 								COLORREF clrArrow = NppDarkMode::getTextColor();
 
-								::SetBkMode(nmtbcd->nmcd.hdc, TRANSPARENT);
-								::SetTextColor(nmtbcd->nmcd.hdc, clrArrow);
-								// DrawText -> QPainter::drawText: nmtbcd->nmcd.hdc, L"⏷", -1, &rcArrow, DT_NOPREFIX | DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOCLIP);
-								// SelectObject -> QPainter: nmtbcd->nmcd.hdc, holdFont);
+								{ QPainter p(nmtbcd->hdc); p.setBackgroundMode(Qt::TransparentMode); p.setPen(clrArrow); }
+								// DrawText -> QPainter::drawText: nmtbcd->hdc, L"⏷", -1, &rcArrow, DT_NOPREFIX | DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOCLIP);
+								// SelectObject -> QPainter: nmtbcd->hdc, holdFont);
 								// DeleteObject: hFont);
 
 								return CDRF_DODEFAULT;
@@ -2190,7 +2194,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 									return CDRF_DODEFAULT;
 								}
 
-								::FillRect(lpnmcd->hdc, &lpnmcd->rc, NppDarkMode::getDlgBackgroundBrush());
+								{ QPainter p(lpnmcd->hdc); p.fillRect(lpnmcd->rc, NppDarkMode::instance().pureBackgroundBrush()); }
 								REBARBANDINFO rbBand{};
 								rbBand.cbSize = sizeof(REBARBANDINFO);
 								rbBand.fMask = RBBIM_STYLE | RBBIM_CHEVRONLOCATION | RBBIM_CHEVRONSTATE;
@@ -2213,15 +2217,14 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 									if (isHot)
 									{
-										NppDarkMode::paintRoundRect(lpnmcd->hdc, rbBand.rcChevronLocation, NppDarkMode::getHotEdgePen(), NppDarkMode::getHotBackgroundBrush(), roundCornerValue, roundCornerValue);
+										{ QPainter p(lpnmcd->hdc); p.setPen(NppDarkMode::instance().hotEdgePen()); QBrush b(NppDarkMode::instance().hotBackgroundBrush()); p.fillRect(rbBand.rcChevronLocation, b); p.drawRoundedRect(rbBand.rcChevronLocation, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
 									}
 									else if (isPressed)
 									{
-										NppDarkMode::paintRoundRect(lpnmcd->hdc, rbBand.rcChevronLocation, NppDarkMode::getEdgePen(), NppDarkMode::getCtrlBackgroundBrush(), roundCornerValue, roundCornerValue);
+										{ QPainter p(lpnmcd->hdc); p.setPen(NppDarkMode::instance().edgePen()); QBrush b(NppDarkMode::instance().ctrlBackgroundBrush()); p.fillRect(rbBand.rcChevronLocation, b); p.drawRoundedRect(rbBand.rcChevronLocation, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
 									}
 
-									::SetTextColor(lpnmcd->hdc, isHot ? NppDarkMode::getTextColor() : NppDarkMode::getDarkerTextColor());
-									::SetBkMode(lpnmcd->hdc, TRANSPARENT);
+									{ QPainter p(lpnmcd->hdc); p.setPen(isHot ? NppDarkMode::getTextColor() : NppDarkMode::getDarkerTextColor()); p.setBackgroundMode(Qt::TransparentMode); }
 
 									constexpr auto dtFlags = DT_NOPREFIX | DT_CENTER | DT_TOP | DT_SINGLELINE | DT_NOCLIP;
 									// DrawText -> QPainter::drawText: lpnmcd->hdc, L"»", -1, &rbBand.rcChevronLocation, dtFlags);
@@ -2262,9 +2265,11 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 		case WM_ACTIVATEAPP:
 		{
+			// Win32: PostMessage(hwnd, NPPM_INTERNAL_CHECKDOCSTATUS, ...) → Qt signal/slot
 			if (wParam == true) // if npp is about to be activated
 			{
-				::PostMessage(hwnd, NPPM_INTERNAL_CHECKDOCSTATUS, 0, 0);
+				QMetaObject::invokeMethod(this, "checkModifiedDocument", Qt::QueuedConnection,
+					Q_ARG(bool, (nppParam.getNppGUI()._fileAutoDetection & cdEnabledNew) ? true : false));
 			}
 			return false;
 		}
@@ -2566,7 +2571,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 			if (isForcedShuttingDown)
 				nppParam.makeEndSessionCritical();
 
-			if (::IsWindowEnabled(hwnd))
+			if (hwnd->isEnabled())
 			{
 				if (MainFileManager.getNbDirtyBuffers() > 0)
 				{
@@ -2581,14 +2586,14 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 						}
 						else
 						{
-							if (!::IsWindowVisible(hwnd))
+							if (!!!hwnd->isVisible())
 							{
 								// systray etc...
 								// ShowWindow -> QWidget: hwnd, Qt::WindowState::WindowActive);
 								// SendMessage(WM_) -> Qt: SIZE, 0, 0);	// to make window fit (specially to show tool bar.)
 							}
 						}
-						::PostMessage(hwnd, NPPM_INTERNAL_WINDOWSSESSIONEXIT, 0, 0); // posting will not block us here
+						QMetaObject::invokeMethod(this, "onWindowsSessionEnding", Qt::QueuedConnection);
 						return false; // request abort of the shutdown 
 					}
 				}
@@ -2608,32 +2613,45 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 				string strLog = "Main Notepad++ wnd is disabled by (an active modal-dlg?):  ";
 				char szBuf[MAX_PATH + 128] = { 0 };
 
-				QWidget* hActiveWnd = ::GetActiveWindow();
+				QWidget* hActiveWnd = QApplication::activeWindow();
 				if (hActiveWnd)
 				{
-					if (::GetWindowTextA(hActiveWnd, szBuf, static_cast<size_t>(sizeof(szBuf)))
+					QByteArray titleBytes = hActiveWnd->windowTitle().toLocal8Bit();
+					if (!titleBytes.isEmpty())
+					{
+						qstrncpy(szBuf, titleBytes.constData(), sizeof(szBuf) - 1);
 						strLog += szBuf;
-					if (hActiveWnd) { QWidget* w = QWidget::find(reinterpret_cast<WId>(hActiveWnd)); if (w) w->close(); } // WM_CLOSE -> QCloseEvent
+					}
+					hActiveWnd->close(); // WM_CLOSE -> QCloseEvent
 				}
 				else
 				{
-					// no active child window, so it is most probably the system dialog box class #32770 (used e.g. by the MessageBox WINAPI)
-					// - so our main hwnd here is not the PARENT but OWNER of that top-level window
-					hActiveWnd = ::GetLastActivePopup(hwnd);
+					// no active child window, so it is most probably a modal dialog owned by the main window
+					// Find the active modal widget (the topmost blocking dialog)
+					hActiveWnd = QApplication::activeModalWidget();
+					if (!hActiveWnd)
+						hActiveWnd = QApplication::modalWindow();
+
 					if (hActiveWnd)
 					{
-						if (::GetWindowTextA(hActiveWnd, szBuf, static_cast<size_t>(sizeof(szBuf)))
-							strLog += szBuf;
-						::GetClassNameA(hActiveWnd, szBuf, static_cast<size_t>(sizeof(szBuf));
-						if (lstrcmpiA("#32770", szBuf) == 0)
-							strLog += " (MessageBox)";
-						// we cannot use here the usual sending of the 0 /* WM_CLOSE -> QCloseEvent */ as it will not always work (e.g. for a 0 MessageBox)
-						if (!::EndDialog(hActiveWnd, 0))
+						QByteArray titleBytes = hActiveWnd->windowTitle().toLocal8Bit();
+						if (!titleBytes.isEmpty())
 						{
-							strLog += "  -> EndDialog failed with ErrorCode: ";
-							strLog += std::to_string(::GetLastError());
-							// last attempt
-							if (hActiveWnd) { QWidget* w = QWidget::find(reinterpret_cast<WId>(hActiveWnd)); if (w) w->close(); } // WM_SYSCOMMAND SC_CLOSE
+							qstrncpy(szBuf, titleBytes.constData(), sizeof(szBuf) - 1);
+							strLog += szBuf;
+						}
+						const char* className = hActiveWnd->metaObject() ? hActiveWnd->metaObject()->className() : "";
+						if (strcmp(className, "QDialog") == 0)
+							strLog += " (QDialog)";
+						// Try to close via QDialog accept/reject (works for modal QDialogs)
+						if (QDialog* dlg = qobject_cast<QDialog*>(hActiveWnd))
+						{
+							dlg->reject(); // sends QCloseEvent
+						}
+						else
+						{
+							// Generic widget close as fallback
+							hActiveWnd->close();
 						}
 					}
 					else
@@ -2643,7 +2661,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 				}
 
 				// re-test
-				if (::IsWindowEnabled(hwnd))
+				if (hwnd->isEnabled())
 					strLog += "  -> Main Notepad++ wnd has been successfully reenabled.";
 			}
 
@@ -2683,7 +2701,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 		{
 			if (this->isPrelaunch())
 			{
-				SendMessage(hwnd, 0 /* WM_SYSCOMMAND -> QEvent */, SC_MINIMIZE, 0);
+				hwnd->showMinimized();
 			}
 			else
 			{
@@ -2702,8 +2720,9 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 				if (isSnapshotMode)
 				{
-					::LockWindowUpdate(hwnd);
+					hwnd->setUpdatesEnabled(false);
 					MainFileManager.backupCurrentBuffer();
+					hwnd->setUpdatesEnabled(true);
 				}
 
 				Session currentSession;
@@ -2733,14 +2752,15 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 					scnN.nmhdr.code = NPPN_CANCELSHUTDOWN;
 					_pluginsManager.notify(&scnN);
 					if (isSnapshotMode)
-						::LockWindowUpdate(NULL);
+						hwnd->setUpdatesEnabled(true);
 
-					if (!::IsWindowVisible(hwnd))
+					if (hwnd->isHidden())
 					{
 						// Notepad++ probably has not been restored from the systray
 						// - as its tray-icon was removed before, we have to show the app window otherwise we end up with no-GUI state
-						// ShowWindow -> QWidget: hwnd, Qt::WindowState::WindowActive);
-						// SendMessage(WM_) -> Qt: SIZE, 0, 0);
+						hwnd->showNormal();
+						hwnd->activateWindow();
+						hwnd->raise();
 					}
 
 					return 0; // abort quitting
@@ -2756,7 +2776,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 				if (_beforeSpecialView._isPostIt)		//closing, return to windowed mode
 					postItToggle();
 
-				if (_configStyleDlg.isCreated() && ::IsWindowVisible(_configStyleDlg.getHSelf()))
+				if (_configStyleDlg.isCreated() && !!_configStyleDlg.getHSelf()->isVisible())
 					_configStyleDlg.restoreGlobalOverrideValues();
 
 				scnN.nmhdr.code = NPPN_SHUTDOWN;
@@ -2814,11 +2834,8 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 					}
 				}
 
-				if (isSnapshotMode)
-					::LockWindowUpdate(NULL);
-
 				//Sends 0 /* WM_DESTROY -> QCloseEvent */, Notepad++ will end
-				::DestroyWindow(hwnd);
+				hwnd->close();
 
 				if (!nppParam.isEndSessionCritical())
 				{
@@ -2867,17 +2884,18 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 				((toTray == sta_close || toTray == sta_minimize_close) && wParam == SC_CLOSE)
 			)
 			{
+				// Win32: Shell_NotifyIcon(NIM_ADD) → QSystemTrayIcon::show()
+				// The TrayIconController is created in Notepad_plus::init() when needed.
 				if (!_pTrayIco)
 				{
-					HICON icon = nullptr;
-					MainWindow::loadTrayIcon(this->getHinst(), &icon);
-					_pTrayIco = new trayIconControler(hwnd, IDI_M30ICON, NPPM_INTERNAL_MINIMIZED_TRAY, icon, L"");
+					_pTrayIco = new TrayIconController(this->getHSelf(), QStringLiteral("Notepad++"));
+					_pTrayIco->addToTray();
 				}
 
-				_pTrayIco->doTrayIcon(ADD);
 				_dockingManager.showFloatingContainers(false);
 				minimizeDialogs();
-				// ShowWindow -> QWidget: hwnd, Qt::WindowState::WindowMinimized);
+				if (QWidget* w = qobject_cast<QWidget*>(hwnd))
+					w->showMinimized();
 				return true;
 			}
 
@@ -2914,45 +2932,11 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 		case NPPM_INTERNAL_MINIMIZED_TRAY:
 		{
-			switch (lParam)
-			{
-				//case WM_LBUTTONDBLCLK:
-				case 0 /* WM_LBUTTONUP -> QMouseEvent */ :
-				{
-					_pEditView->grabFocus();
-					// ShowWindow -> QWidget: hwnd, Qt::WindowState::WindowActive);
-					_dockingManager.showFloatingContainers(true);
-					restoreMinimizeDialogs();
-
-					if (!this->isPrelaunch())
-						_pTrayIco->doTrayIcon(REMOVE);
-					// SendMessage(WM_) -> Qt: SIZE, 0, 0);
-					return true;
-				}
-
-				case WM_MBUTTONUP:
-				{
-					command(IDM_SYSTRAYPOPUP_NEW_AND_PASTE);
-					return true;
-				}
-
-				case 0 /* WM_RBUTTONUP -> QMouseEvent */:
-				{
-					QPoint p;
-					GetCursorPos(&p);
-
-					QMenu* hmenu;            // menu template
-					QMenu* hTrayIconMenu;  // shortcut menu
-					hmenu = ::LoadMenu(this->getHinst(), MAKEINTRESOURCE(IDR_SYSTRAYPOPUP_MENU));
-					hTrayIconMenu = // GetSubMenu -> QMenu::actions: hmenu, 0);
-					_nativeLangSpeaker.changeLangTrayIconContexMenu(hTrayIconMenu);
-					SetForegroundWindow(hwnd);
-					TrackPopupMenu(hTrayIconMenu, TPM_LEFTALIGN, p.x, p.y, 0, hwnd, NULL);
-					PostMessage(hwnd, WM_NULL, 0, 0);
-					DestroyMenu(hmenu);
-					return true;
-				}
-			}
+			// Win32: Shell_NotifyIcon routed WM_* messages via NPPM_INTERNAL_MINIMIZED_TRAY lParam
+			// Qt6: QSystemTrayIcon emits typed signals — handled via slots in Notepad_plus
+			// We no longer need this branch; the signal routing is done via Qt connections.
+			// Left as a no-op for backward compatibility with any deferred calls.
+			Q_UNUSED(lParam);
 			return true;
 		}
 
@@ -2970,7 +2954,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 		case NPPM_DMMUPDATEDISPINFO:
 		{
-			if (::IsWindowVisible(qobject_cast<QWidget*>(reinterpret_cast<void*>(lParam))))
+			if (!!qobject_cast<QWidget*>(reinterpret_cast<void*>(lParam))->isVisible())
 				_dockingManager.updateContainerInfo(qobject_cast<QWidget*>(reinterpret_cast<void*>(lParam)));
 			return true;
 		}
@@ -4181,22 +4165,21 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 			if (nppParam.getNppGUI()._hideMenuRightShortcuts)
 			{
 				int nbRemoved = 0;
-				const int bufferSize = 64;
-				wchar_t buffer[bufferSize];
-				int nbItem = GetMenuItemCount(_mainMenuHandle);
+				QList<QAction*> menuActions = _mainMenuHandle->actions();
+				int nbItem = menuActions.size();
 				for (int i = nbItem - 1; i >= 0; --i)
 				{
-					::GetMenuStringW(_mainMenuHandle, i, buffer, bufferSize, 0);
-					if (lstrcmp(buffer, L"✕") == 0 || lstrcmp(buffer, L"▼") == 0 || lstrcmp(buffer, L"＋") == 0)
+					QString actionText = menuActions[i]->text();
+					if (actionText == QString::fromWCharArray(L"✕") ||
+						actionText == QString::fromWCharArray(L"▼") ||
+						actionText == QString::fromWCharArray(L"＋"))
 					{
-						::RemoveMenu(_mainMenuHandle, i, 0);
+						_mainMenuHandle->removeAction(menuActions[i]);
 						++nbRemoved;
 					}
 					if (nbRemoved == 3)
 						break;
 				}
-				if (nbRemoved > 0)
-					// DrawMenuBar: Qt handles automaticallyhwnd);
 			}
 			return true;
 		}

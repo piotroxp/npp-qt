@@ -39,6 +39,19 @@ class ScintillaComponent;
 // the real Scintilla Qt port (scintilla/qt/) when available.
 #include "ScintillaEditBase.h"
 
+// Sci_CharacterRangeFull — needed by Notepad_plus.h (which includes this header).
+// Scintilla.h (included via NppSciCompat.h → ScintillaEditBase.h) defines it inside
+// an extern "C" block, so it's not accessible as a C++ type here without including
+// Scintilla.h directly (which would poison the namespace with SCI_* macros).
+// Provide a compatible C++ definition; guard against double-definition.
+#ifndef SCI_CHARACTERRANGEFULL_DEFINED
+#define SCI_CHARACTERRANGEFULL_DEFINED
+struct Sci_CharacterRangeFull {
+    intptr_t cpMin;
+    intptr_t cpMax;
+};
+#endif
+
 // =============================================================================
 // Constants lifted from ScintillaEditView.h / Notepad_plus_msgs.h
 // =============================================================================

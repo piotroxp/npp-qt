@@ -6,6 +6,28 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
+# Add each target's source directory to the include path, so mocs_compilation.cpp
+# (which lives in npp-qt_autogen/) can resolve relative includes like
+# "YDZQWUPVU2/moc_Foo.cpp" via its own directory.
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+# Disable automatic GCC/MinGW dependency tracking (-MD -MP) to prevent race conditions
+# where the .d dependency file is read before it exists on first build
+set(CMAKE_DEPEND_FLAGS "")
+
+# Pre-create a phony .d file to prevent "No such file" errors on fresh builds
+file(WRITE "${CMAKE_BINARY_DIR}/cmake_dependency_placeholder.d" "")
+
+# WORKAROUND: AUTOMOC generates mocs_compilation.cpp with includes like
+# "SUBDIR/moc_Foo.cpp" but doesn't add npp-qt_autogen/ to the include path.
+# This causes compilation to fail. Also ensure Scintilla and other include paths
+# are passed to the moc executable.
+get_property(AUTOMOC_INCLUDE_DIRS DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY AUTOMOC_INCLUDE_DIRS)
+# Always use both the binary autogen dir AND any inherited dirs
+set(CMAKE_AUTOMOC_INCLUDE_DIRECTORIES
+    ${CMAKE_BINARY_DIR}/npp-qt_autogen
+    ${AUTOMOC_INCLUDE_DIRS}
+)
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core Xml)
 # QScintilla2 has no CMake config; link manually via pkg-config or library path
@@ -377,12 +399,18 @@ target_link_libraries(npp-qt
         ${QSCINTILLA2_LIB}
 )
 
+# Scintilla and Lexilla headers (from notepad-plus-plus-translation workspace)
+set(SCINTILLA_INCLUDE "/home/node/.openclaw/workspace/notepad-plus-plus-translation/scintilla/include")
+set(LEXILLA_INCLUDE "/home/node/.openclaw/workspace/notepad-plus-plus-translation/lexilla/include")
+
 target_include_directories(npp-qt PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/WinControls
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}/npp-qt_autogen  # WORKAROUND: AUTOMOC mocs_compilation.cpp includes "SUBDIR/moc_Foo.cpp"
     /usr/include/x86_64-linux-gnu/qt6/QtPrintSupport
-    /home/node/.openclaw/workspace/notepad-plus-plus-translation/scintilla/include
-    /home/node/.openclaw/workspace/notepad-plus-plus-translation/lexilla/include
+    ${SCINTILLA_INCLUDE}
+    ${LEXILLA_INCLUDE}
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

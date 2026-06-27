@@ -18,6 +18,11 @@
 #include <QFileInfo>
 #include <QDir>
 
+// Bring in SCFIND constants from npp_sci namespace for local use
+using npp_sci::SCFIND_REGEXP;
+using npp_sci::SCFIND_POSIX;
+using npp_sci::SCFIND_REGEXP_DOTMATCHESNL;
+
 // =============================================================================
 // FunctionParsersManager::init
 // Mirrors Win32 init() — sets paths and loads override map.

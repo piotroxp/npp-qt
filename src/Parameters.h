@@ -26,6 +26,19 @@
 #include "Window.h"
 #include "MISC/Common/Common.h"
 
+// Undef Scintilla.h macros that would otherwise poison npp_sci namespace constants
+#undef SC_MOD_DELETETEXT
+#undef SC_MOD_INSERTTEXT
+#undef SC_MOD_CHANGEFIRST
+#undef SC_MOD_CHANGELAST
+#undef SC_MOD_CHANGEMARKER
+#undef SC_MOD_CHANGEFOLD
+#undef SC_MOD_PERFORMED_UNDO
+#undef SC_MOD_PERFORMED_REDO
+#undef SC_MOD_CHANGEINDICATOR
+#undef SC_PERFORMED_UNDO
+#undef SC_PERFORMED_REDO
+
 #include <QtCore>
 #include <QtGui>
 #include <algorithm>
@@ -430,7 +443,7 @@ struct LangMenuItem final
 
 struct PrintSettings final {
     bool _printLineNumber = true;
-    int _printOption = SC_PRINT_COLOURONWHITE;
+    int _printOption = npp_sci::SC_PRINT_COLOURONWHITE;
     std::wstring _headerLeft, _headerMiddle, _headerRight;
     std::wstring _headerFontName;
     int _headerFontStyle = 0;
@@ -767,8 +780,8 @@ private:
     std::wstring _name;
     std::wstring _ext;
     std::string _udlVersion;
-    std::string _keywordLists[SCE_USER_KWLIST_TOTAL];
-    bool _isPrefix[SCE_USER_TOTAL_KEYWORD_GROUPS] = { false };
+    std::string _keywordLists[npp_sci::SCE_USER_KWLIST_TOTAL];
+    bool _isPrefix[npp_sci::SCE_USER_TOTAL_KEYWORD_GROUPS] = { false };
     int _forcePureLC = PURE_LC_NONE;
     int _decimalSeparator = DECSEP_DOT;
     bool _isCaseIgnored = false;
@@ -1141,7 +1154,7 @@ public:
     void setCloudChoice(const wchar_t* pathChoice) const;
     void removeCloudChoice() const;
     bool isCloudPathChanged() const;
-    static constexpr int archType() { return ARCH_TYPE; }
+    static constexpr int archType() { return npp_sci::ARCH_TYPE; }
     QRgb getCurrentDefaultBgColor() const { return _currentDefaultBgColor; }
     QRgb getCurrentDefaultFgColor() const { return _currentDefaultFgColor; }
     void setCurrentDefaultBgColor(QRgb c) { _currentDefaultBgColor = c; }
@@ -1326,7 +1339,7 @@ private:
     bool _theWarningHasBeenGiven = false;
     int _currentSystemCodepage = -1;
 
-    unsigned long _sintillaModEventMask = SC_MOD_DELETETEXT | SC_MOD_INSERTTEXT | SC_PERFORMED_UNDO | SC_PERFORMED_REDO | SC_MOD_CHANGEINDICATOR;
+    unsigned long _sintillaModEventMask = npp_sci::SC_MOD_DELETETEXT | npp_sci::SC_MOD_INSERTTEXT | npp_sci::SC_PERFORMED_UNDO | npp_sci::SC_PERFORMED_REDO | npp_sci::SC_MOD_CHANGEINDICATOR;
     enum class ConfXml { lang, styles };
 
     std::pair<unsigned char, unsigned char> addUserDefineLangsFromXmlTree(NppXml::Document xmldoc);

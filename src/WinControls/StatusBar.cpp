@@ -157,4 +157,10 @@ QLabel* StatusBar::getOrCreatePart(int partIndex)
     return label;
 }
 
+void StatusBar::setPartWidth(int partIndex, int width)
+{
+    QLabel* part = getOrCreatePart(partIndex);
+    if (part) part->setMinimumWidth(width);
+}
+
 

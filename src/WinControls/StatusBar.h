@@ -50,6 +50,7 @@ public:
 
     void setProgress(int percent);
     void clearProgress();
+    void setPartWidth(int partIndex, int width);  // Win32 compat stub
 
 signals:
     void statusClicked(int part);

@@ -24,7 +24,6 @@
 #include "ScintillaComponent.h"
 
 class Buffer;
-struct MapPosition;
 
 // Custom messages for view zone communication (mirrors Win32 DOCUMENTMAP_*)
 const unsigned int DOCUMENTMAP_SCROLL       = 0x1000 + 4;
