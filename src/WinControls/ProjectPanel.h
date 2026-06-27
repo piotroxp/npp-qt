@@ -7,6 +7,8 @@
 #include "DockingWnd.h"
 #include "StaticDialog.h"
 #include "TreeView.h"
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QMenu>
@@ -86,7 +88,7 @@ private:
 // Mirrors Win32 FileRelocalizerDlg (IDD_RELOCALIZE_FILEPATH).
 // =============================================================================
 
-class FileRelocalizerDlg : public StaticDialog
+class FileRelocalizerDlg : public QDialog
 {
     Q_OBJECT
 public:
@@ -94,12 +96,11 @@ public:
     ~FileRelocalizerDlg() override = default;
 
     int doDialog(const QString& fn, bool isRTL = false);
-    void destroy() override {}
 
     const QString& getFullFilePath() const { return _fullFilePath; }
 
 protected:
-    intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam);
 
 private:
     QString _fullFilePath;
@@ -127,6 +128,9 @@ public:
     bool openWorkSpace(const QString& projectFileName, bool force = false);
     bool saveWorkSpace();
     bool saveWorkSpaceAs(bool saveCopyAs = false);
+    bool isClosed() const { return false; }  // stub: panel never fully closed
+    QString getWorkSpaceFilePath() const;  // stub
+    void enumWorkSpaceFiles(std::vector<QString>& paths, int type) const;  // stub
     void setWorkSpaceFilePath(const QString& path) { _workSpaceFilePath = path; }
     QString workSpaceFilePath() const { return _workSpaceFilePath; }
     bool isDirty() const { return _isDirty; }
@@ -151,7 +155,7 @@ signals:
     void findInProjectsRequested(const QStringList& files);
 
 protected:
-    intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam) override;
+    intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam);
 
 private slots:
     void onItemDoubleClicked(QTreeWidgetItem* item, int column);

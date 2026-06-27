@@ -159,6 +159,15 @@ void TabBarPlus::refresh()
     (void)currentIndex(); // suppress unused warning
 }
 
+void TabBarPlus::display(bool toShow)
+{
+    if (toShow) {
+        show();
+    } else {
+        hide();
+    }
+}
+
 void TabBarPlus::triggerOwnerDrawTabbar()
 {
     for (int i = 0; i < 10; ++i) {

@@ -3,6 +3,7 @@
 #include <QString>
 #include <QStringList>
 
+#include <string>
 // Splits a string by a delimiter character
 inline QStringList splitString(const QString& str, QChar delim) {
     return str.split(delim, Qt::SkipEmptyParts);
@@ -17,6 +18,8 @@ inline QStringList splitString(const QString& str, const QString& delim) {
 class FileNameStringSplitter {
 public:
     explicit FileNameStringSplitter(const QString& str) : _str(str) {}
+    explicit FileNameStringSplitter(const wchar_t* str) : _str(QString::fromWCharArray(str)) {}
+    explicit FileNameStringSplitter(const std::wstring& str) : _str(QString::fromStdWString(str)) {}
     ~FileNameStringSplitter() = default;
 
     // Get the base name (last component after last / or \\)

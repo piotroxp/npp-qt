@@ -694,9 +694,9 @@ intptr_t DocumentMap::run_dlgProc(unsigned int message, intptr_t wParam, intptr_
     {
         if (_ppEditView && *_ppEditView)
         {
-            QWheelEvent event(QEvent::Wheel, QPoint(), QPoint(),
+            QWheelEvent event(QEvent::Wheel, QPoint(), QPoint(), QPoint(),
                 static_cast<Qt::KeyboardModifiers>(0),
-                static_cast<int>(wParam), Qt::Vertical, Qt::NoButton, Qt::NoModifier);
+                static_cast<int>(wParam), Qt::NoButton, Qt::NoModifier, Qt::ScrollMild, Qt::MouseEventNotSynthesized);
             QCoreApplication::sendEvent((*_ppEditView)->getHSelf(), &event);
         }
         return TRUE;

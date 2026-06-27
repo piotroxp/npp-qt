@@ -114,10 +114,14 @@ struct MapPosition {
     int  _firstVisibleDocLine = 0;
     int  _nbLine = 0;
     int  _lastVisibleDocLine = 0;
+    int  _higherPos = -1;    // scroll position marker
+    int  _KByteInDoc = 512;  // max peek length in KB
 
-    MapPosition() : _firstVisibleLine(0), _wrapColumn(0), _height(-1), _width(-1), _iView(0), _isWrap(false), _wrapIndentMode(0), _firstVisibleDisplayLine(0), _firstVisibleDocLine(0), _nbLine(0), _lastVisibleDocLine(0) {}
+    MapPosition() : _firstVisibleLine(0), _wrapColumn(0), _height(-1), _width(-1), _iView(0), _isWrap(false), _wrapIndentMode(0), _firstVisibleDisplayLine(0), _firstVisibleDocLine(0), _nbLine(0), _lastVisibleDocLine(0), _higherPos(-1), _KByteInDoc(512) {}
     MapPosition(int line, int height, int width, int iView)
-        : _firstVisibleLine(line), _wrapColumn(0), _height(height), _width(width), _iView(iView), _isWrap(false), _wrapIndentMode(0), _firstVisibleDisplayLine(0), _firstVisibleDocLine(0), _nbLine(0), _lastVisibleDocLine(0) {}
+        : _firstVisibleLine(line), _wrapColumn(0), _height(height), _width(width), _iView(iView), _isWrap(false), _wrapIndentMode(0), _firstVisibleDisplayLine(0), _firstVisibleDocLine(0), _nbLine(0), _lastVisibleDocLine(0), _higherPos(-1), _KByteInDoc(512) {}
+
+    bool isValid() const { return (_firstVisibleDisplayLine != -1); }
 };
 
 class Buffer : public QObject {

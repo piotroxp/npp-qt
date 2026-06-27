@@ -195,6 +195,15 @@ bool ReBar::getIDVisible(int id) const
 
 void ReBar::setGrayBackground(int id) { Q_UNUSED(id); }
 
+void ReBar::display(bool toShow)
+{
+    if (toShow) {
+        show();
+    } else {
+        hide();
+    }
+}
+
 int ReBar::getNewID()
 {
     for (int i = 0; i < 1000; ++i) {

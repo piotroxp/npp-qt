@@ -774,6 +774,10 @@ void DockingManager::updateContainerInfo(QWidget* client) {
     relayout();
 }
 
+std::vector<DockingContainer*> DockingManager::getContainerInfo() const {
+    return std::vector<DockingContainer*>(_containers.begin(), _containers.end());
+}
+
 QWidget* DockingManager::findDockedWidgetByName(const QString& name) {
     for (auto* cont : _containers) {
         DockedWidgetData* data = cont->findDockedWidgetByName(name);

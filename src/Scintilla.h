@@ -1347,16 +1347,12 @@ typedef sptr_t (*SciFnDirectStatus)(sptr_t ptr, unsigned int iMessage, uptr_t wP
  * CHARRANGE, TEXTRANGE, FINDTEXTEX, FORMATRANGE, and NMHDR structs.
  * So older code that treats Scintilla as a RichEdit will work. */
 
-#ifndef SCI_CHARACTERRANGE_DEFINED
-#define SCI_CHARACTERRANGE_DEFINED
 struct Sci_CharacterRange {
 	Sci_PositionCR cpMin;
 	Sci_PositionCR cpMax;
 };
-#endif
 
-#ifndef SCI_CHARACTERRANGEFULL_DEFINED
-#define SCI_CHARACTERRANGEFULL_DEFINED
+#ifndef SCINTILLA_H
 struct Sci_CharacterRangeFull {
 	Sci_Position cpMin;
 	Sci_Position cpMax;

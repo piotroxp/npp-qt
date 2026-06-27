@@ -272,6 +272,13 @@ void FindReplaceDlg::finishFilesSearch(int, int, bool) {}
 void FindReplaceDlg::focusOnFinder() { show(); raise(); }
 void FindReplaceDlg::clearAllFinderResults() {}
 
+void FindReplaceDlg::setStatusbarMessageWithRegExprErr(ScintillaComponent* view)
+{
+    Q_UNUSED(view);
+    // Win32: displayed regex compilation error in status bar
+    // Stubbed on Linux — regex errors are handled by the UI directly
+}
+
 const std::wstring& FindReplaceDlg::getText2search() const
 {
     static std::wstring empty;

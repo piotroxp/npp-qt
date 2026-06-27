@@ -95,7 +95,7 @@ bool FunctionCallTip::getCursorFunction()
     // SCI_GETLINE doesn't null-terminate properly, so we handle it
     QByteArray lineBytes = QByteArray(len + 1, '\0');
     _pEditView->send(SCI_GETLINE, line, reinterpret_cast<sptr_t>(lineBytes.data()));
-    lineBytes[len] = '\0';
+    lineBytes.data()[len] = '\0';
     std::memcpy(lineData, lineBytes.constData(), len);
     lineData[len] = '\0';
 

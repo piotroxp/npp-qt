@@ -120,6 +120,7 @@ constexpr std::nullptr_t BUFFER_INVALID = nullptr;
 // =============================================================================
 
 class Buffer;
+class UserDefineDialog;
 
 // =============================================================================
 // Language name table — mirrors Win32 ScintillaEditView::_langNameInfoArray
@@ -163,6 +164,7 @@ public:
     ~ScintillaComponent() override;
 
     void redraw() { update(); }  // Force repaint — mirrors Win32 InvalidateRect/RedrawWindow
+    void redraw(bool /*unused*/) { update(); }  // overload used by DocumentMap.cpp
 
     // Semantic lift: Win32 init(hInst, hParent) → constructor + setup
     // Called once per editor instance to wire up the Scintilla widget.
@@ -201,7 +203,7 @@ public:
     // Win32 compatibility shims
     Buffer* getCurrentBuffer() const { return currentBuffer(); }
     Buffer* getCurrentBufferID() const { return getCurrentBuffer(); }  // alias for plugin compat
-    intptr_t getCurrentLineNumber() const { return currentLine(); }
+    intptr_t getCurrentLineNumber() const { return static_cast<intptr_t>(ScintillaEditBase::currentLine()); }
     void setLineIndent(int line, int indent) { send(SCI_SETLINEINDENTATION, line, indent); }
 
     // Attach the default (startup) document as a Buffer
@@ -229,6 +231,10 @@ public:
     // Search in target (SciLexer find/replace)
     intptr_t searchInTarget(const QString& text, size_t fromPos, size_t toPos) const;
     intptr_t searchInTarget(const char* text, size_t len, size_t fromPos, size_t toPos) const;
+    // Overloads used by Notepad_plus.cpp: std::string& text, non-const ref for pos
+    intptr_t searchInTarget(const std::string& text, intptr_t& fromPos, intptr_t& toPos) const;
+    intptr_t searchInTarget(const std::string& text, intptr_t& fromPos, intptr_t toPos) const;
+    intptr_t searchInTarget(const std::string& text, intptr_t& fromPos, int len) const;
 
     // Replace the target range
     intptr_t replaceTarget(const QString& replacement, intptr_t fromPos = -1, intptr_t toPos = -1);
@@ -260,6 +266,7 @@ public:
 
     // Folding
     void fold(size_t line, bool collapse) const;
+    void fold(size_t line, bool collapse, bool /*unused*/) const { fold(line, collapse); }
     void foldAll(bool collapse) const;
     void expand(size_t& line, bool doExpand, bool force = false) const;
     bool isFolded(size_t line) const;
@@ -272,6 +279,7 @@ public:
     void showIndentGuide(bool show = true);
     bool isShownIndentGuide() const;
     void wrapText(bool wrap = true);
+    void wrap(bool doWrap) { wrapText(doWrap); }  // public alias for wrapText
     bool isWrap() const;
     void showWrapSymbol(bool show = true);
     bool isWrapSymbolVisible() const;
@@ -284,7 +292,6 @@ public:
     void scrollToCenter(size_t position);
     void gotoLine(size_t line);
     void scroll(int columns, int lines);
-    intptr_t currentLine() const;
     intptr_t currentColumn() const;
     intptr_t currentXOffset() const { return send(SCI_GETXOFFSET); }
     void setXOffset(long offset) { send(SCI_SETXOFFSET, offset); }
@@ -296,7 +303,7 @@ public:
 
     void beginSelect();
     void endSelect();
-    void selectAll();
+    // selectAll() is inherited from QsciScintilla — no override needed.
     bool hasSelection() const;
     size_t selectionStart() const { return send(SCI_GETSELECTIONSTART); }
     size_t selectionEnd() const { return send(SCI_GETSELECTIONEND); }
@@ -387,6 +394,48 @@ public:
     // Sets the Scintilla document pointer directly (mirrors SCI_SETDOCPOINTER)
     void setDocPointer(intptr_t doc) { send(SCI_SETDOCPOINTER, 0, doc); }
 
+    // --- Missing API stubs for compatibility ---
+
+    // Returns the zero-based index of the last line (lineCount - 1)
+    intptr_t lastZeroBasedLineNumber() const {
+        return static_cast<intptr_t>(send(SCI_GETLINECOUNT)) - 1;
+    }
+
+    // Qt6: forwards to QWidget::setFocus()
+    void grabFocus() { setFocus(); }
+
+    // Returns the length (in bytes) of the given line
+    size_t getLineLength(size_t line) const {
+        return send(SCI_LINELENGTH, line);
+    }
+
+    // Returns the indentation of the given line in spaces
+    int getLineIndent(size_t line) const {
+        return static_cast<int>(send(SCI_GETLINEINDENTATION, line));
+    }
+
+    // Stub: maintains NPC state for a buffer
+    void maintainStateForNpc(Buffer* /*buf*/) {}
+    void maintainStateForNpc() {}  // no-arg overload used by Notepad_plus.cpp
+
+    // Stub: inserts generic text from a source
+    void insertGenericTextFrom(const char* /*text*/, size_t /*length*/) {}
+
+    // Document map / fold helpers
+    QRect getClientRect() const { return rect(); }
+    size_t getCurrentDocLen() const { return static_cast<size_t>(send(SCI_GETLENGTH)); }
+    std::vector<size_t> getCurrentFoldStates() const;
+    bool isTextDirectionRTL() const;
+    void changeTextDirection(bool toRTL);
+
+    // Static: returns the UserDefineDialog singleton
+    static UserDefineDialog* getUserDefineDlg();
+
+    // Static: returns the UserDefineDialog singleton (alternate entry point)
+    static UserDefineDialog* getUserDefineDialog() { return getUserDefineDlg(); }
+
+signals:
+
 signals:
     // Forward Scintilla notifications as Qt signals.
     // These are connected by MainWindow to drive the UI (status bar, tab state, etc.)
@@ -472,16 +521,16 @@ private:
 
     // Win32 compatibility: display() → show()
     void display() { show(); }
+    void display(bool doShow) { doShow ? show() : hide(); }
+    void setPositionReached(intptr_t pos) { send(SCI_SETCURRENTPOS, pos); }
+    void getGenericTextInPage() {}  // stub: used by N++ for clipboard text
 
     // Win32 compatibility aliases
     void showIndentGuideLine(bool show = true) { showIndentGuide(show); }
-    void wrap(bool doWrap) { wrapText(doWrap); }
 
     // Win32 compatibility stubs (Win32 method names with Qt6 or no-op implementations)
     // setMakerStyle(style) — sets the folder/collapse marker style
     void setMakerStyle(int style);
-
-    // setWrapMode(mode) — SCI_WRAPMODE values
     void setWrapMode(int mode);
 
     // setBorderEdge(show) — draws border around editor

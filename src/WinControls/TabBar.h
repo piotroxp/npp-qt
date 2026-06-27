@@ -144,6 +144,7 @@ public:
     void setTabCloseButtonOrder(int newOrder) { _closeButtonZone.setOrder(newOrder); }
 
     void refresh();
+    void display(bool toShow = true);
 
 protected:
     bool _mightBeDragging = false;

@@ -157,6 +157,10 @@ set(SCINTILLA_LAYERS
     src/ScintillaComponent.h
     src/ScintillaComponent.cpp
 
+    # User Define Language dialog
+    src/ScintillaComponent/UserDefineDialog.h
+    src/ScintillaComponent/UserDefineDialog.cpp
+
     # ScintillaEditView — type-alias header for Win32 compatibility (see ScintillaComponent.h)
     src/ScintillaEditView.h
 
@@ -217,6 +221,7 @@ set(MISC_COMMON
     src/MISC/Common/EncodingMapper.h
     src/MISC/Common/EncodingMapper.cpp
     src/MISC/Common/IDAllocator.h
+    src/MISC/md5/md5Dlgs.cpp
 )
 
 # =============================================================================

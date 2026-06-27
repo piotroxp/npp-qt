@@ -151,6 +151,7 @@ public:
     void setIDVisible(int id, bool show);
     bool getIDVisible(int id) const;
     void setGrayBackground(int id);
+    void display(bool toShow = true);
 
 signals:
     void bandChanged(int id);

@@ -107,10 +107,13 @@ class NppDarkMode : public QObject
 public:
     // ── Enable / query ────────────────────────────────────────────────────
     bool isEnabled() const;
+    static bool isEnabled_Static() { return instance().isEnabled(); }  // static alias for callers using NppDarkMode::isEnabled()
+    bool isWindowsModeEnabled();
     bool isEnabledForPlugins() const;
     void setEnabled(bool on);
     void setEnabledForPlugins(bool on);
     static int getTabIconSet(bool isDarkMode);
+    static QString getTabIcon();  // stub
 
     // ── Color palette ───────────────────────────────────────────────────────
     Colors colors() const;

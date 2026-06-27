@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "NppSciCompat.h"  // Sci_CharacterRangeFull, npp_sci::SCI_* constants
 #include "ScintillaEditView.h"
 // Additional includes needed for Qt6 port
 #include "MainWindow.h"
@@ -445,6 +446,15 @@ private:
 	bool _isUDDocked = false;
 
 	TrayIconController* _pTrayIco = nullptr;
+	QMenu* _trayContextMenu = nullptr;
+
+	// QSystemTrayIcon signal handlers — slots replacing Win32 NPPM_INTERNAL_MINIMIZED_TRAY
+	private slots:
+		void onTrayIconDoubleClicked();
+		void onTrayIconRightClicked();
+		void onTrayIconMiddleClicked();
+		void onTrayMenuAction(QAction* action);
+
 	intptr_t _zoomOriginalValue = 0;
 
 	Accelerator _accelerator;

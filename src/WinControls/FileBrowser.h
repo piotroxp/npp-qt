@@ -101,6 +101,11 @@ public:
 
     void startWatching();
     void stopWatching();
+    FolderInfo getRootFolder() const { return _rootFolder; }
+
+public:
+    // _rootFolder must be public — some callers access it directly for performance
+    FolderInfo _rootFolder;
 
 signals:
     void filesAdded(const QVector<QString>& files);
@@ -112,7 +117,6 @@ private slots:
     void processChanges();
 
 private:
-    FolderInfo _rootFolder;
     QFileSystemWatcher* _watcher = nullptr;
     bool _stopped = false;
 

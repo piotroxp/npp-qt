@@ -16,10 +16,12 @@
 #include <QString>
 #include <Scintilla.h>
 #include <SciLexer.h>
+#include <vector>
 // ScintillaStructures.h was a phantom include — Sci_TextRange/Sci_CharacterRangeFull
 // are defined locally in this file (see local struct definitions near line 527).
 
 #include "Buffer.h"
+#include "UserDefineDialog.h"
 
 #include <QApplication>
 #include <QColorDialog>
@@ -31,6 +33,7 @@
 #include <QStyle>
 #include <QString>
 #include <cstring>
+#include <string>
 
 // =============================================================================
 // Forward declarations from ScintillaEditBase (Qt platform layer)
@@ -643,6 +646,24 @@ intptr_t ScintillaComponent::searchInTarget(const char* text, size_t len, size_t
     return send(SCI_SEARCHINTARGET, len, reinterpret_cast<sptr_t>(text));
 }
 
+intptr_t ScintillaComponent::searchInTarget(const std::string& text, intptr_t& fromPos, intptr_t& toPos) const
+{
+    return searchInTarget(text.c_str(), static_cast<size_t>(text.size()),
+                          static_cast<size_t>(fromPos), static_cast<size_t>(toPos));
+}
+
+intptr_t ScintillaComponent::searchInTarget(const std::string& text, intptr_t& fromPos, intptr_t toPos) const
+{
+    return searchInTarget(text.c_str(), static_cast<size_t>(text.size()),
+                          static_cast<size_t>(fromPos), static_cast<size_t>(toPos));
+}
+
+intptr_t ScintillaComponent::searchInTarget(const std::string& text, intptr_t& fromPos, int len) const
+{
+    return searchInTarget(text.c_str(), static_cast<size_t>(text.size()),
+                          static_cast<size_t>(fromPos), static_cast<size_t>(fromPos + len));
+}
+
 intptr_t ScintillaComponent::replaceTarget(const QString& replacement, intptr_t fromPos, intptr_t toPos)
 {
     QByteArray utf8 = replacement.toUtf8();
@@ -862,6 +883,32 @@ intptr_t ScintillaComponent::currentColumn() const
 }
 
 // =============================================================================
+// Document map helpers
+// =============================================================================
+
+std::vector<size_t> ScintillaComponent::getCurrentFoldStates() const
+{
+    // Collect fold levels for all visible lines (stub for Qt6)
+    std::vector<size_t> result;
+    intptr_t lineCount = send(SCI_GETLINECOUNT);
+    for (intptr_t i = 0; i < lineCount; ++i) {
+        result.push_back(send(SCI_GETFOLDLEVEL, i));
+    }
+    return result;
+}
+
+bool ScintillaComponent::isTextDirectionRTL() const
+{
+    return (send(SCI_GETBIDIRECTIONAL) != 0);
+}
+
+void ScintillaComponent::changeTextDirection(bool toRTL)
+{
+    send(toRTL ? SCI_SETBIDIRECTIONAL : 2399, 0);  // 2399 = Bidirect_RevTypeLeftToRight
+    Q_UNUSED(toRTL);
+}
+
+// =============================================================================
 // Selection
 // =============================================================================
 
@@ -875,11 +922,6 @@ void ScintillaComponent::endSelect()
 {
     send(SCI_SELECTALL, 0);
     _beginSelectPosition = -1;
-}
-
-void ScintillaComponent::selectAll()
-{
-    send(SCI_SELECTALL);
 }
 
 bool ScintillaComponent::hasSelection() const
@@ -1352,6 +1394,15 @@ void ScintillaCtrls::setDarkMode(bool enabled)
         // Apply dark mode colours to all editors
         // Individual editor implementations handle dark mode via styleChange()
     }
+}
+
+// =============================================================================
+// Static method: getUserDefineDlg — returns the UserDefineDialog singleton
+// =============================================================================
+
+UserDefineDialog* ScintillaComponent::getUserDefineDlg()
+{
+    return UserDefineDialog::getUserDefineDlg();
 }
 
 // =============================================================================

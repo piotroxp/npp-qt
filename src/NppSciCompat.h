@@ -7,6 +7,19 @@
 // QsciScintillaBase (class scope). We replicate them here as constexpr
 // so bare names (e.g. SCI_GETCURRENTPOS) compile without qualification.
 //
+// Sci_Position / Sci_PositionCR must be defined before Sci_CharacterRangeFull which uses them.
+// This header may be included before Scintilla.h (via the NppConstants.h -> ScintillaEditBase.h
+// -> qsciscintillabase.h chain), so we define Sci_CharacterRangeFull here and guard it so
+// Scintilla.h's own definition is skipped via SCI_CHARACTERRANGEFULL_DEFINED.
+#include "Sci_Position.h"
+#ifndef SCI_CHARACTERRANGEFULL_DEFINED
+#define SCI_CHARACTERRANGEFULL_DEFINED
+struct Sci_CharacterRangeFull {
+    Sci_Position cpMin;
+    Sci_Position cpMax;
+};
+#endif
+
 // Include this in any file that uses bare SCI_* constants.
 #pragma once
 
@@ -316,8 +329,22 @@ namespace npp_sci {
     constexpr int SCI_STYLEGETBACK             = 2482;
 
     // Missing constants from Scintilla.h (not in QScintilla subset)
-    // Scrolling / selection navigation
+    // Scrolling / line editing / EOL
+    constexpr int SCI_LINESCROLL                = 2168;
     constexpr int SCI_SCROLLCARET               = 2169;
+    constexpr int SCI_LINELENGTH                = 2350;
+    constexpr int SCI_TEXTHEIGHT                = 2279;
+    constexpr int SCI_SETTARGETRANGE            = 2686;
+    constexpr int SCI_COLOURISE               = 2613;
+    constexpr int SCI_POSITIONFROMPOINT       = 2562;
+    constexpr int SCI_POINTXFROMPOSITION      = 2167;
+    constexpr int SCI_POINTYFROMPOSITION       = 2166;
+    constexpr int SCI_GETWRAPINDENTMODE       = 2472;
+    constexpr int SCI_SETWRAPINDENTMODE       = 2473;
+    constexpr int SCI_FOLDDISPLAYTEXTSTYLE     = 2665;
+    constexpr int SC_EOL_CRLF                  = 0;
+    constexpr int SC_EOL_CR                    = 1;
+    constexpr int SC_EOL_LF                    = 2;
     constexpr int SCI_PAGEUPRECTEXTEND         = 2433;
     constexpr int SCI_PAGEDOWNRECTEXTEND        = 2434;
     constexpr int SCI_STUTTEREDPAGEUP           = 2435;
@@ -345,16 +372,282 @@ namespace npp_sci {
 
     // Line end types (added for NPP 8.6+)
     constexpr int SCI_LINEENDWRAP              = 2451;
+
+    // Additional Scintilla/QScintilla constants
+    constexpr int SCI_GETSELECTIONSTART                                   = 2143;
+    constexpr int SCI_GETSELECTIONEND                                     = 2145;
+    constexpr int SCI_GETSELECTIONNSTART                                  = 2585;
+    constexpr int SCI_GETSELECTIONNEND                                    = 2587;
+    constexpr int SCI_GETLASTVISIBLELINE                                  = 2353;
+    constexpr int SCI_GETTEXTDIRECTION                                    = 2596;
+    constexpr int SCI_MARGINTEXTGETTEXT                                   = 2534;
+    constexpr int SCI_SETSELECTIONLAYER                                   = 2560;
+    constexpr int SCI_GETSELECTIONLAYER                                   = 2561;
+    constexpr int SCI_GETSELBACK                                          = 2686;
+    constexpr int SCI_GETCHANGEHISTORY                                    = 2690;
+    constexpr int SCI_GETMOUSESELECTIONRECTANGULARPROBABILITYTHRESHOLD    = 2669;
+    constexpr int SCI_SETMOUSESELECTIONRECTANGULARPROBABILITYTHRESHOLD    = 2668;
+    constexpr int SCI_ANNOTATIONSETMOUSENOTIFICATION                      = 2549;
+    constexpr int SCI_ANNOTATIONGETMOUSENOTIFICATION                      = 2550;
+    constexpr int SCI_DELETELINE                                          = 2338;
+    constexpr int SCI_INSERTLINE                                          = 2337;
+    constexpr int SCI_GETPOSITIONCACHESIZE                                = 2510;
+    constexpr int SCI_SELECTIONCONTAINS                                   = 2685;
 }  // namespace npp_sci
 
-// Bring npp_sci constants into global namespace as bare names
-using namespace npp_sci;
+    // Additional constants used by Notepad_plus.cpp
+    constexpr int SCI_GETANCHOR              = 2009;
+    constexpr int SCI_GETSELECTIONS           = 2570;
+    constexpr int SCI_GETSELECTIONMODE       = 2618;
+    constexpr int SC_SEL_RECTANGLE           = 1;
+    constexpr int SC_SEL_THIN                = 4;
+    constexpr int SCI_SETCURRENTPOS          = 2001;
+    constexpr int SCI_SETANCHOR              = 2008;
+    constexpr int STYLE_DEFAULT              = 32;
+    constexpr int SC_SEARCHRESULTPOS         = 3090;
+}  // namespace npp_sci
 
-// Win32 API shim — lstrcmp is a Windows-only API; map to strcmp on Unix
+// NOTE: `using namespace npp_sci;` is intentionally NOT used here because
+// QsciScintillaBase also defines SCI_GETCURRENTPOS, SCI_GETTARGETEND, SCI_GETLINECOUNT,
+// SCI_GETSELECTIONS, and other constants in the global namespace. A bare
+// `using namespace npp_sci;` would create ambiguity in files that include both
+// NppSciCompat.h (via the NppConstants.h chain) AND Qsci headers.
+//
+// Instead, constants are brought into global scope individually. The conflict
+// resolution (Qsci vs npp_sci) is handled per-file: for ambiguous constants,
+// use `::CONST` to pick the Qsci version, or `npp_sci::CONST` to force ours.
+
 #ifndef lstrcmp
 #define lstrcmp strcmp
 #endif
 
+// Win32 API shim — _strnicmp is a Windows-only CRT function; use Qt equivalent
+#ifndef _strnicmp
+#define _strnicmp strncmp
+#endif
+
+// Win32 API shim — _wcsicmp is a wide-char case-insensitive compare; use Qt equivalent
+#ifndef _wcsicmp
+#include <QString>
+inline int _wcsicmp(const wchar_t* a, const wchar_t* b) {
+    return QString::compare(QString::fromWCharArray(a), QString::fromWCharArray(b), Qt::CaseInsensitive);
+}
+#endif
+
 // Bring all npp_sci constexpr constants into global namespace
 // so bare SCI_* names (as used throughout the codebase) resolve correctly.
-using namespace npp_sci;
+// NOTE: using namespace npp_sci is NOT used (ambiguity with QsciScintillaBase).
+// Instead, each constant is individually brought into global scope below.
+
+using npp_sci::SCI_ADDREFDOCUMENT;
+using npp_sci::SCI_ANNOTATIONGETMOUSENOTIFICATION;
+using npp_sci::SCI_ANNOTATIONSETMOUSENOTIFICATION;
+using npp_sci::SCI_APPENDTEXT;
+using npp_sci::SCI_AUTOCCANCEL;
+using npp_sci::SCI_AUTOCGETSEPARATOR;
+using npp_sci::SCI_AUTOCSETAUTOHIDE;
+using npp_sci::SCI_AUTOCSETDROPRESTOFWORD;
+using npp_sci::SCI_AUTOCSETIGNORECASE;
+using npp_sci::SCI_AUTOCSETSEPARATOR;
+using npp_sci::SCI_AUTOCSHOW;
+using npp_sci::SCI_BACKTAB;
+using npp_sci::SCI_BEGINUNDOACTION;
+using npp_sci::SCI_BRACEHIGHLIGHT;
+using npp_sci::SCI_CALLTIPACTIVE;
+using npp_sci::SCI_CALLTIPCANCEL;
+using npp_sci::SCI_CALLTIPSHOW;
+using npp_sci::SCI_CANCEL;
+using npp_sci::SCI_CHARLEFT;
+using npp_sci::SCI_CHARLEFTEXTEND;
+using npp_sci::SCI_CHARLEFTRECTEXTEND;
+using npp_sci::SCI_CHARRIGHT;
+using npp_sci::SCI_CHARRIGHTEXTEND;
+using npp_sci::SCI_CHARRIGHTRECTEXTEND;
+using npp_sci::SCI_CLEAR;
+using npp_sci::SCI_CLEARALL;
+using npp_sci::SCI_COLOURISE;
+using npp_sci::SCI_COPY;
+using npp_sci::SCI_CREATEDOCUMENT;
+using npp_sci::SCI_CUT;
+using npp_sci::SCI_DELETEBACK;
+using npp_sci::SCI_DELETEBACKNOTLINE;
+using npp_sci::SCI_DELETELINE;
+using npp_sci::SCI_DELLINELEFT;
+using npp_sci::SCI_DELLINERIGHT;
+using npp_sci::SCI_DELWORDLEFT;
+using npp_sci::SCI_DELWORDRIGHT;
+using npp_sci::SCI_DELWORDRIGHTEND;
+using npp_sci::SCI_DOCLINEFROMVISIBLE;
+using npp_sci::SCI_DOCUMENTEND;
+using npp_sci::SCI_DOCUMENTENDEXTEND;
+using npp_sci::SCI_DOCUMENTSTART;
+using npp_sci::SCI_DOCUMENTSTARTEXTEND;
+using npp_sci::SCI_EDITTOGGLEOVERTYPE;
+using npp_sci::SCI_EMPTYUNDOBUFFER;
+using npp_sci::SCI_ENDUNDOACTION;
+using npp_sci::SCI_ENSUREVISIBLE;
+using npp_sci::SCI_FOLDDISPLAYTEXTSTYLE;
+using npp_sci::SCI_FORMFEED;
+using npp_sci::SCI_GETANCHOR;
+using npp_sci::SCI_GETCHANGEHISTORY;
+using npp_sci::SCI_GETCHARACTERPOINTER;
+using npp_sci::SCI_GETCHARAT;
+using npp_sci::SCI_GETCOLUMN;
+using npp_sci::SCI_GETCURRENTLINE;
+using npp_sci::SCI_GETCURRENTPOS;
+using npp_sci::SCI_GETDOCPOINTER;
+using npp_sci::SCI_GETFIRSTVISIBLELINE;
+using npp_sci::SCI_GETINDENTATIONGUIDES;
+using npp_sci::SCI_GETLASTVISIBLELINE;
+using npp_sci::SCI_GETLENGTH;
+using npp_sci::SCI_GETLINE;
+using npp_sci::SCI_GETLINECOUNT;
+using npp_sci::SCI_GETLINEENDPOSITION;
+using npp_sci::SCI_GETMOUSESELECTIONRECTANGULARPROBABILITYTHRESHOLD;
+using npp_sci::SCI_GETPOSITIONCACHESIZE;
+using npp_sci::SCI_GETREADONLY;
+using npp_sci::SCI_GETSELBACK;
+using npp_sci::SCI_GETSELECTIONEMPTY;
+using npp_sci::SCI_GETSELECTIONEND;
+using npp_sci::SCI_GETSELECTIONLAYER;
+using npp_sci::SCI_GETSELECTIONMODE;
+using npp_sci::SCI_GETSELECTIONNEND;
+using npp_sci::SCI_GETSELECTIONNSTART;
+using npp_sci::SCI_GETSELECTIONS;
+using npp_sci::SCI_GETSELECTIONSTART;
+using npp_sci::SCI_GETSELTEXT;
+using npp_sci::SCI_GETSTYLEAT;
+using npp_sci::SCI_GETTARGETEND;
+using npp_sci::SCI_GETTARGETSTART;
+using npp_sci::SCI_GETTEXTDIRECTION;
+using npp_sci::SCI_GETTEXTRANGE;
+using npp_sci::SCI_GETWRAPINDENTMODE;
+using npp_sci::SCI_GETZOOM;
+using npp_sci::SCI_GOTOLINE;
+using npp_sci::SCI_GOTOPOS;
+using npp_sci::SCI_HOME;
+using npp_sci::SCI_HOMEDISPLAY;
+using npp_sci::SCI_HOMEDISPLAYEXTEND;
+using npp_sci::SCI_HOMEEXTEND;
+using npp_sci::SCI_HOMERECTEXTEND;
+using npp_sci::SCI_HOMEWRAP;
+using npp_sci::SCI_HOMEWRAPEXTEND;
+using npp_sci::SCI_INDICATORCLEARRANGE;
+using npp_sci::SCI_INDICATORFILLRANGE;
+using npp_sci::SCI_INSERTLINE;
+using npp_sci::SCI_INSERTTEXT;
+using npp_sci::SCI_LINECOPY;
+using npp_sci::SCI_LINECUT;
+using npp_sci::SCI_LINEDELETE;
+using npp_sci::SCI_LINEDOWN;
+using npp_sci::SCI_LINEDOWNEXTEND;
+using npp_sci::SCI_LINEDOWNRECTEXTEND;
+using npp_sci::SCI_LINEDUPLICATE;
+using npp_sci::SCI_LINEEND;
+using npp_sci::SCI_LINEENDDISPLAY;
+using npp_sci::SCI_LINEENDDISPLAYEXTEND;
+using npp_sci::SCI_LINEENDEXTEND;
+using npp_sci::SCI_LINEENDRECTEXTEND;
+using npp_sci::SCI_LINEENDWRAP;
+using npp_sci::SCI_LINEENDWRAPEXTEND;
+using npp_sci::SCI_LINEFROMPOSITION;
+using npp_sci::SCI_LINELENGTH;
+using npp_sci::SCI_LINESCROLL;
+using npp_sci::SCI_LINESCROLLDOWN;
+using npp_sci::SCI_LINESCROLLUP;
+using npp_sci::SCI_LINESJOIN;
+using npp_sci::SCI_LINESONSCREEN;
+using npp_sci::SCI_LINETRANSPOSE;
+using npp_sci::SCI_LINEUP;
+using npp_sci::SCI_LINEUPEXTEND;
+using npp_sci::SCI_LINEUPRECTEXTEND;
+using npp_sci::SCI_MARGINTEXTGETTEXT;
+using npp_sci::SCI_MARKERADD;
+using npp_sci::SCI_MARKERDELETE;
+using npp_sci::SCI_MARKERDELETEALL;
+using npp_sci::SCI_MARKERGET;
+using npp_sci::SCI_MOVECARETINSIDEVIEW;
+using npp_sci::SCI_NEWLINE;
+using npp_sci::SCI_PAGEDOWN;
+using npp_sci::SCI_PAGEDOWNEXTEND;
+using npp_sci::SCI_PAGEDOWNRECTEXTEND;
+using npp_sci::SCI_PAGEUP;
+using npp_sci::SCI_PAGEUPEXTEND;
+using npp_sci::SCI_PAGEUPRECTEXTEND;
+using npp_sci::SCI_PARADOWN;
+using npp_sci::SCI_PARADOWNEXTEND;
+using npp_sci::SCI_PARAUP;
+using npp_sci::SCI_PARAUPEXTEND;
+using npp_sci::SCI_PASTE;
+using npp_sci::SCI_POINTXFROMPOSITION;
+using npp_sci::SCI_POINTYFROMPOSITION;
+using npp_sci::SCI_POSITIONAFTER;
+using npp_sci::SCI_POSITIONBEFORE;
+using npp_sci::SCI_POSITIONFROMLINE;
+using npp_sci::SCI_POSITIONFROMPOINT;
+using npp_sci::SCI_REDO;
+using npp_sci::SCI_RELEASEDOCUMENT;
+using npp_sci::SCI_REPLACESEL;
+using npp_sci::SCI_REPLACETARGET;
+using npp_sci::SCI_ROTATESELECTION;
+using npp_sci::SCI_SCROLLCARET;
+using npp_sci::SCI_SEARCHINTARGET;
+using npp_sci::SCI_SELECTALL;
+using npp_sci::SCI_SELECTIONCONTAINS;
+using npp_sci::SCI_SELECTIONDUPLICATE;
+using npp_sci::SCI_SETANCHOR;
+using npp_sci::SCI_SETBRACKETLIGHTLINE;
+using npp_sci::SCI_SETCODEPAGE;
+using npp_sci::SCI_SETCURRENTPOS;
+using npp_sci::SCI_SETDOCPOINTER;
+using npp_sci::SCI_SETILEXER;
+using npp_sci::SCI_SETINDICATORCURRENT;
+using npp_sci::SCI_SETLAZYEND;
+using npp_sci::SCI_SETMODEVENTMASK;
+using npp_sci::SCI_SETMOUSESELECTIONRECTANGULARPROBABILITYTHRESHOLD;
+using npp_sci::SCI_SETREADONLY;
+using npp_sci::SCI_SETSAVEPOINT;
+using npp_sci::SCI_SETSEARCHFLAGS;
+using npp_sci::SCI_SETSEL;
+using npp_sci::SCI_SETSELECTIONLAYER;
+using npp_sci::SCI_SETSTATUS;
+using npp_sci::SCI_SETTARGETEND;
+using npp_sci::SCI_SETTARGETRANGE;
+using npp_sci::SCI_SETTARGETSTART;
+using npp_sci::SCI_SETUNDOCOLLECTION;
+using npp_sci::SCI_SETWRAPINDENTMODE;
+using npp_sci::SCI_SETZOOM;
+using npp_sci::SCI_STUTTEREDPAGEDOWN;
+using npp_sci::SCI_STUTTEREDPAGEDOWNEXTEND;
+using npp_sci::SCI_STUTTEREDPAGEUP;
+using npp_sci::SCI_STUTTEREDPAGEUPEXTEND;
+using npp_sci::SCI_STYLEGETBACK;
+using npp_sci::SCI_STYLEGETFORE;
+using npp_sci::SCI_SWAPMAINANCHORCARET;
+using npp_sci::SCI_TAB;
+using npp_sci::SCI_TARGETFROMSELECTION;
+using npp_sci::SCI_TEXTHEIGHT;
+using npp_sci::SCI_UNDO;
+using npp_sci::SCI_VCHOME;
+using npp_sci::SCI_VCHOMEDISPLAY;
+using npp_sci::SCI_VCHOMEDISPLAYEXTEND;
+using npp_sci::SCI_VCHOMEEXTEND;
+using npp_sci::SCI_VCHOMERECTEXTEND;
+using npp_sci::SCI_VCHOMEWRAP;
+using npp_sci::SCI_VCHOMEWRAPEXTEND;
+using npp_sci::SCI_WORDENDPOSITION;
+using npp_sci::SCI_WORDLEFT;
+using npp_sci::SCI_WORDLEFTEND;
+using npp_sci::SCI_WORDLEFTENDEXTEND;
+using npp_sci::SCI_WORDLEFTEXTEND;
+using npp_sci::SCI_WORDPARTLEFT;
+using npp_sci::SCI_WORDPARTLEFTEXTEND;
+using npp_sci::SCI_WORDPARTRIGHT;
+using npp_sci::SCI_WORDPARTRIGHTEXTEND;
+using npp_sci::SCI_WORDRIGHT;
+using npp_sci::SCI_WORDRIGHTEND;
+using npp_sci::SCI_WORDRIGHTENDEXTEND;
+using npp_sci::SCI_WORDRIGHTEXTEND;
+using npp_sci::SCI_WORDSTARTPOSITION;
+using npp_sci::SCI_ZOOMIN;
+using npp_sci::SCI_ZOOMOUT;

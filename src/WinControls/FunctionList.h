@@ -122,6 +122,7 @@ public slots:
     void onInitialSortAction();
     void onSearchTextChanged(const QString& text);
     void onEditorUiChanged();
+    void cleanup();
 
 signals:
     void closeRequested();

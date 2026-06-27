@@ -11,6 +11,7 @@
 #include <QPainter>
 #include <QVector>
 #include <QPair>
+#include "Window.h"
 
 // Splitter flags
 constexpr int SV_HORIZONTAL       = 0x00000001;
@@ -87,7 +88,7 @@ private:
 // SplitterContainer — two-pane container with splitter (lifted from SplitterContainer.h)
 // =============================================================================
 
-class SplitterContainer : public QWidget
+class SplitterContainer : public Window
 {
     Q_OBJECT
 
@@ -98,6 +99,9 @@ public:
     // Create with two windows
     void create(QWidget* pWin0, QWidget* pWin1, int splitterSize,
                 SplitterMode mode = SplitterMode::DYNAMIC, int ratio = 50, bool isVertical = true);
+
+    // Win32 API compatibility (not called in Qt6 but declared to satisfy callers)
+    void init(QWidget* /*hwnd*/) {}  // no-op on Qt6
 
     // Window management
     void setWin0(QWidget* pWin) { _pWin0 = pWin; relayout(); }

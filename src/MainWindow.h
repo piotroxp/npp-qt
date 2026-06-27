@@ -53,6 +53,7 @@ public:
     static void loadTrayIcon(QApplication*, QIcon*) { /* TODO: QSystemTrayIcon */ }
 
     // getHSelf() / getHinst() compatibility (Window.h interface for sub-components)
+    QWidget* getHSelf() { return this; }
     const QWidget* getHSelf() const { return this; }
     QApplication* getHinstCompat() const { return qApp; }
 

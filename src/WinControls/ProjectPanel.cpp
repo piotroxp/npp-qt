@@ -114,7 +114,7 @@ void ProjectTreeItem::saveToXml(QXmlStreamWriter& xml) const
 // =============================================================================
 
 FileRelocalizerDlg::FileRelocalizerDlg()
-    : StaticDialog()
+    : QDialog()
 {
     setWindowTitle(QStringLiteral("Modify File Path"));
     setMinimumWidth(400);
@@ -131,23 +131,16 @@ FileRelocalizerDlg::FileRelocalizerDlg()
     mainLayout->addLayout(form);
     mainLayout->addSpacing(8);
 
-    QHBoxLayout* btnRow = new QHBoxLayout();
-    btnRow->addStretch();
-
-    QPushButton* okBtn = new QPushButton(QStringLiteral("OK"), this);
-    QPushButton* cancelBtn = new QPushButton(QStringLiteral("Cancel"), this);
-
-    connect(okBtn, &QPushButton::clicked, this, [this, pathEdit]() {
+    // QDialogButtonBox provides standard Win32 IDOK/IDCANCEL behavior
+    QDialogButtonBox* buttonBox = new QDialogButtonBox(
+        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+    connect(buttonBox, &QDialogButtonBox::accepted, this, [this, pathEdit]() {
         _fullFilePath = pathEdit->text();
         accept();
     });
-    connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
+    connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-    btnRow->addWidget(okBtn);
-    btnRow->addSpacing(6);
-    btnRow->addWidget(cancelBtn);
-    mainLayout->addLayout(btnRow);
-
+    mainLayout->addWidget(buttonBox);
     setLayout(mainLayout);
 }
 
@@ -162,14 +155,6 @@ int FileRelocalizerDlg::doDialog(const QString& fn, bool isRTL)
     if (exec() == QDialog::Accepted)
         return IDOK;
     return IDCANCEL;
-}
-
-intptr_t FileRelocalizerDlg::run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam)
-{
-    Q_UNUSED(message);
-    Q_UNUSED(wParam);
-    Q_UNUSED(lParam);
-    return 0;
 }
 
 // =============================================================================
@@ -913,4 +898,15 @@ intptr_t ProjectPanel::run_dlgProc(unsigned int message, intptr_t wParam, intptr
 
 void ProjectPanel::setPanelTitle(const std::wstring& title) {
     _panelTitle = QString::fromStdWString(title);
+}
+
+QString ProjectPanel::getWorkSpaceFilePath() const
+{
+    return QString();
+}
+
+void ProjectPanel::enumWorkSpaceFiles(std::vector<QString>& paths, int type) const
+{
+    Q_UNUSED(paths);
+    Q_UNUSED(type);
 }

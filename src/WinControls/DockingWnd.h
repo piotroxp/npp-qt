@@ -67,7 +67,7 @@ struct DockedWidgetData {
     int dlgID = 0;                       // dialog ID
 
     // User modifications
-    quint32 mask = 0;                    // uMask
+    quint32 uMask = 0;                   // uMask (Win32 field name)
     QIcon iconTab;                       // hIconTab
     QString addInfo;                      // pszAddInfo
 
@@ -162,6 +162,11 @@ public:
     QVector<DockedWidgetData*> visibleWidgetData() const;
     bool isWidgetVisible(DockedWidgetData* data) const;
     bool hasWidgets() const { return !_widgetData.isEmpty(); }
+
+    // Win32 API stubs
+    QVector<DockedWidgetData*> getDataOfVisTb() const { return visibleWidgetData(); }
+    QWidget* getTabWnd() const { return _tabWidget; }
+    QWidget* getCaptionWnd() const { return _captionBar; }
 
     void setCaptionTop(bool isTop);
     bool isCaptionTop() const { return _isTopCaption; }
@@ -304,8 +309,13 @@ public slots:
     void showDockableDialogByName(const QString& name, bool show);
     void setActiveTab(int container, int index);
     void setDockedContainerSize(int container, int size);
+    void setDockedContSize(int container, int size) { setDockedContainerSize(container, size); }
     int dockedContainerSize(int container) const;
+    int getDockedContSize(int container) const { return dockedContainerSize(container); }
     void setStyleCaption(bool captionOnTop);
+
+    // Win32 API stub (returns containers for save/restore)
+    std::vector<DockingContainer*> getContainerInfo() const;
 
 signals:
     void dockInfoChanged();

@@ -121,6 +121,10 @@ inline constexpr int TAB_DRAWINACTIVETAB = 3;
 inline constexpr int TAB_DRAGNDROP = 4;
 inline constexpr int TAB_CLOSEBUTTON = 5;
 inline constexpr int TAB_REBAR = 6;
+inline constexpr int TAB_ALTICONS = 0x0400;    // 0000 0100 0000 0000
+
+// Menu item name buffer max length (128 = 64 + 64 for localization compatibility)
+inline constexpr int menuItemStrLenMax = 64 + 64;
 
 // Uni mode constants
 inline constexpr int uniUTF8_NoBOM = 0;
@@ -459,13 +463,9 @@ constexpr unsigned int MF_BYCOMMAND = 0;
 constexpr int MAIN_VIEW = 0;
 constexpr int SUB_VIEW = 1;
 
-// Sci_CharacterRangeFull struct — defined here ONLY if Scintilla.h hasn't defined it yet.
-// (NppSciCompat.h includes Scintilla.h which defines it, so this is usually a no-op.)
-#ifndef SCI_CHARACTERRANGEFULL_DEFINED
-#define SCI_CHARACTERRANGEFULL_DEFINED
-// NppQt extended version — use Scintilla.h's version when available.
-struct Sci_CharacterRangeFull;
-#endif
+// Sci_CharacterRangeFull — defined in NppSciCompat.h (Sci_CharacterRangeFull struct)
+// and in src/Scintilla.h. NppSciCompat.h uses #pragma once + SCI_CHARACTERRANGEFULL_DEFINED
+// guard so the struct is only defined once.
 
 // Stub forward declarations for missing dialog classes
 class FindInFinderDlg;
@@ -473,7 +473,10 @@ class FindIncrementDlg;
 class HashFromFilesDlg;
 class HashFromTextDlg;
 class DocumentPeeker;
-struct FindersInfo { void* dummy = nullptr; };
+struct FindersInfo {
+    void* dummy = nullptr;
+    const char* _pFileName = nullptr;
+};
 
 // TrayIconController (corrected spelling)
 class TrayIconController;
@@ -747,19 +750,25 @@ inline constexpr int IDI_REPLACE_ICON2       = 275;
 inline constexpr int IDI_REPLACE_ICON_DM     = 276;
 inline constexpr int IDI_REPLACE_ICON_DM2    = 277;
 inline constexpr int IDI_CUT_ICON           = 280;
-inline constexpr int IDI_CUT_ICON2          = 281;
-inline constexpr int IDI_CUT_DISABLE_ICON    = 284;
-inline constexpr int IDI_CUT_DISABLE_ICON2   = 285;
+inline constexpr int IDI_CUT_ICON2           = 281;
+inline constexpr int IDI_CUT_ICON_DM          = 257;  // dark mode regular
+inline constexpr int IDI_CUT_ICON_DM2         = 357;  // dark mode filled
+inline constexpr int IDI_CUT_DISABLE_ICON     = 284;
+inline constexpr int IDI_CUT_DISABLE_ICON2    = 285;
 inline constexpr int IDI_CUT_DISABLE_ICON_DM  = 286;
 inline constexpr int IDI_CUT_DISABLE_ICON_DM2 = 287;
 inline constexpr int IDI_COPY_ICON           = 290;
-inline constexpr int IDI_COPY_ICON2          = 291;
-inline constexpr int IDI_COPY_DISABLE_ICON    = 294;
-inline constexpr int IDI_COPY_DISABLE_ICON2   = 295;
+inline constexpr int IDI_COPY_ICON2           = 291;
+inline constexpr int IDI_COPY_ICON_DM          = 258;
+inline constexpr int IDI_COPY_ICON_DM2         = 358;
+inline constexpr int IDI_COPY_DISABLE_ICON     = 294;
+inline constexpr int IDI_COPY_DISABLE_ICON2    = 295;
 inline constexpr int IDI_COPY_DISABLE_ICON_DM  = 296;
 inline constexpr int IDI_COPY_DISABLE_ICON_DM2 = 297;
 inline constexpr int IDI_PASTE_ICON          = 300;
 inline constexpr int IDI_PASTE_ICON2         = 301;
+inline constexpr int IDI_PASTE_ICON_DM         = 259;
+inline constexpr int IDI_PASTE_ICON_DM2        = 359;
 inline constexpr int IDI_PASTE_DISABLE_ICON   = 304;
 inline constexpr int IDI_PASTE_DISABLE_ICON2  = 305;
 inline constexpr int IDI_PASTE_DISABLE_ICON_DM = 306;

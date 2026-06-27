@@ -40,8 +40,15 @@ FunctionListTreeWidget::FunctionListTreeWidget(QWidget* parent)
     // Single column for function list
     setColumnCount(1);
 
+    // Qt6 QTreeWidget::itemDoubleClicked(QTreeWidgetItem*, int) has different signature
+    // than QWidget::mouseDoubleClickEvent(QMouseEvent*). Use lambda to bridge.
     connect(this, &QTreeWidget::itemDoubleClicked,
-            this, &FunctionListTreeWidget::mouseDoubleClickEvent);
+            this, [this](QTreeWidgetItem* item, int column) {
+                QMouseEvent ev(QEvent::MouseButtonDblClick, QPointF(), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                mouseDoubleClickEvent(&ev);
+                Q_UNUSED(item);
+                Q_UNUSED(column);
+            });
 }
 
 QTreeWidgetItem* FunctionListTreeWidget::searchSubItemByName(const QString& name, QTreeWidgetItem* root) const {

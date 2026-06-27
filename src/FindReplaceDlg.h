@@ -102,6 +102,8 @@ public:
     void finishFilesSearch(int count, int searchedCount, bool searchedEntireNotSelection);
     void focusOnFinder();
     void clearAllFinderResults();
+    // Win32 API stub: sets status bar regex error message
+    void setStatusbarMessageWithRegExprErr(ScintillaComponent* view);
 
     const std::wstring& getText2search() const;
     const FindOption& getCurrentOptions() const { return _options; }

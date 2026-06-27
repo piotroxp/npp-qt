@@ -57,6 +57,8 @@
 // (originally: InternetOpen, InternetCloseHandle, InternetReadFile, etc.)
 
 #include <ctime>
+#include "MISC/md5/md5Dlgs.h"
+#include "ScintillaComponent/UserDefineDialog.h"
 #include <memory>
 
 #include "NppXml.h"
@@ -979,7 +981,7 @@ bool Notepad_plus::saveGUIParams()
 	}
 #else
 	// Qt6 equivalent: use QWidget geometry and window state
-	if (QWidget* self = qobject_cast<QWidget*>(this->getHSelf())) {
+	if (QWidget* self = static_cast<QWidget*>(this->getHSelf())) {
 		QRect geo = self->geometry();
 		nppGUI._appPos.left   = geo.left();
 		nppGUI._appPos.top    = geo.top();
@@ -989,7 +991,7 @@ bool Notepad_plus::saveGUIParams()
 	}
 	if (_findReplaceDlg.getHSelf() != NULL)
 	{
-		if (QWidget* fr = qobject_cast<QWidget*>(_findReplaceDlg.getHSelf())) {
+		if (QWidget* fr = static_cast<QWidget*>(_findReplaceDlg.getHSelf())) {
 			QRect geo = fr->geometry();
 			nppGUI._findWindowPos.left   = geo.left();
 			nppGUI._findWindowPos.top    = geo.top();
@@ -1092,8 +1094,8 @@ void Notepad_plus::saveDockingParams()
 		// save the position, when container is a floated one
 		if (i >= DOCKCONT_MAX)
 		{
-			RECT	rc;
-			vCont[i]->getWindowRect(rc);
+			QRect rc;
+			vCont[i]->rc = getWindowRect();
 			FloatingWindowInfo fwi(int32_t(i), rc.left, rc.top, rc.right, rc.bottom);
 			vFloatingWindowInfo.push_back(fwi);
 		}
@@ -1985,7 +1987,7 @@ bool Notepad_plus::replaceInFilelist(std::vector<wstring> & fileNames)
 	Document oldDoc = _invisibleEditView.execute(SCI_GETDOCPOINTER);
 	Buffer * oldBuf = _invisibleEditView.getCurrentBuffer();	//for manually setting the buffer, so notifications can be handled properly
 
-	Progress progress(this->getHinst());
+	Progress nppProgress(this->getHinst());
 	size_t filesCount = fileNames.size();
 	size_t filesPerPercent = 1;
 
@@ -1995,7 +1997,7 @@ bool Notepad_plus::replaceInFilelist(std::vector<wstring> & fileNames)
 			filesPerPercent = filesCount / 100;
 		
 		wstring msg = _nativeLangSpeaker.getLocalizedStrFromID("replace-in-files-progress-title", L"Replace In Files progress...");
-		progress.open(_findReplaceDlg.getHSelf(), msg.c_str());
+		nppProgress.open(_findReplaceDlg.getHSelf(), msg.c_str());
 	}
 
 	bool hasInvalidRegExpr = false;
@@ -2004,7 +2006,7 @@ bool Notepad_plus::replaceInFilelist(std::vector<wstring> & fileNames)
 
 	for (size_t i = 0, updateOnCount = filesPerPercent; i < filesCount; ++i)
 	{
-		if (progress.isCancelled()) break;
+		if (nppProgress.isCancelled()) break;
 
 		bool closeBuf = false;
 
@@ -2048,15 +2050,15 @@ bool Notepad_plus::replaceInFilelist(std::vector<wstring> & fileNames)
 		if (i == updateOnCount)
 		{
 			updateOnCount += filesPerPercent;
-			progress.setPercent(int32_t((i * 100) / filesCount), fileNames.at(i).c_str(), nbTotal);
+			nppProgress.setPercent(int32_t((i * 100) / filesCount), fileNames.at(i).c_str(), nbTotal);
 		}
 		else
 		{
-			progress.setInfo(fileNames.at(i).c_str(), nbTotal);
+			nppProgress.setInfo(fileNames.at(i).c_str(), nbTotal);
 		}
 	}
 
-	progress.close();
+	nppProgress.close();
 
 	_invisibleEditView.execute(SCI_SETDOCPOINTER, 0, oldDoc);
 	_invisibleEditView.setCurrentBuffer(oldBuf);
@@ -2093,7 +2095,7 @@ bool Notepad_plus::findInFinderFiles(FindersInfo *findInFolderInfo)
 	findInFolderInfo->_pDestFinder->beginNewFilesSearch();
 	findInFolderInfo->_pDestFinder->addSearchLine(findInFolderInfo->_findOption._str2Search.c_str());
 
-	Progress progress(this->getHinst());
+	Progress nppProgress(this->getHinst());
 
 	size_t filesCount = fileNames.size();
 	size_t filesPerPercent = 1;
@@ -2104,12 +2106,12 @@ bool Notepad_plus::findInFinderFiles(FindersInfo *findInFolderInfo)
 			filesPerPercent = filesCount / 100;
 		
 		wstring msg = _nativeLangSpeaker.getLocalizedStrFromID("find-in-files-progress-title", L"Find In Files progress...");
-		progress.open(_findReplaceDlg.getHSelf(), msg.c_str());
+		nppProgress.open(_findReplaceDlg.getHSelf(), msg.c_str());
 	}
 
 	for (size_t i = 0, updateOnCount = filesPerPercent; i < filesCount; ++i)
 	{
-		if (progress.isCancelled()) break;
+		if (nppProgress.isCancelled()) break;
 
 		bool closeBuf = false;
 		BufferID id = MainFileManager.getBufferFromName(fileNames.at(i).c_str());
@@ -2145,14 +2147,14 @@ bool Notepad_plus::findInFinderFiles(FindersInfo *findInFolderInfo)
 		if (i == updateOnCount)
 		{
 			updateOnCount += filesPerPercent;
-			progress.setPercent(int32_t((i * 100) / filesCount), fileNames.at(i).c_str(), nbTotal);
+			nppProgress.setPercent(int32_t((i * 100) / filesCount), fileNames.at(i).c_str(), nbTotal);
 		}
 		else
 		{
-			progress.setInfo(fileNames.at(i).c_str(), nbTotal);
+			nppProgress.setInfo(fileNames.at(i).c_str(), nbTotal);
 		}
 	}
-	progress.close();
+	nppProgress.close();
 
 	const bool searchedInSelection = false;
 	findInFolderInfo->_pDestFinder->finishFilesSearch(nbTotal, int(filesCount), !searchedInSelection, &(findInFolderInfo->_findOption));
@@ -2190,7 +2192,7 @@ bool Notepad_plus::findInFilelist(std::vector<wstring> & fileNames)
 
 	_findReplaceDlg.beginNewFilesSearch();
 
-	Progress progress(this->getHinst());
+	Progress nppProgress(this->getHinst());
 
 	size_t filesCount = fileNames.size();
 	size_t filesPerPercent = 1;
@@ -2201,7 +2203,7 @@ bool Notepad_plus::findInFilelist(std::vector<wstring> & fileNames)
 			filesPerPercent = filesCount / 100;
 
 		wstring msg = _nativeLangSpeaker.getLocalizedStrFromID("find-in-files-progress-title", L"Find In Files progress...");
-		progress.open(_findReplaceDlg.getHSelf(), msg.c_str());
+		nppProgress.open(_findReplaceDlg.getHSelf(), msg.c_str());
 	}
 
 	const bool isEntireDoc = true;
@@ -2212,7 +2214,7 @@ bool Notepad_plus::findInFilelist(std::vector<wstring> & fileNames)
 
 	for (size_t i = 0, updateOnCount = filesPerPercent; i < filesCount; ++i)
 	{
-		if (progress.isCancelled()) break;
+		if (nppProgress.isCancelled()) break;
 
 		bool closeBuf = false;
 
@@ -2250,15 +2252,15 @@ bool Notepad_plus::findInFilelist(std::vector<wstring> & fileNames)
 		if (i == updateOnCount)
 		{
 			updateOnCount += filesPerPercent;
-			progress.setPercent(int32_t((i * 100) / filesCount), fileNames.at(i).c_str(), nbTotal);
+			nppProgress.setPercent(int32_t((i * 100) / filesCount), fileNames.at(i).c_str(), nbTotal);
 		}
 		else
 		{
-			progress.setInfo(fileNames.at(i).c_str(), nbTotal);
+			nppProgress.setInfo(fileNames.at(i).c_str(), nbTotal);
 		}
 	}
 
-	progress.close();
+	nppProgress.close();
 
 	_findReplaceDlg.finishFilesSearch(nbTotal, int(filesCount), isEntireDoc);
 
@@ -2470,13 +2472,13 @@ int Notepad_plus::doSaveOrNot(const wchar_t* fn, bool isMulti)
 	// In case Notepad++ is minimized into taskbar or iconized into notification zone
 	if (// IsIconic -> QWidget::isMinimized: this->getHSelf()))
 	{
-		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->showNormal();
+		if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->showNormal();
 	}
 	else
 	{
 		if (!this->getHSelf()->isVisible())
 		{
-			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
+			if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->show();
 
 			// Send sizing info to make window fit (specially to show tool bar.)
 			// SendMessage(WM_) -> Qt: SIZE, 0, 0);
@@ -2495,7 +2497,7 @@ int Notepad_plus::doSaveOrNot(const wchar_t* fn, bool isMulti)
 
 		msg = stringReplace(msg, L"$STR_REPLACE$", fn);
 
-		return QMessageBox::warning(qobject_cast<QWidget*>(this->getHSelf()),  msg.c_str(), title.c_str(), 0CANCEL | MB_ICONQUESTION | 0);
+		return QMessageBox::warning(static_cast<QWidget*>(this->getHSelf()),  msg.c_str(), title.c_str(), 0CANCEL | MB_ICONQUESTION | 0);
 	}
 
 	DoSaveOrNotBox doSaveOrNotBox;
@@ -2512,7 +2514,7 @@ int Notepad_plus::doSaveAll()
 	// In case Notepad++ is iconized into notification zone
 	if (!this->getHSelf()->isVisible())
 	{
-		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
+		if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->show();
 
 		// Send sizing info to make window fit (specially to show tool bar.)
 		// SendMessage(WM_) -> Qt: SIZE, 0, 0);
@@ -4641,9 +4643,9 @@ void Notepad_plus::dropFiles(QMimeData* hdrop)
 	}
 
 	// Bring window to foreground if it was minimized
-	if (qobject_cast<QWidget*>(this->getHSelf())->isMinimized())
+	if (static_cast<QWidget*>(this->getHSelf())->isMinimized())
 	{
-		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf()))
+		if (QWidget* w = static_cast<QWidget*>(this->getHSelf()))
 			w->showNormal();
 	}
 }
@@ -6064,7 +6066,7 @@ void Notepad_plus::fullScreenToggle()
 		}
 #else
 		// Qt6: save current window geometry and determine fullscreen area from primary screen
-		if (QWidget* self = qobject_cast<QWidget*>(this->getHSelf())) {
+		if (QWidget* self = static_cast<QWidget*>(this->getHSelf())) {
 			_beforeSpecialView._savedGeom = self->geometry();
 		}
 		QRect fullscreenArea{};
@@ -6093,7 +6095,7 @@ void Notepad_plus::fullScreenToggle()
         _restoreButton.setButtonStatus(bs);
 
 		//Hide window so windows can properly update it
-		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->hide();
+		if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->hide();
 
 		//Set popup style for fullscreen window and store the old style
 		if (!_beforeSpecialView._isPostIt)
@@ -6109,7 +6111,7 @@ void Notepad_plus::fullScreenToggle()
 		}
 
 		//Set fullscreen window, highest non-top z-order, show the window and redraw it (refreshing the windowmanager cache as well)
-		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) {
+		if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) {
 			w->setWindowFlags(w->windowFlags() | Qt::Window);
 			w->setGeometry(fullscreenArea);
 			w->show();
@@ -6134,7 +6136,7 @@ void Notepad_plus::fullScreenToggle()
 	else	//toggle fullscreen off
 	{
 		//Hide window for updating, restore style and menu then restore position and Z-Order
-		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->hide();
+		if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->hide();
 
         _restoreButton.setButtonStatus(buttonStatus_fullscreen ^ _restoreButton.getButtonStatus());
         _restoreButton.display(false);
@@ -6157,7 +6159,7 @@ void Notepad_plus::fullScreenToggle()
 			// SetWindowLongPtr -> QWidget:  this->getHSelf(), 0, _beforeSpecialView._preStyle);
 			//Redraw the window and refresh windowmanager cache, don't do anything else, sizing is done later on
 			// SetWindowPos -> QWidget: this->getHSelf(), HWND_TOP,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
-			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
+			if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->show();
 		}
 
 #ifdef _WIN32
@@ -6174,17 +6176,17 @@ void Notepad_plus::fullScreenToggle()
 		}
 		else	//fallback
 		{
-			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
+			if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->show();
 		}
 #else
 		// Qt6: restore from saved geometry
 		if (_beforeSpecialView._savedGeom.isValid()) {
-			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) {
+			if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) {
 				w->setGeometry(_beforeSpecialView._savedGeom);
 				w->show();
 			}
 		} else {
-			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
+			if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->show();
 		}
 #endif
 	}
@@ -6252,7 +6254,7 @@ void Notepad_plus::postItToggle()
 		if (!_beforeSpecialView._isFullScreen)
 		{
 			//Hide window so windows can properly update it
-			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->hide();
+			if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->hide();
 			_beforeSpecialView._preStyle = // SetWindowLongPtr -> QWidget:  this->getHSelf(), 0, WS_POPUP );
 			if (!_beforeSpecialView._preStyle)
 			{
@@ -6263,7 +6265,7 @@ void Notepad_plus::postItToggle()
 			}
 			//Redraw the window and refresh windowmanager cache, don't do anything else, sizing is done later on
 			// SetWindowPos -> QWidget: this->getHSelf(), HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
-			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
+			if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->show();
 		}
 
         // show restore button
@@ -6309,12 +6311,12 @@ void Notepad_plus::postItToggle()
 		if (!_beforeSpecialView._isFullScreen)
 		{
 			//dwStyle |= (WS_CAPTION | WS_SIZEBOX);
-			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->hide();
+			if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->hide();
 			// SetWindowLongPtr -> QWidget: this->getHSelf(), 0, _beforeSpecialView._preStyle);
 
 			//Redraw the window and refresh windowmanager cache, don't do anything else, sizing is done later on
 			// SetWindowPos -> QWidget: this->getHSelf(), HWND_NOTOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
-			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->show();
+			if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->show();
 		}
 	}
 
@@ -6703,7 +6705,7 @@ void Notepad_plus::prepareBufferChangedDialog(Buffer * buffer)
 {
 	// immediately show window if it was minimized before
 	if (// IsIconic -> QWidget::isMinimized: this->getHSelf()))
-		if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf())) w->showNormal();
+		if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->showNormal();
 
 	// switch to the file that changed
 	int index = _pDocTab->getIndexByBuffer(buffer->getID());
@@ -8283,7 +8285,7 @@ unsigned int WINAPI Notepad_plus::threadTextPlayer(void *params)
 	trollerParams._mutex = &textTrollerMutex;
 
     // Get the current scintilla
-    QWidget* curScintilla = pCurrentView->getHSelf();
+    ScintillaComponent* curScintilla = pCurrentView;
 	const int nbMaxTrolling = 1;
 	int nbTrolling = 0;
 	vector<int> generatedRans;
@@ -8396,7 +8398,7 @@ unsigned int WINAPI Notepad_plus::threadTextTroller(void *params)
 
 	ScintillaEditView *pCurrentView = textTrollerParams->_pCurrentView;
 	const wchar_t* text2display = textTrollerParams->_text2display;
-	QWidget* curScintilla = pCurrentView->getHSelf();
+	ScintillaComponent* curScintilla = pCurrentView;
 	BufferID targetBufID = textTrollerParams->_targetBufID;
 
 	for (size_t i = 0, len = std::wcslen(text2display); i < len; ++i)
@@ -9462,7 +9464,7 @@ void Notepad_plus::onTrayMenuAction(QAction* action)
 			break;
 		case IDM_SYSTRAYPOPUP_ACTIVATE:
 			// SetForegroundWindow -> QWidget::activateWindow()
-			if (QWidget* w = qobject_cast<QWidget*>(this->getHSelf()))
+			if (QWidget* w = static_cast<QWidget*>(this->getHSelf()))
 				w->activateWindow();
 			break;
 		case IDM_SYSTRAYPOPUP_CLOSE:

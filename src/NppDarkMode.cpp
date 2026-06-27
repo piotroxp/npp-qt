@@ -192,10 +192,6 @@ void NppDarkMode::enableDarkScrollBarForWindowAndChildren(QWidget* w)
     }
 }
 
-void NppDarkMode::setDarkTitleBar(QWidget*)
-{
-    // Windows: setDarkTitleBar via DwmSetWindowAttribute.  N/A on Linux.
-}
 
 void NppDarkMode::autoSubclassWindowMenuBar(QWidget*)
 {
@@ -217,6 +213,25 @@ bool NppDarkMode::isEnabled() const
 bool NppDarkMode::isEnabledForPlugins() const
 {
     return _options.enablePlugin;
+}
+
+bool NppDarkMode::isWindowsModeEnabled()
+{
+    // Windows mode is a Windows-specific feature (uses Windows theme APIs)
+    // Stubbed to false on Linux
+    return false;
+}
+
+void NppDarkMode::setDarkTitleBar(QWidget* w)
+{
+    // Win32 dark title bar theme — stubbed on Linux
+    Q_UNUSED(w);
+}
+
+QString NppDarkMode::getTabIcon()
+{
+    // Win32 tab dark mode icons — stubbed
+    return QString();
 }
 
 void NppDarkMode::setEnabled(bool on)
