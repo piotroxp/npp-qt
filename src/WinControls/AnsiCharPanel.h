@@ -67,7 +67,7 @@ public:
     void clear();
     bool removeFromIndex(size_t i);
 
-    void init(QApplication* app, QWidget* parent) override;
+    void init(void* hInst, QWidget* hParent) override;
     void destroy() override;
 
     // Internal table access for AnsiCharPanel

@@ -15,8 +15,12 @@
 #include <QMap>
 #include <QString>
 
-class TabBarPlus;
+// DPIManagerV2 — DPI-aware sizing helper
+#include "MISC/Common/dpiManagerV2.h"
 
+// =============================================================================
+// TabBar — base tab widget (no Window interface)
+// =============================================================================
 class TabBar : public QTabWidget
 {
     Q_OBJECT
@@ -25,10 +29,7 @@ public:
     TabBar(QWidget* parent = nullptr);
     ~TabBar() override;
 
-    void destroy();
-
     void init(QWidget* parent, bool isVertical, bool isMultiLine);
-
     void reSizeTo(QRect& rc2Adjust);
 
     int insertAtEnd(const QString& tabName);
@@ -42,7 +43,6 @@ public:
     void deleteAllItems();
 
     void setImageList(const QVector<QIcon>& icons);
-
     size_t nbItem() const { return count(); }
 
     void destroyFonts();
@@ -54,18 +54,6 @@ public:
 
     int getNextOrPrevTabIdx(bool isNext) const;
 
-class DPIManagerV2 {
-    public:
-        static int getDpiForWindow(QWidget* w) { return w->logicalDpiY(); }
-        static int scale(int val, int dpi) { return val; }
-        int getDpi() const { return _dpi; }
-        void setDpi(int dpi) { _dpi = dpi; }
-        int scale(int val) const { return val; }
-        void setDpiWithParent(QWidget* parent) { Q_UNUSED(parent); }
-    private:
-        int _dpi = 96;
-    };
-
     DPIManagerV2& dpiManager() { return _dpiManager; }
 
 signals:
@@ -75,6 +63,7 @@ signals:
 
 protected:
     int getRowCount() const { return 1; }
+    virtual int getTabIndexAt(const QPoint& p) const = 0;
 
     DPIManagerV2 _dpiManager;
     QFont _font;
@@ -83,10 +72,11 @@ protected:
     QFont _verticalLargeFont;
     bool _hasImgLst = false;
     QVector<QIcon> _imageList;
-
-    virtual int getTabIndexAt(const QPoint& p) const = 0;
 };
 
+// =============================================================================
+// TabButtonZone — button zone within a tab (lifted from TabBar.h)
+// =============================================================================
 class TabButtonZone {
 public:
     void init(QWidget* parent, int order) { _parent = parent; _order = order; }
@@ -105,21 +95,27 @@ public:
     int _order = -1;
 };
 
-class TabBarPlus : public TabBar, virtual public Window
+// =============================================================================
+// TabBarPlus — full-featured tab bar with Window interface
+// =============================================================================
+class TabBarPlus : public TabBar, virtual public IWindow
 {
     Q_OBJECT
 
 public:
-    // Window interface implementation
+    // IWindow interface
     QWidget* getHSelf() override { return this; }
-    void display(bool show = true) override { show ? QWidget::show() : QWidget::hide(); }
+    void display(bool toShow = true) override { toShow ? show() : hide(); }
     void show() override { QWidget::show(); }
     void hide() override { QWidget::hide(); }
     int getHeight() const override { return rect().height(); }
+    int getWidth() const override { return rect().width(); }
     QRect getClientRect() const override { return rect(); }
     void destroy() override { deleteLater(); }
-    void init(void* hInst, QWidget* hParent) override { (void)hInst; (void)hParent; }
+    void init(void*, QWidget*) override {}
     void redraw(bool forceUpdate = false) override { update(); if (forceUpdate) repaint(); }
+    bool isVisible() const override { return QWidget::isVisible(); }
+    QWidget* getHParent() const override { return parentWidget(); }
 
     TabBarPlus(QWidget* parent = nullptr);
 
@@ -133,8 +129,6 @@ public:
 
     void init(QWidget* parent, bool isVertical, bool isMultiLine,
               unsigned char buttonsStatus = 0);
-
-    void destroy();
 
     QPoint getDraggingPoint() const { return _dragStartPos; }
     void resetDraggingPoint() { _dragStartPos = QPoint(0, 0); }
@@ -157,7 +151,6 @@ public:
     void setTabCloseButtonOrder(int newOrder) { _closeButtonZone.setOrder(newOrder); }
 
     void refresh();
-    void display(bool toShow = true);
 
 protected:
     bool _mightBeDragging = false;

@@ -7,7 +7,7 @@
 
 class ScintillaComponent;
 
-class DocTabView : public TabBarPlus, virtual public Window
+class DocTabView : public TabBarPlus
 {
     Q_OBJECT
 public:

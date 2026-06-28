@@ -40,7 +40,7 @@
 // Forward declarations
 class Buffer;
 #include "ScintillaEditView.h"  // provides `using ScintillaEditView = ScintillaComponent;`
-class Window;
+#include "Window.h"
 struct recordedMacroStep;
 
 QString folderBrowser(QWidget* parent, const QString& title = QString(),

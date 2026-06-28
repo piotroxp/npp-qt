@@ -2,36 +2,23 @@
 // Original: PowerEditor/src/WinControls/Window.h
 // Target: npp-qt/src/WinControls/Window.h
 
-#ifndef WINDOW_H
-#define WINDOW_H
-
-// Window class definition
-#define WINDOW_H_INCLUDED
+#pragma once
 
 #include <QWidget>
 #include <QApplication>
 #include <QDebug>
 #include <QRect>
 #include <QSize>
-#include <string>
 
-// WideCharToMultiByte stub
-inline int WideCharToMultiByte(unsigned int CodePage, unsigned long dwFlags, const wchar_t* lpWideCharStr, int cchWideChar, char* lpMultiByteStr, int cbMultiByte, const char* lpDefaultChar, int* lpUsedDefaultChar) {
-    std::wstring ws(lpWideCharStr ? lpWideCharStr : L"");
-    std::string s = QString::fromWCharArray(lpWideCharStr).toUtf8().constData();
-    if (lpMultiByteStr && cbMultiByte > 0) { strncpy(lpMultiByteStr, s.c_str(), cbMultiByte - 1); lpMultiByteStr[cbMultiByte - 1] = 0; }
-    return static_cast<int>(s.size());
-}
-
-// IWindow interface - pure virtual base for Window-like objects
-// Does NOT inherit from QWidget to avoid diamond inheritance with classes
-// that already inherit from QWidget (TabBarPlus -> QTabWidget)
-class Window
+// =============================================================================
+// IWindow — abstract interface matching Window's Win32 API surface
+// Used by callers that need the Window protocol without coupling to QWidget.
+// =============================================================================
+class IWindow
 {
 public:
-    virtual ~Window() = default;
+    virtual ~IWindow() = default;
 
-    // Core Window interface
     virtual QWidget* getHSelf() = 0;
     virtual void display(bool show = true) = 0;
     virtual void show() = 0;
@@ -41,111 +28,83 @@ public:
     virtual void destroy() = 0;
     virtual void init(void* hInst, QWidget* hParent) = 0;
     virtual void redraw(bool forceUpdate = false) = 0;
+    virtual int getWidth() const = 0;
+    virtual bool isVisible() const = 0;
+    virtual QWidget* getHParent() const = 0;
 
-    // Static factory
-    static Window* fromWidget(QWidget* w) { return qobject_cast<Window*>(w); }
+    // Static factory — for any QWidget* that also implements IWindow
+    static IWindow* fromWidget(QWidget* w) {
+        return dynamic_cast<IWindow*>(w);
+    }
 };
 
-    // Semantic lift: init() maps to constructor + setWindowFlags
-    virtual void init(QApplication* app, QWidget* parent) {
-        _hInst = reinterpret_cast<HINSTANCE>(app);
-        _hParent = parent;
-        if (parent) {
-            setParent(parent);
-        }
+// =============================================================================
+// WindowBase — concrete QWidget base class that implements IWindow
+// All Qt widgets in npp-qt that expose the Window API should inherit from this.
+// =============================================================================
+class WindowBase : public QWidget, virtual public IWindow
+{
+    Q_OBJECT
+
+public:
+    using QWidget::QWidget;  // inherit constructors
+
+    QWidget* getHSelf() override { return this; }
+    void display(bool toShow = true) override { toShow ? show() : hide(); }
+    void show() override { QWidget::show(); }
+    void hide() override { QWidget::hide(); }
+    int getHeight() const override { return rect().height(); }
+    int getWidth() const override { return rect().width(); }
+
+    QRect getClientRect() const override {
+        return rect();
     }
 
-    // Semantic lift: destroy() → destructor cleanup
-    virtual void destroy() {
-        deleteLater();
+    QRect getWindowRect() const {
+        return geometry();
     }
 
-    // Semantic lift: display(bool) → show/hide
-    virtual void display(bool toShow = true) {
-        if (toShow) {
-            show();
-        } else {
-            hide();
-        }
+    void destroy() override { deleteLater(); }
+
+    void init(void* /*hInst*/, QWidget* hParent) override {
+        if (hParent) setParent(hParent);
     }
 
-    // Semantic lift: reSizeTo(RECT&) → resize()
-    virtual void reSizeTo(QRect& rc) {
+    void redraw(bool forceUpdate = false) override {
+        update();
+        if (forceUpdate) repaint();
+    }
+
+    bool isVisible() const override { return QWidget::isVisible(); }
+
+    QWidget* getHParent() const { return parentWidget(); }
+
+    void grabFocus() { setFocus(); }
+
+    // Convenience: reSizeTo maps RECT → QWidget resize + move
+    void reSizeTo(QRect& rc) {
         resize(rc.width(), rc.height());
         move(rc.left(), rc.top());
         update();
     }
 
-    // Semantic lift: reSizeToWH(RECT&) → resize(w, h)
-    virtual void reSizeToWH(QRect& rc) {
+    void reSizeToWH(QRect& rc) {
         resize(rc.width(), rc.height());
         update();
     }
 
-    // Semantic lift: redraw() → update()
-    virtual void redraw(bool forceUpdate = false) {
-        update();
-        if (forceUpdate) {
-            repaint();
-        }
-    }
-
-    // Semantic lift: getClientRect() → rect()
-    virtual QRect getClientRect() const {
-        return rect();
-    }
-
-    // Semantic lift: getWindowRect() → QWidget::geometry()
-    virtual QRect getWindowRect() const {
-        return geometry();
-    }
-
-    // Semantic lift: getWidth() → width()
-    virtual int getWidth() const {
-        return rect().width();
-    }
-
-    // Semantic lift: getHeight() → height()
-    virtual int getHeight() const {
-        if (isVisible()) {
-            return rect().height();
-        }
-        return 0;
-    }
-
-    virtual bool isVisible() const {
-        return QWidget::isVisible();
-    }
-
-    // Semantic lift: getHSelf() → this QWidget*
-    QWidget* getHSelf() override { return nullptr; }
-
-    // Semantic lift: getHParent() → parentWidget()
-    QWidget* getHParent() const {
-        return parentWidget();
-    }
-
-    // Semantic lift: grabFocus() → setFocus()
-    void grabFocus() {
-        setFocus();
-    }
-
-    // Semantic lift: getHinst() → qApp
-    QApplication* getHinst() const {
-        return qApp;
-    }
-
-    // Win32 handle types for compatibility
-    using HINSTANCE = QApplication*;
-    using HWND = QWidget*;
-
 protected:
     void* _hInst = nullptr;
     QWidget* _hParent = nullptr;
-    QWidget* _hSelf = nullptr;
 };
 
-// Type aliases for Win32 → Qt translation layer
-using HWND_ = QWidget*;
-using HINSTANCE_ = QApplication*;
-#endif // WINDOW_H
+// Backwards-compat alias — code references "Window" as a concrete base
+using Window = WindowBase;
+
+// Win32 type aliases for compatibility layer (renamed to avoid conflict with NppConstants.h void* versions)
+// Use NPP_HWND/QWidget* and NPP_HINSTANCE/QApplication* for Qt-layer window handles.
+// The void* HWND/HINSTANCE from NppConstants.h are used for Win32 API stubs.
+using NPP_HWND_  = QWidget*;
+using NPP_HWND   = QWidget*;
+using NPP_HINSTANCE_ = QApplication*;
+using NPP_HINSTANCE  = QApplication*;

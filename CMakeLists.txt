@@ -62,15 +62,23 @@ set(WINCONTROLS_BASE
 set(WINCONTROLS_DIALOGS
     src/WinControls/AboutDlg.h
     src/WinControls/AboutDlg.cpp
+    src/WinControls/AboutDlg/URLCtrl.h
+    src/WinControls/AboutDlg/URLCtrl.cpp
     src/WinControls/WindowsDlg.h
     src/WinControls/WindowsDlg.cpp
     src/WinControls/WinMgr.h
     src/WinControls/WinMgr.cpp
     src/WinControls/WinRect.h
+    src/WinControls/WinRect.cpp
     src/WinControls/SizeableDlg.h
     src/WinControls/SizeableDlg.cpp
     src/WinControls/AnsiCharPanel.h
     src/WinControls/AnsiCharPanel.cpp
+    src/WinControls/AnsiCharPanel/ListView.h
+    src/WinControls/AnsiCharPanel/ListView.cpp
+    src/WinControls/AnsiCharPanel/ansiCharPanel_rc.h
+    src/WinControls/AnsiCharPanel/asciiListView.h
+    src/WinControls/AnsiCharPanel/asciiListView.cpp
     src/WinControls/ColourPicker.h
     src/WinControls/ColourPicker.cpp
     src/WinControls/WordStyleDlg.h
@@ -225,6 +233,17 @@ set(MISC_COMMON
 )
 
 # =============================================================================
+# MISC — File associations dialog + CRC16 utility
+# =============================================================================
+set(MISC_REGEXT
+    src/MISC/RegExt/regExtDlg.h
+    src/MISC/RegExt/regExtDlg.cpp
+    src/MISC/RegExt/regExtDlgRc.h
+    src/MISC/crc16/Crc16.h
+    src/MISC/md5/md5Dlgs_rc.h
+)
+
+# =============================================================================
 # MISC — Plugins manager
 # =============================================================================
 set(MISC_PLUGINS
@@ -270,6 +289,13 @@ set(SOURCES
     src/NppDarkMode.h
     src/NppDarkMode.cpp
 
+    # DarkMode subdirectory — Win32 dark mode stubs (Windows 10/11 uxtheme)
+    # These bridge the Win32 ordinal-based dark mode API to NppDarkMode (Qt6)
+    src/DarkMode/DarkMode.h
+    src/DarkMode/DarkMode.cpp
+    src/DarkMode/IatHook.h    # PE IAT hooking stubs (no-op on Linux)
+    src/DarkMode/UAHMenuBar.h # UAH menu bar dark mode stubs (no-op on Linux)
+
     # Text encoding
     src/Utf8_16.h
     src/Utf8_16.cpp
@@ -300,6 +326,7 @@ set(SOURCES
     # MISC infrastructure
     ${MISC_COMMON}
     ${MISC_PLUGINS}
+    ${MISC_REGEXT}
 
     # Top-level infrastructure (headers)
     ${INFRASTRUCTURE}
@@ -358,6 +385,10 @@ set(HEADERS
     # Core
     src/MainWindow.h
     src/NppDarkMode.h
+    src/DarkMode/DarkMode.h
+    src/DarkMode/IatHook.h
+    src/DarkMode/UAHMenuBar.h
+    src/MISC/PluginsManager/PluginInterface.h
     src/Utf8_16.h
     src/lesDlgs.h
     src/menuCmdID.h
@@ -380,6 +411,7 @@ set(HEADERS
     # MISC
     ${MISC_COMMON}
     ${MISC_PLUGINS}
+    ${MISC_REGEXT}
 
     # WinControls
     ${WINCONTROLS_BASE}
@@ -406,8 +438,8 @@ target_link_libraries(npp-qt
 )
 
 # Scintilla and Lexilla headers (from notepad-plus-plus-translation workspace)
-set(SCINTILLA_INCLUDE "/home/node/.openclaw/workspace/notepad-plus-plus-translation/scintilla/include")
-set(LEXILLA_INCLUDE "/home/node/.openclaw/workspace/notepad-plus-plus-translation/lexilla/include")
+set(SCINTILLA_INCLUDE "/home/piotro/.openclaw/workspace/notepad-plus-plus-translation/scintilla/include")
+set(LEXILLA_INCLUDE "/home/piotro/.openclaw/workspace/notepad-plus-plus-translation/lexilla/include")
 
 target_include_directories(npp-qt PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src

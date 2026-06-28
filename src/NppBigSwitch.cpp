@@ -55,7 +55,7 @@
 #include <uxtheme.h> // for EnableThemeDialogTexture
 #include <windowsx.h> // for GET_X_VALUE, GET_Y_VALUE
 #endif
-#include <format>
+// <format> requires GCC 13+ — removed for GCC 12 compatibility
 #include <atomic>
 #include "Notepad_plus_Window.h"
 #include "Notepad_plus.h"  // Notepad_plus::process definition

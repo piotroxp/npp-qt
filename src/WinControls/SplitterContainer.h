@@ -88,20 +88,7 @@ private:
 // SplitterContainer — two-pane container with splitter (lifted from SplitterContainer.h)
 // =============================================================================
 
-class SplitterContainer : public Window
-{
-public:
-    // Window interface implementation
-    QWidget* getHSelf() override { return this; }
-    void display(bool show = true) override { show ? QWidget::show() : QWidget::hide(); }
-    void show() override { QWidget::show(); }
-    void hide() override { QWidget::hide(); }
-    int getHeight() const override { return rect().height(); }
-    QRect getClientRect() const override { return rect(); }
-    void destroy() override { deleteLater(); }
-    void redraw(bool forceUpdate = false) override { update(); if (forceUpdate) repaint(); }
-
-
+class SplitterContainer : public WindowBase
 {
     Q_OBJECT
 
@@ -109,12 +96,22 @@ public:
     explicit SplitterContainer(QWidget* parent = nullptr);
     ~SplitterContainer() override = default;
 
+    // Window interface
+    void display(bool toShow = true) override { toShow ? show() : hide(); }
+    void show() override { QWidget::show(); }
+    void hide() override { QWidget::hide(); }
+    int getHeight() const override { return rect().height(); }
+    int getWidth() const override { return rect().width(); }
+    QRect getClientRect() const override { return rect(); }
+    void destroy() override { deleteLater(); }
+    void init(void*, QWidget*) override {}
+    void redraw(bool forceUpdate = false) override { update(); if (forceUpdate) repaint(); }
+    bool isVisible() const override { return QWidget::isVisible(); }
+    QWidget* getHParent() const override { return parentWidget(); }
+
     // Create with two windows
     void create(QWidget* pWin0, QWidget* pWin1, int splitterSize,
                 SplitterMode mode = SplitterMode::DYNAMIC, int ratio = 50, bool isVertical = true);
-
-    // Win32 API compatibility (not called in Qt6 but declared to satisfy callers)
-    void init(QWidget* /*hwnd*/) {}  // no-op on Qt6
 
     // Window management
     void setWin0(QWidget* pWin) { _pWin0 = pWin; relayout(); }
@@ -133,21 +130,15 @@ public:
     // Orientation
     bool isVertical() const { return _splitter->orientation() == Qt::Vertical; }
 
-    // Visibility (not virtual in QWidget, just public methods)
-    void show();
-    void hide();
-
 public slots:
     void rotate();
+    void onSplitterMoved(double newRatio);
 
 signals:
     void splitterMoved(double newRatio);
 
 protected:
     void resizeEvent(QResizeEvent* event) override;
-
-private slots:
-    void onSplitterMoved(double newRatio);
 
 private:
     void relayout();

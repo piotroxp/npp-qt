@@ -195,9 +195,9 @@ ColourPicker::ColourPicker(QWidget* parent)
     setAttribute(Qt::WA_TintedBackground, false);
 }
 
-void ColourPicker::init(QApplication* app, QWidget* parent)
+void ColourPicker::init(void* hInst, QWidget* hParent)
 {
-    Window::init(app, parent);
+    WindowBase::init(hInst, hParent);
     _hSelf = this;
 }
 

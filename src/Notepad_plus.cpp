@@ -9175,8 +9175,8 @@ void Notepad_plus::updateCommandShortcuts()
 		{
 			if (localizedMenuName.length() > 0)
 				shortcutName = localizedMenuName;
-			else if (csc.getShortcutName()[0])
-				shortcutName = csc.getShortcutName();
+			else if (!csc.getShortcutName().isEmpty())
+				shortcutName = csc.getShortcutName().toStdWString();
 			else
 				shortcutName = menuName;
 		}

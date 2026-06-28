@@ -103,9 +103,9 @@ bool ListView::removeFromIndex(size_t i)
     return true;
 }
 
-void ListView::init(QApplication* app, QWidget* parent)
+void ListView::init(void* hInst, QWidget* hParent)
 {
-    Window::init(app, parent);
+    WindowBase::init(hInst, hParent);
     _hSelf = this;
 
     if (!_columnInfos.isEmpty()) {

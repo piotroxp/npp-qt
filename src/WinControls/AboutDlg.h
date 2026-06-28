@@ -11,7 +11,6 @@
 #include <QString>
 
 // Forward declarations
-class Window;
 class URLCtrl;
 
 // =============================================================================

@@ -16,9 +16,6 @@
 #include <QCloseEvent>
 #include <QMoveEvent>
 
-// Forward declaration for StaticDialog base
-class Window;
-
 // =============================================================================
 // StaticDialog — base dialog window (lifted from StaticDialog.h)
 // =============================================================================

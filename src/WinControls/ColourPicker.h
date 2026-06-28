@@ -91,7 +91,7 @@ public:
     ColourPicker(QWidget* parent = nullptr);
     ~ColourPicker() override = default;
 
-    void init(QApplication* app, QWidget* parent) override;
+    void init(void* hInst, QWidget* hParent) override;
     void destroy() override;
 
     void setColour(const QColor& c) { _currentColour = c; update(); }
