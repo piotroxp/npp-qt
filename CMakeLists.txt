@@ -29,7 +29,7 @@ set(CMAKE_AUTOMOC_INCLUDE_DIRECTORIES
     ${AUTOMOC_INCLUDE_DIRS}
 )
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core Xml)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core Xml PrintSupport)
 # QScintilla2 has no CMake config; link manually via pkg-config or library path
 find_library(QSCINTILLA2_LIB NAMES qscintilla2_qt6 PATHS /usr/lib/x86_64-linux-gnu)
 if(NOT QSCINTILLA2_LIB)
@@ -401,6 +401,7 @@ target_link_libraries(npp-qt
         Qt6::Gui
         Qt6::Core
         Qt6::Xml
+        Qt6::PrintSupport
         ${QSCINTILLA2_LIB}
 )
 

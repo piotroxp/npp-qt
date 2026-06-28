@@ -90,6 +90,19 @@ private:
 
 class SplitterContainer : public Window
 {
+public:
+    // Window interface implementation
+    QWidget* getHSelf() override { return this; }
+    void display(bool show = true) override { show ? QWidget::show() : QWidget::hide(); }
+    void show() override { QWidget::show(); }
+    void hide() override { QWidget::hide(); }
+    int getHeight() const override { return rect().height(); }
+    QRect getClientRect() const override { return rect(); }
+    void destroy() override { deleteLater(); }
+    void redraw(bool forceUpdate = false) override { update(); if (forceUpdate) repaint(); }
+
+
+{
     Q_OBJECT
 
 public:

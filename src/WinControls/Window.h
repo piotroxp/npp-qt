@@ -2,7 +2,11 @@
 // Original: PowerEditor/src/WinControls/Window.h
 // Target: npp-qt/src/WinControls/Window.h
 
-#pragma once
+#ifndef WINDOW_H
+#define WINDOW_H
+
+// Window class definition
+#define WINDOW_H_INCLUDED
 
 #include <QWidget>
 #include <QApplication>
@@ -19,14 +23,28 @@ inline int WideCharToMultiByte(unsigned int CodePage, unsigned long dwFlags, con
     return static_cast<int>(s.size());
 }
 
-class Window : public QWidget
+// IWindow interface - pure virtual base for Window-like objects
+// Does NOT inherit from QWidget to avoid diamond inheritance with classes
+// that already inherit from QWidget (TabBarPlus -> QTabWidget)
+class Window
 {
-    Q_OBJECT
-
 public:
-    Window(QWidget* parent = nullptr) : QWidget(parent) {}
-
     virtual ~Window() = default;
+
+    // Core Window interface
+    virtual QWidget* getHSelf() = 0;
+    virtual void display(bool show = true) = 0;
+    virtual void show() = 0;
+    virtual void hide() = 0;
+    virtual int getHeight() const = 0;
+    virtual QRect getClientRect() const = 0;
+    virtual void destroy() = 0;
+    virtual void init(void* hInst, QWidget* hParent) = 0;
+    virtual void redraw(bool forceUpdate = false) = 0;
+
+    // Static factory
+    static Window* fromWidget(QWidget* w) { return qobject_cast<Window*>(w); }
+};
 
     // Semantic lift: init() maps to constructor + setWindowFlags
     virtual void init(QApplication* app, QWidget* parent) {
@@ -100,9 +118,7 @@ public:
     }
 
     // Semantic lift: getHSelf() → this QWidget*
-    QWidget* getHSelf() {
-        return this;
-    }
+    QWidget* getHSelf() override { return nullptr; }
 
     // Semantic lift: getHParent() → parentWidget()
     QWidget* getHParent() const {
@@ -124,7 +140,7 @@ public:
     using HWND = QWidget*;
 
 protected:
-    HINSTANCE _hInst = nullptr;
+    void* _hInst = nullptr;
     QWidget* _hParent = nullptr;
     QWidget* _hSelf = nullptr;
 };
@@ -132,3 +148,4 @@ protected:
 // Type aliases for Win32 → Qt translation layer
 using HWND_ = QWidget*;
 using HINSTANCE_ = QApplication*;
+#endif // WINDOW_H
