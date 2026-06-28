@@ -14,6 +14,12 @@
 #include <QWaitCondition>
 #include <QFileInfo>
 #include <QDir>
+#include <QString>
+
+// Forward-declare the private server class.
+// On Windows it is defined in ReadDirectoryChangesPrivate.h;
+// on Linux it is unused (the Qt6 DirectoryWatcher handles everything).
+class CReadChangesServer;
 
 // -----------------------------------------------------------------------
 // Change action flags — mirror the Win32 FILE_NOTIFY_INFORMATION values

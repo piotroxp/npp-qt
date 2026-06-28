@@ -12,25 +12,10 @@
 #include <QVector>
 #include <QPair>
 #include "Window.h"
-
-// Splitter flags
-constexpr int SV_HORIZONTAL       = 0x00000001;
-constexpr int SV_VERTICAL         = 0x00000002;
-constexpr int SV_FIXED           = 0x00000004;
-constexpr int SV_ENABLERDBLCLK    = 0x00000008;  // enable right double-click
-constexpr int SV_ENABLELDBLCLK    = 0x00000010;  // enable left double-click
-constexpr int SV_RESIZEWTHPERCNT = 0x00000020;  // resize with percentage
-
-enum class SplitterMode : quint8 {
-    DYNAMIC,
-    LEFT_FIX,
-    RIGHT_FIX
-};
-
-enum class Arrow { left, up, right, down };
+#include "SplitterContainer/Splitter.h"
 
 // =============================================================================
-// Splitter — single resize handle widget (lifted from Splitter.h)
+// Splitter — single resize handle widget (lifted from Splitter.h + Splitter.cpp)
 // =============================================================================
 
 class Splitter : public QWidget
@@ -56,6 +41,10 @@ public:
     void setFlags(unsigned int flags) { _flags = flags; }
     unsigned int flags() const { return _flags; }
 
+    bool isVertical() const { return _orientation == Qt::Vertical; }
+
+    void updateClickZones();
+
 signals:
     void splitterMoved(double newRatio);
     void doubleClicked(Qt::MouseButton button);
@@ -70,18 +59,35 @@ protected:
     void leaveEvent(QEvent* event) override;
 
 private:
+    int getClickZone(WH which) const;
+    void adjustZoneToDraw(QRect& rc2def, ZONE_TYPE whichZone) const;
     void drawSplitter(QPainter& painter);
     void drawArrow(QPainter& painter, const QRect& rect, Arrow direction);
+    bool isInLeftTopZone(const QPoint& p) const;
+    bool isInRightBottomZone(const QPoint& p) const;
+    void gotoTopLeft();
+    void gotoRightBottom();
 
     Qt::Orientation _orientation;
     int _splitterSize = 4;
     double _splitRatio = 0.5;
-    bool _isDragging = false;
+    bool _isDraged = false;
     bool _isFixed = false;
     bool _draggable = true;
     unsigned int _flags = SV_ENABLERDBLCLK | SV_ENABLELDBLCLK;
     QPoint _dragStartPos;
-    double _dragStartRatio;
+    double _dragStartRatio = 0.5;
+    bool _isLeftButtonDown = false;
+
+    // Click zones for collapse arrows
+    QRect _clickZone2TL;
+    QRect _clickZone2BR;
+
+    // Static registration flags (legacy Win32 compatibility — no-op in Qt)
+    static bool _isHorizontalRegistered;
+    static bool _isVerticalRegistered;
+    static bool _isHorizontalFixedRegistered;
+    static bool _isVerticalFixedRegistered;
 };
 
 // =============================================================================

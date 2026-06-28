@@ -44,6 +44,10 @@ set(WINCONTROLS_BASE
     src/WinControls/Window.h
     src/WinControls/TabBar.h
     src/WinControls/TabBar.cpp
+    src/WinControls/TabBar/ControlsTab.h
+    src/WinControls/TabBar/ControlsTab.cpp
+    src/WinControls/TaskList/TaskListDlg_rc.h
+    src/WinControls/VerticalFileSwitcher/VerticalFileSwitcher_rc.h
     src/WinControls/ToolBar.h
     src/WinControls/ToolBar.cpp
     src/WinControls/StatusBar.h
@@ -107,6 +111,7 @@ set(WINCONTROLS_PANELS
 set(WINCONTROLS_ADVANCED
     src/WinControls/Preference.h
     src/WinControls/Preference.cpp
+    WinControls/Preference/preference_rc.h
     src/WinControls/ClipboardHistory.h
     src/WinControls/ClipboardHistory.cpp
     src/WinControls/ContextMenu.h
@@ -128,6 +133,7 @@ set(WINCONTROLS_ADVANCED
     src/WinControls/PluginsAdmin.cpp
     src/WinControls/ProjectPanel.h
     src/WinControls/ProjectPanel.cpp
+    WinControls/ProjectPanel/ProjectPanel_rc.h
     src/WinControls/ShortcutMapper.h
     src/WinControls/ShortcutMapper.cpp
 )
@@ -152,8 +158,17 @@ set(WINCONTROLS_UTILS
     src/WinControls/ImageListSet.cpp
     src/WinControls/ReadDirectoryChanges.h
     src/WinControls/ReadDirectoryChanges.cpp
+    WinControls/ReadDirectoryChanges/ReadDirectoryChangesPrivate.h
+    WinControls/ReadDirectoryChanges/ReadDirectoryChangesPrivate.cpp
+    WinControls/ReadDirectoryChanges/ThreadSafeQueue.h
     src/WinControls/CustomFileDialog.h
     src/WinControls/CustomFileDialog.cpp
+    # Resource ID constants (lifted from Win32 .rc.h → Qt6)
+    src/WinControls/WindowsDlg/WindowsDlgRc.h
+    src/WinControls/shortcut/RunMacroDlg_rc.h
+    src/WinControls/shortcut/shortcutRc.h
+    # Win32 shortcut grid (uses same IDs as ShortcutMapper_rc.h)
+    src/WinControls/Grid/ShortcutMapper_rc.h
 )
 
 # =============================================================================
@@ -268,6 +283,14 @@ set(INFRASTRUCTURE
 )
 
 # =============================================================================
+# Third-party header-only libraries
+# =============================================================================
+set(THIRDPARTY_HEADERS
+    src/json/json.hpp
+    src/pugixml/pugiconfig.hpp
+)
+
+# =============================================================================
 # All sources — single authoritative list
 # =============================================================================
 set(SOURCES
@@ -379,6 +402,9 @@ set(SOURCES
     ${WINCONTROLS_ADVANCED}
     ${WINCONTROLS_UTILS}
     ${WINCONTROLS_BABYGRID}
+
+    # Third-party header-only libraries
+    ${THIRDPARTY_HEADERS}
 )
 
 set(HEADERS
@@ -420,6 +446,9 @@ set(HEADERS
     ${WINCONTROLS_ADVANCED}
     ${WINCONTROLS_UTILS}
     ${WINCONTROLS_BABYGRID}
+
+    # Third-party header-only libraries
+    ${THIRDPARTY_HEADERS}
 )
 
 add_executable(npp-qt WIN32

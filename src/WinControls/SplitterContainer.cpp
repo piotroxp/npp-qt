@@ -3,131 +3,17 @@
 // Target: npp-qt/src/WinControls/SplitterContainer.cpp
 
 #include "SplitterContainer.h"
+#include "SplitterContainer/Splitter.cpp"  // concrete Splitter implementation
 #include <QApplication>
 #include <QDebug>
 #include <QVBoxLayout>
 #include <QLayout>
 
-// =============================================================================
-// Splitter
-// =============================================================================
-
-Splitter::Splitter(Qt::Orientation orient, QWidget* parent)
-    : QWidget(parent)
-    , _orientation(orient)
-{
-    setMinimumSize(4, 4);
-    if (orient == Qt::Vertical) {
-        setMaximumHeight(4);
-        setCursor(Qt::SizeVerCursor);
-    } else {
-        setMaximumWidth(4);
-        setCursor(Qt::SizeHorCursor);
-    }
-    setMouseTracking(true);
-}
-
-void Splitter::mousePressEvent(QMouseEvent* event) {
-    if (!_draggable || _isFixed) return;
-    if (event->button() == Qt::LeftButton) {
-        _isDragging = true;
-        _dragStartPos = event->globalPos();
-        _dragStartRatio = _splitRatio;
-        update();
-    }
-}
-
-void Splitter::mouseReleaseEvent(QMouseEvent* event) {
-    Q_UNUSED(event);
-    _isDragging = false;
-    update();
-}
-
-void Splitter::mouseMoveEvent(QMouseEvent* event) {
-    if (!_draggable || _isFixed) return;
-    if (_isDragging) {
-        QWidget* parent = parentWidget();
-        if (!parent) return;
-
-        QRect parentRect = parent->rect();
-        double delta = 0.0;
-
-        if (_orientation == Qt::Horizontal) {
-            int dx = event->globalPos().x() - _dragStartPos.x();
-            delta = static_cast<double>(dx) / parentRect.width();
-        } else {
-            int dy = event->globalPos().y() - _dragStartPos.y();
-            delta = static_cast<double>(dy) / parentRect.height();
-        }
-
-        double newRatio = _dragStartRatio + delta;
-        newRatio = qBound(0.05, newRatio, 0.95);
-        _splitRatio = newRatio;
-        emit splitterMoved(newRatio);
-    }
-}
-
-void Splitter::mouseDoubleClickEvent(QMouseEvent* event) {
-    if ((_flags & SV_ENABLELDBLCLK) && event->button() == Qt::LeftButton) {
-        emit doubleClicked(Qt::LeftButton);
-    } else if ((_flags & SV_ENABLERDBLCLK) && event->button() == Qt::RightButton) {
-        emit doubleClicked(Qt::RightButton);
-    }
-}
-
-void Splitter::enterEvent(QEnterEvent* event) {
-    Q_UNUSED(event);
-    if (_draggable && !_isFixed) {
-        setCursor(_orientation == Qt::Vertical ? Qt::SizeVerCursor : Qt::SizeHorCursor);
-    }
-}
-
-void Splitter::leaveEvent(QEvent* event) {
-    Q_UNUSED(event);
-    if (!_isDragging) {
-        unsetCursor();
-    }
-}
-
-void Splitter::paintEvent(QPaintEvent* event) {
-    Q_UNUSED(event);
-    QPainter painter(this);
-    drawSplitter(painter);
-}
-
-void Splitter::drawSplitter(QPainter& painter) {
-    QColor highlight = palette().color(QPalette::Normal, QPalette::Midlight);
-    QColor shadow = palette().color(QPalette::Normal, QPalette::Dark);
-
-    if (_isDragging) {
-        painter.fillRect(rect(), highlight);
-    } else {
-        // 3D border effect
-        painter.fillRect(rect(), palette().color(QPalette::Normal, QPalette::Button));
-    }
-
-    // Draw grip dots
-    QRect r = rect();
-    painter.setPen(shadow);
-    if (_orientation == Qt::Horizontal) {
-        int cx = r.center().x();
-        for (int y = r.top() + 3; y < r.bottom() - 2; y += 4) {
-            painter.drawPoint(cx, y);
-        }
-    } else {
-        int cy = r.center().y();
-        for (int x = r.left() + 3; x < r.right() - 2; x += 4) {
-            painter.drawPoint(x, cy);
-        }
-    }
-}
-
-void Splitter::drawArrow(QPainter& painter, const QRect& rect, Arrow direction) {
-    Q_UNUSED(painter);
-    Q_UNUSED(rect);
-    Q_UNUSED(direction);
-    // Arrow drawing for future expansion
-}
+// Static member definitions for Splitter
+bool Splitter::_isHorizontalRegistered = false;
+bool Splitter::_isVerticalRegistered = false;
+bool Splitter::_isHorizontalFixedRegistered = false;
+bool Splitter::_isVerticalFixedRegistered = false;
 
 // =============================================================================
 // SplitterContainer
