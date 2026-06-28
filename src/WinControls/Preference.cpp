@@ -334,7 +334,13 @@ LanguageTab::LanguageTab(QWidget* parent)
     _langDetail = new QWidget(this);
     QFormLayout* detLay = new QFormLayout(_langDetail);
     _cbDefaultLang = new QComboBox(this);
-    _cbDefaultLang->addItems(_langList->findItems(QString(), Qt::MatchContains));
+    {
+        QStringList langNames;
+        for (auto* item : _langList->findItems(QString(), Qt::MatchContains)) {
+            langNames.append(item->text());
+        }
+        _cbDefaultLang->addItems(langNames);
+    }
     _cbCaseSensitive = new QCheckBox(QStringLiteral("Case-sensitive syntax highlighting"), this);
     _cbFuzzyMatch = new QCheckBox(QStringLiteral("Fuzzy match on Search"), this);
     detLay->addRow(QStringLiteral("Default language:"), _cbDefaultLang);
@@ -751,7 +757,7 @@ void PerformanceTab::resetToDefaults()
 // =============================================================================
 
 PreferenceDlg::PreferenceDlg()
-    : StaticDialog()
+    : QDialog()
 {
     setWindowTitle(QStringLiteral("Preferences"));
     setModal(true);

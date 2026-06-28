@@ -219,7 +219,7 @@ void ScintillaComponent::setupScintilla()
     send(SCI_SETSCROLLWIDTH, 1);
 
     // Set caret style: blinking vertical bar
-    send(SCI_SETCARETSTYLE, CARETSTYLE_LINE_1);
+    send(SCI_SETCARETSTYLE, npp_sci::CARETSTYLE_LINE_1);
     send(SCI_SETCARETWIDTH, 2);
 
     // Selection
@@ -273,12 +273,12 @@ void ScintillaComponent::setupIndicators()
     }
 
     // URL indicator
-    send(SCI_INDICSETSTYLE, INDIC_HYPERLINK, INDIC_SQUIGGLE);
-    send(SCI_INDICSETFORE, INDIC_HYPERLINK, qColorToSciRGB(Qt::blue));
+    send(SCI_INDICSETSTYLE, npp_sci::INDIC_HYPERLINK, INDIC_SQUIGGLE);
+    send(SCI_INDICSETFORE, npp_sci::INDIC_HYPERLINK, qColorToSciRGB(Qt::blue));
 
     // Spell-check indicator (if used)
-    send(SCI_INDICSETSTYLE, INDIC_SPELL, INDIC_SQUIGGLE);
-    send(SCI_INDICSETFORE, INDIC_SPELL, qColorToSciRGB(Qt::red));
+    send(SCI_INDICSETSTYLE, npp_sci::INDIC_SPELL, INDIC_SQUIGGLE);
+    send(SCI_INDICSETFORE, npp_sci::INDIC_SPELL, qColorToSciRGB(Qt::red));
 }
 
 // =============================================================================
@@ -370,12 +370,12 @@ void ScintillaComponent::setupMarkers()
     send(SCI_MARKERDEFINE, MARK_HIDELINESEND, SC_MARK_EMPTY);
 
     // Change history: modified (orange dot)
-    send(SCI_MARKERDEFINE, SC_MARKNUM_HISTORY_MODIFIED, SC_MARK_DOT);
+    send(SCI_MARKERDEFINE, SC_MARKNUM_HISTORY_MODIFIED, npp_sci::SC_MARK_DOT);
     send(SCI_MARKERSETBACK, SC_MARKNUM_HISTORY_MODIFIED, qColorToSciRGB(QColor(255, 128, 0)));
     send(SCI_MARKERSETALPHA, SC_MARKNUM_HISTORY_MODIFIED, SC_ALPHA_NOALPHA);
 
     // Change history: saved (green dot)
-    send(SCI_MARKERDEFINE, SC_MARKNUM_HISTORY_SAVED, SC_MARK_DOT);
+    send(SCI_MARKERDEFINE, SC_MARKNUM_HISTORY_SAVED, npp_sci::SC_MARK_DOT);
     send(SCI_MARKERSETBACK, SC_MARKNUM_HISTORY_SAVED, qColorToSciRGB(Qt::green));
     send(SCI_MARKERSETALPHA, SC_MARKNUM_HISTORY_SAVED, SC_ALPHA_NOALPHA);
 
@@ -1014,7 +1014,7 @@ void ScintillaComponent::styleChange()
         else if (lang == QStringLiteral("r"))
             lexer = SCLEX_R;
         else if (lang == QStringLiteral("objective-c") || lang == QStringLiteral("objc") || lang == QStringLiteral("objectivec"))
-            lexer = SCLEX_OBJECTIVEC;
+            lexer = npp_sci::SCLEX_OBJECTIVEC;
         else if (lang == QStringLiteral("d"))
             lexer = SCLEX_D;
         else if (lang == QStringLiteral("diff") || lang == QStringLiteral("patch"))
@@ -1066,7 +1066,7 @@ void ScintillaComponent::styleChange()
         else if (lang == QStringLiteral("visualprolog"))
             lexer = SCLEX_VISUALPROLOG;
         else if (lang == QStringLiteral("inno"))
-            lexer = SCLEX_INNO;
+            lexer = npp_sci::SCLEX_INNO;
         else if (lang == QStringLiteral("kix"))
             lexer = SCLEX_KIX;
         else if (lang == QStringLiteral("baan") || lang == QStringLiteral("baanc"))

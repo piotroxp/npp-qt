@@ -57,13 +57,13 @@ void SmartHighlighter::highlightViewWithWord(ScintillaComponent* sci, const std:
 
 void SmartHighlighter::highlightView(ScintillaComponent* sci, ScintillaComponent* unfocusView)
 {
-    sci->clearIndicator(SCE_UNIVERSAL_FOUND_STYLE_SMART);
+    sci->clearIndicator(npp_sci::SCE_UNIVERSAL_FOUND_STYLE_SMART);
 
     const NppGUI& nppGUI = NppParameters::getInstance().getNppGUI();
     if (!nppGUI._enableSmartHilite || sci->send(SCI_GETSELECTIONEMPTY)) {
         if (nppGUI._smartHiliteOnAnotherView && unfocusView && unfocusView->isVisible()
             && unfocusView->currentBuffer() != sci->currentBuffer()) {
-            unfocusView->clearIndicator(SCE_UNIVERSAL_FOUND_STYLE_SMART);
+            unfocusView->clearIndicator(npp_sci::SCE_UNIVERSAL_FOUND_STYLE_SMART);
         }
         return;
     }
@@ -88,7 +88,7 @@ void SmartHighlighter::highlightView(ScintillaComponent* sci, ScintillaComponent
 
     if (nppGUI._smartHiliteOnAnotherView && unfocusView && unfocusView->isVisible()) {
         if (unfocusView->currentBuffer() != sci->currentBuffer())
-            unfocusView->clearIndicator(SCE_UNIVERSAL_FOUND_STYLE_SMART);
+            unfocusView->clearIndicator(npp_sci::SCE_UNIVERSAL_FOUND_STYLE_SMART);
         highlightViewWithWord(unfocusView, text2Find);
     }
 }

@@ -307,6 +307,12 @@ public:
     bool hasSelection() const;
     size_t selectionStart() const { return send(SCI_GETSELECTIONSTART); }
     size_t selectionEnd() const { return send(SCI_GETSELECTIONEND); }
+    Sci_CharacterRangeFull getSelection() const {
+        Sci_CharacterRangeFull cr;
+        cr.cpMin = static_cast<Sci_Position>(send(SCI_GETSELECTIONSTART));
+        cr.cpMax = static_cast<Sci_Position>(send(SCI_GETSELECTIONEND));
+        return cr;
+    }
     void setSelection(size_t start, size_t end);
     void gotoPos(size_t pos);
 
@@ -468,6 +474,7 @@ protected:
     // (ScintillaEditBase already emits some; override to emit more)
     void notifyParent(const SCNotification* scn) override;
 
+
 private:
     // --- Setup helpers ---
     void setupScintilla();
@@ -476,6 +483,7 @@ private:
     void setupFonts();
     void setupMarkers();
 
+public:
     // Apply global styles (folding, selection, caret, etc.)
     void performGlobalStyles();
 
@@ -525,8 +533,25 @@ private:
     void setPositionReached(intptr_t pos) { send(SCI_SETCURRENTPOS, pos); }
     void getGenericTextInPage() {}  // stub: used by N++ for clipboard text
 
+public:
     // Win32 compatibility aliases
     void showIndentGuideLine(bool show = true) { showIndentGuide(show); }
+
+    // showWSAndTab — controls whitespace and tab visibility via SCI_SETVIEWWS
+    // SC_VIEWWS_INVISIBLE=0, SC_VIEWWS_VISIBLEALWAYS=1
+    void showWSAndTab(bool show) {
+        execute(SCI_SETVIEWWS, show ? 1 : 0);
+    }
+
+    // getGenericTextAsString — extract text range as std::wstring (public wrapper)
+    std::wstring getGenericTextAsString(size_t start, size_t end) const {
+        intptr_t len = execute(SCI_GETLENGTH);
+        int bufLen = static_cast<int>(len * 4 + 1);
+        std::string s(bufLen, 0);
+        Sci_CharacterRangeFull r{static_cast<intptr_t>(start), static_cast<intptr_t>(end)};
+        execute(SCI_GETTEXTRANGE, 0, reinterpret_cast<sptr_t>(&r));
+        return QString::fromLatin1(s.data(), static_cast<int>(s.size())).toStdWString();
+    }
 
     // Win32 compatibility stubs (Win32 method names with Qt6 or no-op implementations)
     // setMakerStyle(style) — sets the folder/collapse marker style

@@ -393,18 +393,133 @@ namespace npp_sci {
     constexpr int SCI_INSERTLINE                                          = 2337;
     constexpr int SCI_GETPOSITIONCACHESIZE                                = 2510;
     constexpr int SCI_SELECTIONCONTAINS                                   = 2685;
-}  // namespace npp_sci
 
     // Additional constants used by Notepad_plus.cpp
     constexpr int SCI_GETANCHOR              = 2009;
     constexpr int SCI_GETSELECTIONS           = 2570;
-    constexpr int SCI_GETSELECTIONMODE       = 2618;
+    constexpr int SCI_GETSELECTIONMODE       = 2423;
     constexpr int SC_SEL_RECTANGLE           = 1;
     constexpr int SC_SEL_THIN                = 4;
+    constexpr int SC_SEL_LINES               = 2;
+    constexpr int SC_SEL_STREAM              = 0;
     constexpr int SCI_SETCURRENTPOS          = 2001;
     constexpr int SCI_SETANCHOR              = 2008;
     constexpr int STYLE_DEFAULT              = 32;
     constexpr int SC_SEARCHRESULTPOS         = 3090;
+
+    // ==== Additional Scintilla constants needed by Notepad_plus.cpp ====
+    constexpr int SCI_GETCODEPAGE            = 2137;
+    constexpr int SCI_GETTABWIDTH            = 2121;
+    constexpr int SCI_GETTARGETTEXT          = 2389;
+    constexpr int SCI_GETFOLDLEVEL           = 2223;
+    constexpr int SC_FOLDLEVELHEADERFLAG      = 0x2000;
+    constexpr int SC_FOLDLEVELBASE           = 0x0400;
+    constexpr int SC_FOLDLEVELNUMBERMASK      = 0x0fff;
+    constexpr int SCI_GETFOLDEXPANDED         = 2230;
+    constexpr int SCI_DELETERANGE             = 2386;
+    constexpr int SCI_TARGETWHOLEDOCUMENT     = 2690;
+    constexpr int SCI_GETMARGINWIDTHN         = 2243;
+    constexpr int SCI_SETMARGINWIDTHN         = 2242;
+
+    // ==== Missing SCI_* from QsciScintillaBase ====
+    constexpr int SCI_CANUNDO                = 2174;
+    constexpr int SCI_CANREDO                = 2016;
+    constexpr int SCI_CANPASTE               = 2173;
+    constexpr int SCI_SETSELECTIONSTART      = 2142;
+    constexpr int SCI_SETSELECTIONEND        = 2144;
+    constexpr int SCI_BRACEMATCH             = 2353;
+    constexpr int SCI_BRACEBADLIGHT          = 2352;
+    constexpr int SCI_SETHIGHLIGHTGUIDE      = 2134;
+    constexpr int SCI_ENSUREVISIBLEENFORCEPOLICY = 2234;
+    constexpr int SCI_CHOOSECARETX           = 2399;
+    constexpr int SCI_USEPOPUP               = 2371;
+    constexpr int SCI_INDICATORVALUEAT       = 2507;
+    constexpr int SCI_INDICATORSTART         = 2508;
+    constexpr int SCI_INDICATOREND           = 2509;
+    constexpr int SCI_INDICGETHOVERSTYLE     = 2681;
+    constexpr int SCI_INDICSETHOVERSTYLE     = 2680;
+    constexpr int SCI_INDICSETALPHA          = 2523;
+    constexpr int SCI_INDICSETFLAGS          = 2684;
+    constexpr int SCI_SETMARGINLEFT          = 2155;
+    constexpr int SCI_SETMARGINRIGHT         = 2157;
+    constexpr int SCI_SETENDATLASTLINE       = 2277;
+    constexpr int SCI_SETFONTQUALITY         = 2611;
+    constexpr int SC_EFF_QUALITY_LCD_OPTIMIZED = 3;
+    constexpr int SCI_GETLINESELSTARTPOSITION = 2424;
+    constexpr int SCI_GETLINESELENDPOSITION  = 2425;
+    constexpr int SCI_GETLINEINDENTPOSITION  = 2128;
+    constexpr int SCI_SETAUTOMATICFOLD       = 2663;
+    constexpr int SC_AUTOMATICFOLD_SHOW      = 0x0001;
+    constexpr int SC_AUTOMATICFOLD_CHANGE    = 0x0004;
+    constexpr int SCI_STYLESETCHECKMONOSPACED = 2099;
+    constexpr int SCI_SETUNDOSELECTIONHISTORY = 2564;
+    constexpr int SC_UNDO_SELECTION_HISTORY_ENABLED = 1;
+    constexpr int SC_UNDO_SELECTION_HISTORY_SCROLL = 2;
+    constexpr int SCI_SETCARETLINEVISIBLEALWAYS = 2655;
+    constexpr int SCI_SETADDITIONALSELECTIONTYPING = 2565;
+    constexpr int SCVS_RECTANGULARSELECTION  = 1;
+    constexpr int SCVS_USERACCESSIBLE        = 2;
+    constexpr int SCVS_NOWRAPLINESTART       = 4;
+    constexpr int SCI_SETMULTIPASTE          = 2614;
+    constexpr int SC_MULTIPASTE_EACH         = 1;
+    constexpr int SCI_AUTOCSETMULTI          = 2636;
+    constexpr int SC_MULTIAUTOC_EACH         = 1;
+    constexpr int SCI_SETMOUSESELECTIONRECTANGULARSWITCH = 2668;
+    constexpr int SCI_GETTEXTLENGTH          = 2183;
+    constexpr int SCI_SETSELECTION           = 2572;
+    constexpr int SCI_GETOVERTYPE            = 2187;
+    constexpr int SCI_SELECTIONISRECTANGLE   = 2372;
+    constexpr int SCI_GETXOFFSET             = 2398;
+    constexpr int SCI_COUNTCHARACTERS        = 2633;
+    constexpr int SCI_SETINDICATORVALUE      = 2502;
+    constexpr int SCI_SETVIRTUALSPACEOPTIONS = 2596;
+    constexpr int SCI_MARKERPREVIOUS         = 2048;
+    constexpr int SCI_MARKERNEXT             = 2047;
+    constexpr int SCI_GETSTYLEINDEXAT        = 2010;
+    constexpr int SCI_SETCHANGEHISTORY       = 2689;
+    constexpr int SC_CHANGE_HISTORY_DISABLED = 0;
+
+    // ==== SC_MARKNUM_HISTORY_* — for change history markers ====
+    constexpr int SC_MARKNUM_HISTORY_REVERTED_TO_ORIGIN     = 21;
+    constexpr int SC_MARKNUM_HISTORY_SAVED                  = 22;
+    constexpr int SC_MARKNUM_HISTORY_MODIFIED               = 23;
+    constexpr int SC_MARKNUM_HISTORY_REVERTED_TO_MODIFIED   = 24;
+
+    // ==== INDIC_* styles ====
+    constexpr int INDIC_PLAIN                = 0;
+    constexpr int INDIC_HIDDEN               = 5;
+    constexpr int INDIC_FULLBOX              = 16;
+    constexpr int INDIC_EXPLORERLINK         = 4;
+    constexpr int URL_INDIC                  = 4;
+    constexpr int SC_INDICFLAG_VALUEFORE     = 2;
+
+    // ==== SC_POPUP_* ====
+    constexpr int SC_POPUP_NEVER             = 0;
+
+    // ==== Universal found styles (supplement SciLexer.h defines) ====
+    constexpr int SCE_UNIVERSAL_FOUND_STYLE  = 31;
+    constexpr int SCE_UNIVERSAL_FOUND_STYLE_EXT1 = 25;
+    constexpr int SCE_UNIVERSAL_FOUND_STYLE_EXT2 = 24;
+    constexpr int SCE_UNIVERSAL_FOUND_STYLE_EXT3 = 23;
+    constexpr int SCE_UNIVERSAL_FOUND_STYLE_EXT4 = 22;
+    constexpr int SCE_UNIVERSAL_FOUND_STYLE_EXT5 = 21;
+
+    // ==== STATUSBAR_* constants (from original N++) ====
+    constexpr int STATUSBAR_DOC_SIZE        = 1;
+    constexpr int STATUSBAR_CUR_POS         = 2;
+    constexpr int STATUSBAR_EOF_FORMAT      = 3;
+    constexpr int STATUSBAR_UNICODE_TYPE    = 4;
+    constexpr int STATUSBAR_TYPING_MODE     = 5;
+    constexpr int STATUSBAR_DOC_TYPE        = 6;
+
+    // ==== TABBAR_* constants (from original N++) ====
+    constexpr int TABBAR_ACTIVETEXT                = 1;
+    constexpr int TABBAR_ACTIVEFOCUSEDINDCATOR     = 2;
+    constexpr int TABBAR_ACTIVEUNFOCUSEDINDCATOR   = 3;
+    constexpr int TABBAR_INACTIVETEXT              = 4;
+
+    // ==== VIEWZONE_* constants (from original N++) ====
+    constexpr int VIEWZONE_DOCUMENTMAP       = 1;
 }  // namespace npp_sci
 
 // NOTE: `using namespace npp_sci;` is intentionally NOT used here because
@@ -566,6 +681,8 @@ using npp_sci::SCI_MARKERADD;
 using npp_sci::SCI_MARKERDELETE;
 using npp_sci::SCI_MARKERDELETEALL;
 using npp_sci::SCI_MARKERGET;
+using npp_sci::SCI_MARKERPREVIOUS;
+using npp_sci::SCI_MARKERNEXT;
 using npp_sci::SCI_MOVECARETINSIDEVIEW;
 using npp_sci::SCI_NEWLINE;
 using npp_sci::SCI_PAGEDOWN;
@@ -651,3 +768,52 @@ using npp_sci::SCI_WORDRIGHTEXTEND;
 using npp_sci::SCI_WORDSTARTPOSITION;
 using npp_sci::SCI_ZOOMIN;
 using npp_sci::SCI_ZOOMOUT;
+// Additional using declarations for constants defined in npp_sci:: but not yet exported
+using npp_sci::SCFIND_MATCHCASE;
+using npp_sci::SCFIND_WHOLEWORD;
+using npp_sci::SCFIND_REGEXP;
+using npp_sci::SCFIND_POSIX;
+using npp_sci::SCFIND_REGEXP_DOTMATCHESNL;
+using npp_sci::SC_SEL_RECTANGLE;
+using npp_sci::SC_SEL_THIN;
+// Additional using declarations for newly added npp_sci:: constants
+using npp_sci::SCI_GETCODEPAGE;
+using npp_sci::SCI_GETTABWIDTH;
+using npp_sci::SCI_GETTARGETTEXT;
+using npp_sci::SCI_GETFOLDLEVEL;
+using npp_sci::SC_FOLDLEVELHEADERFLAG;
+using npp_sci::SC_FOLDLEVELBASE;
+using npp_sci::SC_FOLDLEVELNUMBERMASK;
+using npp_sci::SCI_GETFOLDEXPANDED;
+using npp_sci::SCI_DELETERANGE;
+using npp_sci::SCI_GETMARGINWIDTHN;
+using npp_sci::SCI_TARGETWHOLEDOCUMENT;
+using npp_sci::SCI_SETFONTQUALITY;
+using npp_sci::SC_EFF_QUALITY_LCD_OPTIMIZED;
+using npp_sci::SCI_SETCARETLINEVISIBLEALWAYS;
+using npp_sci::SCI_SETENDATLASTLINE;
+using npp_sci::SCI_SETADDITIONALSELECTIONTYPING;
+using npp_sci::SCVS_RECTANGULARSELECTION;
+using npp_sci::SCVS_USERACCESSIBLE;
+using npp_sci::SCVS_NOWRAPLINESTART;
+using npp_sci::SCI_SETVIRTUALSPACEOPTIONS;
+using npp_sci::SCI_SETMULTIPASTE;
+using npp_sci::SC_MULTIPASTE_EACH;
+using npp_sci::SCI_AUTOCSETMULTI;
+using npp_sci::SC_MULTIAUTOC_EACH;
+using npp_sci::SCI_SETMOUSESELECTIONRECTANGULARSWITCH;
+using npp_sci::SCI_SETAUTOMATICFOLD;
+using npp_sci::SC_AUTOMATICFOLD_SHOW;
+using npp_sci::SC_AUTOMATICFOLD_CHANGE;
+using npp_sci::SCI_SETMARGINLEFT;
+using npp_sci::SCI_SETMARGINRIGHT;
+using npp_sci::SCI_STYLESETCHECKMONOSPACED;
+using npp_sci::STYLE_DEFAULT;
+using npp_sci::SCI_SETUNDOSELECTIONHISTORY;
+using npp_sci::SC_CHANGE_HISTORY_DISABLED;
+using npp_sci::SC_MARKNUM_HISTORY_REVERTED_TO_ORIGIN;
+using npp_sci::SC_MARKNUM_HISTORY_SAVED;
+using npp_sci::SC_MARKNUM_HISTORY_MODIFIED;
+using npp_sci::SC_MARKNUM_HISTORY_REVERTED_TO_MODIFIED;
+using npp_sci::SC_UNDO_SELECTION_HISTORY_ENABLED;
+using npp_sci::SC_UNDO_SELECTION_HISTORY_SCROLL;

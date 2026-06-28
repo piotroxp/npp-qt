@@ -121,6 +121,7 @@ public:
 
     void init(QApplication* app, QWidget* parent, int panelID);
     void setParentWindow(QWidget* parent) { _hParent = parent; }
+    void enumWorkSpaceFiles(void* /*parent*/, std::vector<std::wstring>& /*files*/, std::vector<std::wstring>& /*dirs*/) const {}
 
     // Workspace management
     void newWorkSpace();

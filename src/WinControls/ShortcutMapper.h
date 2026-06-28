@@ -167,5 +167,8 @@ private:
 
     void filterByCategory(const QString& category);
     void filterByName(const QString& name);
+
+    void goToSchwerCategory(int categoryIndex);
+    QTableWidget* currentTable() const;
 };
 

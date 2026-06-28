@@ -84,6 +84,7 @@ public:
                          const FindOption* options = nullptr);
     int markAll(const wchar_t* txt2find, int styleID);
     int processAll(ProcessOperation op, const FindOption* opt, bool isEntire = false);
+    int processAll(ProcessOperation op, const FindOption* opt, bool isEntire, FindersInfo* findersInfo);
     int processRange(ProcessOperation op, const std::wstring& findReplaceInfo,
                      const FindOption* opt, int colourStyleID, int extraArg,
                      ScintillaComponent* view2Process);
@@ -92,6 +93,7 @@ public:
                      ScintillaComponent* view2Process = nullptr);
 
     void replaceAllInOpenedDocs();
+    bool allowCopyAction() const { return true; }  // stub for copy find result
     void setSearchText(const wchar_t* txt2find);
     void setFindInFilesDirFilter(const wchar_t* dir, const wchar_t* filters);
     void enableFindInFilesControls(bool, bool);
@@ -110,6 +112,20 @@ public:
     static FindOption _options;
     // Win32 compat: _env was a pointer default; use static _options as default
     static FindOption* _env;
+
+
+    // Qt-port stubs for methods called by Notepad_plus.cpp
+    void setStatusbarMessage(const QString& msg, int delayMs = 0) {}
+    QString getDir2Search() const { return QString(); }
+    QString getAndValidatePatterns(bool* isRecursive = nullptr, bool* isInHiddenDir = nullptr) const {
+        if (isRecursive) *isRecursive = true;
+        if (isInHiddenDir) *isInHiddenDir = false;
+        return QStringLiteral("*.*");
+    }
+    bool isRecursive() const { return false; }
+    bool isInHiddenDir() const { return false; }
+    void putFindResult(const std::vector<struct FoundInfo>& /*results*/) {}
+    void display(bool show) { setVisible(show); }
 
 signals:
     void searchCompleted(int count);

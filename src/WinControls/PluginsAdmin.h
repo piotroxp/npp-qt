@@ -82,7 +82,7 @@ public:
     void addPluginItem(const QString& name, const QString& version, PluginUpdateInfo* info);
     QVector<size_t> getCheckedIndexes() const;
     size_t getSelectedIndex() const;
-    void setSelection(int index) const;
+    void setSelection(int index);
     void clearAll();
     void removeItem(size_t index);
     void removeItemByPtr(PluginUpdateInfo* info);
@@ -97,6 +97,9 @@ public:
     enum SortType { NameAZ, NameZA };
     void sortBy(SortType type);
     size_t findAlphabeticalOrderPos(const QString& name, bool increase) const;
+
+    // Internal: append raw pointer (avoids duplicating addPlugin logic)
+    void addPluginPtr(PluginUpdateInfo* info) { _pluginList.append(info); }
 
 private:
     QVector<PluginUpdateInfo*> _pluginList;
@@ -152,6 +155,7 @@ private:
     bool loadFromPluginInfos();
     bool initAvailablePluginsViewFromList();
     bool initIncompatiblePluginList();
+    void addSamplePlugins();
 
     // Search
     bool searchInPlugins(bool isNextMode) const;

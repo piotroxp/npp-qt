@@ -9,6 +9,15 @@
 #include <QDebug>
 #include <QRect>
 #include <QSize>
+#include <string>
+
+// WideCharToMultiByte stub
+inline int WideCharToMultiByte(unsigned int CodePage, unsigned long dwFlags, const wchar_t* lpWideCharStr, int cchWideChar, char* lpMultiByteStr, int cbMultiByte, const char* lpDefaultChar, int* lpUsedDefaultChar) {
+    std::wstring ws(lpWideCharStr ? lpWideCharStr : L"");
+    std::string s = QString::fromWCharArray(lpWideCharStr).toUtf8().constData();
+    if (lpMultiByteStr && cbMultiByte > 0) { strncpy(lpMultiByteStr, s.c_str(), cbMultiByte - 1); lpMultiByteStr[cbMultiByte - 1] = 0; }
+    return static_cast<int>(s.size());
+}
 
 class Window : public QWidget
 {

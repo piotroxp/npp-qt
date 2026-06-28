@@ -84,6 +84,7 @@ public:
     void setCurrentIndex(int index);
     int updateCurrentIndex();
     QWidget* viewport() const { return _listWidget->viewport(); }
+    void setParentWidget(QWidget* p) { _hParent = p; }
 
     // Populate items from TaskListInfo (called by parent after WM_GETTASKLISTINFO)
     void setItems(const TaskListInfo& info);
@@ -111,7 +112,7 @@ private:
     QListWidget* _listWidget = nullptr;
     QFont* _pFont = nullptr;
     QFont* _pFontSelected = nullptr;
-    QWidget* _hParent = nullptr;
+    QWidget* _hParent = nullptr;  // Mirrors Win32 parent HWND; used for Qt dark mode
     void* _hImgLst = nullptr;
     int _nbItem = 0;
     int _currentIndex = 0;
@@ -119,6 +120,7 @@ private:
     QString _initDir;
 
     friend class TaskListDelegate;
+    friend class TaskListDlg;
 };
 
 // =============================================================================
@@ -180,4 +182,8 @@ private:
 
     // Mouse event filter for right-click and wheel passthrough
     bool eventFilter(QObject* watched, QEvent* event) override;
+
+protected:
+    void showEvent(QShowEvent* event) override;
+    void closeEvent(QCloseEvent* event) override;
 };

@@ -53,13 +53,14 @@ public:
 
     int getNextOrPrevTabIdx(bool isNext) const;
 
-    class DPIManagerV2 {
+class DPIManagerV2 {
     public:
         static int getDpiForWindow(QWidget* w) { return w->logicalDpiY(); }
         static int scale(int val, int dpi) { return val; }
         int getDpi() const { return _dpi; }
         void setDpi(int dpi) { _dpi = dpi; }
         int scale(int val) const { return val; }
+        void setDpiWithParent(QWidget* parent) { Q_UNUSED(parent); }
     private:
         int _dpi = 96;
     };
@@ -126,7 +127,7 @@ public:
     QPoint getDraggingPoint() const { return _dragStartPos; }
     void resetDraggingPoint() { _dragStartPos = QPoint(0, 0); }
 
-    static void triggerOwnerDrawTabbar();
+    static void triggerOwnerDrawTabbar(DPIManagerV2* = nullptr);
     static void doVertical();
     static void doMultiLine();
 

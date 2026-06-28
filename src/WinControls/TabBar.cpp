@@ -168,7 +168,7 @@ void TabBarPlus::display(bool toShow)
     }
 }
 
-void TabBarPlus::triggerOwnerDrawTabbar()
+void TabBarPlus::triggerOwnerDrawTabbar(DPIManagerV2*)
 {
     for (int i = 0; i < 10; ++i) {
         if (_tabbrPlusInstanceHwndArray[i]) _tabbrPlusInstanceHwndArray[i]->update();

@@ -109,6 +109,7 @@ public:
     // Docking data access
     int getDockedTabHandle() const { return _panelID; }
     DockedWidgetData* getDockedData() { return &_dockedData; }
+    std::vector<int> getIconIDs() const { return {}; }
     void setDockedData(const DockedWidgetData& data) { _dockedData = data; }
 
     // Dark mode color override
@@ -165,6 +166,10 @@ public:
 
     // Win32 API stubs
     QVector<DockedWidgetData*> getDataOfVisTb() const { return visibleWidgetData(); }
+    QVector<DockedWidgetData*> getDataOfAllTb() const { return allWidgetData(); }
+    bool isTbVis(DockedWidgetData* data) const { return isWidgetVisible(data); }
+    DockedWidgetData* getActiveTb() const { return activeWidgetData(); }
+    QRect getWindowRect() const { return geometry(); }  // Win32 compat: rc = window rect
     QWidget* getTabWnd() const { return _tabWidget; }
     QWidget* getCaptionWnd() const { return _captionBar; }
 

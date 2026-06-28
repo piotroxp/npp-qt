@@ -17,6 +17,7 @@
 #include <QCheckBox>
 #include <QLabel>
 #include <QPushButton>
+#include <QWindow>
 #include <QComboBox>
 #include <QDialogButtonBox>
 

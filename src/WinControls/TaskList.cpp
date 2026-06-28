@@ -119,7 +119,7 @@ TaskList::TaskList(QWidget* parent)
             this, &TaskList::onItemClicked);
     connect(_listWidget, &QListWidget::itemDoubleClicked,
             this, &TaskList::onItemDoubleClicked);
-    connect(_listWidget->selectionModel(), &QSelectionModel::selectionChanged,
+    connect(_listWidget->selectionModel(), &QItemSelectionModel::selectionChanged,
             this, &TaskList::onItemSelectionChanged);
 
     layout->addWidget(_listWidget);
@@ -386,7 +386,7 @@ void TaskListDlg::init(QApplication* app, QWidget* parent, void* hImgLst, bool d
 {
     Q_UNUSED(app);
     StaticDialog::create(0);
-    _hParent = parent;
+    _taskList.setParentWidget(this);
     _hImgLst = hImgLst;
     _initDir = dir;
 
@@ -454,6 +454,19 @@ int TaskListDlg::doDialog(bool isRTL)
     return 0;
 }
 
+void TaskListDlg::showEvent(QShowEvent* event)
+{
+    Q_UNUSED(event);
+    // Mirrors WM_INITDIALOG: dialog is now visible, ensure it has focus
+}
+
+void TaskListDlg::closeEvent(QCloseEvent* event)
+{
+    Q_UNUSED(event);
+    // Mirrors WM_DESTROY: clean up resources
+    destroy();
+}
+
 void TaskListDlg::destroy()
 {
     _taskList.destroy();
@@ -499,23 +512,12 @@ bool TaskListDlg::eventFilter(QObject* watched, QEvent* event)
 
 intptr_t TaskListDlg::run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam)
 {
-    switch (message)
-    {
-        case WM_INITDIALOG:
-            return true;
-
-        case WM_DESTROY:
-            destroy();
-            return true;
-
-        case NPPM_INTERNAL_REFRESHDARKMODE:
-            // Force delegate repaint on dark mode change
-            _listWidget->viewport()->update();
-            return true;
-
-        default:
-            break;
-    }
+    // Win32 message dispatch — all Win32-specific cases have been moved to
+    // Qt event handlers (showEvent, closeEvent). Dark mode refresh is handled
+    // via NppDarkMode::instance().updated() signals from the host.
+    Q_UNUSED(message);
+    Q_UNUSED(wParam);
+    Q_UNUSED(lParam);
     return StaticDialog::run_dlgProc(message, wParam, lParam);
 }
 

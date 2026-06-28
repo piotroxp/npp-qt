@@ -47,6 +47,7 @@ public:
 
     void setFileName(const QString& fileName);
     void setDocType(const QString& docType);
+    void display(int which, const QString& str, bool isImportant = true);  // Win32 compat stub
 
     void setProgress(int percent);
     void clearProgress();

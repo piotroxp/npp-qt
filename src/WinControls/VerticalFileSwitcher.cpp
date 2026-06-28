@@ -329,20 +329,20 @@ void VerticalFileSwitcherListView::redrawItems()
     viewport()->update();
 }
 
-void VerticalFileSwitcherListView::ensureVisibleCurrentItem() const
+void VerticalFileSwitcherListView::ensureVisibleCurrentItem()
 {
     if (_currentIndex >= 0 && _currentIndex < rowCount())
     {
-        const_cast<VerticalFileSwitcherListView*>(this)->setCurrentCell(_currentIndex, COL_NAME);
+        this->setCurrentCell(_currentIndex, COL_NAME);
         scrollToItem(item(_currentIndex, 0), QAbstractItemView::EnsureVisible);
     }
 }
 
-void VerticalFileSwitcherListView::selectCurrentItem() const
+void VerticalFileSwitcherListView::selectCurrentItem()
 {
     if (_currentIndex >= 0 && _currentIndex < rowCount())
     {
-        const_cast<VerticalFileSwitcherListView*>(this)->setCurrentCell(_currentIndex, COL_NAME);
+        this->setCurrentCell(_currentIndex, COL_NAME);
     }
 }
 
@@ -526,7 +526,7 @@ void VerticalFileSwitcher::display(bool toShow)
 {
     DockingDlgInterface::display(toShow);
     if (toShow)
-        _fileListView.ensureVisibleCurrentItem();
+        const_cast<VerticalFileSwitcherListView&>(_fileListView).ensureVisibleCurrentItem();
 }
 
 // =============================================================================

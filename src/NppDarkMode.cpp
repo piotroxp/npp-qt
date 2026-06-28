@@ -6,6 +6,7 @@
 
 #include "NppDarkMode.h"
 #include "Preference.h"
+#include <string>
 
 #include <QApplication>
 #include <QStyleFactory>

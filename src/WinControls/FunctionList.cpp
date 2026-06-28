@@ -307,7 +307,6 @@ void FunctionListPanel::cleanup() {
         delete s;
     _posStrs.clear();
 }
-}
 
 void FunctionListPanel::init(QApplication* app, QWidget* parent) {
     Q_UNUSED(app);

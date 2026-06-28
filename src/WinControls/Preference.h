@@ -9,6 +9,7 @@
 #pragma once
 
 #include "StaticDialog.h"
+#include <QDialog>
 #include <QTabWidget>
 #include <QWidget>
 #include <QVBoxLayout>
@@ -276,7 +277,7 @@ private:
 // Mirrors Win32 PreferenceDlg with a QTabWidget.
 // =============================================================================
 
-class PreferenceDlg : public StaticDialog
+class PreferenceDlg : public QDialog
 {
     Q_OBJECT
 
@@ -284,20 +285,21 @@ public:
     explicit PreferenceDlg();
     ~PreferenceDlg() override;
 
+    void init(QWidget* parent);
     void doDialog(bool isRTL = false);
     void switchToTab(int index);
 
     // Notify sub-tabs of changes
     void notifyItemChanged(const QString& key, const QVariant& value);
 
-protected:
-    intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam) override;
-
 private slots:
     void onOk();
     void onCancel();
     void onApply();
     void onTabChanged(int index);
+
+protected:
+    intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam);
 
 private:
     void createAllTabs();

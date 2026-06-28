@@ -52,7 +52,7 @@ QString PluginUpdateInfo::describe() const
         desc += QStringLiteral("Author: %1\n").arg(_author);
     if (!_homepage.isEmpty())
         desc += QStringLiteral("Homepage: %1\n").arg(_homepage);
-    if (!_nppCompatibleVersions.first._major > 0 || _nppCompatibleVersions.second._major > 0)
+    if (!_nppCompatibleVersions.first.major() > 0 || _nppCompatibleVersions.second.major() > 0)
         desc += QStringLiteral("Compatible: %1 - %2\n").arg(
             _nppCompatibleVersions.first.toString()).arg(_nppCompatibleVersions.second.toString());
     return desc;
@@ -120,7 +120,7 @@ size_t PluginListView::getSelectedIndex() const
     return static_cast<size_t>(row(sel));
 }
 
-void PluginListView::setSelection(int index) const
+void PluginListView::setSelection(int index)
 {
     if (index >= 0 && index < count())
         QListWidget::setCurrentRow(index);
@@ -129,8 +129,8 @@ void PluginListView::setSelection(int index) const
 void PluginListView::clearAll()
 {
     clear();
-    for (PluginUpdateInfo* p : _pluginList)
-        delete p;
+    for (int i = 0; i < _pluginList.size(); ++i)
+        delete _pluginList[i];
     _pluginList.clear();
 }
 
@@ -389,11 +389,11 @@ bool PluginsAdminDlg::initFromJson()
         {
             // Simple format: "[from,to]" or exact version
             // Stub: accept any version
-            pi->_nppCompatibleVersions = {{Version(), Version(QStringLiteral("99.99.99.99"))}};
+            pi->_nppCompatibleVersions = std::make_pair(Version(), Version(QStringLiteral("99.99.99.99")));
         }
 
         _allAvailablePlugins.push_back(pi);
-        _availableList->_pluginList.push_back(pi);
+        _availableList->addPluginPtr(pi);
     }
 
     return true;
@@ -406,7 +406,7 @@ void PluginsAdminDlg::addSamplePlugins()
     sample1._displayName = QStringLiteral("JSON Viewer");
     sample1._folderName = QStringLiteral("JSONViewer");
     sample1._version = Version(QStringLiteral("1.2.0"));
-    sample1._nppCompatibleVersions = {{Version(), Version(QStringLiteral("99.99.99.99"))}};
+    sample1._nppCompatibleVersions = std::make_pair(Version(), Version(QStringLiteral("99.99.99.99")));
     sample1._description = QStringLiteral("Display JSON files in a tree view");
     sample1._author = QStringLiteral("Author Name");
     sample1._repository = QStringLiteral("https://github.com/example/json-viewer");
@@ -416,7 +416,7 @@ void PluginsAdminDlg::addSamplePlugins()
     sample2._displayName = QStringLiteral("Explorer");
     sample2._folderName = QStringLiteral("Explorer");
     sample2._version = Version(QStringLiteral("0.9.0"));
-    sample2._nppCompatibleVersions = {{Version(), Version(QStringLiteral("99.99.99.99"))}};
+    sample2._nppCompatibleVersions = std::make_pair(Version(), Version(QStringLiteral("99.99.99.99")));
     sample2._description = QStringLiteral("File browser panel");
     sample2._author = QStringLiteral("Another Author");
     _availableList->addPlugin(sample2);

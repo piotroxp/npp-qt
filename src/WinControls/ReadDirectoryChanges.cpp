@@ -37,7 +37,7 @@ bool DirectoryWatcher::init()
     // Note: Qt6 QFileSystemWatcher has no errorOccurred signal.
     // File/directory change errors are implicitly handled — no explicit error reporting needed.
     connect(_pollTimer, &QTimer::timeout,
-            this, &DirectoryWatcher::onDirectoryChanged);
+            this, [this]() { onDirectoryChanged(QString()); });
 
     // Seed the known-files map for ADD vs MODIFY differentiation.
     for (const QString& path : _watchedPaths) {

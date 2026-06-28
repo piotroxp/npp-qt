@@ -2,6 +2,9 @@
 // These classes are forward-declared in NppConstants.h but not yet implemented.
 // Provides minimal stubs so the class Notepad_plus can compile.
 
+// md5Dlgs.h (included via Notepad_plus.h) provides the real HashFromFilesDlg and HashFromTextDlg
+// These are forward-declared here to avoid "incomplete type" errors in StubDialogs.h
+
 #pragma once
 #include "ScintillaComponent.h"
 
@@ -13,6 +16,10 @@ public:
     void doDialog(void* launcher, bool isRTL = false) {}
     void initFromOptions() {}
     void writeOptions() {}
+    void beginNewFilesSearch() {}
+    void addSearchLine(const char*) {}
+    void finishFilesSearch(int nbTotal, int filesCount, bool isEntire, FindersInfo::FindOption* = nullptr) {}
+    std::vector<std::wstring> getResultFilePaths(bool) { return {}; }
 };
 
 // Minimal empty dialog for "Incremental Find" — placeholder
@@ -22,18 +29,11 @@ public:
     virtual ~FindIncrementDlg() = default;
 };
 
-// Minimal stub for Hash (MD5/SHA) dialogs — placeholder
-class HashFromFilesDlg : public ScintillaComponent {
-public:
-    HashFromFilesDlg() = default;
-    virtual ~HashFromFilesDlg() = default;
-};
-
-class HashFromTextDlg : public ScintillaComponent {
-public:
-    HashFromTextDlg() = default;
-    virtual ~HashFromTextDlg() = default;
-};
+// HashFromFilesDlg and HashFromTextDlg are defined in MISC/md5/md5Dlgs.h
+// (inherits from StaticDialog with full run_dlgProc implementation).
+// We just forward-declare them here to avoid "incomplete type" errors.
+class HashFromFilesDlg;
+class HashFromTextDlg;
 
 // Minimal stub for Document Peeker (function list preview) — placeholder
 class DocumentPeeker : public ScintillaComponent {
@@ -41,7 +41,3 @@ public:
     DocumentPeeker() = default;
     virtual ~DocumentPeeker() = default;
 };
-
-// Sci_CharacterRangeFull — defined in Scintilla.h (authoritative source)
-// StubDialogs.h included by Notepad_plus.h before Scintilla.h,
-// so Scintilla's definition wins. No duplicate needed here.

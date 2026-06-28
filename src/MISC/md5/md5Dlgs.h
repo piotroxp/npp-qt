@@ -1,3 +1,5 @@
+#pragma once
+
 // md5Dlgs.h — Qt6 port of Notepad++ Hash dialog classes
 // Ported from PowerEditor/src/MISC/md5/md5Dlgs.h
 

@@ -156,6 +156,7 @@ inline constexpr int RECENTFILES_SHOWFULLPATH = 0;
 
 // UDD docked
 inline constexpr int UDD_DOCKED = 0;
+inline constexpr int UDD_SHOW = 1;
 
 // Position
 inline constexpr int POS_VERTICAL = 0;
@@ -476,6 +477,20 @@ class DocumentPeeker;
 struct FindersInfo {
     void* dummy = nullptr;
     const char* _pFileName = nullptr;
+    // Qt-port additions
+    class FindInFinderDlg* _pDestFinder = nullptr;
+    class FindInFinderDlg* _pSourceFinder = nullptr;  // added for Qt6 port
+    struct FindOption {
+        bool _isRecursive = false;
+        bool _isInHiddenDir = false;
+        bool _dotDotMatch = false;
+        bool _isMatchCase = false;
+        bool _wholeWord = false;
+        QString _dirFilter;
+        std::wstring _str2Search;  // search string (added for Qt6 port)
+    } _findOption;
+    QString _findRes;
+    int _nbMatch = 0;
 };
 
 // TrayIconController (corrected spelling)
@@ -609,6 +624,17 @@ inline constexpr int IDI_UNDO_ICON2         = 171;
 inline constexpr int IDI_STOP_ICON          = 180;
 inline constexpr int IDI_PLAY_ICON          = 181;
 
+
+// Progress dialog stub — no-op for Qt port (QProgressDialog managed by caller)
+class Progress {
+public:
+    Progress(void* /* HINSTANCE */) {}
+    void open(void* /* HWND */, const char* /* msg */) {}
+    void setPercent(int /* percent */, const char* /* file */, int /* total */) {}
+    void setInfo(const char* /* file */, int /* total */) {}
+    bool isCancelled() const { return false; }
+    void close() {}
+};
 #endif  // WM_CREATE
 // Windows resource IDs (IDR_*) — stubbed for Qt6/Linux (not loaded from .rc files)
 inline constexpr int IDR_FILENEW          = 200;
@@ -689,6 +715,20 @@ inline constexpr int IDI_WRAP_ICON          = 210;
 inline constexpr int IDI_WRAP_ICON2          = 211;
 inline constexpr int IDI_WRAP_ICON_DM       = 212;
 inline constexpr int IDI_WRAP_ICON_DM2      = 213;
+// Missing VIEW_ICON constants (stub IDs for toolbar buttons)
+inline constexpr int IDI_VIEW_WRAP_ICON          = 310;
+inline constexpr int IDI_VIEW_WRAP_ICON2         = 311;
+inline constexpr int IDI_VIEW_WRAP_ICON_DM        = 312;
+inline constexpr int IDI_VIEW_WRAP_ICON_DM2      = 313;
+inline constexpr int IDI_VIEW_ALL_CHAR_ICON      = 320;
+inline constexpr int IDI_VIEW_ALL_CHAR_ICON2     = 321;
+inline constexpr int IDI_VIEW_ALL_CHAR_DM        = 322;
+inline constexpr int IDI_VIEW_ALL_CHAR_DM2        = 323;
+inline constexpr int IDI_UNDO_ICON_DM            = 330;
+inline constexpr int IDI_UNDO_ICON_DM2           = 331;
+inline constexpr int IDI_REDO_ICON_DM            = 332;
+inline constexpr int IDI_REDO_ICON_DM2           = 333;
+
 inline constexpr int IDI_INDENT_ICON         = 214;
 inline constexpr int IDI_INDENT_ICON2        = 215;
 inline constexpr int IDI_INDENT_ICON_DM      = 216;
@@ -839,3 +879,23 @@ inline constexpr int MENUINDEX_SETTINGS     = 6;
 inline constexpr int MENUINDEX_TOOLS        = 7;
 inline constexpr int MENUINDEX_MACRO        = 8;
 inline constexpr int MENUINDEX_RUN          = 9;
+
+// Missing EolType enum values
+inline constexpr int EolType_unix = 0;      // LF
+inline constexpr int EolType_windows = 1;   // CRLF
+inline constexpr int EolType_mac = 2;       // CR
+inline constexpr int EolType_macLegacy = 3; // CR (classic)
+
+// Missing DocFileStatus values
+inline constexpr int DocFileStatus_clean = 0;
+inline constexpr int DocFileStatus_observed = 1;
+inline constexpr int DocFileStatus_modified = 2;
+
+// Additional missing IDI constants
+inline constexpr int IDI_VIEW_ALL_CHAR_ICON_DM   = 324;
+inline constexpr int IDI_VIEW_ALL_CHAR_ICON_DM2 = 325;
+// MODEVENTMASK constant
+inline constexpr int MODEVENTMASK_OFF = 0;
+// NOTE: IDOK, IDCANCEL, WM_INITDIALOG, WM_SIZE, WM_DESTROY are already defined
+// in NppConstants.h above (lines 189-190 for IDOK/IDCANCEL, lines ~504-539 for WM_*)
+// with proper #ifndef guards — do NOT add duplicates here.

@@ -24,6 +24,8 @@ constexpr int buttonStatus_distractionFree = 4;
 
 class ButtonDlg : public StaticDialog
 {
+public:
+    void* getHSelf() const { return nullptr; }
     Q_OBJECT
 
 public:

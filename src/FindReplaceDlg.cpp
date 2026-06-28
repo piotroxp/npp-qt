@@ -226,6 +226,12 @@ int FindReplaceDlg::processAll(ProcessOperation op, const FindOption* opt, bool 
     return 0;
 }
 
+int FindReplaceDlg::processAll(ProcessOperation op, const FindOption* opt, bool isEntire, FindersInfo* findersInfo)
+{
+    Q_UNUSED(findersInfo);
+    return processAll(op, opt, isEntire);
+}
+
 int FindReplaceDlg::processRange(ProcessOperation op, const std::wstring& txt,
                                 const FindOption* opt, int colourStyleID, int /*extraArg*/,
                                 ScintillaComponent* view2Process)

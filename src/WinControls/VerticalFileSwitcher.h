@@ -90,7 +90,7 @@ public:
     std::vector<QPair<int, int>> getSelectedBuffers(bool reverse = false) const;
     void reload();
     void redrawItems();
-    void ensureVisibleCurrentItem() const;
+    void ensureVisibleCurrentItem();
     void removeAllItems();
 
     // Colors
@@ -118,7 +118,7 @@ protected:
 
 private:
     int _currentIndex = 0;
-    void selectCurrentItem() const;
+    void selectCurrentItem();
     int find(int bufferID, int iView) const;
     int add(int bufferID, int iView);
     void remove(int index, bool removeRow = true);

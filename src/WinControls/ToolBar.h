@@ -11,6 +11,7 @@
 #include <QIcon>
 #include <QSize>
 #include <QString>
+#include <QDomDocument>
 
 // Note: ToolBarStatusType (button state machine) is defined in NppConstants.h.
 // This is the toolbar display style (small icons, large icons, etc.)
@@ -74,8 +75,8 @@ public:
     bool init(QApplication* app, QWidget* parent, ToolBarStatusType type,
               const ToolBarButtonUnit* buttonUnitArray, int arraySize);
     void destroy();
-    void initTheme() { /* Stubbed on Linux — no dark mode theme from .theme files */ }
-    void initHideButtonsConf() { /* Stubbed — no persisted hidden button state */ }
+    void initTheme(QDomDocument* = nullptr) { /* Stubbed on Linux — no dark mode theme from .theme files */ }
+    void initHideButtonsConf(QDomDocument* = nullptr, const void* = nullptr, size_t = 0) { /* Stubbed — no persisted hidden button state */ }
 
     void enable(int cmdID, bool doEnable) const;
     int getWidth() const;

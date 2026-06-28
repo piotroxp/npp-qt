@@ -322,7 +322,9 @@ QString FileBrowserTreeWidget::itemDisplayName(QTreeWidgetItem* item) const
 void FileBrowserTreeWidget::customSorting(QTreeWidgetItem* parent, bool recursive, int depth)
 {
     Q_UNUSED(depth);
-    sortChildren(0, Qt::AscendingOrder);
+    // sortChildren is on QTreeWidgetItem, not QTreeWidget
+    if (parent)
+        parent->sortChildren(0, Qt::AscendingOrder);
     if (recursive)
     {
         for (int i = 0; i < (parent ? parent->childCount() : topLevelItemCount()); ++i)
@@ -676,7 +678,7 @@ void FileBrowser::setForegroundColor(const QColor& col)
 {
     QPalette pal = _treeView.palette();
     pal.setColor(QPalette::Text, col);
-    pal.setColor(QPalette::Foreground, col);
+    pal.setColor(QPalette::WindowText, col);
     _treeView.setPalette(pal);
 }
 
@@ -728,7 +730,7 @@ void FileBrowser::getDirectoryStructure(const QString& dirPath,
 {
     Q_UNUSED(patterns);
 
-    if (directoryStructure._parent == nullptr)
+    if (directoryStructure.parent() == nullptr)
         directoryStructure.setRootPath(dirPath);
 
     QDir dir(dirPath);
@@ -752,7 +754,7 @@ void FileBrowser::getDirectoryStructure(const QString& dirPath,
             {
                 FolderInfo subDir(fi.fileName(), &directoryStructure);
                 getDirectoryStructure(fi.absoluteFilePath(), patterns, subDir, true, isInHiddenDir);
-                directoryStructure.addSubFolder(subDir);
+                directoryStructure.subFolders().push_back(subDir);
             }
         }
         else
@@ -773,7 +775,7 @@ void FileBrowser::getDirectoryStructure(const QString& dirPath,
                 }
             }
             if (match)
-                directoryStructure.addFile(fi.fileName());
+                directoryStructure.files().push_back(FileInfo(fi.fileName()));
         }
     }
 }
@@ -789,7 +791,7 @@ QTreeWidgetItem* FileBrowser::createFolderItemsFromDirStruct(QTreeWidgetItem* hP
     QTreeWidgetItem* hFolderItem = nullptr;
     FileBrowserTreeWidgetItem* fbItem = nullptr;
 
-    if (directoryStructure._parent == nullptr && hParentItem == nullptr)
+    if (directoryStructure.parent() == nullptr && hParentItem == nullptr)
     {
         // Root node
         QString rootPath = directoryStructure.getRootPath();
@@ -823,13 +825,13 @@ QTreeWidgetItem* FileBrowser::createFolderItemsFromDirStruct(QTreeWidgetItem* hP
     }
 
     // Recurse into subfolders
-    for (const auto& folder : directoryStructure._subFolders)
+    for (const auto& folder : directoryStructure.subFolders())
     {
         createFolderItemsFromDirStruct(hFolderItem, folder);
     }
 
     // Add files as leaf items
-    for (const auto& file : directoryStructure._files)
+    for (const auto& file : directoryStructure.files())
     {
         SortingData* customData = new SortingData(QString(), file.getName(), false);
         _sortingDataArray.push_back(customData);
@@ -901,8 +903,10 @@ void FileBrowser::addRootFolder(const QString& rootFolderPath)
 
     // Start file system watcher
     FolderWatcher* watcher = new FolderWatcher(directoryStructure, this);
-    connect(watcher, &FolderWatcher::directoryChanged,
-            this, &FileBrowser::onDirectoryChanged);
+    connect(watcher, &FolderWatcher::filesAdded, this, [](const QVector<QString>&) {
+        // filesAdded signal: QVector<QString> vs slot expecting QString
+        // Directory change is handled by FolderWatcher internally
+    });
     _folderWatchers.push_back(watcher);
     watcher->startWatching();
 }
@@ -1111,9 +1115,9 @@ bool FileBrowser::selectItemFromPath(const QString& itemPath) const
             QTreeWidgetItem* found = const_cast<FileBrowser*>(this)->findInTree(rootPath, nullptr, linarPathArray);
             if (found)
             {
-                _treeView.setCurrentItem(found);
-                _treeView.scrollToItem(found, QAbstractItemView::EnsureVisible);
-                _treeView.setFocus();
+                const_cast<FileBrowser*>(this)->_treeView.setCurrentItem(found);
+                const_cast<FileBrowser*>(this)->_treeView.scrollToItem(found, QAbstractItemView::EnsureVisible);
+                const_cast<FileBrowser*>(this)->_treeView.setFocus();
                 return true;
             }
         }

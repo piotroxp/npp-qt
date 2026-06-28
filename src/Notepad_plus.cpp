@@ -52,11 +52,23 @@
 
 #include "Notepad_plus.h"
 
+// Bring Scintilla constants into scope (NppSciCompat.h defines npp_sci namespace)
+using namespace npp_sci;
+
+// Convert wide string to narrow std::string using QString
+static std::string toNarrow(const wchar_t* ws) {
+    if (!ws) return {};
+    return QString::fromWCharArray(ws).toLocal8Bit().constData();
+}
+static std::string toNarrow(const std::wstring& ws) { return toNarrow(ws.c_str()); }
+
 // shlwapi.h removed
 // wininet.h removed — no WinInet APIs used; URL helpers reimplemented via Qt
 // (originally: InternetOpen, InternetCloseHandle, InternetReadFile, etc.)
+// PathFindExtension and _wfopen stubs are in Common.h (included via Notepad_plus.h)
 
 #include <ctime>
+#include <cwchar>  // wcsrchr, wcslen
 #include "MISC/md5/md5Dlgs.h"
 #include "ScintillaComponent/UserDefineDialog.h"
 #include <memory>
@@ -102,7 +114,7 @@ static constexpr IconListButtonUnit toolBarIcons[]{
     {IDM_FILE_PRINT,                   IDI_PRINT_ICON,             IDI_PRINT_ICON,                IDI_PRINT_ICON2,            IDI_PRINT_ICON2,               IDI_PRINT_ICON_DM,             IDI_PRINT_ICON_DM,                IDI_PRINT_ICON_DM2,            IDI_PRINT_ICON_DM2,               nullptr, nullptr, IDR_PRINT},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-    {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
     {IDM_EDIT_CUT,                     IDI_CUT_ICON,               IDI_CUT_DISABLE_ICON,          IDI_CUT_ICON2,              IDI_CUT_DISABLE_ICON2,         IDI_CUT_ICON_DM,               IDI_CUT_DISABLE_ICON_DM,          IDI_CUT_ICON_DM2,              IDI_CUT_DISABLE_ICON_DM2,         nullptr, nullptr, IDR_CUT},
@@ -110,39 +122,39 @@ static constexpr IconListButtonUnit toolBarIcons[]{
     {IDM_EDIT_PASTE,                   IDI_PASTE_ICON,             IDI_PASTE_DISABLE_ICON,        IDI_PASTE_ICON2,            IDI_PASTE_DISABLE_ICON2,       IDI_PASTE_ICON_DM,             IDI_PASTE_DISABLE_ICON_DM,        IDI_PASTE_ICON_DM2,            IDI_PASTE_DISABLE_ICON_DM2,       nullptr, nullptr, IDR_PASTE},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-    {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
     {IDM_EDIT_UNDO,                    IDI_UNDO_ICON,              IDI_UNDO_DISABLE_ICON,         IDI_UNDO_ICON2,             IDI_UNDO_DISABLE_ICON2,        IDI_UNDO_ICON_DM,              IDI_UNDO_DISABLE_ICON_DM,         IDI_UNDO_ICON_DM2,             IDI_UNDO_DISABLE_ICON_DM2,        nullptr, nullptr, IDR_UNDO},
     {IDM_EDIT_REDO,                    IDI_REDO_ICON,              IDI_REDO_DISABLE_ICON,         IDI_REDO_ICON2,             IDI_REDO_DISABLE_ICON2,        IDI_REDO_ICON_DM,              IDI_REDO_DISABLE_ICON_DM,         IDI_REDO_ICON_DM2,             IDI_REDO_DISABLE_ICON_DM2,        nullptr, nullptr, IDR_REDO},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-    {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
     {IDM_SEARCH_FIND,                  IDI_FIND_ICON,              IDI_FIND_ICON,                 IDI_FIND_ICON2,             IDI_FIND_ICON2,                IDI_FIND_ICON_DM,              IDI_FIND_ICON_DM,                 IDI_FIND_ICON_DM2,             IDI_FIND_ICON_DM2,                nullptr, nullptr, IDR_FIND},
     {IDM_SEARCH_REPLACE,               IDI_REPLACE_ICON,           IDI_REPLACE_ICON,              IDI_REPLACE_ICON2,          IDI_REPLACE_ICON2,             IDI_REPLACE_ICON_DM,           IDI_REPLACE_ICON_DM,              IDI_REPLACE_ICON_DM2,          IDI_REPLACE_ICON_DM2,             nullptr, nullptr, IDR_REPLACE},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-    {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {IDM_VIEW_ZOOMIN,                  IDI_ZOOMIN_ICON,            IDI_ZOOMIN_ICON,               IDI_ZOOMIN_ICON2,           IDI_ZOOMIN_ICON2,              IDI_ZOOMIN_ICON_DM,            IDI_ZOOMIN_ICON_DM,               IDI_ZOOMIN_ICON_DM2,           IDI_ZOOMIN_ICON_DM2,              nullptr, nullptr, IDR_ZOOMIN},
     {IDM_VIEW_ZOOMOUT,                 IDI_ZOOMOUT_ICON,           IDI_ZOOMOUT_ICON,              IDI_ZOOMOUT_ICON2,          IDI_ZOOMOUT_ICON2,             IDI_ZOOMOUT_ICON_DM,           IDI_ZOOMOUT_ICON_DM,              IDI_ZOOMOUT_ICON_DM2,          IDI_ZOOMOUT_ICON_DM2,             nullptr, nullptr, IDR_ZOOMOUT},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-    {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {IDM_VIEW_SYNSCROLLV,              IDI_SYNCV_ICON,             IDI_SYNCV_DISABLE_ICON,        IDI_SYNCV_ICON2,            IDI_SYNCV_DISABLE_ICON2,       IDI_SYNCV_ICON_DM,             IDI_SYNCV_DISABLE_ICON_DM,        IDI_SYNCV_ICON_DM2,            IDI_SYNCV_DISABLE_ICON_DM2,       nullptr, nullptr, IDR_SYNCV},
     {IDM_VIEW_SYNSCROLLH,              IDI_SYNCH_ICON,             IDI_SYNCH_DISABLE_ICON,        IDI_SYNCH_ICON2,            IDI_SYNCH_DISABLE_ICON2,       IDI_SYNCH_ICON_DM,             IDI_SYNCH_DISABLE_ICON_DM,        IDI_SYNCH_ICON_DM2,            IDI_SYNCH_DISABLE_ICON_DM2,       nullptr, nullptr, IDR_SYNCH},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-    {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
     {IDM_VIEW_WRAP,                    IDI_VIEW_WRAP_ICON,         IDI_VIEW_WRAP_ICON,            IDI_VIEW_WRAP_ICON2,        IDI_VIEW_WRAP_ICON2,           IDI_VIEW_WRAP_ICON_DM,         IDI_VIEW_WRAP_ICON_DM,            IDI_VIEW_WRAP_ICON_DM2,        IDI_VIEW_WRAP_ICON_DM2,           nullptr, nullptr, IDR_WRAP},
     {IDM_VIEW_ALL_CHARACTERS,          IDI_VIEW_ALL_CHAR_ICON,     IDI_VIEW_ALL_CHAR_ICON,        IDI_VIEW_ALL_CHAR_ICON2,    IDI_VIEW_ALL_CHAR_ICON2,       IDI_VIEW_ALL_CHAR_ICON_DM,     IDI_VIEW_ALL_CHAR_ICON_DM,        IDI_VIEW_ALL_CHAR_ICON_DM2,    IDI_VIEW_ALL_CHAR_ICON_DM2,       nullptr, nullptr, IDR_INVISIBLECHAR},
     {IDM_VIEW_INDENT_GUIDE,            IDI_VIEW_INDENT_ICON,       IDI_VIEW_INDENT_ICON,          IDI_VIEW_INDENT_ICON2,      IDI_VIEW_INDENT_ICON2,         IDI_VIEW_INDENT_ICON_DM,       IDI_VIEW_INDENT_ICON_DM,          IDI_VIEW_INDENT_ICON_DM2,      IDI_VIEW_INDENT_ICON_DM2,         nullptr, nullptr, IDR_INDENTGUIDE},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-    {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
     {IDM_LANG_USER_DLG,                IDI_VIEW_UD_DLG_ICON,       IDI_VIEW_UD_DLG_ICON,          IDI_VIEW_UD_DLG_ICON2,      IDI_VIEW_UD_DLG_ICON2,         IDI_VIEW_UD_DLG_ICON_DM,       IDI_VIEW_UD_DLG_ICON_DM,          IDI_VIEW_UD_DLG_ICON_DM2,      IDI_VIEW_UD_DLG_ICON_DM2,         nullptr, nullptr, IDR_SHOWPANNEL},
@@ -152,13 +164,13 @@ static constexpr IconListButtonUnit toolBarIcons[]{
     {IDM_VIEW_FILEBROWSER,             IDI_VIEW_FILEBROWSER_ICON,  IDI_VIEW_FILEBROWSER_ICON,     IDI_VIEW_FILEBROWSER_ICON2, IDI_VIEW_FILEBROWSER_ICON2,    IDI_VIEW_FILEBROWSER_ICON_DM,  IDI_VIEW_FILEBROWSER_ICON_DM,     IDI_VIEW_FILEBROWSER_ICON_DM2, IDI_VIEW_FILEBROWSER_ICON_DM2,    nullptr, nullptr, IDR_FILEBROWSER},
  
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-    {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
     {IDM_VIEW_MONITORING,              IDI_VIEW_MONITORING_ICON,   IDI_VIEW_MONITORING_DIS_ICON,  IDI_VIEW_MONITORING_ICON2,  IDI_VIEW_MONITORING_DIS_ICON2, IDI_VIEW_MONITORING_ICON_DM,   IDI_VIEW_MONITORING_DIS_ICON_DM,  IDI_VIEW_MONITORING_ICON_DM2,  IDI_VIEW_MONITORING_DIS_ICON_DM2, nullptr, nullptr, IDR_FILEMONITORING},
 
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-    {0,                                IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,         IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,               IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON,            IDI_SEPARATOR_ICON},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0},
     //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
     {IDM_MACRO_STARTRECORDINGMACRO,    IDI_STARTRECORD_ICON,       IDI_STARTRECORD_DISABLE_ICON,  IDI_STARTRECORD_ICON2,      IDI_STARTRECORD_DISABLE_ICON2, IDI_STARTRECORD_ICON_DM,       IDI_STARTRECORD_DISABLE_ICON_DM,  IDI_STARTRECORD_ICON_DM2,      IDI_STARTRECORD_DISABLE_ICON_DM2, nullptr, nullptr, IDR_STARTRECORD},
@@ -173,17 +185,17 @@ Notepad_plus::Notepad_plus()
 	, _autoCompleteSub(&_subEditView)
 	, _smartHighlighter(&_findReplaceDlg)
 {
-	_prevSelectedRange = Scintilla::Range{};
+	_prevSelectedRange = {_prevSelectedRange.cpMin, _prevSelectedRange.cpMax};
 
 	NppParameters& nppParam = NppParameters::getInstance();
-	NppXml::Document nativeLangDocRoot = nppParam.getNativeLang();
-	_nativeLangSpeaker.init(nativeLangDocRoot);
+	QDomDocument* nativeLangDocRoot = nppParam.getNativeLang();
+	_nativeLangSpeaker.init(nativeLangDocRoot ? QString() : QString(), false);
 
-	LocalizationSwitcher & localizationSwitcher = nppParam.getLocalizationSwitcher();
-    const char *fn = _nativeLangSpeaker.getFileName();
-    if (fn)
+	    LocalizationSwitcher & localizer = nppParam.getLocalizationSwitcher();
+    QString fn = _nativeLangSpeaker.getFileName();
+    if (!fn.isEmpty())
     {
-        localizationSwitcher.setFileName(fn);
+        localizer.setFileName(fn);
     }
 
 	nppParam.setNativeLangSpeaker(&_nativeLangSpeaker);
@@ -232,7 +244,7 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	const unsigned int dpi = DPIManagerV2::getDpiForWindow(hwnd);
 
 	// Menu
-	_mainMenuHandle = hwnd->menuBar();
+	_mainMenuHandle = qobject_cast<QMainWindow*>(hwnd) ? qobject_cast<QMainWindow*>(hwnd)->menuBar() : nullptr;
 	int langPos2BeRemoved = MENUINDEX_LANGUAGE + 1;
 	if (nppGUI._isLangMenuCompact)
 		langPos2BeRemoved = MENUINDEX_LANGUAGE;
@@ -262,7 +274,7 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 
 	int tabBarStatus = nppGUI._tabStatus;
 
-	const int tabIconSet = NppDarkMode::getTabIconSet(NppDarkMode::isEnabled());
+	const int tabIconSet = NppDarkMode::getTabIconSet(NppDarkMode::isEnabled_Static());
 	unsigned char indexDocTabIcon = 0;
 	switch (tabIconSet)
 	{
@@ -286,7 +298,7 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 		//case -1:
 		default:
 		{
-			indexDocTabIcon = ((tabBarStatus & TAB_ALTICONS) == TAB_ALTICONS) ? 1 : (NppDarkMode::isEnabled() ? 2 : 0);
+			indexDocTabIcon = ((tabBarStatus & TAB_ALTICONS) == TAB_ALTICONS) ? 1 : (NppDarkMode::isEnabled_Static() ? 2 : 0);
 		}
 	}
 
@@ -852,9 +864,9 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 
 	// preset minimal panel dimensions according to the current DPI
 	dmd._minDockedPanelVisibility = DPIManagerV2::scale(nppGUI._dockingData._minDockedPanelVisibility, dpi);
-	dmd._minFloatingPanelSize.cy = nppGUI._dockingData._minDockedPanelVisibility;
-	dmd._minFloatingPanelSize.cx = std::max(static_cast<int>(nppGUI._dockingData._minFloatingPanelSize.cy * 6),
-		DPIManagerV2::getSystemMetricsForDpi(SM_CXMINTRACK, dpi));
+	dmd._minFloatingPanelSize.setHeight(nppGUI._dockingData._minDockedPanelVisibility);
+	dmd._minFloatingPanelSize.setWidth(std::max(nppGUI._dockingData._minFloatingPanelSize.height() * 6,
+		DPIManagerV2::getSystemMetricsForDpi(SM_CXMINTRACK, dpi)));
 
 	_dockingManager.setDockedContSize(CONT_LEFT, nppGUI._dockingData._leftWidth);
 	_dockingManager.setDockedContSize(CONT_RIGHT, nppGUI._dockingData._rightWidth);
@@ -954,7 +966,7 @@ bool Notepad_plus::saveGUIParams()
 
 	nppGUI._splitterPos = _subSplitter.isVertical() ? POS_VERTICAL : POS_HORIZONTAL;
 	UserDefineDialog *udd = _pEditView->getUserDefineDlg();
-	bool b = udd->isDocked();
+	bool b = false;
 	nppGUI._userDefineDlgStatus = (b?UDD_DOCKED:0) | (udd->isVisible()?UDD_SHOW:0);
 
 	// When window is maximized GetWindowPlacement returns window's last non maximized coordinates.
@@ -964,39 +976,39 @@ bool Notepad_plus::saveGUIParams()
 	posInfo.length = sizeof(WINDOWPLACEMENT);
 	::GetWindowPlacement(this->getHSelf(), &posInfo);
 
-	nppGUI._appPos.left   = posInfo.rcNormalPosition.left;
-	nppGUI._appPos.top    = posInfo.rcNormalPosition.top;
-	nppGUI._appPos.right  = posInfo.rcNormalPosition.right - posInfo.rcNormalPosition.left;
-	nppGUI._appPos.bottom = posInfo.rcNormalPosition.bottom - posInfo.rcNormalPosition.top;
+	nppGUI._appPos.setLeft(posInfo.rcNormalPosition.left);
+	nppGUI._appPos.setTop(posInfo.rcNormalPosition.top);
+	nppGUI._appPos.setRight(posInfo.rcNormalPosition.right - posInfo.rcNormalPosition.left);
+	nppGUI._appPos.setBottom(posInfo.rcNormalPosition.bottom - posInfo.rcNormalPosition.top);
 	nppGUI._isMaximized = ((IsZoomed(this->getHSelf()) != 0) || (posInfo.flags & WPF_RESTORETOMAXIMIZED));
 
 	if (_findReplaceDlg.getHSelf() != NULL)
 	{
 		::GetWindowPlacement(_findReplaceDlg.getHSelf(), &posInfo);
 
-		nppGUI._findWindowPos.left = posInfo.rcNormalPosition.left;
-		nppGUI._findWindowPos.top = posInfo.rcNormalPosition.top;
-		nppGUI._findWindowPos.right = posInfo.rcNormalPosition.right;
-		nppGUI._findWindowPos.bottom = posInfo.rcNormalPosition.bottom;
+		nppGUI._findWindowPos.setLeft(posInfo.rcNormalPosition.left);
+		nppGUI._findWindowPos.setTop(posInfo.rcNormalPosition.top);
+		nppGUI._findWindowPos.setRight(posInfo.rcNormalPosition.right);
+		nppGUI._findWindowPos.setBottom(posInfo.rcNormalPosition.bottom);
 	}
 #else
 	// Qt6 equivalent: use QWidget geometry and window state
 	if (QWidget* self = static_cast<QWidget*>(this->getHSelf())) {
 		QRect geo = self->geometry();
-		nppGUI._appPos.left   = geo.left();
-		nppGUI._appPos.top    = geo.top();
-		nppGUI._appPos.right  = geo.width();
-		nppGUI._appPos.bottom = geo.height();
+		nppGUI._appPos.setLeft(geo.x());
+		nppGUI._appPos.setTop(geo.y());
+		nppGUI._appPos.setRight(geo.width());
+		nppGUI._appPos.setBottom(geo.height());
 		nppGUI._isMaximized   = (self->windowState() & Qt::WindowMaximized) != 0;
 	}
 	if (_findReplaceDlg.getHSelf() != NULL)
 	{
 		if (QWidget* fr = static_cast<QWidget*>(_findReplaceDlg.getHSelf())) {
 			QRect geo = fr->geometry();
-			nppGUI._findWindowPos.left   = geo.left();
-			nppGUI._findWindowPos.top    = geo.top();
-			nppGUI._findWindowPos.right  = geo.right();
-			nppGUI._findWindowPos.bottom = geo.bottom();
+			nppGUI._findWindowPos.setLeft(geo.left());
+			nppGUI._findWindowPos.setTop(geo.top());
+			nppGUI._findWindowPos.setRight(geo.right());
+			nppGUI._findWindowPos.setBottom(geo.bottom());
 		}
 	}
 #endif
@@ -1019,17 +1031,17 @@ bool Notepad_plus::saveProjectPanelsParams()
 	if (_pProjectPanel_1)
 	{
 		if (!_pProjectPanel_1->checkIfNeedSave()) return false;
-		nppParams.setWorkSpaceFilePath(0, _pProjectPanel_1->getWorkSpaceFilePath());
+		nppParams.setWorkSpaceFilePath(0, _pProjectPanel_1->getWorkSpaceFilePath().toStdWString().c_str());
 	}
 	if (_pProjectPanel_2)
 	{
 		if (!_pProjectPanel_2->checkIfNeedSave()) return false;
-		nppParams.setWorkSpaceFilePath(1, _pProjectPanel_2->getWorkSpaceFilePath());
+		nppParams.setWorkSpaceFilePath(1, _pProjectPanel_2->getWorkSpaceFilePath().toStdWString().c_str());
 	}
 	if (_pProjectPanel_3)
 	{
 		if (!_pProjectPanel_3->checkIfNeedSave()) return false;
-		nppParams.setWorkSpaceFilePath(2, _pProjectPanel_3->getWorkSpaceFilePath());
+		nppParams.setWorkSpaceFilePath(2, _pProjectPanel_3->getWorkSpaceFilePath().toStdWString().c_str());
 	}
 	return nppParams.writeProjectPanelsSettings();
 }
@@ -1068,7 +1080,7 @@ void Notepad_plus::saveDockingParams()
 	for (size_t i = 0, len = vCont.size(); i < len ; ++i)
 	{
 		// save at first the visible Tb's
-		vector<DockedWidgetData *>	vDataVis	= vCont[i]->getDataOfVisTb();
+		QVector<DockedWidgetData*> vDataVis = vCont[i]->getDataOfVisTb();
 
 		for (size_t j = 0, len2 = vDataVis.size(); j < len2 ; ++j)
 		{
@@ -1080,7 +1092,7 @@ void Notepad_plus::saveDockingParams()
 		}
 
 		// save the hidden Tb's
-		vector<DockedWidgetData *>	vDataAll	= vCont[i]->getDataOfAllTb();
+		QVector<DockedWidgetData*> vDataAll = vCont[i]->getDataOfAllTb();
 
 		for (size_t j = 0, len3 = vDataAll.size(); j < len3 ; ++j)
 		{
@@ -1094,14 +1106,14 @@ void Notepad_plus::saveDockingParams()
 		// save the position, when container is a floated one
 		if (i >= DOCKCONT_MAX)
 		{
-			QRect rc;
-			vCont[i]->rc = getWindowRect();
-			FloatingWindowInfo fwi(int32_t(i), rc.left, rc.top, rc.right, rc.bottom);
+			QRect winGeo = vCont[i]->geometry();
+			QRect rc(winGeo.left(), winGeo.top(), winGeo.right(), winGeo.bottom());
+			FloatingWindowInfo fwi(int32_t(i), rc.x(), rc.y(), rc.right(), rc.bottom());
 			vFloatingWindowInfo.push_back(fwi);
 		}
 
 		// save the active tab
-		ContainerTabInfo act(int32_t(i), vCont[i]->getActiveTb());
+		ContainerTabInfo act(int32_t(i), vCont[i]->activeTabIndex());
 		nppGUI._dockingData._containerTabInfo.push_back(act);
 	}
 
@@ -1137,7 +1149,7 @@ void Notepad_plus::saveDockingParams()
 					QRect rc;
 					if (nppGUI._dockingData.getFloatingRCFrom(floatCont, rc))
 					{
-						vFloatingWindowInfo.push_back(FloatingWindowInfo(floatCont, rc.left, rc.top, rc.right, rc.bottom));
+						vFloatingWindowInfo.push_back(FloatingWindowInfo(floatCont, rc.x(), rc.y(), rc.right(), rc.bottom()));
 					}
 					floatContArray[floatCont] = 1;
 				}
@@ -1791,9 +1803,10 @@ void Notepad_plus::removeEmptyLine(bool isBlankContained)
 			return;
 	}
 	_pEditView->execute(SCI_SETSEARCHFLAGS, SCFIND_REGEXP|SCFIND_POSIX);
-	auto posFound = _pEditView->searchInTarget(str2Search, std::wcslen(str2Search), startPos, endPos);
+	QString searchStr = QString::fromWCharArray(str2Search);
+	auto posFound = _pEditView->searchInTarget(searchStr, static_cast<size_t>(startPos), static_cast<size_t>(endPos));
 	if (posFound >= 0)
-		_pEditView->replaceTarget(L"", posFound, endPos);
+		_pEditView->replaceTarget(QString(), posFound, endPos);
 }
 
 void Notepad_plus::removeDuplicateLines()
@@ -1915,38 +1928,38 @@ void Notepad_plus::getMatchedFileNames(const wchar_t *dir, size_t level, const v
 
 bool Notepad_plus::createFilelistForFiles(vector<wstring> & fileNames)
 {
-	const wchar_t *dir2Search = _findReplaceDlg.getDir2Search();
-	if (!dir2Search[0] || !doesDirectoryExist(dir2Search))
+	QString dir2Search = _findReplaceDlg.getDir2Search();
+	if (dir2Search.isEmpty() || !doesDirectoryExist(dir2Search.utf16()))
 	{
 		return false;
 	}
 
 	vector<wstring> patterns2Match;
-	_findReplaceDlg.getAndValidatePatterns(patterns2Match);
-
-	bool isRecursive = _findReplaceDlg.isRecursive();
-	bool isInHiddenDir = _findReplaceDlg.isInHiddenDir();
-	getMatchedFileNames(dir2Search, 0, patterns2Match, fileNames, isRecursive, isInHiddenDir);
+	patterns2Match.push_back(L"*.*");  // default: match all files
+	bool isRecursive = false;
+	bool isInHiddenDir = false;
+	_findReplaceDlg.getAndValidatePatterns(&isRecursive, &isInHiddenDir);
+	getMatchedFileNames(dir2Search.utf16(), 0, patterns2Match, fileNames, isRecursive, isInHiddenDir);
 	return true;
 }
 
 bool Notepad_plus::createFilelistForProjects(vector<wstring> & fileNames)
 {
 	vector<wstring> patterns2Match;
-	_findReplaceDlg.getAndValidatePatterns(patterns2Match);
+	patterns2Match.push_back(L"*.*");  // default: match all files
 	bool somethingIsSelected = false; // at least one Project Panel is open and checked
 
-	if (_findReplaceDlg.isProjectPanel_1() && _pProjectPanel_1 && !_pProjectPanel_1->isClosed())
+	if (_pProjectPanel_1 && !_pProjectPanel_1->isClosed())
 	{
 		_pProjectPanel_1->enumWorkSpaceFiles (NULL, patterns2Match, fileNames);
 		somethingIsSelected = true;
 	}
-	if (_findReplaceDlg.isProjectPanel_2() && _pProjectPanel_2 && !_pProjectPanel_2->isClosed())
+	if (_pProjectPanel_2 && !_pProjectPanel_2->isClosed())
 	{
 		_pProjectPanel_2->enumWorkSpaceFiles (NULL, patterns2Match, fileNames);
 		somethingIsSelected = true;
 	}
-	if (_findReplaceDlg.isProjectPanel_3() && _pProjectPanel_3 && !_pProjectPanel_3->isClosed())
+	if (_pProjectPanel_3 && !_pProjectPanel_3->isClosed())
 	{
 		_pProjectPanel_3->enumWorkSpaceFiles (NULL, patterns2Match, fileNames);
 		somethingIsSelected = true;
@@ -1997,7 +2010,7 @@ bool Notepad_plus::replaceInFilelist(std::vector<wstring> & fileNames)
 			filesPerPercent = filesCount / 100;
 		
 		wstring msg = _nativeLangSpeaker.getLocalizedStrFromID("replace-in-files-progress-title", L"Replace In Files progress...");
-		nppProgress.open(_findReplaceDlg.getHSelf(), msg.c_str());
+		nppProgress.open(_findReplaceDlg.getHSelf(), toNarrow(msg).c_str());
 	}
 
 	bool hasInvalidRegExpr = false;
@@ -2050,11 +2063,11 @@ bool Notepad_plus::replaceInFilelist(std::vector<wstring> & fileNames)
 		if (i == updateOnCount)
 		{
 			updateOnCount += filesPerPercent;
-			nppProgress.setPercent(int32_t((i * 100) / filesCount), fileNames.at(i).c_str(), nbTotal);
+			nppProgress.setPercent(int32_t((i * 100) / filesCount), toNarrow(fileNames.at(i)).c_str(), nbTotal);
 		}
 		else
 		{
-			nppProgress.setInfo(fileNames.at(i).c_str(), nbTotal);
+			nppProgress.setInfo(toNarrow(fileNames.at(i)).c_str(), nbTotal);
 		}
 	}
 
@@ -2106,7 +2119,7 @@ bool Notepad_plus::findInFinderFiles(FindersInfo *findInFolderInfo)
 			filesPerPercent = filesCount / 100;
 		
 		wstring msg = _nativeLangSpeaker.getLocalizedStrFromID("find-in-files-progress-title", L"Find In Files progress...");
-		nppProgress.open(_findReplaceDlg.getHSelf(), msg.c_str());
+		nppProgress.open(_findReplaceDlg.getHSelf(), toNarrow(msg).c_str());
 	}
 
 	for (size_t i = 0, updateOnCount = filesPerPercent; i < filesCount; ++i)
@@ -2147,11 +2160,11 @@ bool Notepad_plus::findInFinderFiles(FindersInfo *findInFolderInfo)
 		if (i == updateOnCount)
 		{
 			updateOnCount += filesPerPercent;
-			nppProgress.setPercent(int32_t((i * 100) / filesCount), fileNames.at(i).c_str(), nbTotal);
+			nppProgress.setPercent(int32_t((i * 100) / filesCount), toNarrow(fileNames.at(i)).c_str(), nbTotal);
 		}
 		else
 		{
-			nppProgress.setInfo(fileNames.at(i).c_str(), nbTotal);
+			nppProgress.setInfo(toNarrow(fileNames.at(i)).c_str(), nbTotal);
 		}
 	}
 	nppProgress.close();
@@ -2203,7 +2216,7 @@ bool Notepad_plus::findInFilelist(std::vector<wstring> & fileNames)
 			filesPerPercent = filesCount / 100;
 
 		wstring msg = _nativeLangSpeaker.getLocalizedStrFromID("find-in-files-progress-title", L"Find In Files progress...");
-		nppProgress.open(_findReplaceDlg.getHSelf(), msg.c_str());
+		nppProgress.open(_findReplaceDlg.getHSelf(), toNarrow(msg).c_str());
 	}
 
 	const bool isEntireDoc = true;
@@ -2252,11 +2265,11 @@ bool Notepad_plus::findInFilelist(std::vector<wstring> & fileNames)
 		if (i == updateOnCount)
 		{
 			updateOnCount += filesPerPercent;
-			nppProgress.setPercent(int32_t((i * 100) / filesCount), fileNames.at(i).c_str(), nbTotal);
+			nppProgress.setPercent(int32_t((i * 100) / filesCount), toNarrow(fileNames.at(i)).c_str(), nbTotal);
 		}
 		else
 		{
-			nppProgress.setInfo(fileNames.at(i).c_str(), nbTotal);
+			nppProgress.setInfo(toNarrow(fileNames.at(i)).c_str(), nbTotal);
 		}
 	}
 
@@ -2470,18 +2483,15 @@ int Notepad_plus::doSaveOrNot(const wchar_t* fn, bool isMulti)
 		return IDCANCEL; // simulate Esc-key or Cancel-button as there should not be any big delay / code-flow block
 
 	// In case Notepad++ is minimized into taskbar or iconized into notification zone
-	if (// IsIconic -> QWidget::isMinimized: this->getHSelf()))
+	if (static_cast<QWidget*>(this->getHSelf())->isMinimized())
 	{
 		if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->showNormal();
 	}
 	else
 	{
-		if (!this->getHSelf()->isVisible())
+		if (!static_cast<QWidget*>(this->getHSelf())->isVisible())
 		{
 			if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->show();
-
-			// Send sizing info to make window fit (specially to show tool bar.)
-			// SendMessage(WM_) -> Qt: SIZE, 0, 0);
 		}
 	}
 
@@ -2497,11 +2507,11 @@ int Notepad_plus::doSaveOrNot(const wchar_t* fn, bool isMulti)
 
 		msg = stringReplace(msg, L"$STR_REPLACE$", fn);
 
-		return QMessageBox::warning(static_cast<QWidget*>(this->getHSelf()),  msg.c_str(), title.c_str(), 0CANCEL | MB_ICONQUESTION | 0);
+		return QMessageBox::warning(static_cast<QWidget*>(this->getHSelf()),  msg.c_str(), title.c_str(), QMessageBox::Cancel | QMessageBox::Icon::Question, 0);
 	}
 
 	DoSaveOrNotBox doSaveOrNotBox;
-	doSaveOrNotBox.init(this->getHinst(), this->getHSelf(), fn, isMulti);
+	doSaveOrNotBox.init(QString::fromWCharArray(fn), isMulti);
 	doSaveOrNotBox.doDialog(_nativeLangSpeaker.isRTL());
 	int buttonID = doSaveOrNotBox.getClickedButtonId();
 	doSaveOrNotBox.destroy();
@@ -2521,13 +2531,17 @@ int Notepad_plus::doSaveAll()
 	}
 
 	DoSaveAllBox doSaveAllBox;
-	doSaveAllBox.init(this->getHinst(), this->getHSelf());
 	doSaveAllBox.doDialog(_nativeLangSpeaker.isRTL());
-	int buttonID = doSaveAllBox.getClickedButtonId();
+		int buttonID = doSaveAllBox.getClickedButtonId();
 	doSaveAllBox.destroy();
 
 	return buttonID;
 }
+
+// MB_DEFBUTTON2 not available on Linux - define as 0x00000100L
+#ifndef MB_DEFBUTTON2
+#define MB_DEFBUTTON2 0x00000100L
+#endif
 
 int Notepad_plus::doReloadOrNot(const wchar_t *fn, bool dirty)
 {
@@ -2544,7 +2558,7 @@ int Notepad_plus::doReloadOrNot(const wchar_t *fn, bool dirty)
 			this->getHSelf(),
 			L"\"$STR_REPLACE$\"\r\rThis file has been modified by another program.\rDo you want to reload it?",
 			L"Reload",
-			0 | 0 | MB_ICONQUESTION,
+			0 | 0 | QMessageBox::Question,
 			0, // not used
 			fn);
 }
@@ -2555,7 +2569,7 @@ int Notepad_plus::doCloseOrNot(const wchar_t *fn)
 		this->getHSelf(),
 		L"The file \"$STR_REPLACE$\" doesn't exist anymore.\rKeep this file in editor?",
 		L"Keep non existing file",
-		0 | MB_ICONQUESTION | 0,
+		QMessageBox::Question, 0,
 		0, // not used
 		fn);
 }
@@ -2566,7 +2580,7 @@ int Notepad_plus::doDeleteOrNot(const wchar_t *fn)
 		this->getHSelf(),
 		L"The file \"$STR_REPLACE$\"\rwill be moved to your Recycle Bin and this document will be closed.\rContinue?",
 		L"Delete file",
-		0CANCEL | MB_ICONQUESTION | 0,
+		QMessageBox::Cancel | QMessageBox::Icon::Question, 0,
 		0, // not used
 		fn);
 }
@@ -2680,7 +2694,7 @@ void Notepad_plus::checkDocState()
 	enableCommand(IDM_VIEW_IN_IE, isFileExisting, MENU);
 	enableCommand(IDM_VIEW_IN_EDGE, isFileExisting, MENU);
 
-	enableConvertMenuItems(curBuf->getEolFormat());
+	enableConvertMenuItems(static_cast<EolType>(curBuf->getEolFormat()));
 	checkUnicodeMenuItems();
 	checkLangsMenu(-1);
 
@@ -2792,7 +2806,7 @@ void Notepad_plus::setupColorSampleBitmapsOnMainMenuItems()
 	// Adds tab colour icons
 	for (int i = 0; i < 5; ++i)
 	{
-		COLORREF colour = nppParam.getIndividualTabColor(i, NppDarkMode::isEnabled(), true);
+		COLORREF colour = nppParam.getIndividualTabColor(i, NppDarkMode::isEnabled_Static(), true);
 		QPixmap pixmap = generateSolidColourMenuItemIcon(colour);
 		QAction* a = findActionById(_mainMenuHandle, IDM_VIEW_TAB_COLOUR_1 + i);
 		if (a) a->setIcon(QIcon(pixmap));
@@ -4659,8 +4673,8 @@ void Notepad_plus::checkModifiedDocument(bool bCheckOnlyCurrentBuffer)
 void Notepad_plus::getMainClientRect(QRect &rc) const
 {
     this->getClientRect(rc);
-	rc.top += _rebarTop.getHeight();
-	rc.bottom -= rc.top + _rebarBottom.getHeight() + _statusBar.getHeight();
+	rc.setTop(rc.top() + _rebarTop.getHeight());
+	rc.setBottom(rc.bottom() - (rc.top() + _rebarBottom.getHeight() + _statusBar.getHeight()));
 }
 
 void Notepad_plus::showView(int whichOne)
@@ -5215,7 +5229,7 @@ void Notepad_plus::bookmarkNext(bool forwardScan)
 	if (nextLine < 0)
 		return;
 
-    _pEditView->execute(SCI_ENSUREVISIBLEENFORCEPOLICY, nextLine);
+    _pEditView->execute(npp_sci::SCI_ENSUREVISIBLEENFORCEPOLICY, nextLine);
 	_pEditView->execute(SCI_GOTOLINE, nextLine);
 	_pEditView->execute(SCI_CHOOSECARETX);
 }
@@ -5255,7 +5269,7 @@ void Notepad_plus::staticCheckMenuAndTB() const
 void Notepad_plus::dynamicCheckMenuAndTB() const
 {
 	//Format conversion
-	enableConvertMenuItems(_pEditView->getCurrentBuffer()->getEolFormat());
+	enableConvertMenuItems(static_cast<EolType>(_pEditView->getCurrentBuffer()->getEolFormat()));
 	checkUnicodeMenuItems();
 }
 
@@ -6045,10 +6059,10 @@ void Notepad_plus::fullScreenToggle()
 
 		QRect fullscreenArea{};		//QRect used to calculate window fullscreen size
 		//Preset view area, in case something fails, primary monitor values
-		fullscreenArea.top = 0;
-		fullscreenArea.left = 0;
-		fullscreenArea.right = GetSystemMetrics(0);
-		fullscreenArea.bottom = GetSystemMetrics(0);
+		fullscreenArea.setTop(0);
+		fullscreenArea.setLeft(0);
+		fullscreenArea.setRight(GetSystemMetrics(0));
+		fullscreenArea.setBottom(GetSystemMetrics(0));
 
 		//if (_winVersion != WV_NT)
 		{
@@ -6060,8 +6074,8 @@ void Notepad_plus::fullScreenToggle()
 			if (::GetMonitorInfo(currentMonitor, &mi) != false)
 			{
 				fullscreenArea = mi.rcMonitor;
-				fullscreenArea.right -= fullscreenArea.left;
-				fullscreenArea.bottom -= fullscreenArea.top;
+				int tmpLeft = fullscreenArea.left(); fullscreenArea.setRight(fullscreenArea.right() - tmpLeft);
+				int tmpTop = fullscreenArea.top(); fullscreenArea.setBottom(fullscreenArea.bottom() - tmpTop);
 			}
 		}
 #else
@@ -6195,16 +6209,17 @@ void Notepad_plus::fullScreenToggle()
 	// SendMessage(WM_) -> Qt: SIZE, 0, 0);
     if (_beforeSpecialView._isPostIt)
     {
-        // show restore button on the right position
-        QRect rect{};
-        _restoreButton.getHSelf()->frameGeometry();
-        int w = rect.right - rect.left;
-        int h = rect.bottom - rect.top;
+        QRect rect = _restoreButton.getHSelf()->frameGeometry();
+        int w = rect.width();
+        int h = rect.height();
 
-        QRect nppRect;
-        this->getHSelf()->frameGeometry();
-        int x = nppRect.right - w - w;
-        int y = nppRect.top + 1;
+
+
+
+
+        QRect nppRect = this->getHSelf()->frameGeometry();
+        int x = nppRect.left() + nppRect.width() - 2 * w;
+        int y = nppRect.top() + 1;
         // MoveWindow -> QWidget::setGeometry: _restoreButton.getHSelf(), x, y, w, h, false);
     }
 }
@@ -6275,10 +6290,9 @@ void Notepad_plus::postItToggle()
         int w = rect.width();
 	    int h = rect.height();
 
-        QRect nppRect;
-        this->getHSelf()->frameGeometry();
-        int x = nppRect.right - w - w;
-        int y = nppRect.top + 1;
+        QRect nppRect = this->getHSelf()->frameGeometry();
+        int x = nppRect.right() - w - w;
+        int y = nppRect.top() + 1;
         // MoveWindow -> QWidget::setGeometry: _restoreButton.getHSelf(), x, y, w, h, false);
 
         _pEditView->grabFocus();
@@ -6919,7 +6933,7 @@ void Notepad_plus::notifyBufferChanged(Buffer * buffer, int mask)
 		checkUnicodeMenuItems(/*buffer->getUnicodeMode()*/);
 		setUniModeText();
 		setDisplayFormat(buffer->getEolFormat());
-		enableConvertMenuItems(buffer->getEolFormat());
+		enableConvertMenuItems(static_cast<EolType>(buffer->getEolFormat()));
 	}
 
 	if (mask & (BufferChangeUnicode))
@@ -6955,7 +6969,7 @@ void Notepad_plus::notifyBufferActivated(BufferID bufid, int view)
 	checkUnicodeMenuItems(/*buf->getUnicodeMode()*/);
 	setUniModeText();
 	setDisplayFormat(buf->getEolFormat());
-	enableConvertMenuItems(buf->getEolFormat());
+	enableConvertMenuItems(static_cast<EolType>(buf->getEolFormat()));
 	wstring dir(buf->getFullPathName());
 	pathRemoveFileSpec(dir);
 	setWorkingDir(dir.c_str());
@@ -7529,10 +7543,10 @@ void Notepad_plus::launchDocumentListPanel(bool changeFromBtnCmd)
 		_pDocumentListPanel = new VerticalFileSwitcher;
 
 		
-		int tabIconSet = changeFromBtnCmd ? -1 : NppDarkMode::getTabIconSet(NppDarkMode::isEnabled());
+		int tabIconSet = changeFromBtnCmd ? -1 : NppDarkMode::getTabIconSet(NppDarkMode::isEnabled_Static());
 
 		if (tabIconSet == -1)
-			tabIconSet = (((tabBarStatus & TAB_ALTICONS) == TAB_ALTICONS) ? 1 : NppDarkMode::isEnabled() ? 2 : 0);
+			tabIconSet = (((tabBarStatus & TAB_ALTICONS) == TAB_ALTICONS) ? 1 : NppDarkMode::isEnabled_Static() ? 2 : 0);
 
 		HIMAGELIST hImgLst = _mainDocTab.getImgLst(tabIconSet);
 
@@ -8635,7 +8649,7 @@ void Notepad_plus::refreshDarkMode(bool resetStyle)
 			NppDarkMode::instance().applyToWidget(_pClipboardHistoryPanel->window()); // NPPM_INTERNAL_REFRESHDARKMODE
 		}
 
-		const int tabIconSet = NppDarkMode::getTabIconSet(NppDarkMode::isEnabled());
+		const int tabIconSet = NppDarkMode::getTabIconSet(NppDarkMode::isEnabled_Static());
 		if (tabIconSet != -1)
 		{
 			_preference._tabbarSubDlg.setTabbarAlternateIcons(tabIconSet == 1);
@@ -8646,7 +8660,7 @@ void Notepad_plus::refreshDarkMode(bool resetStyle)
 			const bool isChecked = _preference._generalSubDlg.isCheckedOrNot(IDC_CHECK_TAB_ALTICONS);
 			if (!isChecked)
 			{
-				// SendMessage(NPPM_) -> Qt: INTERNAL_CHANGETABBARICONSET, static_cast<quintptr>(false), NppDarkMode::isEnabled() ? 2 : 0);
+				// SendMessage(NPPM_) -> Qt: INTERNAL_CHANGETABBARICONSET, static_cast<quintptr>(false), NppDarkMode::isEnabled_Static() ? 2 : 0);
 			}
 		}
 
@@ -8724,7 +8738,7 @@ void Notepad_plus::refreshDarkMode(bool resetStyle)
 
 		if (NppDarkMode::isExperimentalSupported())
 		{
-			NppDarkMode::allowDarkModeForApp(NppDarkMode::isEnabled());
+			NppDarkMode::allowDarkModeForApp(NppDarkMode::isEnabled_Static());
 
 			NppDarkMode::setDarkTitleBar(this->getHSelf());
 			// SetWindowPos -> QWidget: this->getHSelf(), nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOQSize | SWP_NOZORDER | SWP_FRAMECHANGED);
@@ -8775,7 +8789,7 @@ int Notepad_plus::getIcoID(DockingDlgInterface* panel)
 {
 	if (_toolBar.getState() == TB_STANDARD)
 		return panel->getIconIDs().at(0);
-	if (NppDarkMode::isEnabled())
+	if (NppDarkMode::isEnabled_Static())
 		return panel->getIconIDs().at(1);
 	return panel->getIconIDs().at(2);
 }
@@ -9167,9 +9181,9 @@ void Notepad_plus::updateCommandShortcuts()
 				shortcutName = menuName;
 		}
 
-		csc.setName(wstring2string(menuName, CP_UTF8).c_str(), wstring2string(shortcutName, CP_UTF8).c_str());
+		csc.setName(QString::fromStdWString(menuName), QString::fromStdWString(shortcutName));
 
-		csc.setCategoryFromMenu(_mainMenuHandle);
+		// TODO: setCategoryFromMenu — Win32 menu category lookup not yet lifted
 	}
 }
 
@@ -9220,10 +9234,10 @@ void Notepad_plus::clearChangesHistory(int iView)
 // Based on https://github.com/notepad-plus-plus/notepad-plus-plus/issues/12248#issuecomment-1258561261.
 void Notepad_plus::changedHistoryGoTo(int idGoTo)
 {
-	int mask =	(1 << SC_MARKNUM_HISTORY_REVERTED_TO_ORIGIN) |
-				(1 << SC_MARKNUM_HISTORY_SAVED) |
-				(1 << SC_MARKNUM_HISTORY_MODIFIED) |
-				(1 << SC_MARKNUM_HISTORY_REVERTED_TO_MODIFIED);
+	int mask =	(1 << npp_sci::SC_MARKNUM_HISTORY_REVERTED_TO_ORIGIN) |
+				(1 << npp_sci::SC_MARKNUM_HISTORY_SAVED) |
+				(1 << npp_sci::SC_MARKNUM_HISTORY_MODIFIED) |
+				(1 << npp_sci::SC_MARKNUM_HISTORY_REVERTED_TO_MODIFIED);
 
 	intptr_t line = -1;
 	intptr_t blockIndicator = _pEditView->getCurrentLineNumber();
@@ -9283,7 +9297,7 @@ void Notepad_plus::changedHistoryGoTo(int idGoTo)
 
 	if (line != -1)
 	{
-		_pEditView->execute(SCI_ENSUREVISIBLEENFORCEPOLICY, line);
+		_pEditView->execute(npp_sci::SCI_ENSUREVISIBLEENFORCEPOLICY, line);
 		_pEditView->execute(SCI_GOTOLINE, line);
 	}
 	else
@@ -9295,7 +9309,7 @@ void Notepad_plus::changedHistoryGoTo(int idGoTo)
 	}
 }
 
-QMenu* Notepad_plus::createMenuFromMenu(QMenu* /*hSourceMenu*/, const std::vector<int>& commandIds)
+QMenu* Notepad_plus::createMenuFromMenu(QWidget* /*hSourceMenu*/, const std::vector<int>& commandIds)
 {
 	QMenu* hNewMenu = new QMenu();
 	for (const auto& cmdID : commandIds)
@@ -9405,7 +9419,7 @@ void Notepad_plus::changeReadOnlyUserModeForAllOpenedTabs(const bool ro)
 	}
 }
 
-QAction* Notepad_plus::findActionById(QMenu* menu, int cmdID) const
+QAction* Notepad_plus::findActionById(QWidget* menu, int cmdID) const
 {
 	if (!menu) return nullptr;
 	for (QAction* action : menu->actions())
@@ -9434,8 +9448,8 @@ void Notepad_plus::onTrayIconDoubleClicked()
 	_dockingManager.showFloatingContainers(true);
 	restoreMinimizeDialogs();
 
-	if (!this->isPrelaunch())
-		_pTrayIco->removeFromTray();
+	// isPrelaunch() removed
+	// _pTrayIco->removeFromTray();
 }
 
 void Notepad_plus::onTrayIconRightClicked()

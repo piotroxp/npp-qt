@@ -4,6 +4,7 @@
 
 #include "ProjectPanel.h"
 #include "DockingWnd.h"
+#include "NppConstants.h"
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QToolBar>
@@ -346,7 +347,7 @@ bool ProjectPanel::readWorkSpace(const QString& projectFileName)
             {
                 if (xml.name() == QStringLiteral("Project"))
                 {
-                    auto* root = _treeWidget->topLevelItem(0);
+                    ProjectTreeItem* root = dynamic_cast<ProjectTreeItem*>(_treeWidget->topLevelItem(0));
                     if (!root)
                     {
                         root = new ProjectTreeItem(_treeWidget);

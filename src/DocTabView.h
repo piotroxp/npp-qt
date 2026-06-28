@@ -15,6 +15,8 @@ public:
     ~DocTabView() override {}
 
     void init(QWidget* parent, ScintillaComponent* pView, int iconChoice, int buttonsStatus);
+    void init(void* /*HINSTANCE*/, QWidget*& parent, ScintillaComponent* pView, unsigned char& iconIdx, unsigned char& buttonStatus) { Q_UNUSED(iconIdx); Q_UNUSED(buttonStatus); init(parent, pView, 0, 0); }
+    void destroy(bool withRebuild = false, bool force = false);
     void addBuffer(BufferID buffer);
     void closeBuffer(BufferID buffer);
     void bufferUpdated(const Buffer* buffer, int mask);

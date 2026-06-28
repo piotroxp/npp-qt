@@ -275,10 +275,10 @@ void DocumentSnapshotWidget::saveCurrentSnapshot(const ScintillaEditView& editVi
 
     // Width calculation
     QRect editorRect;
-    editView.getClientRect(editorRect);
+    editorRect = editView.getClientRect();
     intptr_t marginWidths = 0;
     for (int m = 0; m < 4; ++m) {
-        marginWidths += editView.execute(SCI_GETMARGINWIDTHN, m);
+        marginWidths += editView.execute(npp_sci::SCI_GETMARGINWIDTHN, m);
     }
     double editViewWidth = editorRect.width() - marginWidths;
     double editViewHeight = editorRect.height();
@@ -395,7 +395,7 @@ void DocumentMap::reloadMap()
 
     // Folding
     std::vector<size_t> lineStateVector;
-    (*_ppEditView)->getCurrentFoldStates(lineStateVector);
+    lineStateVector = (*_ppEditView)->getCurrentFoldStates();
     _pMapView->syncFoldStateWith(lineStateVector);
 
     // Wrapping
@@ -510,7 +510,7 @@ void DocumentMap::scrollMap()
         return;
 
     QRect rcEditView;
-    (*_ppEditView)->getClientRect(rcEditView);
+    rcEditView = (*_ppEditView)->getClientRect();
     intptr_t higherPos = (*_ppEditView)->execute(SCI_POSITIONFROMPOINT, 0, 0);
     intptr_t lowerPos = (*_ppEditView)->execute(SCI_POSITIONFROMPOINT, rcEditView.width() - 1, rcEditView.height() - 1);
 
@@ -518,7 +518,7 @@ void DocumentMap::scrollMap()
     _pMapView->execute(SCI_GOTOPOS, lowerPos);
 
     QRect rcMapView;
-    _pMapView->getClientRect(rcMapView);
+    rcMapView = _pMapView->getClientRect();
     intptr_t higherY = _pMapView->execute(SCI_POINTYFROMPOSITION, 0, higherPos);
     intptr_t lowerY = 0;
     intptr_t lineHeightMapView = _pMapView->execute(SCI_TEXTHEIGHT, 0);
@@ -694,9 +694,8 @@ intptr_t DocumentMap::run_dlgProc(unsigned int message, intptr_t wParam, intptr_
     {
         if (_ppEditView && *_ppEditView)
         {
-            QWheelEvent event(QEvent::Wheel, QPoint(), QPoint(), QPoint(),
-                static_cast<Qt::KeyboardModifiers>(0),
-                static_cast<int>(wParam), Qt::NoButton, Qt::NoModifier, Qt::ScrollMild, Qt::MouseEventNotSynthesized);
+            QWheelEvent event(QPointF(), QPointF(), QPoint(), QPoint(0, static_cast<int>(wParam)),
+                Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false, Qt::MouseEventNotSynthesized);
             QCoreApplication::sendEvent((*_ppEditView)->getHSelf(), &event);
         }
         return TRUE;

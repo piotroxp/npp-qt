@@ -850,6 +850,11 @@ void cutStringBy(const wchar_t* str2cut, std::vector<std::wstring>& patternVect,
 		patternVect.emplace_back(pBegin, pEnd);
 }
 
+void LocalizationSwitcher::setFileName(const QString& fn)
+{
+    _fileName = fn.toStdString();
+}
+
 std::wstring LocalizationSwitcher::getLangFromXmlFileName(const wchar_t* fn)
 {
 	for (const auto& locDef : _localizationList)
@@ -5745,24 +5750,24 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		// <GUIConfig name="AppPosition" x="0" y="0" width="1100" height="700" isMaximized="no" />
 		else if (std::strcmp(nm, "AppPosition") == 0)
 		{
-			RECT oldRect = _nppGUI._appPos;
+			QRect oldRect = _nppGUI._appPos;
 			bool fuckUp = true;
 
 			if (const char* val = NppXml::attribute(childNode, "x"); val)
 			{
-				_nppGUI._appPos.left = std::stoi(val);
+				_nppGUI._appPos.setLeft(std::stoi(val));
 
 				if (val = NppXml::attribute(childNode, "y"); val)
 				{
-					_nppGUI._appPos.top = std::stoi(val);
+					_nppGUI._appPos.setTop(std::stoi(val));
 
 					if (val = NppXml::attribute(childNode, "width"); val)
 					{
-						_nppGUI._appPos.right = std::stoi(val);
+						_nppGUI._appPos.setRight(std::stoi(val));
 
 						if (val = NppXml::attribute(childNode, "height"); val)
 						{
-							_nppGUI._appPos.bottom = std::stoi(val);
+							_nppGUI._appPos.setBottom(std::stoi(val));
 							fuckUp = false;
 						}
 					}
@@ -5776,24 +5781,24 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		// <GUIConfig name="FindWindowPosition" left="0" top="0" right="0" bottom="0" isLessModeOn="no" />
 		else if (std::strcmp(nm, "FindWindowPosition") == 0)
 		{
-			RECT oldRect = _nppGUI._findWindowPos;
+			QRect oldRect = _nppGUI._findWindowPos;
 			bool incomplete = true;
 
 			if (const char* val = NppXml::attribute(childNode, "left"); val)
 			{
-				_nppGUI._findWindowPos.left = std::stoi(val);
+				_nppGUI._findWindowPos.setLeft(std::stoi(val));
 
 				if (val = NppXml::attribute(childNode, "top"); val)
 				{
-					_nppGUI._findWindowPos.top = std::stoi(val);
+					_nppGUI._findWindowPos.setTop(std::stoi(val));
 
 					if (val = NppXml::attribute(childNode, "right"); val)
 					{
-						_nppGUI._findWindowPos.right = std::stoi(val);
+						_nppGUI._findWindowPos.setRight(std::stoi(val));
 
 						if (val = NppXml::attribute(childNode, "bottom"); val)
 						{
-							_nppGUI._findWindowPos.bottom = std::stoi(val);
+							_nppGUI._findWindowPos.setBottom(std::stoi(val));
 							incomplete = false;
 						}
 					}
@@ -6039,10 +6044,10 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			_nppGUI._printSettings._headerFontSize = NppXml::intAttribute(childNode, "headerFontSize", 0);
 			_nppGUI._printSettings._footerFontSize = NppXml::intAttribute(childNode, "footerFontSize", 0);
 
-			_nppGUI._printSettings._marge.left = NppXml::intAttribute(childNode, "margeLeft", 0);
-			_nppGUI._printSettings._marge.top = NppXml::intAttribute(childNode, "margeTop", 0);
-			_nppGUI._printSettings._marge.right = NppXml::intAttribute(childNode, "margeRight", 0);
-			_nppGUI._printSettings._marge.bottom = NppXml::intAttribute(childNode, "margeBottom", 0);
+			_nppGUI._printSettings._marge.setLeft(NppXml::intAttribute(childNode, "margeLeft", 0);
+			_nppGUI._printSettings._marge.setTop(NppXml::intAttribute(childNode, "margeTop", 0);
+			_nppGUI._printSettings._marge.setRight(NppXml::intAttribute(childNode, "margeRight", 0);
+			_nppGUI._printSettings._marge.setBottom(NppXml::intAttribute(childNode, "margeBottom", 0);
 		}
 		
 		else if (std::strcmp(nm, "ScintillaPrimaryView") == 0)

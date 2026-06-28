@@ -878,7 +878,7 @@ public:
     bool switchToLang(const wchar_t *lang2switch) const;
     size_t size() const { return _localizationList.size(); }
     std::pair<std::wstring, std::wstring> getElementFromIndex(size_t index) const;
-    void setFileName(const char *fn) { if (fn) _fileName = fn; }
+    void setFileName(const QString& fn);
     const std::string& getFileName() const { return _fileName; }
 private:
     std::vector<std::pair<std::wstring, std::wstring>> _localizationList;

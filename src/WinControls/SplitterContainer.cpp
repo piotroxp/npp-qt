@@ -134,7 +134,7 @@ void Splitter::drawArrow(QPainter& painter, const QRect& rect, Arrow direction) 
 // =============================================================================
 
 SplitterContainer::SplitterContainer(QWidget* parent)
-    : QWidget(parent)
+    : Window(parent)
 {
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);

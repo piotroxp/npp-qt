@@ -285,6 +285,12 @@ public:
     bool isCompatibleTo(const Version& from, const Version& to) const;
     bool isCompatibleTo(const Version& minVer, bool minInclusive, const Version& maxVer, bool maxInclusive) const;
 
+    // Accessors for private members
+    int major() const { return _major; }
+    int minor() const { return _minor; }
+    int patch() const { return _patch; }
+    int build() const { return _build; }
+
 private:
     int _major = 0;
     int _minor = 0;
@@ -347,3 +353,25 @@ inline wchar_t* wcscpy_s(wchar_t* dest, const wchar_t* src) {
     return std::wcscpy(dest, src);
 }
 #endif
+
+// =============================================================================
+// Win32 Shell / CRT API stubs for Linux
+// These provide Windows-compatible interfaces without the Windows headers.
+// =============================================================================
+
+// Windows Shell PathFindExtension — find the file extension in a path
+inline const wchar_t* PathFindExtension(const wchar_t* path) {
+    if (!path) return path;
+    const wchar_t* ext = wcsrchr(path, L'.');
+    return ext ? ext : path + wcslen(path);
+}
+inline QString PathFindExtension(const QString& path) {
+    int dot = path.lastIndexOf('.');
+    return dot >= 0 ? path.mid(dot) : QString();
+}
+
+// Windows CRT _wfopen — wide-character file open, mapped to POSIX fopen
+inline FILE* _wfopen(const wchar_t* path, const wchar_t* mode) {
+    return fopen(QString::fromWCharArray(path).toLocal8Bit().constData(),
+                 QString::fromWCharArray(mode).toLocal8Bit().constData());
+}

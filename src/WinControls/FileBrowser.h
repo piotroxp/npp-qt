@@ -79,6 +79,14 @@ public:
     bool addToStructure(QString& fullpath, const QVector<QString>& linarPathArray);
     bool removeFromStructure(const QVector<QString>& linarPathArray);
     bool renameInStructure(const QVector<QString>& linarPathArrayFrom, const QVector<QString>& linarPathArrayTo);
+
+    // Public accessors for private members
+    FolderInfo* parent() const { return _parent; }
+    QVector<FolderInfo>& subFolders() { return _subFolders; }
+    const QVector<FolderInfo>& subFolders() const { return _subFolders; }
+    QVector<FileInfo>& files() { return _files; }
+    const QVector<FileInfo>& files() const { return _files; }
+
 private:
     QVector<FolderInfo> _subFolders;
     QVector<FileInfo> _files;

@@ -545,7 +545,7 @@ bool FunctionParsersManager::parse(std::vector<foundInfo>& foundInfos,
     if (!fp)
         return false;
 
-    size_t docLen = (*_ppEditView)->execute(SCI_GETTEXTLENGTH);
+    size_t docLen = (*_ppEditView)->execute(npp_sci::SCI_GETTEXTLENGTH);
     fp->parse(foundInfos, 0, docLen, _ppEditView);
 
     return true;
@@ -567,7 +567,7 @@ size_t FunctionZoneParser::getBodyClosePos(
     if (!(*ppEditView))
         return begin;
 
-    size_t docLen = (*ppEditView)->execute(SCI_GETTEXTLENGTH);
+    size_t docLen = (*ppEditView)->execute(npp_sci::SCI_GETTEXTLENGTH);
     if (begin >= docLen)
         return docLen;
 
@@ -586,7 +586,7 @@ size_t FunctionZoneParser::getBodyClosePos(
         if (targetStart >= 0) {
             intptr_t targetEnd = (*ppEditView)->execute(SCI_GETTARGETEND);
             if (!isInZones(targetStart, commentZones)) {
-                intptr_t tmpStart = (*ppEditView)->searchInTarget(bodyOpenSymbol, targetStart, targetEnd);
+                intptr_t tmpStart = (*ppEditView)->searchInTarget(QString::fromLatin1(bodyOpenSymbol), static_cast<size_t>(targetStart), static_cast<size_t>(targetEnd));
                 if (tmpStart >= 0) {
                     ++cntOpen;
                 } else {
@@ -632,7 +632,7 @@ void FunctionZoneParser::classParse(
     static constexpr int flags = SCFIND_REGEXP | SCFIND_POSIX | SCFIND_REGEXP_DOTMATCHESNL;
 
     (*ppEditView)->execute(SCI_SETSEARCHFLAGS, flags);
-    intptr_t targetStart = (*ppEditView)->searchInTarget(_rangeExpr, begin, end);
+    intptr_t targetStart = (*ppEditView)->searchInTarget(QString::fromStdString(_rangeExpr), static_cast<size_t>(begin), static_cast<size_t>(end));
 
     while (targetStart >= 0) {
         intptr_t targetEnd = (*ppEditView)->execute(SCI_GETTARGETEND);
@@ -663,7 +663,7 @@ void FunctionZoneParser::classParse(
         }
 
         begin = targetStart + (targetEnd - targetStart);
-        targetStart = (*ppEditView)->searchInTarget(_rangeExpr, begin, end);
+        targetStart = (*ppEditView)->searchInTarget(QString::fromStdString(_rangeExpr), static_cast<size_t>(begin), static_cast<size_t>(end));
     }
 }
 
@@ -684,7 +684,7 @@ void FunctionParser::getCommentZones(std::vector<std::pair<size_t, size_t>>& com
     static constexpr int flags = SCFIND_REGEXP | SCFIND_POSIX | SCFIND_REGEXP_DOTMATCHESNL;
 
     (*ppEditView)->execute(SCI_SETSEARCHFLAGS, flags);
-    intptr_t targetStart = (*ppEditView)->searchInTarget(_commentExpr, begin, end);
+    intptr_t targetStart = (*ppEditView)->searchInTarget(QString::fromStdString(_commentExpr), static_cast<size_t>(begin), static_cast<size_t>(end));
 
     while (targetStart >= 0) {
         intptr_t targetEnd = (*ppEditView)->execute(SCI_GETTARGETEND);
@@ -699,7 +699,7 @@ void FunctionParser::getCommentZones(std::vector<std::pair<size_t, size_t>>& com
             break;
 
         begin = targetStart + foundTextLen;
-        targetStart = (*ppEditView)->searchInTarget(_commentExpr, begin, end);
+        targetStart = (*ppEditView)->searchInTarget(QString::fromStdString(_commentExpr), static_cast<size_t>(begin), static_cast<size_t>(end));
     }
 }
 

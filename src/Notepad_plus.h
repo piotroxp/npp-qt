@@ -25,6 +25,7 @@
 #include "DockingCont.h"
 #include "WinControls/PluginsAdmin.h"
 #include "StubDialogs.h"
+#include "MISC/md5/md5Dlgs.h"
 #include "MISC/Common/Common.h"
 // Qt6 port
 #include <QWidget>
@@ -333,7 +334,7 @@ public:
 	void changeReadOnlyUserModeForAllOpenedTabs(const bool ro);
 
 	// Helper: find QAction with matching data (cmdID) in a menu and its submenus
-	QAction* findActionById(QMenu* menu, int cmdID) const;
+	QAction* findActionById(QWidget* menu, int cmdID) const;
 
 private:
     Window* _pMainWindow = nullptr;
@@ -401,7 +402,7 @@ private:
 	LastRecentFileList _lastRecentFileList;
 
 	WindowsMenu _windowsMenu;
-	QMenu* _mainMenuHandle = NULL;
+	QMenuBar* _mainMenuHandle = nullptr;
 
 	bool _sysMenuEntering = false;
 
@@ -453,6 +454,7 @@ private:
 		void onTrayIconDoubleClicked();
 		void onTrayIconRightClicked();
 		void onTrayIconMiddleClicked();
+		bool isPrelaunch() const { return false; }  // stub: prelaunch mode N/A on Linux
 		void onTrayMenuAction(QAction* action);
 
 	intptr_t _zoomOriginalValue = 0;
@@ -736,7 +738,7 @@ private:
 	void clearChangesHistory(int iView);
 	void changedHistoryGoTo(int idGoTo);
 
-	QMenu* createMenuFromMenu(QMenu* hSourceMenu, const std::vector<int>& commandIds);
+	QMenu* createMenuFromMenu(QWidget* hSourceMenu, const std::vector<int>& commandIds);
 	bool notifyTBShowMenu(int buttonId, const char* menuPosId);
 	bool notifyTBShowMenu(int buttonId, const char* menuPosId, const std::vector<int>& cmdIDs);
 

@@ -159,6 +159,9 @@ public:
     LangType getLangType() const { return _lang; }
     // Returns the language name as a QString for Scintilla lexer lookup (stub)
     QString language() const { return QString(); }
+    const wchar_t* getCommentStart() const { return L""; }
+    const wchar_t* getCommentEnd() const { return L""; }
+    const wchar_t* getCommentLineSymbol() const { return L""; }
     void setLangType(LangType lang, const wchar_t* userLangName = L"");
     UniMode getUnicodeMode() const { return _unicodeMode; }
     void setUnicodeMode(UniMode mode);
