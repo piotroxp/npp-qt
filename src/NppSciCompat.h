@@ -234,6 +234,7 @@ namespace npp_sci {
     constexpr int SCFIND_REGEXP      = 0x00200000;
     constexpr int SCFIND_POSIX       = 0x00400000;  // from Scintilla.iface
     constexpr int SCFIND_REGEXP_DOTMATCHESNL = 0x10000000;  // from BoostRegexSearch.h
+    constexpr int SCFIND_WORDSTART   = 0x00000008;  // match at word start only
 
     // ==== Universal styles ====
     constexpr int SCE_UNIVERSAL_FOUND_STYLE_SMART = 33;
@@ -774,6 +775,7 @@ using npp_sci::SCFIND_WHOLEWORD;
 using npp_sci::SCFIND_REGEXP;
 using npp_sci::SCFIND_POSIX;
 using npp_sci::SCFIND_REGEXP_DOTMATCHESNL;
+using npp_sci::SCFIND_WORDSTART;
 using npp_sci::SC_SEL_RECTANGLE;
 using npp_sci::SC_SEL_THIN;
 // Additional using declarations for newly added npp_sci:: constants

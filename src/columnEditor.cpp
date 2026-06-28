@@ -7,7 +7,7 @@
 #include <QSpinBox>
 #include <QMessageBox>
 
-void ColumnEditorDlg::init(QWidget* parent, ScintillaComponent** ppEditView)
+void ColumnEditorDlg::init(void* /*hInst*/, QWidget*& parent, ScintillaComponent** ppEditView)
 {
     if (!ppEditView) throw std::runtime_error("ColumnEditorDlg::init: ppEditView is null.");
     _ppEditView = ppEditView;

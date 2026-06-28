@@ -540,6 +540,20 @@ void ScintillaComponent::getText(char* dest, size_t start, size_t end) const
     send(SCI_GETTEXTRANGE, 0, reinterpret_cast<sptr_t>(&tr));
 }
 
+void ScintillaComponent::getGenericText(char* dest, size_t bufSize, size_t start, size_t end) const
+{
+    if (!dest || bufSize == 0 || start >= end)
+        return;
+
+    // Clamp end to not exceed bufSize
+    size_t len = end - start;
+    if (len + 1 > bufSize)
+        len = bufSize - 1;
+
+    getText(dest, start, start + len);
+    dest[len] = '\0';
+}
+
 QString ScintillaComponent::getTextAsString(size_t start, size_t end) const
 {
     if (start >= end)
@@ -682,6 +696,17 @@ intptr_t ScintillaComponent::replaceTarget(const char* replacement, intptr_t fro
     if (toPos >= 0)
         send(SCI_SETTARGETEND, static_cast<size_t>(toPos));
     return send(SCI_REPLACETARGET, len, reinterpret_cast<sptr_t>(replacement));
+}
+
+intptr_t ScintillaComponent::replaceTarget(const std::wstring& replacement, intptr_t fromPos, intptr_t toPos)
+{
+    QString qstr = QString::fromStdWString(replacement);
+    QByteArray utf8 = qstr.toUtf8();
+    if (fromPos >= 0)
+        send(SCI_SETTARGETSTART, static_cast<size_t>(fromPos));
+    if (toPos >= 0)
+        send(SCI_SETTARGETEND, static_cast<size_t>(toPos));
+    return send(SCI_REPLACETARGET, utf8.size(), reinterpret_cast<sptr_t>(utf8.constData()));
 }
 
 // =============================================================================
@@ -1250,10 +1275,37 @@ void ScintillaComponent::restoreCurrentPos()
     send(SCI_SETSCROLLWIDTH, _savedScrollWidth);
 }
 
+void ScintillaComponent::getVisibleStartAndEndPosition(intptr_t* startPos, intptr_t* endPos) const
+{
+    if (startPos) *startPos = 0;
+    if (endPos) *endPos = send(SCI_GETLENGTH);
+}
+
 void ScintillaComponent::restoreScrollState()
 {
     send(SCI_SETFIRSTVISIBLELINE, _savedFirstVisibleLine);
     send(SCI_SETXOFFSET, _savedXOffset);
+}
+
+std::pair<size_t, size_t> ScintillaComponent::getSelectedCharsAndLinesCount(size_t) const
+{
+    size_t chars = 0;
+    size_t lines = 0;
+    size_t numSel = send(SCI_GETSELECTIONS);
+    if (numSel == 1 && send(SCI_GETSELECTIONEMPTY)) {
+        chars = 0;
+        lines = 0;
+    } else {
+        for (size_t i = 0; i < numSel; ++i) {
+            size_t start = send(SCI_GETSELECTIONNSTART, i);
+            size_t end = send(SCI_GETSELECTIONNEND, i);
+            chars += (end - start);
+            size_t line1 = send(SCI_LINEFROMPOSITION, start);
+            size_t line2 = send(SCI_LINEFROMPOSITION, end);
+            lines += (line2 - line1 + 1);
+        }
+    }
+    return {chars, lines};
 }
 
 void ScintillaComponent::restoreSelectionState()

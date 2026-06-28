@@ -111,7 +111,7 @@ set(WINCONTROLS_PANELS
 set(WINCONTROLS_ADVANCED
     src/WinControls/Preference.h
     src/WinControls/Preference.cpp
-    WinControls/Preference/preference_rc.h
+    src/WinControls/Preference/preference_rc.h
     src/WinControls/ClipboardHistory.h
     src/WinControls/ClipboardHistory.cpp
     src/WinControls/ContextMenu.h
@@ -133,7 +133,7 @@ set(WINCONTROLS_ADVANCED
     src/WinControls/PluginsAdmin.cpp
     src/WinControls/ProjectPanel.h
     src/WinControls/ProjectPanel.cpp
-    WinControls/ProjectPanel/ProjectPanel_rc.h
+    src/WinControls/ProjectPanel/ProjectPanel_rc.h
     src/WinControls/ShortcutMapper.h
     src/WinControls/ShortcutMapper.cpp
 )
@@ -158,9 +158,9 @@ set(WINCONTROLS_UTILS
     src/WinControls/ImageListSet.cpp
     src/WinControls/ReadDirectoryChanges.h
     src/WinControls/ReadDirectoryChanges.cpp
-    WinControls/ReadDirectoryChanges/ReadDirectoryChangesPrivate.h
-    WinControls/ReadDirectoryChanges/ReadDirectoryChangesPrivate.cpp
-    WinControls/ReadDirectoryChanges/ThreadSafeQueue.h
+    src/WinControls/ReadDirectoryChanges/ReadDirectoryChangesPrivate.h
+    src/WinControls/ReadDirectoryChanges/ReadDirectoryChangesPrivate.cpp
+    src/WinControls/ReadDirectoryChanges/ThreadSafeQueue.h
     src/WinControls/CustomFileDialog.h
     src/WinControls/CustomFileDialog.cpp
     # Resource ID constants (lifted from Win32 .rc.h → Qt6)

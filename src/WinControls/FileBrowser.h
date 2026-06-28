@@ -22,6 +22,7 @@
 #include <QClipboard>
 #include <QApplication>
 #include <QSet>
+#include "DockingWnd.h"
 
 // =============================================================================
 // SortingData — lParam wrapper for tree items (mirrors Win32 SortingData4lParam)
@@ -212,13 +213,15 @@ private:
 // FileBrowser — main docking panel (lifted from FileBrowser)
 // =============================================================================
 
-class FileBrowser : public QWidget
+class FileBrowser : public DockingDlgInterface
 {
     Q_OBJECT
 
 public:
     explicit FileBrowser(QWidget* parent = nullptr);
     ~FileBrowser() override;
+
+    intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam) override;
 
     void setParentWindow(QWidget* parent) { _hParent = parent; }
     void init(QApplication* app, QWidget* parent);

@@ -28,7 +28,7 @@ FindReplaceDlg::FindReplaceDlg() : QWidget() {}
 
 FindReplaceDlg::~FindReplaceDlg() = default;
 
-void FindReplaceDlg::init(QWidget* parent, ScintillaComponent** ppEditView)
+void FindReplaceDlg::init(void* /*hInst*/, QWidget*& parent, ScintillaComponent** ppEditView)
 {
     if (!ppEditView) throw std::runtime_error("FindReplaceDlg::init: ppEditView is null.");
     _ppEditView = ppEditView;

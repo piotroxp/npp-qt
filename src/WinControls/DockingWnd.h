@@ -119,6 +119,9 @@ public:
     // Win32 message dispatcher (pure virtual — must be overridden)
     virtual intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam) = 0;
 
+    // getHSelf() — returns this widget (mirrors Win32 getHSelf())
+    QWidget* getHSelf() const { return const_cast<DockingDlgInterface*>(this); }
+
 protected:
     int _panelID = 0;
     QString _dockID;

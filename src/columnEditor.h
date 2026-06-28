@@ -20,7 +20,7 @@ class ColumnEditorDlg : public QDialog
     Q_OBJECT
 public:
     ColumnEditorDlg() : QDialog() {}
-    void init(QWidget* parent, ScintillaComponent** ppEditView);
+    void init(void* hInst, QWidget*& parent, ScintillaComponent** ppEditView);
     void doDialog(bool isRTL = false);
 
 public slots:

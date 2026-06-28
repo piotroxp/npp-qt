@@ -22,9 +22,15 @@
 
 #include <QTableWidget>
 #include <QTableWidgetItem>
-#include <QTextCodec>
 #include <QString>
 #include <QVector>
+
+AsciiListView::AsciiListView(QWidget* parent)
+    : ListView()
+{
+    // Parent will be set during init() call
+    Q_UNUSED(parent);
+}
 
 // Map ASCII value to readable name string
 QString AsciiListView::getAscii(unsigned char value)
@@ -65,15 +71,8 @@ QString AsciiListView::getAscii(unsigned char value)
         case 32:  return QStringLiteral("Space");
         case 127: return QStringLiteral("DEL");
         default: {
-            // Use the current codepage to decode the byte
-            QTextCodec* codec = QTextCodec::codecForMib(_codepage > 0 ? _codepage : 4); // 4 = Latin1
-            if (codec) {
-                QByteArray bytes;
-                bytes.append(static_cast<char>(value));
-                return codec->toUnicode(bytes);
-            }
             // Fallback: try Latin1
-            return QString(QChar::fromLatin1(static_cast<QChar::ucs4char>(value)));
+            return QString(QChar(static_cast<char>(value)));
         }
     }
 }
@@ -297,18 +296,10 @@ void AsciiListView::setValues(int codepage)
 
         if (codepage == 0 || codepage == 1252) {
             // CP1252: printable ASCII or high CP1252 chars get numeric entities
-            if ((i >= 32 && i <= 126 && i != 45) || (i >= 160 && i <= 255)) {
-                int n = getHtmlNumber(static_cast<unsigned char>(i));
-                if (n > 0) {
-                    htmlNumber = QStringLiteral("&#%1;").arg(n);
-                    htmlHexNumber = QStringLiteral("&#x%1;").arg(n, 0, 16);
-                }
-            } else {
-                int n = getHtmlNumber(static_cast<unsigned char>(i));
-                if (n > 0) {
-                    htmlNumber = QStringLiteral("&#%1;").arg(n);
-                    htmlHexNumber = QStringLiteral("&#x%1;").arg(n, 0, 16);
-                }
+            int n = getHtmlNumber(static_cast<unsigned char>(i));
+            if (n >= 0) {
+                htmlNumber = QStringLiteral("&#%1;").arg(n);
+                htmlHexNumber = QStringLiteral("&#x%1;").arg(n, 0, 16);
             }
             htmlName = getHtmlName(static_cast<unsigned char>(i));
         } else {

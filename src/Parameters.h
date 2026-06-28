@@ -62,6 +62,7 @@
 #include "Notepad_plus_msgs.h"
 #include "Buffer.h"
 #include "NppDarkMode.h"
+using NppDarkMode::TbIconInfo;
 #include "MISC/Common/keys.h"
 #include "NppXml.h"
 #include "ToolBar.h"
@@ -492,14 +493,7 @@ public:
     bool _doDoubleQuotes = false;
 };
 
-struct TbIconInfo
-{
-    toolBarStatusType _tbIconSet = toolBarStatusType::TB_STANDARD;
-    FluentColor _tbColor = FluentColor::defaultColor;
-    QRgb _tbCustomColor = qRgba(0,0,0,0);
-    bool _tbUseMono = false;
-};
-
+// TbIconInfo struct (in NppDarkMode namespace, made accessible here via using)
 struct AdvOptDefaults final
 {
     std::wstring _xmlFileName;
@@ -510,8 +504,18 @@ struct AdvOptDefaults final
 
 struct AdvancedOptions final
 {
-    AdvOptDefaults _darkDefaults{ L"DarkModeDefault.xml", { toolBarStatusType::TB_SMALL, FluentColor::defaultColor, 0, false }, 2, false };
-    AdvOptDefaults _lightDefaults{ L"", { toolBarStatusType::TB_STANDARD, FluentColor::defaultColor, 0, false }, 0, true };
+    AdvOptDefaults _darkDefaults{
+        L"DarkModeDefault.xml",
+        TbIconInfo{ToolBarStatusType::TB_SMALL, FluentColor::defaultColor, 0, false},
+        2,
+        false
+    };
+    AdvOptDefaults _lightDefaults{
+        L"",
+        TbIconInfo{ToolBarStatusType::TB_STANDARD, FluentColor::defaultColor, 0, false},
+        0,
+        true
+    };
     bool _enableWindowsMode = false;
 };
 
@@ -538,7 +542,7 @@ struct LargeFileRestriction final
 
 struct NppGUI final
 {
-    TbIconInfo _tbIconInfo{ toolBarStatusType::TB_STANDARD, FluentColor::defaultColor, 0, false };
+    TbIconInfo _tbIconInfo{ ToolBarStatusType::TB_STANDARD, FluentColor::defaultColor, 0, false };
     bool _toolbarShow = true;
     bool _statusBarShow = true;
     bool _menuBarShow = true;

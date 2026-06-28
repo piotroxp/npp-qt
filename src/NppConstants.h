@@ -155,11 +155,15 @@ inline constexpr int FILL_FINDWHAT_THRESHOLD_DEFAULT = 0;
 inline constexpr int RECENTFILES_SHOWFULLPATH = 0;
 
 // UDD docked
-inline constexpr int UDD_DOCKED = 0;
+inline constexpr int UDD_DOCKED = 2;
 inline constexpr int UDD_SHOW = 1;
 
 // Position
 inline constexpr int POS_VERTICAL = 0;
+inline constexpr int POS_HORIZONTAL = 1;
+
+// Rebar IDs (stubbed — no REBAR in Qt6)
+inline constexpr int REBAR_BAR_TOOLBAR = 0;
 
 // Virtual key codes used in ShortcutMapper & shortcut.h
 
@@ -247,6 +251,7 @@ using DWORD_PTR = quint64;
 constexpr int IDC_PREV_DOC                  = 0x10000001;
 constexpr int IDC_NEXT_DOC                  = 0x10000002;
 constexpr int IDC_EDIT_TOGGLEMACRORECORDING = 0x10000003;
+constexpr int IDC_CHECK_TAB_ALTICONS        = 0x10000004;  // TabBar alternate icons preference
 
 // Win32 error codes
 inline constexpr DWORD ERROR_SUCCESS = 0;
@@ -345,10 +350,6 @@ enum LangIdxStyle {
 enum class EolType { EolWindows = 0, EolUnix = 1, EolMac = 2, unknown = -1, osdefault = 0 };
 
 // ToolBarStatusType is defined in ToolBar.h (enum class ToolBarDisplayType + using alias)
-enum toolBarStatusType {
-    TBAR_NEW = 0, TBAR_OPEN = 1, TBAR_SAVE = 2, TBAR_CLOSE = 3,
-    TB_STANDARD = 4, TB_SMALL = 0, TB_LARGE = 1, TB_SMALL2 = 2, TB_LARGE2 = 3,
-};
 
 // NumBase enum is defined in Parameters.h (with BASE_10, BASE_16, BASE_16_UPPERCASE, BASE_08, BASE_02)
 
@@ -899,3 +900,8 @@ inline constexpr int MODEVENTMASK_OFF = 0;
 // NOTE: IDOK, IDCANCEL, WM_INITDIALOG, WM_SIZE, WM_DESTROY are already defined
 // in NppConstants.h above (lines 189-190 for IDOK/IDCANCEL, lines ~504-539 for WM_*)
 // with proper #ifndef guards — do NOT add duplicates here.
+
+// Win32 SM_* system metrics (for DPIManagerV2::getSystemMetricsForDpi)
+#ifndef SM_CXMINTRACK
+inline constexpr int SM_CXMINTRACK = 112;  // minimum window drag width (Windows default)
+#endif

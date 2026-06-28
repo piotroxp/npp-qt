@@ -14,6 +14,11 @@ FindCharsInRangeDlg::FindCharsInRangeDlg(QWidget* parent)
     setupUi();
 }
 
+void FindCharsInRangeDlg::init(void* /*hInst*/, QWidget*& /*parent*/)
+{
+    // No-op: dialog is fully constructed in constructor
+}
+
 void FindCharsInRangeDlg::setupUi()
 {
     QVBoxLayout* mainLayout = new QVBoxLayout(this);

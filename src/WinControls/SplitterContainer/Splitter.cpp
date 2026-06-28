@@ -169,7 +169,7 @@ int Splitter::getClickZone(WH which) const
 void Splitter::drawSplitter(QPainter& painter)
 {
     QRect rc = rect();
-    bool isDarkMode = NppDarkMode::isEnabled();
+    bool isDarkMode = NppDarkMode::isEnabled_Static();
 
     // Background
     if (isDarkMode) {
@@ -180,10 +180,10 @@ void Splitter::drawSplitter(QPainter& painter)
 
     // DPI-scaled sizing
     const unsigned int dpi = DPIManagerV2::getDpiForWindow(parentWidget());
-    const int scaled1 = DPIManagerV2::scale(1, dpi);
-    const int scaled2 = DPIManagerV2::scale(2, dpi);
-    const int scaled3 = DPIManagerV2::scale(3, dpi);
-    const int scaled4 = DPIManagerV2::scale(4, dpi);
+    const int scaled1 = DPIManagerV2::scale(1, nullptr);
+    const int scaled2 = DPIManagerV2::scale(2, nullptr);
+    const int scaled3 = DPIManagerV2::scale(3, nullptr);
+    const int scaled4 = DPIManagerV2::scale(4, nullptr);
 
     // Draw grip dots
     QColor highlight = palette().color(QPalette::Normal, QPalette::Midlight);
@@ -206,7 +206,7 @@ void Splitter::drawSplitter(QPainter& painter)
             ? rc.right() - _clickZone2BR.right()
             : rc.right();
         int cy = rc.center().y();
-        for (int x = _clickZone2TL.right + scaled1; x < rightEdge - scaled1; x += scaled4) {
+        for (int x = _clickZone2TL.right() + scaled1; x < rightEdge - scaled1; x += scaled4) {
             painter.fillRect(x, cy - scaled1, scaled2, scaled2,
                              isDarkMode ? shadow : highlight);
         }
@@ -225,8 +225,8 @@ void Splitter::drawSplitter(QPainter& painter)
 void Splitter::drawArrow(QPainter& painter, const QRect& r, Arrow arrowDir)
 {
     QPen pen(painter.pen());
-    pen.setColor(NppDarkMode::isEnabled()
-                     ? NppDarkMode::darkerTextColor()
+    pen.setColor(NppDarkMode::isEnabled_Static()
+                     ? NppDarkMode::getDarkerTextColor()
                      : palette().color(QPalette::Text));
     painter.setPen(pen);
 
@@ -269,20 +269,20 @@ void Splitter::adjustZoneToDraw(QRect& rc2def, ZONE_TYPE whichZone) const
 
     if (isVertical()) {
         if (whichZone == ZONE_TYPE::topLeft) {
-            rc2def.setRect(0, (_clickZone2TL.top + _clickZone2TL.height() - h) / 2, w, h);
+            rc2def.setRect(0, (_clickZone2TL.top() + _clickZone2TL.height() - h) / 2, w, h);
         } else {
             rc2def.setRect(
-                _clickZone2BR.left + _clickZone2BR.width() - w,
-                (_clickZone2BR.top + _clickZone2BR.height() - h) / 2,
+                _clickZone2BR.left() + _clickZone2BR.width() - w,
+                (_clickZone2BR.top() + _clickZone2BR.height() - h) / 2,
                 w, h);
         }
     } else {
         if (whichZone == ZONE_TYPE::topLeft) {
-            rc2def.setRect((_clickZone2TL.right + _clickZone2TL.width() - w) / 2, 0, w, h);
+            rc2def.setRect((_clickZone2TL.right() + _clickZone2TL.width() - w) / 2, 0, w, h);
         } else {
             rc2def.setRect(
-                (_clickZone2BR.left + _clickZone2BR.width() - w) / 2,
-                _clickZone2BR.top + _clickZone2BR.height() - h,
+                (_clickZone2BR.left() + _clickZone2BR.width() - w) / 2,
+                _clickZone2BR.top() + _clickZone2BR.height() - h,
                 w, h);
         }
     }

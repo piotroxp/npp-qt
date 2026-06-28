@@ -46,6 +46,7 @@ public:
     size_t nbItem() const { return count(); }
 
     void destroyFonts();
+    virtual void destroy();
     void setFont(const QFont& font);
 
     QFont& getFont(bool isReduced = true) {

@@ -53,6 +53,9 @@ public:
     void clearProgress();
     void setPartWidth(int partIndex, int width);  // Win32 compat stub
 
+    // Win32 compat shim — mirrors the Win32 SB_GETMINHEIGHT / simple height query
+    int getHeight() const { return height(); }
+
 signals:
     void statusClicked(int part);
     void statusDoubleClicked(int part);

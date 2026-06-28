@@ -198,7 +198,6 @@ ColourPicker::ColourPicker(QWidget* parent)
 void ColourPicker::init(void* hInst, QWidget* hParent)
 {
     WindowBase::init(hInst, hParent);
-    _hSelf = this;
 }
 
 void ColourPicker::destroy()

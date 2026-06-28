@@ -195,8 +195,9 @@ void FunctionListTreeWidget::contextMenuEvent(QContextMenuEvent* event) {
 // =============================================================================
 
 FunctionListPanel::FunctionListPanel(QWidget* parent)
-    : QWidget(parent)
+    : DockingDlgInterface()
 {
+
     setWindowTitle(QStringLiteral("Function List"));
 
     // Main layout: toolbar on top, tree below

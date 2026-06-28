@@ -44,13 +44,14 @@ public:
     ~ControlsTab() override = default;
 
     // init — mirrors Win32 ControlsTab::init(HINSTANCE, HWND)
-    void init(QWidget* parent) override;
+    // Note: TabBar base has init(QWidget*, bool, bool); this hides it with a 1-arg variant.
+    void init(QWidget* parent);
 
     // createTabs — mirrors Win32 ControlsTab::createTabs(WindowVector&)
     void createTabs(WindowVector& winVector);
 
     // reSizeTo — mirrors Win32 ControlsTab::reSizeTo(RECT&)
-    void reSizeTo(QRect& rc) override;
+    void reSizeTo(QRect& rc);
 
     // activateWindowAt — mirrors Win32 list selection → panel switch
     void activateWindowAt(int index);

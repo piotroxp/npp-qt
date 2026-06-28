@@ -26,6 +26,11 @@
 #include <QProgressBar>
 #include <QProxyStyle>
 #include <QAbstractItemView>
+#include "WinControls/ToolBar.h"  // ToolBarStatusType
+
+// Needed for TbIconInfo members
+#include "NppConstants.h"
+#include "WinControls/ImageListSet.h"
 
 // Forward declarations
 class QPaintDevice;
@@ -37,6 +42,8 @@ class QPalette;
 
 namespace NppDarkMode
 {
+
+struct TbIconInfo;  // forward declaration (defined below)
 
 struct Colors
 {
@@ -95,6 +102,17 @@ enum class AccentSource
     custom
 };
 
+// Toolbar icon info struct — originally in Parameters.h, moved here to avoid
+// circular include (Parameters.h → NppDarkMode.h → Parameters.h).
+// Kept in NppDarkMode namespace so callers don't need an extra include.
+struct TbIconInfo
+{
+    ToolBarStatusType _tbIconSet = ToolBarStatusType::TB_STANDARD;
+    FluentColor       _tbColor   = FluentColor::defaultColor;
+    QRgb              _tbCustomColor = qRgba(0, 0, 0, 0);
+    bool              _tbUseMono = false;
+};
+
 // =============================================================================
 // NppDarkMode — singleton palette + style controller
 // =============================================================================
@@ -108,12 +126,14 @@ public:
     // ── Enable / query ────────────────────────────────────────────────────
     bool isEnabled() const;
     static bool isEnabled_Static() { return instance().isEnabled(); }  // static alias for callers using NppDarkMode::isEnabled()
+    static QBrush getDlgBackgroundBrush() { return instance().pureBackgroundBrush(); }
     bool isWindowsModeEnabled();
     bool isEnabledForPlugins() const;
     void setEnabled(bool on);
     void setEnabledForPlugins(bool on);
     static int getTabIconSet(bool isDarkMode);
     static QString getTabIcon();  // stub
+    static ::NppDarkMode::TbIconInfo getToolbarIconInfo();  // returns current toolbar icon configuration
 
     // ── Color palette ───────────────────────────────────────────────────────
     Colors colors() const;
@@ -253,12 +273,32 @@ public:
     static bool isExperimentalSupported();
     static void enableDarkScrollBarForWindowAndChildren(QWidget*);
     static void setDarkTitleBar(QWidget*);
+    static void setDarkTitleBar(QWidget* w, bool dark);  // bool overload for call sites using 0/false
     static void autoSubclassWindowMenuBar(QWidget*);
     static void autoSubclassCtlColor(QWidget*);
+    static QRgb getDarkerTextColor();
+    static void allowDarkModeForApp(bool on);             // stub: Windows app-level dark mode
+    static void autoThemeChildControls(QWidget* w);       // stub: apply dark theme to child controls
+    static QString getThemeName();                        // stub: return current theme name
 };
 
+// Namespace-scope inline wrappers for class static methods that exist.
+// Required because C++ name lookup: NppDarkMode::X looks in namespace NppDarkMode first,
+// finds class NppDarkMode, but does NOT search class static members.
+// ::NppDarkMode::NppDarkMode:: reaches the class from within the namespace.
+inline bool isEnabled_Static()              { return ::NppDarkMode::NppDarkMode::isEnabled_Static(); }
+inline bool isExperimentalSupported()       { return ::NppDarkMode::NppDarkMode::isExperimentalSupported(); }
+inline QBrush getDlgBackgroundBrush()       { return ::NppDarkMode::NppDarkMode::getDlgBackgroundBrush(); }
+inline int getTabIconSet(bool v)           { return ::NppDarkMode::NppDarkMode::getTabIconSet(v); }
+inline void setDarkTitleBar(QWidget* w)    { return ::NppDarkMode::NppDarkMode::setDarkTitleBar(w); }
+inline QString getTabIcon()                 { return ::NppDarkMode::NppDarkMode::getTabIcon(); }
+inline TbIconInfo getToolbarIconInfo() { return ::NppDarkMode::NppDarkMode::getToolbarIconInfo(); }
+inline QRgb getDarkerTextColor()           { return ::NppDarkMode::NppDarkMode::getDarkerTextColor(); }
+inline QString getThemeName()              { return ::NppDarkMode::NppDarkMode::getThemeName(); }
+inline void allowDarkModeForApp(bool v)    { ::NppDarkMode::NppDarkMode::allowDarkModeForApp(v); }
+inline void autoThemeChildControls(QWidget* w) { ::NppDarkMode::NppDarkMode::autoThemeChildControls(w); }
+
 // Namespace-level delegate so code can use instance() without qualification.
-// Placed after the class definition so NppDarkMode is complete.
 inline NppDarkMode& instance()
 {
     return NppDarkMode::instance();

@@ -36,9 +36,9 @@
 
 // Forward declarations
 class NppData;
-class PluginViewList;
 class FuncItem;
 struct ShortcutKey;
+struct PluginUpdateInfo;
 
 using PFUNCISUNICODE = bool(*)();
 
@@ -114,8 +114,8 @@ public:
 
     void init(const NppData& nppData);
 
-    bool loadPlugins(const QString& dir = QString(), const PluginViewList* pluginUpdateInfoList = nullptr,
-                     PluginViewList* pluginIncompatibleList = nullptr);
+    bool loadPlugins(const QString& dir = QString(), const std::vector<PluginUpdateInfo*>* pluginUpdateInfoList = nullptr,
+                     std::vector<PluginUpdateInfo*>* pluginIncompatibleList = nullptr);
 
     void runPluginCommand(size_t i);
     void runPluginCommand(const QString& pluginName, int commandID);

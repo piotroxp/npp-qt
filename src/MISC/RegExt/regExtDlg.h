@@ -10,6 +10,10 @@
 #include "../../WinControls/StaticDialog.h"
 #include <QString>
 #include <QStringList>
+#include <QSettings>
+#include <QListWidget>
+#include <QLineEdit>
+#include <QPushButton>
 
 constexpr int extNameLen = 32;
 
@@ -66,4 +70,12 @@ private:
         Q_UNUSED(reg);
         return 0;
     }
+
+    // Member widgets — initialized by the UI layer that owns this dialog
+    QListWidget* langExtList = nullptr;
+    QLineEdit* customExtEdit = nullptr;
+    QListWidget* registeredExtList = nullptr;
+    QPushButton* addFromLangBtn = nullptr;
+    QPushButton* removeExtBtn = nullptr;
+    QListWidget* langList = nullptr;
 };

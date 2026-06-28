@@ -58,6 +58,34 @@ protected:
 // GeneralTab — General settings (launch, drag-drop, file association)
 // =============================================================================
 
+// =============================================================================
+// TabbarSubDlg — stub sub-dialog for Tab Bar preferences
+// Needed by Notepad_plus.cpp call sites and PreferenceDlg members.
+// =============================================================================
+class TabbarSubDlg : public QWidget
+{
+    Q_OBJECT
+public:
+    explicit TabbarSubDlg(QWidget* parent = nullptr) : QWidget(parent) {}
+    void setTabbarAlternateIcons(bool on) { _altIcons = on; }
+    bool isTabbarAlternateIcons() const { return _altIcons; }
+private:
+    bool _altIcons = false;
+};
+
+// =============================================================================
+// GeneralSubDlg — stub sub-dialog for General preferences
+// Needed by Notepad_plus.cpp call sites and PreferenceDlg members.
+// =============================================================================
+class GeneralSubDlg : public QWidget
+{
+    Q_OBJECT
+public:
+    explicit GeneralSubDlg(QWidget* parent = nullptr) : QWidget(parent) {}
+    bool isCheckedOrNot(int /*id*/) const { return false; }
+};
+
+
 class GeneralTab : public PreferenceTab
 {
     Q_OBJECT
@@ -291,6 +319,14 @@ public:
 
     // Notify sub-tabs of changes
     void notifyItemChanged(const QString& key, const QVariant& value);
+
+    bool isCreated() const { return isVisible(); }
+
+    // Sub-dialog stubs for dark mode / preferences access
+    TabbarSubDlg _tabbarSubDlg;
+    GeneralSubDlg _generalSubDlg;
+
+    QWidget* getHSelf() { return this; }
 
 private slots:
     void onOk();

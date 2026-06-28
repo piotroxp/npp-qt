@@ -64,11 +64,12 @@ StringArray::StringArray(const ClipboardDataInfo& cd, size_t maxLen)
 // =============================================================================
 
 ClipboardHistoryPanel::ClipboardHistoryPanel(QWidget* parent)
-    : QWidget(parent)
+    : DockingDlgInterface(0)
     , _isTrackingClipboardOps(true)
     , _bgColor(Qt::white)
     , _fgColor(Qt::black)
 {
+    setParent(parent);
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);

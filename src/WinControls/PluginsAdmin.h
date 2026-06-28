@@ -141,6 +141,19 @@ public:
     QVector<PluginUpdateInfo> getInstalledPlugins() const;
     std::wstring getPluginListVerStr() const;
 
+    // Win32 compatibility: plugin manager passes these lists to _pluginsManager.loadPlugins()
+    std::vector<PluginUpdateInfo*>* getAvailablePluginUpdateInfoList() { return &_allAvailablePlugins; }
+    std::vector<PluginUpdateInfo*>* getIncompatibleList() {
+        // Build incompatible list from _incompatibleList if not cached
+        if (_incompatiblePlugins.empty() && _incompatibleList) {
+            for (size_t i = 0; i < _incompatibleList->count(); ++i) {
+                if (auto* info = _incompatibleList->pluginInfoAt(i))
+                    _incompatiblePlugins.push_back(info);
+            }
+        }
+        return &_incompatiblePlugins;
+    }
+
 signals:
     void pluginsInstalled(const QVector<PluginUpdateInfo>& plugins);
     void pluginsRemoved(const QVector<PluginUpdateInfo>& plugins);
@@ -205,6 +218,7 @@ private:
 
     // Lists (raw PluginUpdateInfo*)
     std::vector<PluginUpdateInfo*> _allAvailablePlugins;
+    std::vector<PluginUpdateInfo*> _incompatiblePlugins;  // cached from _incompatibleList
 
     void onInstallClicked();
     void onUpdateClicked();

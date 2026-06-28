@@ -154,6 +154,9 @@ public:
     void setGrayBackground(int id);
     void display(bool toShow = true);
 
+    // Win32 compat shim — mirrors the Win32 RB_GETBARHEIGHT
+    int getHeight() const { return rect().height(); }
+
 signals:
     void bandChanged(int id);
 

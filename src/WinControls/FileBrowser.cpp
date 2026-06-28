@@ -572,9 +572,10 @@ public:
 };
 
 FileBrowser::FileBrowser(QWidget* parent)
-    : QWidget(parent)
+    : DockingDlgInterface(0)
     , _treeView(this)
 {
+    setParent(parent);
     setWindowTitle(QStringLiteral("Folder as Workspace"));
     setMinimumSize(200, 150);
 

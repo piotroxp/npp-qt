@@ -13,6 +13,7 @@
 #include <QToolBar>
 #include <QFont>
 #include <QIcon>
+#include "DockingWnd.h"
 #include <QVector>
 #include <QString>
 #include <QMap>
@@ -89,13 +90,15 @@ private:
 // FunctionListPanel — main docking panel (lifted from FunctionListPanel)
 // =============================================================================
 
-class FunctionListPanel : public QWidget
+class FunctionListPanel : public DockingDlgInterface
 {
     Q_OBJECT
 
 public:
     explicit FunctionListPanel(QWidget* parent = nullptr);
     ~FunctionListPanel() override;
+
+    intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam) override;
 
     void init(QApplication* app, QWidget* parent);
     void setParentWindow(QWidget* parent) { _hParent = parent; }

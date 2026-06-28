@@ -140,32 +140,11 @@ void TabBarPlus::init(QWidget* parent, bool isVertical, bool isMultiLine, unsign
     setPinBtnImageList();
 }
 
-void TabBarPlus::destroy()
-{
-    TabBar::destroy();
-    for (int i = 0; i < 10; ++i) {
-        if (_tabbrPlusInstanceHwndArray[i] == this) {
-            _tabbrPlusInstanceHwndArray[i] = nullptr;
-            --_nbCtrl;
-            break;
-        }
-    }
-}
-
 void TabBarPlus::refresh()
 {
     // Refresh by removing and re-adding the current tab
     // This is a no-op stub for the Qt port
     (void)currentIndex(); // suppress unused warning
-}
-
-void TabBarPlus::display(bool toShow)
-{
-    if (toShow) {
-        show();
-    } else {
-        hide();
-    }
 }
 
 void TabBarPlus::triggerOwnerDrawTabbar(DPIManagerV2*)

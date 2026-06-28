@@ -29,6 +29,12 @@ class AsciiListView : public ListView
     Q_OBJECT
 
 public:
+    // Constructor with optional parent for Qt parent-child model
+    explicit AsciiListView(QWidget* parent = nullptr);
+
+    // Get underlying table widget for direct access
+    QTableWidget* table() const { return _tableWidget; }
+
     // Populate table with all 256 values for the given codepage
     // codepage: Windows codepage number (0 = default, 1252 = CP1252)
     void setValues(int codepage = 0);

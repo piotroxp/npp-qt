@@ -12,6 +12,7 @@
 #include <QTabWidget>
 #include "ScintillaComponent.h"
 #include "Buffer.h"
+#include "DockingWnd.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -73,7 +74,7 @@ public:
     // getHSelf() returns the widget handle (mirrors Win32 getHSelf())
     QWidget* getHSelf() const { return const_cast<FindReplaceDlg*>(this); }
 
-    void init(QWidget* parent, ScintillaComponent** ppEditView);
+    void init(void* hInst, QWidget*& parent, ScintillaComponent** ppEditView);
     void doDialog(DIALOG_TYPE whichType, bool isRTL = false);
     void create(DIALOG_TYPE whichType);
 
@@ -126,6 +127,10 @@ public:
     bool isInHiddenDir() const { return false; }
     void putFindResult(const std::vector<struct FoundInfo>& /*results*/) {}
     void display(bool show) { setVisible(show); }
+
+    // Qt-port stubs for Finder (search results panel) access
+    DockingDlgInterface* getMainFinder() { return nullptr; }
+    std::vector<DockingDlgInterface*> getFindersOfFinder() { return {}; }
 
 signals:
     void searchCompleted(int count);

@@ -17,9 +17,13 @@ class HashFromFilesDlg : public StaticDialog
 {
 public:
     HashFromFilesDlg() = default;
+    void init(void* /*hInst*/, QWidget* /*parent*/) { /* no-op stub */ }
+    void init(QWidget* parent) { /* single-arg stub for Notepad_plus.cpp compat */ }
     void doDialog(bool isRTL = false);
     void destroy() override;
     void setHashType(hashType hashType2set);
+    QWidget* getHSelf() { return this; }
+    const QWidget* getHSelf() const { return this; }
     // isCreated() inherited from StaticDialog
 
 protected:
@@ -31,11 +35,15 @@ class HashFromTextDlg : public StaticDialog
 {
 public:
     HashFromTextDlg() = default;
+    void init(void* /*hInst*/, QWidget* /*parent*/) { /* no-op stub */ }
+    void init(QWidget* parent) { /* single-arg stub for Notepad_plus.cpp compat */ }
     void doDialog(bool isRTL = false);
     void destroy() override;
     void generateHash();
     void generateHashPerLine();
     void setHashType(hashType hashType2set);
+    QWidget* getHSelf() { return this; }
+    const QWidget* getHSelf() const { return this; }
     // isCreated() inherited from StaticDialog
 
 protected:

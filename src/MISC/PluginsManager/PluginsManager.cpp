@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "PluginsManager.h"
+#include "WinControls/PluginsAdmin.h"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -48,7 +49,7 @@ void PluginsManager::init(const NppData& nppData)
     _nppData = const_cast<NppData*>(&nppData);
 }
 
-bool PluginsManager::loadPlugins(const QString& dir, const PluginViewList*, PluginViewList*)
+bool PluginsManager::loadPlugins(const QString& dir, const std::vector<PluginUpdateInfo*>*, std::vector<PluginUpdateInfo*>*)
 {
     if (dir.isEmpty()) {
         // Default plugin directory

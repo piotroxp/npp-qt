@@ -214,6 +214,10 @@ public:
     // Get text in [startPos, endPos) as narrow string
     void getText(char* dest, size_t start, size_t end) const;
 
+    // getGenericText — 4-arg overload used by Notepad_plus.cpp (mirrors Win32 API)
+    // dest: output buffer, bufSize: buffer capacity, start/end: byte positions
+    void getGenericText(char* dest, size_t bufSize, size_t start, size_t end) const;
+
     // Get text as QString (Unicode)
     QString getTextAsString(size_t start, size_t end) const;
 
@@ -239,6 +243,8 @@ public:
     // Replace the target range
     intptr_t replaceTarget(const QString& replacement, intptr_t fromPos = -1, intptr_t toPos = -1);
     intptr_t replaceTarget(const char* replacement, intptr_t fromPos = -1, intptr_t toPos = -1);
+    // wstring overload for Notepad_plus.cpp compatibility
+    intptr_t replaceTarget(const std::wstring& replacement, intptr_t fromPos = -1, intptr_t toPos = -1);
 
     // Get selected text as QString
     QString getSelectedText() const;
@@ -338,6 +344,14 @@ public:
 
     void saveCurrentPos();
     void restoreCurrentPos();
+    // Additional restore steps needed by Notepad_plus.cpp
+    void restoreCurrentPosPreStep() { restoreCurrentPos(); }
+    void restoreHiddenLines() { /* stub: line state restored via Buffer */ }
+
+    // --- Visibility helpers for URL highlighting ---
+
+    void getVisibleStartAndEndPosition(intptr_t* startPos, intptr_t* endPos) const;
+    intptr_t getCurrentColumnNumber() const { return currentColumn(); }
 
     // --- Line operations ---
 
@@ -369,6 +383,11 @@ public:
     void setCodepage(int cp) { _codepage = cp; send(SCI_SETCODEPAGE, cp); }
     void setEolMode(int mode) { send(SCI_SETEOLMODE, mode); }
     int eolMode() const { return send(SCI_GETEOLMODE); }
+    void setCRLF() { send(SCI_SETEOLMODE, SC_EOL_CRLF); send(SCI_CONVERTEOLS, SC_EOL_CRLF); }
+
+    // --- Selection info ---
+
+    std::pair<size_t, size_t> getSelectedCharsAndLinesCount(size_t = 0) const;  // stub with optional maxSels param
 
     // --- Undo/Redo ---
 
@@ -601,8 +620,15 @@ public:
     // Number of active editor instances
     int count() const { return _editors.size(); }
 
+    // Semantic lift: init() — stub for Win32-style initialization.
+    // In Qt6, editors are created directly via createEditor().
+    void init(void* /*hInst*/, QWidget* /*parent*/) { /* no-op: Qt6 editors are created on demand */ }
+
     // Destroy all editors and clear the list
     void destroyAll();
+
+    // destroy — clean up all Scintilla instances (called from Notepad_plus destructor)
+    void destroy();
 
     // Remove a specific editor
     void removeEditor(ScintillaComponent* editor);

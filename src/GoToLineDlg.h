@@ -17,9 +17,10 @@ class GoToLineDlg : public QDialog
     Q_OBJECT
 public:
     GoToLineDlg(QWidget* parent = nullptr, Qt::WindowFlags f = {});
-    void init(QWidget* parent, ScintillaComponent** ppEditView);
+    void init(void* hInst, QWidget*& parent, ScintillaComponent** ppEditView);
     void doDialog(bool isRTL = false);
     void updateLinesNumbers();
+    bool isCreated() const { return isVisible(); }
 
 public slots:
     void accept() override;

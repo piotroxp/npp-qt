@@ -63,9 +63,7 @@ void URLCtrl::create(QLabel* label, const QString& link, const QColor& linkColor
         ctrl->setText(label->text());
         ctrl->setAlignment(label->alignment());
 
-        // Connect linkActivated to open URL
-        QObject::connect(ctrl, &URLCtrl::linkActivated,
-                         ctrl, [](int /*cmdId*/) { /* URL mode: no-op, openUrl handles it */ });
+        // URL mode: clicking calls action() which opens URL directly; no signal needed
 
         label->hide();
         // label will be deleted by parent if owned

@@ -6,6 +6,8 @@
 
 #include "NppDarkMode.h"
 #include "Preference.h"
+#include "WinControls/ToolBar.h"
+#include "WinControls/ImageListSet.h"
 #include <string>
 
 #include <QApplication>
@@ -184,6 +186,11 @@ bool NppDarkMode::isExperimentalSupported()
     return false;  // Windows 10 dark mode explorer experimental flag — not applicable on Linux
 }
 
+QRgb NppDarkMode::getDarkerTextColor()
+{
+    return instance().darkerTextColor();
+}
+
 void NppDarkMode::enableDarkScrollBarForWindowAndChildren(QWidget* w)
 {
     // Windows: EnableMenuShadow / dark scrollbar for taskbar.  No-op on Linux.
@@ -227,6 +234,32 @@ void NppDarkMode::setDarkTitleBar(QWidget* w)
 {
     // Win32 dark title bar theme — stubbed on Linux
     Q_UNUSED(w);
+}
+
+void NppDarkMode::setDarkTitleBar(QWidget* w, bool /*dark*/)
+{
+    // Win32: DwmSetWindowAttribute(DWMWA_USE_IMMERSIVE_DARK_MODE, ...)
+    // Stubbed on Linux; the window manager handles title bar colour
+    Q_UNUSED(w);
+}
+
+void NppDarkMode::allowDarkModeForApp(bool /*on*/)
+{
+    // Win32: ShouldAppsUseDarkMode() registry /UxThemePolicy
+    // Stubbed on Linux
+}
+
+void NppDarkMode::autoThemeChildControls(QWidget* /*w*/)
+{
+    // Win32: enumerate child windows and apply dark theme to each
+    // Stubbed on Linux; use applyToChildWidgets() instead
+}
+
+QString NppDarkMode::getThemeName()
+{
+    // Win32: read active theme name from registry /theme file
+    // Stubbed: return empty string (uses default theme)
+    return QString();
 }
 
 QString NppDarkMode::getTabIcon()
@@ -798,6 +831,20 @@ void NppDarkMode::setTitleBarLight(QWidget* w)
 int NppDarkMode::getTabIconSet(bool /*isDarkMode*/)
 {
     return 0;
+}
+
+// Returns toolbar icon set information based on current dark mode state.
+// On Linux we default to TB_STANDARD / default colour; real icon loading
+// would require platform resources.
+TbIconInfo NppDarkMode::getToolbarIconInfo()
+{
+    TbIconInfo info;
+    // Use small icons in dark mode for better visibility
+    info._tbIconSet  = instance().isEnabled() ? ToolBarDisplayType::TB_SMALL : ToolBarDisplayType::TB_STANDARD;
+    info._tbColor    = FluentColor::defaultColor;
+    info._tbCustomColor = 0;
+    info._tbUseMono  = false;
+    return info;
 }
 
 } // namespace NppDarkMode

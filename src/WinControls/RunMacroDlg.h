@@ -38,6 +38,8 @@ public:
     RunMacroDlg() = default;
     ~RunMacroDlg() override = default;
 
+    void init(void* hInst, QWidget*& parent);
+
     // Show the dialog (mirrors Win32 doDialog)
     void doDialog(bool isRTL = false);
 

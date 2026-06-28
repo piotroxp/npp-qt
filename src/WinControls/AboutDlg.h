@@ -25,6 +25,8 @@ public:
     AboutDlg() = default;
     ~AboutDlg() override;
 
+    void init(void* hInst, QWidget*& parent);
+    void init(bool isAdmin, const QString& loadedPlugins);  // legacy compat
     void doDialog();
 
     void destroy();
@@ -51,7 +53,8 @@ public:
     DebugInfoDlg() = default;
     ~DebugInfoDlg() override = default;
 
-    void init(bool isAdmin, const QString& loadedPlugins);
+    void init(void* hInst, QWidget*& parent, bool& isAdmin, const QString& loadedPlugins);
+    void init(bool isAdmin, const QString& loadedPlugins);  // legacy
     void doDialog();
     void refreshDebugInfo();
     void destroy() override {}
@@ -79,6 +82,7 @@ public:
     CmdLineArgsDlg() = default;
     ~CmdLineArgsDlg() override = default;
 
+    void init(void* hInst, QWidget*& parent);
     void doDialog();
     void destroy() override {}
 

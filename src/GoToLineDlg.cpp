@@ -8,7 +8,7 @@
 GoToLineDlg::GoToLineDlg(QWidget* parent, Qt::WindowFlags f)
     : QDialog(parent, f), _mode(go2line) {}
 
-void GoToLineDlg::init(QWidget* parent, ScintillaComponent** ppEditView)
+void GoToLineDlg::init(void* /*hInst*/, QWidget*& parent, ScintillaComponent** ppEditView)
 {
     if (!ppEditView) throw std::runtime_error("GoToLineDlg::init: ppEditView is null.");
     _ppEditView = ppEditView;

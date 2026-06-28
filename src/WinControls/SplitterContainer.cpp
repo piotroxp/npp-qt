@@ -9,12 +9,6 @@
 #include <QVBoxLayout>
 #include <QLayout>
 
-// Static member definitions for Splitter
-bool Splitter::_isHorizontalRegistered = false;
-bool Splitter::_isVerticalRegistered = false;
-bool Splitter::_isHorizontalFixedRegistered = false;
-bool Splitter::_isVerticalFixedRegistered = false;
-
 // =============================================================================
 // SplitterContainer
 // =============================================================================
@@ -97,18 +91,6 @@ double SplitterContainer::ratio() const {
         }
     }
     return _ratio;
-}
-
-void SplitterContainer::show() {
-    QWidget::show();
-    if (_splitter) _splitter->show();
-}
-
-void SplitterContainer::hide() {
-    if (_pWin0) _pWin0->hide();
-    if (_pWin1) _pWin1->hide();
-    if (_splitter) _splitter->hide();
-    QWidget::hide();
 }
 
 void SplitterContainer::rotate() {

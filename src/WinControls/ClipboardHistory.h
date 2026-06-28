@@ -12,6 +12,7 @@
 #include <QMimeData>
 #include <QClipboard>
 #include <QApplication>
+#include "DockingWnd.h"
 
 // =============================================================================
 // ClipboardDataInfo — clipboard data storage (lifted from clipboardHistoryPanel.h)
@@ -56,13 +57,15 @@ public:
 // Translates: ClipboardViewer chain, WM_DRAWCLIPBOARD, ListBox custom draw → QClipboard + QListWidget
 // =============================================================================
 
-class ClipboardHistoryPanel : public QWidget
+class ClipboardHistoryPanel : public DockingDlgInterface
 {
     Q_OBJECT
 
 public:
     explicit ClipboardHistoryPanel(QWidget* parent = nullptr);
     ~ClipboardHistoryPanel() override;
+
+    intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam) override;
 
     void init();
     void setEditor(QWidget* editor);

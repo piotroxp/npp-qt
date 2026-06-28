@@ -39,6 +39,9 @@ class URLCtrl : public QLabel
     Q_OBJECT
 
 public:
+    // Constructor: creates a URLCtrl label widget
+    explicit URLCtrl(const QString& link, const QString& text = QString(), QWidget* parent = nullptr);
+
     // Create URLCtrl attached to an existing QLabel widget (parent owns it)
     // link: the URL string to open
     // linkColor: text color for the link (default blue)

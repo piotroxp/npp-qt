@@ -29,6 +29,12 @@ public:
     int scaleFont(int pt) const { return scaleFontForFactor(pt); }
     static int getDpiForWindow(QWidget* w) { return w ? w->logicalDpiY() : 96; }
 
+    // Win32 SM_CXMINTRACK equivalent — minimum window track width in pixels
+    // Base value 112 from Windows default; scaled by DPI factor.
+    static int getSystemMetricsForDpi(int /*metric*/, QWidget* widget = nullptr) {
+        return scale(112, widget);  // SM_CXMINTRACK = 112 (Windows default minimum width)
+    }
+
 private:
     int _dpi = 96;
 };

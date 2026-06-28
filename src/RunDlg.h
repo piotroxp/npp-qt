@@ -12,6 +12,7 @@ public:
     explicit RunDlg(QWidget* parent = nullptr);
     ~RunDlg() override;
 
+    void init(void* hInst, QWidget*& parent);
     void doDialog();
     void display(int cmdID, bool isRTL = false);
 

@@ -127,6 +127,16 @@ AboutDlg::~AboutDlg() {
     destroy();
 }
 
+void AboutDlg::init(void* /*hInst*/, QWidget*& /*parent*/)
+{
+    // No-op: dialog initialized in constructor; use doDialog() to show
+}
+
+void AboutDlg::init(bool /*isAdmin*/, const QString& /*loadedPlugins*/)
+{
+    // Legacy no-op stub
+}
+
 void AboutDlg::destroy() {
     _iconLoaded = false;
     // Chameleon icon — QPixmap member, auto-cleaned by Qt
@@ -325,6 +335,11 @@ void DebugInfoDlg::init(bool isAdmin, const QString& loadedPlugins) {
     _loadedPlugins = loadedPlugins;
 }
 
+void DebugInfoDlg::init(void* /*hInst*/, QWidget*& /*parent*/, bool& isAdmin, const QString& loadedPlugins) {
+    _isAdmin = isAdmin;
+    _loadedPlugins = loadedPlugins;
+}
+
 void DebugInfoDlg::doDialog() {
     if (!isCreated()) {
         create(0);
@@ -503,6 +518,11 @@ const QString COMMAND_ARG_HELP = QStringLiteral(
     "filePath: file or folder name to open (absolute or relative path name)\n"
 );
 } // namespace
+
+void CmdLineArgsDlg::init(void* /*hInst*/, QWidget*& /*parent*/)
+{
+    // No-op: dialog initialized in constructor; use doDialog() to show
+}
 
 void CmdLineArgsDlg::doDialog() {
     if (!isCreated()) {

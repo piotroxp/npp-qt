@@ -14,6 +14,7 @@ public:
     FindInFinderDlg() = default;
     virtual ~FindInFinderDlg() = default;
     void doDialog(void* launcher, bool isRTL = false) {}
+    void init(QWidget* mainWin, QWidget* parent, void* param = nullptr) {}
     void initFromOptions() {}
     void writeOptions() {}
     void beginNewFilesSearch() {}
@@ -27,6 +28,7 @@ class FindIncrementDlg : public ScintillaComponent {
 public:
     FindIncrementDlg() = default;
     virtual ~FindIncrementDlg() = default;
+    void init(QWidget* mainWin, QWidget* parent, void* param = nullptr, bool isMulti = false) {}
 };
 
 // HashFromFilesDlg and HashFromTextDlg are defined in MISC/md5/md5Dlgs.h
@@ -40,4 +42,5 @@ class DocumentPeeker : public ScintillaComponent {
 public:
     DocumentPeeker() = default;
     virtual ~DocumentPeeker() = default;
+    void init(QWidget* parent) {}
 };

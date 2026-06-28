@@ -31,6 +31,7 @@ public:
     explicit FindCharsInRangeDlg(QWidget* parent = nullptr);
     ~FindCharsInRangeDlg() override = default;
 
+    void init(void* /*hInst*/, QWidget*& parent);
     void doDialog();
 
 protected:

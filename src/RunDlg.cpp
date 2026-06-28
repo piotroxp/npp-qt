@@ -46,6 +46,11 @@ RunDlg::RunDlg(QWidget* parent)
 
 RunDlg::~RunDlg() = default;
 
+void RunDlg::init(void* /*hInst*/, QWidget*& /*parent*/)
+{
+    // No-op: dialog fully constructed in constructor
+}
+
 void RunDlg::doDialog() { show(); raise(); }
 
 void RunDlg::display(int, bool)

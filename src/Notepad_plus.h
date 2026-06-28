@@ -85,6 +85,7 @@
 #include "WordStyleDlg.h"
 #include "trayIconControler.h"
 #include "PluginsManager.h"
+#include "NppData.h"
 #include "preferenceDlg.h"
 #include "WindowsDlg.h"
 #include "RunMacroDlg.h"
@@ -337,7 +338,7 @@ public:
 	QAction* findActionById(QWidget* menu, int cmdID) const;
 
 private:
-    Window* _pMainWindow = nullptr;
+    QWidget* _pMainWindow = nullptr;
 	DockingManager _dockingManager;
 	std::vector<int> _internalFuncIDs;
 
@@ -556,10 +557,11 @@ private:
 	void checkSyncState();
 	void syncZoom();
 	void setupColorSampleBitmapsOnMainMenuItems();
-	void dropFiles(HDROP hdrop);
+	void dropFiles(QMimeData* hdrop);
 	void checkModifiedDocument(bool bCheckOnlyCurrentBuffer);
 
     void getMainClientRect(QRect & rc) const;
+    void getClientRect(QRect& rc) const { rc = this->geometry(); }  // Win32 compat shim
 	void staticCheckMenuAndTB() const;
 	void dynamicCheckMenuAndTB() const;
 	void enableConvertMenuItems(EolType f) const;
@@ -743,6 +745,6 @@ private:
 	bool notifyTBShowMenu(int buttonId, const char* menuPosId, const std::vector<int>& cmdIDs);
 
 	int getIcoID(DockingDlgInterface* panel);
-	void loadPanelIcon(QApplication* hInst, DockingDlgInterface* panel, HICON* phIcon);
+	void loadPanelIcon(QApplication* hInst, DockingDlgInterface* panel, QIcon* phIcon);
 	void refreshPanelIcon(QApplication* hInst, DockingDlgInterface* panel);
 };

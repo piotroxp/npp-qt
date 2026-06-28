@@ -32,6 +32,8 @@ public:
     ButtonDlg() = default;
 
     void doDialog(bool isRTL = false);
+    // Win32 compatibility: init(HINSTANCE, HWND) stub (unused in Qt6)
+    void init(void* /*hInst*/, QWidget* /*hwnd*/) { /* no-op: use doDialog() */ }
 
     int getButtonStatus() const { return _buttonStatus; }
     void setButtonStatus(int s) { _buttonStatus = s; }

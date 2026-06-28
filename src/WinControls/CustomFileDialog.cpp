@@ -24,7 +24,7 @@
 // -----------------------------------------------------------------------
 // NPP parameter persistence (Qt settings-based)
 // -----------------------------------------------------------------------
-namespace NppParameters {
+namespace npp_settings {
     static const QString orgName  = QStringLiteral("Notepad++");
     static const QString appName  = QStringLiteral("npp-qt");
 
@@ -38,13 +38,6 @@ namespace NppParameters {
 }
 
 // -----------------------------------------------------------------------
-// FluentColor enum (mirrors NPP toolbar colour settings)
-// -----------------------------------------------------------------------
-enum class FluentColor {
-    accent = 0, red, green, blue, purple, cyan, olive, yellow, custom, defaultColor
-};
-
-// -----------------------------------------------------------------------
 // CustomFileDialog
 // -----------------------------------------------------------------------
 
@@ -53,7 +46,7 @@ CustomFileDialog::CustomFileDialog(QWidget* parent)
     , _parentWidget(parent)
 {
     // Seed fallback folder from the persisted last-used directory.
-    _fallbackFolder = NppParameters::lastUsedDir();
+    _fallbackFolder = npp_settings::lastUsedDir();
     if (_fallbackFolder.isEmpty()) {
         _fallbackFolder = QDir::homePath();
     }
@@ -293,7 +286,7 @@ QString CustomFileDialog::doSaveDlg()
 
     // Record the last used directory.
     QString usedFolder = directoryOf(result);
-    NppParameters::setLastUsedDir(usedFolder);
+    npp_settings::setLastUsedDir(usedFolder);
     _lastUsedFolder = usedFolder;
 
     emit accepted(result);
@@ -330,7 +323,7 @@ QString CustomFileDialog::doOpenSingleFileDlg()
 
     // Record last used directory.
     QString usedFolder = fi.absolutePath();
-    NppParameters::setLastUsedDir(usedFolder);
+    npp_settings::setLastUsedDir(usedFolder);
     _lastUsedFolder = usedFolder;
 
     emit accepted(result);
@@ -356,7 +349,7 @@ QStringList CustomFileDialog::doOpenMultiFilesDlg()
     // Record last used directory from the first selected file.
     QFileInfo fi(results.first());
     QString usedFolder = fi.absolutePath();
-    NppParameters::setLastUsedDir(usedFolder);
+    npp_settings::setLastUsedDir(usedFolder);
     _lastUsedFolder = usedFolder;
 
     // Check read-only status of the first file.
@@ -382,7 +375,7 @@ QString CustomFileDialog::pickFolder()
         return QString();
     }
 
-    NppParameters::setLastUsedDir(result);
+    npp_settings::setLastUsedDir(result);
     _lastUsedFolder = result;
 
     emit accepted(result);

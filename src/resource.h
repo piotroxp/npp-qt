@@ -8,6 +8,9 @@
 //
 // In Qt, these are used for identifying UI elements from Notepad++
 // message maps and dialog IDs. Icons are loaded from Qt resource (.qrc).
+//
+// NOTE: Uses constexpr instead of #define to avoid Windows macro conflicts
+// (USER, MACRO_USER, COLOURPOPUP_USER, BABYGRID_USER are Win32 macros).
 
 #pragma once
 
@@ -16,45 +19,46 @@
 // ============================================================================
 #define NOTEPAD_PLUS_VERSION L"Notepad++ v8.9.6"
 #define VERSION_INTERNAL_VALUE L"8.96"
-#define VERSION_PRODUCT_VALUE L"8.9.6"
+#define VERSION_PRODUCT_VALUE L"Notepad++ v8.9.6"
 #define VERSION_DIGITALVALUE 8, 9, 6, 0
 
 // ============================================================================
 // Dialog IDs
 // ============================================================================
-#define IDD_ABOUTBOX              1700
-#define IDD_DEBUGINFOBOX          1750
-#define IDD_COMMANDLINEARGSBOX    1755
-#define IDD_DOSAVEORNOTBOX        1760
-#define IDD_DOSAVEALLBOX          1765
-#define IDD_GOLINE                2000
-#define IDD_BUTTON_DLG            2410
-#define IDD_SETTING_DLG          2500
+constexpr int IDD_ABOUTBOX           = 1700;
+constexpr int IDD_DEBUGINFOBOX       = 1750;
+constexpr int IDD_COMMANDLINEARGSBOX = 1755;
+constexpr int IDD_DOSAVEORNOTBOX     = 1760;
+constexpr int IDD_DOSAVEALLBOX       = 1765;
+constexpr int IDD_GOLINE             = 2000;
+constexpr int IDD_BUTTON_DLG         = 2410;
+constexpr int IDD_SETTING_DLG        = 2500;
 
 // ============================================================================
 // Combo box / list control IDs
 // ============================================================================
 #ifndef IDC_STATIC
-#define IDC_STATIC                -1
+constexpr int IDC_STATIC = -1;
 #endif
 
 // ============================================================================
-// Custom window messages
+// Custom window messages (use WM_USER base + offset)
 // ============================================================================
-#define NOTEPADPLUS_USER_INTERNAL  (0x0400 + 0)   // WM_USER
+constexpr int NOTEPADPLUS_USER_INTERNAL = 0x0400 + 0;   // WM_USER
 
 // ============================================================================
 // Scintilla messages
 // ============================================================================
-#define SCINTILLA_USER (0x0400 + 2000)   // WM_USER + 2000
+constexpr int NPP_SCINTILLA_USER = 0x0400 + 2000;   // WM_USER + 2000
 
 // ============================================================================
 // Macro / Colour / BabyGrid user messages
 // ============================================================================
-#define MACRO_USER    (0x0400 + 4000)
-#define WM_MACRODLGRUNMACRO (MACRO_USER + 2)
+constexpr int NPP_MACRO_USER = 0x0400 + 4000;
+// WM_MACRODLGRUNMACRO is defined in NppConstants.h — do not duplicate here
 
-#define COLOURPOPUP_USER (0x0400 + 6000)
-#define WM_PICKUP_COLOR  (COLOURPOPUP_USER + 1)
+constexpr int NPP_COLOURPOPUP_USER = 0x0400 + 6000;
+constexpr int WM_PICKUP_COLOR = NPP_COLOURPOPUP_USER + 1;
 
-#define BABYGRID_USER (0x0400 + 7000)
+// Note: BABYGRID_USER is defined as constexpr in WinControls/Grid/BabyGrid.h
+// to avoid macro conflicts with Windows headers

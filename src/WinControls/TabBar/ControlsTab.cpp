@@ -46,7 +46,7 @@ void ControlsTab::createTabs(WindowVector& winVector)
     {
         if (info._dlg)
         {
-            int index = addTab(info._name);
+            int index = addTab(nullptr, info._name);
             Q_UNUSED(index);
             // Panel is shown/hidden by activateWindowAt
             info._dlg->display(false);
