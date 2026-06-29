@@ -42,7 +42,7 @@ static const QColor colourItemsData[48] = {
     QColor(128, 128, 255), QColor(  0,   0, 160), QColor(  0,   0,  64), QColor(192, 192, 192),
     QColor( 64,   0,  64), QColor(128,   0, 128), QColor(128,   0,  64), QColor(255, 255, 255),
     QColor(128, 128, 192), QColor(255, 128, 192), QColor(255, 128, 255), QColor(255,   0, 255),
-    QColor(255,   0, 128), QColor(128,   0, 255), QColor( 64,   0, 128), QColor(255, 255, 255),
+    QColor(255,   0, 128), QColor(128,   0, 255), QColor( 64,   0, 128), QColor(200, 200, 200),
 };
 
 // =============================================================================

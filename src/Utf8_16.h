@@ -77,7 +77,7 @@ protected:
 protected:
     unsigned m_eEncoding = utf8_16_8bit;
     eState m_eState = eStart;
-    utf8 m_out[16];
+    utf16 m_out[8]; // 8 × 2 bytes = 16 bytes capacity, matching the original utf16[4]
     int m_out1st = 0;
     int m_outLst = 0;
     utf16 m_nCur16 = 0;

@@ -30,7 +30,7 @@ QRgb FluentColorMap::fromEnum(FluentColor fc, int customColor, bool useMono)
         case FluentColor::cyan:      return 0x00B7C3;
         case FluentColor::olive:     return 0x498205;
         case FluentColor::yellow:    return 0xFFB900;
-        case FluentColor::custom:    return customColor ? static_cast<QRgb>(customColor) : g_defaultAccentColor;
+        case FluentColor::custom:    return (customColor == 0) ? g_defaultAccentColor : static_cast<QRgb>(customColor);
         case FluentColor::defaultColor:
             return useMono
                 ? (NppDarkMode::instance().isEnabled() ? g_cDefaultMainDark : g_cDefaultMainLight)

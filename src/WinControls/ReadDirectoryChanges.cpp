@@ -239,6 +239,10 @@ void DirectoryWatcher::push(quint32 action, const QString& fileName)
 
 bool DirectoryWatcher::pop(quint32& outAction, QString& outFileName, int waitMs)
 {
+    // Initialize output params so they retain their values if we return early.
+    outAction = 0;
+    outFileName = QString();
+
     QMutexLocker locker(&_mutex);
 
     if (_notifications.isEmpty()) {

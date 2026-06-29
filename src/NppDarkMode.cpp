@@ -38,13 +38,13 @@ namespace NppDarkMode
 // Default colour tables (from Win32 originals)
 // =============================================================================
 
-static constexpr int k_offsetEdge   = hexRgb(0x1C1C1C);
-static constexpr int k_offsetRed   = hexRgb(0x100000);
-static constexpr int k_offsetGreen = hexRgb(0x001000);
-static constexpr int k_offsetBlue  = hexRgb(0x000020);
-static constexpr int k_offsetPurple = hexRgb(0x100020);
-static constexpr int k_offsetCyan  = hexRgb(0x001020);
-static constexpr int k_offsetOlive = hexRgb(0x101000);
+static constexpr int k_offsetEdge   = 0x1C1C1C;
+static constexpr int k_offsetRed   = 0x100000;
+static constexpr int k_offsetGreen = 0x001000;
+static constexpr int k_offsetBlue  = 0x000020;
+static constexpr int k_offsetPurple = 0x100020;
+static constexpr int k_offsetCyan  = 0x001020;
+static constexpr int k_offsetOlive = 0x101000;
 
 static constexpr Colors k_colorsBlack =
 {
@@ -611,20 +611,23 @@ void NppDarkMode::calculateTreeViewStyle(QRgb bgColor)
 {
     double lightness = perceivedLightness(bgColor);
     if (lightness < 50.0 - 2.0)
+    {
+        _treeViewStyle = TreeViewStyle::dark;
         setTone(ColorTone::blackTone); // dark bg → dark theme
+    }
     else if (lightness > 50.0 + 2.0)
-        ; // light bg → light theme (default)
+    {
+        _treeViewStyle = TreeViewStyle::light; // light bg → light theme
+    }
+    else
+    {
+        _treeViewStyle = TreeViewStyle::classic;
+    }
 }
 
 TreeViewStyle NppDarkMode::treeViewStyle() const
 {
-    // Heuristic based on bg lightness
-    double lightness = perceivedLightness(_colors.background);
-    if (lightness < 50.0 - 2.0)
-        return TreeViewStyle::dark;
-    if (lightness > 50.0 + 2.0)
-        return TreeViewStyle::light;
-    return TreeViewStyle::classic;
+    return _treeViewStyle;
 }
 
 void NppDarkMode::setTreeViewStyle(QWidget* treeView, TreeViewStyle style)
@@ -648,8 +651,17 @@ void NppDarkMode::setTreeViewStyle(QWidget* treeView, TreeViewStyle style)
 QPalette NppDarkMode::palette() const
 {
     QPalette pal;
+
     if (!_options.enable)
-        return pal; // return null/empty palette → use default
+    {
+        // Return empty palette so isValid() returns false for all roles
+        for (int role = 0; role < QPalette::NColorRoles; ++role)
+        {
+            QColor invalid;  // default-constructed = invalid
+            pal.setColor(static_cast<QPalette::ColorRole>(role), invalid);
+        }
+        return pal;
+    }
 
     pal.setColor(QPalette::Window,          QColor::fromRgb(_colors.background));
     pal.setColor(QPalette::WindowText,      QColor::fromRgb(_colors.text));

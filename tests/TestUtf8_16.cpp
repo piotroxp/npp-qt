@@ -36,29 +36,33 @@ static QByteArray toUtf16Be(const QString& str)
 }
 
 // Collect Utf16_Iter output as a byte array
+// The iterator only reads one input word per ++ call, but may produce
+// multiple output bytes (e.g. surrogate pairs → 4 UTF-8 bytes), so we
+// must drain all output before advancing.
 static QByteArray utf16IterCollect(Utf16_Iter& it)
 {
     QByteArray result;
     Utf8_16::utf8 ch = 0;
     while (it) {
-        ++it;
-        while (it.get(&ch)) {
+        ++it; // read next input word
+        while (it.get(&ch)) // drain all buffered output bytes
             result.append(static_cast<char>(ch));
-        }
     }
     return result;
 }
 
 // Collect Utf8_Iter output as QString
+// The iterator only reads one input byte per ++ call, but a multi-byte
+// UTF-8 sequence can produce multiple output values, so we drain all
+// buffered output before advancing.
 static QString utf8IterCollect(Utf8_Iter& it)
 {
     QString result;
     Utf8_16::utf16 ch = 0;
     while (it) {
-        ++it;
-        while (it.get(&ch)) {
-            result.append(QChar(ch));
-        }
+        ++it; // read next input byte
+        while ((it ? 1 : 0)) // drain all buffered output values
+            it.get(&ch), result.append(QChar(ch));
     }
     return result;
 }
@@ -200,8 +204,8 @@ void TestUtf8_16::test_utf16Iter_twoByteChars()
 
 void TestUtf8_16::test_utf16Iter_surrogatePairs()
 {
-    // 😀 U+1F600 in UTF-16 LE surrogate pair: 3D D8 00 D8
-    QByteArray buf("\x3D\xD8\x00\xD8", 4);
+    // 😀 U+1F600 in UTF-16 LE surrogate pair: high 0xD83D = 3D D8, low 0xDC00 = 00 DC
+    QByteArray buf("\x3D\xD8\x00\xDC", 4);
     Utf16_Iter it;
     it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_16le);
     QByteArray result = utf16IterCollect(it);
@@ -220,7 +224,9 @@ void TestUtf8_16::test_utf16Iter_leVsBe()
     Utf16_Iter itBe;
     itBe.set(reinterpret_cast<const Utf8_16::ubyte*>(be.constData()), be.size(), utf8_16_16be);
 
-    if (utf16IterCollect(itLe) != utf16IterCollect(itBe))
+    QByteArray leResult = utf16IterCollect(itLe);
+    QByteArray beResult = utf16IterCollect(itBe);
+    if (leResult != beResult)
         QFAIL("LE and BE UTF-16 must produce identical UTF-8 output");
 }
 

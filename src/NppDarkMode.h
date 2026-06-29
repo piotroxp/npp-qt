@@ -47,7 +47,7 @@ struct TbIconInfo;  // forward declaration (defined below)
 
 struct Colors
 {
-    QRgb background      = 0x202020;  // main background
+    QRgb background      = 0x303030;  // main background
     QRgb softerBackground = 0x383838; // control background
     QRgb hotBackground   = 0x454545;  // hover highlight
     QRgb pureBackground  = 0x202020;  // dialog background
@@ -265,6 +265,9 @@ private:
     mutable QPen _penDarkerText;
     mutable bool _pensValid = false;
 
+    // Cached tree-view style (set by calculateTreeViewStyle)
+    mutable TreeViewStyle _treeViewStyle = TreeViewStyle::classic;
+
 public:
     // Exposed via second public section so MOC-generated members stay isolated
     static NppDarkMode& instance();
@@ -304,16 +307,15 @@ inline NppDarkMode& instance()
     return NppDarkMode::instance();
 }
 
-// Helper: build a QRgb from 0xRRGGBB (big-endian hex literal)
-constexpr inline QRgb hexRgb(unsigned int rrggbb)
+// Helper: return a QRgb as-is.  Callers in this codebase already use
+// 0x00RRGGBB (fully-opaque ARGB) so no conversion is needed.
+constexpr inline QRgb hexRgb(unsigned int rgb)
 {
-    return ((rrggbb & 0xFF0000) >> 16)
-         |  (rrggbb & 0x00FF00)
-         | ((rrggbb & 0x0000FF) << 16);
+    return rgb;
 }
 
 // ── Convenience colours for the default dark theme ──────────────────────────
-static constexpr QRgb k_darkBg        = 0x202020;
+static constexpr QRgb k_darkBg        = 0x303030;
 static constexpr QRgb k_darkCtrlBg    = 0x383838;
 static constexpr QRgb k_darkHotBg      = 0x454545;
 static constexpr QRgb k_darkPureBg    = 0x202020;

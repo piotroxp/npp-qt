@@ -92,13 +92,14 @@ void Utf16_Iter::read()
         // Little-endian: low byte first.
         m_nCur16 = *m_pRead++;
         m_nCur16 |= static_cast<utf16>(*m_pRead << 8);
-        ++m_pRead;
+        ++m_pRead; // point past the 16-bit word (ready for next read or bounds check)
     }
     else // utf8_16_16be or utf8_16_16be_nobom
     {
+        // Big-endian: high byte first.
         m_nCur16 = static_cast<utf16>(*m_pRead << 8);
-        m_nCur16 |= *m_pRead;
-        m_pRead += 2;
+        m_nCur16 |= *++m_pRead;
+        ++m_pRead; // point past the 16-bit word
     }
 }
 
@@ -112,6 +113,8 @@ void Utf16_Iter::operator++()
         case eStart:
         {
             read();
+            if (m_pRead > m_pEnd)
+                break;
             if ((m_nCur16 >= 0xd800) && (m_nCur16 < 0xdc00))
             {
                 m_eState = eSurrogate;
@@ -141,6 +144,11 @@ void Utf16_Iter::operator++()
         case eSurrogate:
         {
             read();
+            if (m_pRead > m_pEnd)
+            {
+                m_eState = eStart;
+                break;
+            }
             if ((m_nCur16 >= 0xDC00) && (m_nCur16 < 0xE000))
             {
                 unsigned int code = 0x10000
@@ -188,7 +196,6 @@ void Utf8_Iter::set(const ubyte* pBuf, size_t nLen, unsigned eEncoding)
     m_pEnd      = pBuf + nLen;
     m_eEncoding = eEncoding;
     // m_eState, m_code, m_count, m_out* not reset
-    // m_eState, m_code, m_count, m_out* not reset
     // Only initialise the shared Utf16_Iter for UTF-16 encodings.
     // UTF-8 input is handled natively byte-by-byte by operator++().
     if (eEncoding == utf8_16_16be || eEncoding == utf8_16_16le ||
@@ -215,37 +222,82 @@ void Utf8_Iter::pushout(utf16 c)
 
 void Utf8_Iter::toStart()
 {
-    bool swap = (m_eEncoding == utf8_16_16be || m_eEncoding == utf8_16_16be_nobom);
-
     // 4-byte UTF-8 sequences are accumulated with an extra left-shift.
     // Correct by shifting right: the accumulated m_code is 6 bits too high.
     if (m_leadingByte)
         m_code >>= 6;
 
+    // Utf8_Iter is an in-memory iterator: always output native-endian UTF-16.
+    // The file-write path (Utf8_16_Write) handles endianness conversion.
     if (m_code < 0x10000)
     {
-        utf16 c = swap ? qbswap(m_code) : static_cast<utf16>(m_code);
-        pushout(c);
+        pushout(static_cast<utf16>(m_code));
     }
     else
     {
         utf16 c1 = static_cast<utf16>(0xD800 | (m_code >> 10));
         utf16 c2 = static_cast<utf16>(0xDC00 | (m_code & 0x3ff));
-        if (swap)
-        {
-            c1 = qbswap(c1);
-            c2 = qbswap(c2);
-        }
         pushout(c1);
         pushout(c2);
     }
     m_eState = eStart;
+    m_count = 0;        // Prevent wrap-around: --m_count from 0 would underflow
+    m_leadingByte = 0;  // Safe default; next leading byte sets it appropriately
 }
 
 void Utf8_Iter::operator++()
 {
     if (m_out1st != m_outLst)
         return;
+
+    // For UTF-16 encodings, delegate to the inner Utf16_Iter.
+    // iter16() reads UTF-16 words and produces UTF-8 bytes; we feed
+    // each UTF-8 byte through the state machine to build Unicode code
+    // points, which toStart() emits as UTF-16 code units.
+    if (m_eEncoding == utf8_16_16be || m_eEncoding == utf8_16_16le ||
+        m_eEncoding == utf8_16_16be_nobom || m_eEncoding == utf8_16_16le_nobom)
+    {
+        ++iter16();
+        Utf8_16::utf8 byte;
+        while (iter16().get(&byte))
+        {
+            if (m_eState == eStart)
+            {
+                if (byte < 0x80)
+                {
+                    m_code = byte;
+                    m_count = 0; // single-byte: complete
+                }
+                else if (byte < 0xE0)
+                {
+                    m_code = 0x1f & byte;
+                    m_eState = eFollow;
+                    m_count = 1;
+                }
+                else if (byte < 0xF0)
+                {
+                    m_code = 0x0f & byte;
+                    m_eState = eFollow;
+                    m_count = 2;
+                }
+                else
+                {
+                    m_code = 0x07 & byte;
+                    m_eState = eFollow;
+                    m_count = 3;
+                }
+            }
+            else // eFollow
+            {
+                m_code = (m_code << 6) | (0x3F & byte);
+                --m_count;
+            }
+        }
+        // Only emit a code point when a complete sequence has been decoded.
+        if (m_count == 0)
+            toStart();
+        return;
+    }
 
     switch (m_eState)
     {

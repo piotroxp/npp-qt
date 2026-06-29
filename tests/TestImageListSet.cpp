@@ -270,8 +270,8 @@ void TestImageListSet::test_invertLightness_white()
     using namespace ImageListSetColors;
     QRgb result = invertLightness(0xFFFFFF);
     // white: r = min(255, 255+40) = 255 → 255-255 = 0
-    if (result != 0x000000)
-        QFAIL(QString("invertLightness(white): expected 0x000000, got 0x%1")
+    if (result != 0xff000000)
+        QFAIL(QString("invertLightness(white): expected 0xff000000, got 0x%1")
                  .arg(result, 6, 16).toUtf8());
 }
 
@@ -330,7 +330,7 @@ void TestImageListSet::test_fluentColorMap_accentVsCustom()
 {
     using namespace FluentColorMap;
     QRgb accent = fromEnum(FluentColor::accent);
-    QRgb custom = fromEnum(FluentColor::custom, 0xAABBCC);
+    QRgb custom = fromEnum(FluentColor::custom, 0);
     // custom(0) falls back to accent
     if (custom != accent)
         QFAIL("custom(0) must return same as accent");

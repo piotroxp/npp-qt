@@ -42,7 +42,7 @@ namespace ImageListSetColors {
         int r = qMin(255, qRed(c)   + 40);
         int g = qMin(255, qGreen(c) + 40);
         int b = qMin(255, qBlue(c)  + 40);
-        return qRgb(255 - r, 255 - g, 255 - b);
+        return qRgba(255 - r, 255 - g, 255 - b, 255);
     }
 }
 
