@@ -6,6 +6,7 @@
 // =============================================================================
 
 #include <QtTest/QtTest>
+#include <QColor>
 #include "NppDarkMode.h"
 
 class TestNppDarkMode : public QObject
@@ -41,7 +42,7 @@ private slots:
     void test_colorSetters();
     void test_setColorEmitsSignal();
 
-    // ── Brushes ──────────────────────────────────────────────────────────────
+    // ── Brushes ─────────────────────────────────────────────────────────────
     void test_brushesAreBuilt();
     void test_brushesCaching();
     void test_brushesAfterColorChange();
@@ -74,36 +75,25 @@ private slots:
 };
 
 // =============================================================================
-// Helpers
-// =============================================================================
-
-// Access private rebuildBrushes via friend access (NppDarkMode is a friend)
-static void forceRebuildBrushes(NppDarkMode& dm)
-{
-    dm.rebuildBrushes();
-}
-
-// =============================================================================
 // Tests
 // =============================================================================
 
 void TestNppDarkMode::test_singletonNotNull()
 {
-    NppDarkMode& instance = NppDarkMode::instance();
+    auto& instance = NppDarkMode::instance();
     QVERIFY2(&instance != nullptr, "Singleton instance() must not return nullptr");
 }
 
 void TestNppDarkMode::test_singletonSameInstance()
 {
-    NppDarkMode& a = NppDarkMode::instance();
-    NppDarkMode& b = NppDarkMode::instance();
+    auto& a = NppDarkMode::instance();
+    auto& b = NppDarkMode::instance();
     if (&a != &b)
         QFAIL("Singleton instance() must return the same instance");
 }
 
 void TestNppDarkMode::test_hexRgb_basic()
 {
-    // 0xRRGGBB → QRgb byte order: 0xRRGGBB
     QRgb result = NppDarkMode::hexRgb(0xAABBCC);
     if (qRed(result)   != 0xAA) QFAIL("hexRgb red channel mismatch");
     if (qGreen(result) != 0xBB) QFAIL("hexRgb green channel mismatch");
@@ -112,7 +102,6 @@ void TestNppDarkMode::test_hexRgb_basic()
 
 void TestNppDarkMode::test_hexRgb_roundtrip()
 {
-    // Feeding the dark-mode colour constant back through hexRgb
     QRgb c = NppDarkMode::hexRgb(0x202020);
     if (qRed(c) != 0x20 || qGreen(c) != 0x20 || qBlue(c) != 0x20)
         QFAIL("hexRgb failed for 0x202020");
@@ -129,8 +118,8 @@ void TestNppDarkMode::test_hexRgb_borderColors()
 
 void TestNppDarkMode::test_defaultColorsBlackTone()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
-    Colors c = dm.defaultColors(NppDarkMode::ColorTone::blackTone);
+    auto& dm = NppDarkMode::instance();
+    NppDarkMode::Colors c = dm.defaultColors(NppDarkMode::ColorTone::blackTone);
 
     // Background must be dark
     if (qRed(c.background) == 0 && qGreen(c.background) == 0 && qBlue(c.background) == 0)
@@ -141,49 +130,49 @@ void TestNppDarkMode::test_defaultColorsBlackTone()
 
 void TestNppDarkMode::test_defaultColorsRedTone()
 {
-    Colors c = NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::redTone);
+    NppDarkMode::Colors c = NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::redTone);
     if (c.background == NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::blackTone).background)
         QFAIL("Red tone must differ from black tone");
 }
 
 void TestNppDarkMode::test_defaultColorsBlueTone()
 {
-    Colors c = NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::blueTone);
+    NppDarkMode::Colors c = NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::blueTone);
     if (c.background == NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::blackTone).background)
         QFAIL("Blue tone must differ from black tone");
 }
 
 void TestNppDarkMode::test_defaultColorsGreenTone()
 {
-    Colors c = NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::greenTone);
+    NppDarkMode::Colors c = NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::greenTone);
     if (c.background == NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::blackTone).background)
         QFAIL("Green tone must differ from black tone");
 }
 
 void TestNppDarkMode::test_defaultColorsPurpleTone()
 {
-    Colors c = NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::purpleTone);
+    NppDarkMode::Colors c = NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::purpleTone);
     if (c.background == NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::blackTone).background)
         QFAIL("Purple tone must differ from black tone");
 }
 
 void TestNppDarkMode::test_defaultColorsCyanTone()
 {
-    Colors c = NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::cyanTone);
+    NppDarkMode::Colors c = NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::cyanTone);
     if (c.background == NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::blackTone).background)
         QFAIL("Cyan tone must differ from black tone");
 }
 
 void TestNppDarkMode::test_defaultColorsOliveTone()
 {
-    Colors c = NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::oliveTone);
+    NppDarkMode::Colors c = NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::oliveTone);
     if (c.background == NppDarkMode::instance().defaultColors(NppDarkMode::ColorTone::blackTone).background)
         QFAIL("Olive tone must differ from black tone");
 }
 
 void TestNppDarkMode::test_defaultDisabled()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(false);
     if (dm.isEnabled())
         QFAIL("Dark mode should be disabled by default");
@@ -191,7 +180,7 @@ void TestNppDarkMode::test_defaultDisabled()
 
 void TestNppDarkMode::test_enableDisable()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(false);
 
     dm.setEnabled(true);
@@ -206,23 +195,22 @@ void TestNppDarkMode::test_enableDisable()
 
 void TestNppDarkMode::test_enableEmitsSignal()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(false);
 
-    QSignalSpy spy(&dm, &NppDarkMode::darkModeChanged);
+    QSignalSpy spy(&dm, &NppDarkMode::NppDarkMode::darkModeChanged);
     dm.setEnabled(true);
 
     if (spy.size() != 1)
-        QFAIL(QString("darkModeChanged signal: expected 1 emission, got %1").arg(spy.size()).toUtf8());
+        QFAIL(QString("darkModeChanged signal: expected 1 emission, got %1").arg(spy.size()).toUtf8().constData());
 }
 
 void TestNppDarkMode::test_colorGetters()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(true);
 
-    Colors c = dm.colors();
-    // Verify all colour accessors return consistent values
+    NppDarkMode::Colors c = dm.colors();
     if (dm.backgroundColor()    != c.background)       QFAIL("backgroundColor getter mismatch");
     if (dm.ctrlBackgroundColor()!= c.softerBackground) QFAIL("ctrlBackgroundColor mismatch");
     if (dm.hotBackgroundColor()  != c.hotBackground)   QFAIL("hotBackgroundColor mismatch");
@@ -234,7 +222,7 @@ void TestNppDarkMode::test_colorGetters()
 
 void TestNppDarkMode::test_colorSetters()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(true);
     dm.setBackgroundColor(0x123456);
     if (dm.backgroundColor() != 0x123456)
@@ -243,9 +231,9 @@ void TestNppDarkMode::test_colorSetters()
 
 void TestNppDarkMode::test_setColorEmitsSignal()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(true);
-    QSignalSpy spy(&dm, &NppDarkMode::colorsChanged);
+    QSignalSpy spy(&dm, &NppDarkMode::NppDarkMode::colorsChanged);
 
     dm.setBackgroundColor(0xAABBCC);
 
@@ -255,7 +243,7 @@ void TestNppDarkMode::test_setColorEmitsSignal()
 
 void TestNppDarkMode::test_brushesAreBuilt()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(true);
     dm.setColors(dm.defaultColors(NppDarkMode::ColorTone::blackTone));
 
@@ -265,10 +253,11 @@ void TestNppDarkMode::test_brushesAreBuilt()
     QBrush hotBg  = dm.hotBackgroundBrush();
     QBrush edge   = dm.edgeBrush();
 
-    QVERIFY2(!bg.isBrushSet(),     "backgroundBrush should be set");
-    QVERIFY2(!ctrlBg.isBrushSet(), "ctrlBackgroundBrush should be set");
-    QVERIFY2(!hotBg.isBrushSet(),  "hotBackgroundBrush should be set");
-    QVERIFY2(!edge.isBrushSet(),   "edgeBrush should be set");
+    // Verify brushes are non-null
+    QVERIFY2(bg.style() != Qt::NoBrush,     "backgroundBrush should be set");
+    QVERIFY2(ctrlBg.style() != Qt::NoBrush, "ctrlBackgroundBrush should be set");
+    QVERIFY2(hotBg.style() != Qt::NoBrush,  "hotBackgroundBrush should be set");
+    QVERIFY2(edge.style() != Qt::NoBrush,   "edgeBrush should be set");
 
     // Colour should match defaults
     if (bg.color().rgb() != dm.backgroundColor())
@@ -277,7 +266,7 @@ void TestNppDarkMode::test_brushesAreBuilt()
 
 void TestNppDarkMode::test_brushesCaching()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(true);
     dm.setColors(dm.defaultColors(NppDarkMode::ColorTone::blackTone));
 
@@ -289,13 +278,13 @@ void TestNppDarkMode::test_brushesCaching()
 
 void TestNppDarkMode::test_brushesAfterColorChange()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(true);
     dm.setColors(dm.defaultColors(NppDarkMode::ColorTone::blackTone));
 
     QBrush before = dm.backgroundBrush();
 
-    Colors c = dm.defaultColors(NppDarkMode::ColorTone::blueTone);
+    NppDarkMode::Colors c = dm.defaultColors(NppDarkMode::ColorTone::blueTone);
     dm.setColors(c);
 
     QBrush after = dm.backgroundBrush();
@@ -306,7 +295,7 @@ void TestNppDarkMode::test_brushesAfterColorChange()
 
 void TestNppDarkMode::test_pensAreBuilt()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(true);
 
     QPen edge = dm.edgePen();
@@ -322,7 +311,7 @@ void TestNppDarkMode::test_pensAreBuilt()
 
 void TestNppDarkMode::test_pensCaching()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(true);
 
     QPen a = dm.edgePen();
@@ -333,7 +322,7 @@ void TestNppDarkMode::test_pensCaching()
 
 void TestNppDarkMode::test_paletteWhenDisabledIsEmpty()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(false);
 
     QPalette pal = dm.palette();
@@ -344,7 +333,7 @@ void TestNppDarkMode::test_paletteWhenDisabledIsEmpty()
 
 void TestNppDarkMode::test_paletteWhenEnabled()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(true);
     dm.setColors(dm.defaultColors(NppDarkMode::ColorTone::blackTone));
 
@@ -357,21 +346,21 @@ void TestNppDarkMode::test_paletteWhenEnabled()
 
 void TestNppDarkMode::test_setToneBlack()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(true);
     dm.setTone(NppDarkMode::ColorTone::blackTone);
 
-    Colors c = dm.colors();
-    Colors black = dm.defaultColors(NppDarkMode::ColorTone::blackTone);
+    NppDarkMode::Colors c = dm.colors();
+    NppDarkMode::Colors black = dm.defaultColors(NppDarkMode::ColorTone::blackTone);
     if (c.background != black.background)
         QFAIL("setTone(black) must set background to black tone background");
 }
 
 void TestNppDarkMode::test_setToneEmitsColorsChanged()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(true);
-    QSignalSpy spy(&dm, &NppDarkMode::colorsChanged);
+    QSignalSpy spy(&dm, &NppDarkMode::NppDarkMode::colorsChanged);
     dm.setTone(NppDarkMode::ColorTone::blueTone);
     if (spy.isEmpty())
         QFAIL("setTone must emit colorsChanged");
@@ -394,23 +383,19 @@ void TestNppDarkMode::test_calculateTreeViewStyle()
     QFETCH(QRgb, bgColor);
     QFETCH(NppDarkMode::TreeViewStyle, expected);
 
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setColors(dm.defaultColors(NppDarkMode::ColorTone::blackTone));
     dm.calculateTreeViewStyle(bgColor);
 
-    TreeViewStyle actual = dm.treeViewStyle();
+    NppDarkMode::TreeViewStyle actual = dm.treeViewStyle();
     if (actual != expected)
         QFAIL(QString("calculateTreeViewStyle(0x%1): expected %2, got %3")
-                 .arg(bgColor, 6, 16).arg(int(expected)).arg(int(actual)).toUtf8());
+                 .arg(bgColor, 6, 16).arg(int(expected)).arg(int(actual)).toUtf8().constData());
 }
 
 void TestNppDarkMode::test_perceivedLightness_white()
 {
-    // Perceived lightness of white should be 100
-    NppDarkMode& dm = NppDarkMode::instance();
-    // Use internal helper indirectly via treeViewStyle
-    // (it's a static free function, not directly accessible here)
-    // We verify it is called without crash via calculateTreeViewStyle
+    auto& dm = NppDarkMode::instance();
     dm.calculateTreeViewStyle(0xFFFFFF);
     if (dm.treeViewStyle() != NppDarkMode::TreeViewStyle::light)
         QFAIL("calculateTreeViewStyle(white) should return light");
@@ -418,7 +403,7 @@ void TestNppDarkMode::test_perceivedLightness_white()
 
 void TestNppDarkMode::test_perceivedLightness_black()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.calculateTreeViewStyle(0x000000);
     if (dm.treeViewStyle() != NppDarkMode::TreeViewStyle::dark)
         QFAIL("calculateTreeViewStyle(black) should return dark");
@@ -426,7 +411,7 @@ void TestNppDarkMode::test_perceivedLightness_black()
 
 void TestNppDarkMode::test_perceivedLightness_midGray()
 {
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.calculateTreeViewStyle(0x808080);
     if (dm.treeViewStyle() != NppDarkMode::TreeViewStyle::classic)
         QFAIL("calculateTreeViewStyle(0x808080) should return classic");
@@ -434,8 +419,7 @@ void TestNppDarkMode::test_perceivedLightness_midGray()
 
 void TestNppDarkMode::test_perceivedLightness_blue()
 {
-    // Blue is dark in ITU-R BT.709 luminance → should trigger dark style
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.calculateTreeViewStyle(0x000080);
     if (dm.treeViewStyle() != NppDarkMode::TreeViewStyle::dark)
         QFAIL("calculateTreeViewStyle(blue) should return dark");
@@ -443,27 +427,26 @@ void TestNppDarkMode::test_perceivedLightness_blue()
 
 void TestNppDarkMode::test_kDarkColorsConstants()
 {
-    // Verify the public constants match the singletons defaults
-    NppDarkMode& dm = NppDarkMode::instance();
+    auto& dm = NppDarkMode::instance();
     dm.setEnabled(true);
     dm.setTone(NppDarkMode::ColorTone::blackTone);
 
-    Colors c = dm.colors();
-    if (c.background    != k_darkBg)           QFAIL("k_darkBg mismatch");
-    if (c.text         != k_darkText)          QFAIL("k_darkText mismatch");
-    if (c.edge         != k_darkEdge)          QFAIL("k_darkEdge mismatch");
+    NppDarkMode::Colors c = dm.colors();
+    if (c.background    != NppDarkMode::k_darkBg)           QFAIL("k_darkBg mismatch");
+    if (c.text         != NppDarkMode::k_darkText)          QFAIL("k_darkText mismatch");
+    if (c.edge         != NppDarkMode::k_darkEdge)          QFAIL("k_darkEdge mismatch");
 }
 
 void TestNppDarkMode::test_kDarkColorsValues()
 {
     // Absolute value checks
-    if (k_darkBg         != 0x202020) QFAIL("k_darkBg value wrong");
-    if (k_darkText       != 0xE0E0E0) QFAIL("k_darkText value wrong");
-    if (k_darkEdge       != 0x646464) QFAIL("k_darkEdge value wrong");
-    if (k_darkLink       != 0xFFFF00) QFAIL("k_darkLink value wrong");
-    if (k_darkHotBg      != 0x454545) QFAIL("k_darkHotBg value wrong");
-    if (k_darkPureBg     != 0x202020) QFAIL("k_darkPureBg value wrong");
-    if (k_darkDisabledEdge != 0x484848) QFAIL("k_darkDisabledEdge value wrong");
+    if (NppDarkMode::k_darkBg         != 0x202020) QFAIL("k_darkBg value wrong");
+    if (NppDarkMode::k_darkText       != 0xE0E0E0) QFAIL("k_darkText value wrong");
+    if (NppDarkMode::k_darkEdge       != 0x646464) QFAIL("k_darkEdge value wrong");
+    if (NppDarkMode::k_darkLink       != 0xFFFF00) QFAIL("k_darkLink value wrong");
+    if (NppDarkMode::k_darkHotBg     != 0x454545) QFAIL("k_darkHotBg value wrong");
+    if (NppDarkMode::k_darkPureBg    != 0x202020) QFAIL("k_darkPureBg value wrong");
+    if (NppDarkMode::k_darkDisabledEdge != 0x484848) QFAIL("k_darkDisabledEdge value wrong");
 }
 
 QTEST_MAIN(TestNppDarkMode)

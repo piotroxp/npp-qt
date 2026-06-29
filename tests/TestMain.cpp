@@ -1,3 +1,6 @@
+// Force AUTOMOC to pick up WindowBase (Q_OBJECT) for all test targets
+#include "WinControls/Window.h"
+
 // =============================================================================
 // TestMain.cpp — Test runner entry point for the npp-qt test suite
 // All individual test classes are registered via their respective

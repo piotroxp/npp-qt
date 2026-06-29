@@ -125,54 +125,54 @@ private slots:
 void TestUtf8_16::test_bomConstants()
 {
     // UTF-8 BOM: EF BB BF
-    const auto* bom8 = Utf8_16::k_Boms[uniUTF8];
+    const auto* bom8 = Utf8_16::k_Boms[utf8_16_utf8];
     QVERIFY(bom8 != nullptr);
     if (bom8[0] != 0xEF || bom8[1] != 0xBB || bom8[2] != 0xBF)
         QFAIL("UTF-8 BOM mismatch: expected EF BB BF");
 
     // UTF-16 BE BOM: FE FF
-    const auto* bomBe = Utf8_16::k_Boms[uni16BE];
+    const auto* bomBe = Utf8_16::k_Boms[utf8_16_16be];
     QVERIFY(bomBe != nullptr);
     if (bomBe[0] != 0xFE || bomBe[1] != 0xFF)
         QFAIL("UTF-16 BE BOM mismatch: expected FE FF");
 
     // UTF-16 LE BOM: FF FE
-    const auto* bomLe = Utf8_16::k_Boms[uni16LE];
+    const auto* bomLe = Utf8_16::k_Boms[utf8_16_16le];
     QVERIFY(bomLe != nullptr);
     if (bomLe[0] != 0xFF || bomLe[1] != 0xFE)
         QFAIL("UTF-16 LE BOM mismatch: expected FF FE");
 
-    // uniUnknown BOM should be all zeros
-    const auto* bomUnknown = Utf8_16::k_Boms[uniUnknown];
+    // utf8_16_unknown BOM should be all zeros
+    const auto* bomUnknown = Utf8_16::k_Boms[utf8_16_unknown];
     QVERIFY(bomUnknown != nullptr);
     if (bomUnknown[0] != 0x00 || bomUnknown[1] != 0x00 || bomUnknown[2] != 0x00)
-        QFAIL("uniUnknown BOM should be all zeros");
+        QFAIL("utf8_16_unknown BOM should be all zeros");
 }
 
 void TestUtf8_16::test_determineEncodingFromBOM_data()
 {
     QTest::addColumn<QByteArray>("data");
-    QTest::addColumn<int>("expected");
+    QTest::addColumn<unsigned>("expected");
 
-    QTest::newRow("utf8_bom")      << QByteArray("\xEF\xBB\xBFhello", 8) << int(uniUTF8);
-    QTest::newRow("utf16be_bom")   << QByteArray("\xFE\xFF" "\x00""h", 5) << int(uni16BE);
-    QTest::newRow("utf16le_bom")   << QByteArray("\xFF\xFE" "h\x00", 5)   << int(uni16LE);
-    QTest::newRow("no_bom")        << QByteArray("hello")                  << int(uni8Bit);
-    QTest::newRow("too_short")     << QByteArray("\xEF", 1)                 << int(uni8Bit);
-    QTest::newRow("partial_utf16le") << QByteArray("\xFF", 1)              << int(uni8Bit);
+    QTest::newRow("utf8_bom")      << QByteArray("\xEF\xBB\xBFhello", 8) << utf8_16_utf8;
+    QTest::newRow("utf16be_bom")   << QByteArray("\xFE\xFF" "\x00""h", 5) << utf8_16_16be;
+    QTest::newRow("utf16le_bom")   << QByteArray("\xFF\xFE" "h\x00", 5)   << utf8_16_16le;
+    QTest::newRow("no_bom")        << QByteArray("hello")                  << utf8_16_8bit;
+    QTest::newRow("too_short")     << QByteArray("\xEF", 1)                 << utf8_16_8bit;
+    QTest::newRow("partial_utf16le") << QByteArray("\xFF", 1)              << utf8_16_8bit;
 }
 
 void TestUtf8_16::test_determineEncodingFromBOM()
 {
     QFETCH(QByteArray, data);
-    QFETCH(int, expected);
+    QFETCH(unsigned, expected);
 
-    UniMode result = Utf8_16_Read::determineEncodingFromBOM(
+    unsigned result = Utf8_16_Read::determineEncodingFromBOM(
         reinterpret_cast<const unsigned char*>(data.constData()),
         static_cast<size_t>(data.size()));
 
-    if (result != static_cast<UniMode>(expected))
-        QFAIL(QString("BOM detection: expected %1, got %2").arg(expected).arg(int(result)).toUtf8().constData());
+    if (result != expected)
+        QFAIL(QString("BOM detection: expected %1, got %2").arg(expected).arg(result).toUtf8().constData());
 }
 
 void TestUtf8_16::test_utf16Iter_asciiOnly()
@@ -180,7 +180,7 @@ void TestUtf8_16::test_utf16Iter_asciiOnly()
     // "AB" in UTF-16 LE: 41 00 42 00
     QByteArray buf("\x41\x00\x42\x00", 4);
     Utf16_Iter it;
-    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), uni16LE);
+    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_16le);
     QByteArray result = utf16IterCollect(it);
     if (result != QByteArray("AB"))
         QFAIL(QString("ASCII UTF-16 LE: expected 'AB', got '%1'").arg(QString::fromLatin1(result)).toUtf8().constData());
@@ -191,7 +191,7 @@ void TestUtf8_16::test_utf16Iter_twoByteChars()
     // 'é' U+00E9 in UTF-16 LE: E9 00
     QByteArray buf("\xE9\x00""A\x00", 4);
     Utf16_Iter it;
-    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), uni16LE);
+    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_16le);
     QByteArray result = utf16IterCollect(it);
     // 'é' in UTF-8 = C3 A9; 'A' = 41
     if (result.size() != 3)
@@ -203,7 +203,7 @@ void TestUtf8_16::test_utf16Iter_surrogatePairs()
     // 😀 U+1F600 in UTF-16 LE surrogate pair: 3D D8 00 D8
     QByteArray buf("\x3D\xD8\x00\xD8", 4);
     Utf16_Iter it;
-    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), uni16LE);
+    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_16le);
     QByteArray result = utf16IterCollect(it);
     // 😀 in UTF-8 = F0 9F 98 80 (4 bytes)
     if (result.size() != 4)
@@ -216,9 +216,9 @@ void TestUtf8_16::test_utf16Iter_leVsBe()
     QByteArray be("\x00\x41\x00\x42", 4);
 
     Utf16_Iter itLe;
-    itLe.set(reinterpret_cast<const Utf8_16::ubyte*>(le.constData()), le.size(), uni16LE);
+    itLe.set(reinterpret_cast<const Utf8_16::ubyte*>(le.constData()), le.size(), utf8_16_16le);
     Utf16_Iter itBe;
-    itBe.set(reinterpret_cast<const Utf8_16::ubyte*>(be.constData()), be.size(), uni16BE);
+    itBe.set(reinterpret_cast<const Utf8_16::ubyte*>(be.constData()), be.size(), utf8_16_16be);
 
     if (utf16IterCollect(itLe) != utf16IterCollect(itBe))
         QFAIL("LE and BE UTF-16 must produce identical UTF-8 output");
@@ -228,11 +228,11 @@ void TestUtf8_16::test_utf16Iter_reset()
 {
     QByteArray buf("\x41\x00\x42\x00", 4);
     Utf16_Iter it;
-    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), uni16LE);
+    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_16le);
     ++it; ++it; // consume two output bytes
 
     it.reset();
-    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), uni16LE);
+    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_16le);
 
     QByteArray result = utf16IterCollect(it);
     if (result != QByteArray("AB"))
@@ -243,7 +243,7 @@ void TestUtf8_16::test_utf8Iter_asciiOnly()
 {
     QByteArray buf("AB", 2);
     Utf8_Iter it;
-    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), uniUTF8);
+    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_utf8);
     if (utf8IterCollect(it) != QStringLiteral("AB"))
         QFAIL("UTF-8 ASCII iteration failed");
 }
@@ -253,7 +253,7 @@ void TestUtf8_16::test_utf8Iter_twoByteChars()
     // UTF-8 'é' = C3 A9
     QByteArray buf("\xC3\xA9""A", 3);
     Utf8_Iter it;
-    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), uniUTF8);
+    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_utf8);
     if (utf8IterCollect(it) != QStringLiteral("éA"))
         QFAIL("UTF-8 two-byte char iteration failed");
 }
@@ -263,7 +263,7 @@ void TestUtf8_16::test_utf8Iter_threeByteChars()
     // UTF-8 '€' = E2 82 AC
     QByteArray buf("\xE2\x82\xAC""E", 4);
     Utf8_Iter it;
-    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), uniUTF8);
+    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_utf8);
     if (utf8IterCollect(it) != QStringLiteral("€E"))
         QFAIL("UTF-8 three-byte char iteration failed");
 }
@@ -273,7 +273,7 @@ void TestUtf8_16::test_utf8Iter_fourByteSurrogates()
     // UTF-8 '😀' = F0 9F 98 80
     QByteArray buf("\xF0\x9F\x98\x80""X", 5);
     Utf8_Iter it;
-    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), uniUTF8);
+    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_utf8);
     if (utf8IterCollect(it) != QStringLiteral("😀X"))
         QFAIL("UTF-8 four-byte surrogate iteration failed");
 }
@@ -283,7 +283,7 @@ void TestUtf8_16::test_utf8Iter_beOutput()
     // Raw UTF-16 BE bytes for 'AB': 00 41 00 42
     QByteArray buf("\x00\x41\x00\x42", 4);
     Utf8_Iter it;
-    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), uni16BE);
+    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_16be);
 
     QString result = utf8IterCollect(it);
     if (result != QStringLiteral("AB"))
@@ -294,7 +294,7 @@ void TestUtf8_16::test_utf8Iter_noBom()
 {
     QByteArray buf("print('hello')", 15);
     Utf8_Iter it;
-    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), uniUTF8_NoBOM);
+    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_utf8_nobom);
     if (utf8IterCollect(it) != QStringLiteral("print('hello')"))
         QFAIL("UTF-8 NoBOM iteration failed");
 }
@@ -303,11 +303,11 @@ void TestUtf8_16::test_utf8Iter_reset()
 {
     QByteArray buf("AB", 2);
     Utf8_Iter it;
-    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), uniUTF8);
+    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_utf8);
     ++it; ++it; // consume both chars
 
     it.reset();
-    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), uniUTF8);
+    it.set(reinterpret_cast<const Utf8_16::ubyte*>(buf.constData()), buf.size(), utf8_16_utf8);
 
     if (utf8IterCollect(it) != QStringLiteral("AB"))
         QFAIL("UTF-8 Iter reset failed: expected 'AB'");
@@ -359,7 +359,7 @@ void TestUtf8_16::test_readUtf16LeNoBom()
     // "中文" in UTF-8 = E4 B8 AD E6 96 87
     if (out != QByteArray("\xE4\xB8\xAD\xE6\x96\x87"))
         QFAIL(QString("UTF-16 LE NoBOM: expected Chinese UTF-8 bytes, got %1").arg(
-            QString::fromUtf8(out).toUtf8().toHex()).toUtf8());
+            QString::fromUtf8(out).toUtf8().toHex()).toUtf8().constData());
 }
 
 void TestUtf8_16::test_readUtf16BeNoBom()
@@ -377,7 +377,7 @@ void TestUtf8_16::test_readUtf8NoBomDetection()
     Utf8_16_Read reader;
     QByteArray out = reader.convert(raw);
     if (out.size() != 6)
-        QFAIL(QString("UTF-8 NoBOM: expected 6 bytes, got %1").arg(out.size()));
+        QFAIL(QString("UTF-8 NoBOM: expected 6 bytes, got %1").arg(out.size()).toUtf8().constData());
 }
 
 void TestUtf8_16::test_read7Bit()
@@ -404,7 +404,7 @@ void TestUtf8_16::test_readEmpty()
     Utf8_16_Read reader;
     QByteArray out = reader.convert(QByteArray());
     if (!out.isEmpty())
-        QFAIL(QString("Empty buffer: expected empty output, got %1 bytes").arg(out.size()));
+        QFAIL(QString("Empty buffer: expected empty output, got %1 bytes").arg(out.size()).toUtf8().constData());
 }
 
 void TestUtf8_16::test_isLikelyUtf16Le_data()

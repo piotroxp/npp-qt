@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <QWidget>
+#include "WinControls/Window.h"
 #include <QColor>
 #include <QPainter>
 #include <QMouseEvent>

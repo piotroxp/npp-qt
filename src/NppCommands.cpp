@@ -57,6 +57,7 @@
 
 #include "Notepad_plus_Window.h"
 #include "Notepad_plus.h"
+#include "NppCommands.h"
 #include "EncodingMapper.h"
 #include "ShortcutMapper.h"
 #include "TaskListDlg.h"
@@ -77,6 +78,8 @@
 #include "md5Dlgs.h"  // includes MISC/md5/md5.h (the proper MD5 class)
 
 #include "NppConstants.h"
+#include "ScintillaComponent.h"
+
 
 // Qt6 compat shims for removed Win32 APIs
 #define WM_UNDO SCI_UNDO
@@ -155,41 +158,13 @@ inline QString GetLastErrorAsString(int) { return QStringLiteral("Error"); }
 inline bool IsChild(QWidget*, QWidget*) { return false; }
 
 // Qt6: QApplication* -> QWidget* conversion helpers
-inline QWidget* qappAsWidget(QApplication* app) { return app; }
+inline QWidget* qappAsWidget(QWidget* app) { return app; }
 
 // Stub implementations for missing panel methods
 namespace PanelStubs {
     inline bool isClosedStub() { return true; }
     inline void setClosedStub(bool) {}
     inline void grabFocusStub() {}
-}
-
-// Stub for missing ScintillaEditView methods
-namespace SciStubs {
-    inline void addGenericText(ScintillaComponent*, const wchar_t*) {}
-    inline bool getIndicatorRange(ScintillaComponent*, int, size_t*, size_t*, size_t*) { return false; }
-    inline bool pasteToMultiSelection(ScintillaComponent*) { return false; }
-    inline void removeAnyDuplicateLines(ScintillaComponent*) {}
-    inline void showNpc(ScintillaComponent*, bool) {}
-    inline void showCcUniEol(ScintillaComponent*, bool) {}
-    inline void hideLines(ScintillaComponent*) {}
-    inline void setWrapRestoreNeeded(ScintillaComponent*) {}
-    inline void markedTextToClipboard(ScintillaComponent*, int) {}
-    inline bool expandWordSelection(ScintillaComponent*) { return false; }
-    inline void convertSelectedTextToUpperCase(ScintillaComponent*) {}
-    inline void convertSelectedTextToLowerCase(ScintillaComponent*) {}
-    inline void convertSelectedTextToNewerCase(ScintillaComponent*, int) {}
-    inline bool getSelectionLinesRange(ScintillaComponent*, size_t*, size_t*) { return false; }
-    inline void sortLines(ScintillaComponent*, int) {}
-    inline void insertNewLineAboveCurrentLine(ScintillaComponent*) {}
-    inline void insertNewLineBelowCurrentLine(ScintillaComponent*) {}
-    inline void beginOrEndSelect(ScintillaComponent*, int) {}
-    inline bool beginEndSelectedIsStarted(ScintillaComponent*) { return false; }
-    inline bool getSelectedTextToWChar(ScintillaComponent*, wchar_t*, int) { return false; }
-    inline bool getSelectedTextToMultiChar(ScintillaComponent*, char*, int) { return false; }
-    inline int foldLevel(ScintillaComponent*, int) { return 0; }
-    inline int getCurrentBufferId(ScintillaComponent*) { return 0; }
-    inline void doUserDefineDlg(ScintillaComponent*, int) {}
 }
 
 // Stub for missing RunMacroDlg/GoToLineDlg/Finder methods
@@ -204,11 +179,6 @@ namespace DlgStubs {
     inline void updateFinderScintillaForNpcStub(QWidget*) {}
     inline void setIndividualTabColourStub(QWidget*, int) {}
 }
-
-// Hash function stubs
-inline QString hash_sha1(const wchar_t*) { return QString(); }
-inline QString hash_sha256(const wchar_t*) { return QString(); }
-inline QString hash_sha512(const wchar_t*) { return QString(); }
 
 // Command class stub
 class Command {
@@ -317,12 +287,6 @@ void Notepad_plus::macroPlayback(Macro macro, std::vector<Document>* pDocs4EndUA
 // All commands are handled via NppCommands slots connected to QAction signals.
 // This stub prevents linker errors for the declared Notepad_plus::command(int).
 // =============================================================================
-void Notepad_plus::command(int)
-{
-    // Menu commands are dispatched via NppCommands slots connected to menu actions.
-    // The full switch statement will be migrated incrementally.
-}
-
 // =============================================================================
 // NppCommands slot implementations (stubs)
 // These connect Qt menu actions to Notepad_plus commands.

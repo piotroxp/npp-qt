@@ -46,7 +46,7 @@ void TrayIconController::removeFromTray()
 {
     if (!_isIconShown) return; // Already hidden
 
-    _trayIcon->hide();
+    setVisible(false);
     _isIconShown = false;
 }
 
@@ -61,7 +61,7 @@ int TrayIconController::reAddTrayIcon()
         return -1;
 
     // Hide first, then re-show
-    _trayIcon->hide();
+    setVisible(false);
     _isIconShown = false;
     addToTray();
     return 0;
@@ -112,5 +112,17 @@ void TrayIconController::handleActivation(QSystemTrayIcon::ActivationReason reas
             break;
         default:
             break;
+    }
+}
+
+// Win32 compat: doTrayIcon(REMOVE) → removeFromTray()
+void TrayIconController::doTrayIcon(int action)
+{
+    Q_UNUSED(action);
+    // REMOVE = delete tray icon
+    // Qt6 port: delegate to existing methods
+    // REMOVE maps to hiding/removing the tray icon
+    if (_trayIcon) {
+        setVisible(false);
     }
 }

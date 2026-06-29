@@ -12,7 +12,9 @@
 #include <QString>
 #include <utility>
 
-// Fluent toolbar color options mirroring the Win32 FluentColor enum.
+// -----------------------------------------------------------------------
+// Fluent toolbar color options — must appear before FluentColorMap
+// -----------------------------------------------------------------------
 enum class FluentColor {
     accent       = 0,
     red          = 1,
@@ -25,6 +27,31 @@ enum class FluentColor {
     custom       = 8,
     defaultColor = 9
 };
+
+// -----------------------------------------------------------------------
+// ImageListSet colour palette — public so tests can reference it directly
+// -----------------------------------------------------------------------
+namespace ImageListSetColors {
+    static constexpr QRgb g_cDefaultMainLight       = 0xE8E8E8;
+    static constexpr QRgb g_cDefaultMainDark        = 0x2D2D30;
+    static constexpr QRgb g_cDefaultSecondaryLight = 0x909090;
+    static constexpr QRgb g_cDefaultSecondaryDark  = 0x5A5A5A;
+    static constexpr QRgb g_defaultAccentColor      = 0x0078D4;
+
+    inline QRgb invertLightness(QRgb c) {
+        int r = qMin(255, qRed(c)   + 40);
+        int g = qMin(255, qGreen(c) + 40);
+        int b = qMin(255, qBlue(c)  + 40);
+        return qRgb(255 - r, 255 - g, 255 - b);
+    }
+}
+
+// -----------------------------------------------------------------------
+// FluentColorMap — public for tests
+// -----------------------------------------------------------------------
+namespace FluentColorMap {
+    QRgb fromEnum(FluentColor fc, int customColor = 0, bool useMono = false);
+}
 
 // -----------------------------------------------------------------------
 // IconList — manages a flat list of icons (mirrors Win32 HIMAGELIST)

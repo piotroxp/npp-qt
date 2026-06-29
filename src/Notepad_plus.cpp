@@ -9486,8 +9486,7 @@ void Notepad_plus::command(int)
     // Stub: menu command handler — no-op for Qt6 build
 }
 
-unsigned int Notepad_plus::monitorFileOnChange(void*)
+void Notepad_plus::monitorFileOnChange(void*)
 {
     // Stub: file monitoring thread — no-op for Qt6 build
-    return 0;
 }

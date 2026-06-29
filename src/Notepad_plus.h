@@ -724,7 +724,7 @@ private:
 
 	static unsigned int backupDocument(void *params);
 
-	static unsigned int monitorFileOnChange(void * params);
+	static void monitorFileOnChange(void * params);
 	struct MonitorInfo final {
 		MonitorInfo(Buffer *buf, QWidget* nppHandle) :
 			_buffer(buf), _nppHandle(nppHandle) {}

@@ -382,9 +382,9 @@ set(SOURCES
     src/Parameters.h
     src/Parameters.cpp
     src/NppIO.h
-    # src/NppIO.cpp  # Cascading errors — see separate subagent
+    # src/NppIO.cpp
     src/NppCommands.h
-    # src/NppCommands.cpp  # Cascading errors — see separate subagent
+    src/NppCommands.cpp
     src/NppCommandsSlots_stub.cpp
     src/NppBigSwitch.h
     src/NppBigSwitch.cpp

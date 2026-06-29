@@ -47,6 +47,9 @@ public:
     // Visibility
     void setVisible(bool visible);
 
+    // Win32 compat stub: doTrayIcon(REMOVE) → removeFromTray()
+    void doTrayIcon(int action);
+
     // Handle tray icon activation
     void handleActivation(QSystemTrayIcon::ActivationReason reason);
 

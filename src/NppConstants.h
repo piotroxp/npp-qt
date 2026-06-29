@@ -93,6 +93,8 @@ inline constexpr int NPPN_SNAPSHOTDIRTYFILELOADED = NPPN_FIRST + 25;
 inline constexpr int NPPN_QUERYMODIFIED = NPPN_FIRST + 26;
 inline constexpr int NPPN_CANCEL = NPPN_FIRST + 27;
 inline constexpr int NPPN_FILEDELETED = NPPN_FIRST + 28;
+inline constexpr int NPPN_FILEBEFORELOAD = NPPN_FIRST + 30;
+inline constexpr int NPPN_FILELOADFAILED = NPPN_FIRST + 31;
 
 // Buffer ID sentinel
 inline constexpr int INVALID_BUFFER_ID = -1;

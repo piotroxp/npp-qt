@@ -53,7 +53,7 @@ private slots:
     void test_fluentColorMap_accentVsCustom();
     void test_fluentColorMap_allEnumValues();
 
-    // ── ToolBarIcons ─────────────────────────────────────────────────────────
+    // ── IconLists ─────────────────────────────────────────────────────────
     void test_toolBarIcons_createSize();
     void test_toolBarIcons_allListsExist();
     void test_toolBarIcons_reInitClears();
@@ -348,19 +348,19 @@ void TestImageListSet::test_fluentColorMap_allEnumValues()
 
 void TestImageListSet::test_toolBarIcons_createSize()
 {
-    ToolBarIcons tb;
+    IconLists tb;
     tb.create(QSize(16, 16));
     // Must have 8 icon lists
     if (tb.list(0).size() >= 0 && tb.list(7).size() >= 0) {
         // lists exist, that's fine
     } else {
-        QFAIL("ToolBarIcons::list(0..7) must be accessible");
+        QFAIL("IconLists::list(0..7) must be accessible");
     }
 }
 
 void TestImageListSet::test_toolBarIcons_allListsExist()
 {
-    ToolBarIcons tb;
+    IconLists tb;
     tb.create(QSize(16, 16));
     // All 8 HLIST indices must be accessible
     for (int i = 0; i < HLIST_COUNT; ++i) {
@@ -373,7 +373,7 @@ void TestImageListSet::test_toolBarIcons_allListsExist()
 
 void TestImageListSet::test_toolBarIcons_reInitClears()
 {
-    ToolBarIcons tb;
+    IconLists tb;
     tb.create(QSize(16, 16));
     // reInit should not crash and should keep lists accessible
     tb.reInit(QSize(32, 32));
@@ -382,7 +382,7 @@ void TestImageListSet::test_toolBarIcons_reInitClears()
 
 void TestImageListSet::test_toolBarIcons_destroyClearsAll()
 {
-    ToolBarIcons tb;
+    IconLists tb;
     tb.create(QSize(16, 16));
     tb.destroy();
     // After destroy, the object should be re-creatable

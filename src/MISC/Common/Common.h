@@ -259,8 +259,10 @@ bool toggleReadOnlyFlagFromFileAttributes(const QString& fileFullPath, bool& isC
 
 bool isWin32NamespacePrefixedFileName(const QString& fileName);
 inline bool isWin32NamespacePrefixedFileName(const char*) { return false; }
+inline bool isWin32NamespacePrefixedFileName(const std::wstring&) { return false; }
 bool isUnsupportedFileName(const QString& fileName);
 inline bool isUnsupportedFileName(const char*) { return false; }
+inline bool isUnsupportedFileName(const std::wstring&) { return false; }
 
 class Version {
 public:

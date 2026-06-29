@@ -7,6 +7,7 @@
 
 #include <QObject>
 #include <QWidget>
+#include <QEvent>
 #include <QHash>
 #include <QSharedPointer>
 

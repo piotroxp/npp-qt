@@ -16,54 +16,28 @@
 #include <algorithm>
 
 // -----------------------------------------------------------------------
-// ImageListSet colour palette
-// Mirrors the Win32 toolbar colour constants used for icon recolouring.
-// These are the _toolbar_-level colours (not NppDarkMode dark palette).
+// FluentColorMap implementation (declaration is in the header)
 // -----------------------------------------------------------------------
-namespace ImageListSetColors {
-    // Toolbar light / dark base colours
-    static constexpr QRgb g_cDefaultMainLight      = 0xE8E8E8;
-    static constexpr QRgb g_cDefaultMainDark      = 0x2D2D30;
-    static constexpr QRgb g_cDefaultSecondaryLight = 0x909090;
-    static constexpr QRgb g_cDefaultSecondaryDark  = 0x5A5A5A;
-
-    // NPP accent (Windows blue, can be overridden from settings)
-    static constexpr QRgb g_defaultAccentColor = 0x0078D4;
-
-    // Invert lightness of an RGB value for dark-mode icon generation.
-    // Mirrors Win32 DPIManagerV2::inverseLightness.
-    inline QRgb invertLightness(QRgb c) {
-        int r = qMin(255, qRed(c)   + 40);
-        int g = qMin(255, qGreen(c) + 40);
-        int b = qMin(255, qBlue(c)  + 40);
-        return qRgb(255 - r, 255 - g, 255 - b);
+QRgb FluentColorMap::fromEnum(FluentColor fc, int customColor, bool useMono)
+{
+    using namespace ImageListSetColors;
+    switch (fc) {
+        case FluentColor::accent:    return g_defaultAccentColor;
+        case FluentColor::red:       return 0xE81123;
+        case FluentColor::green:     return 0x008B00;
+        case FluentColor::blue:      return 0x0078D4;
+        case FluentColor::purple:    return 0xB146C2;
+        case FluentColor::cyan:      return 0x00B7C3;
+        case FluentColor::olive:     return 0x498205;
+        case FluentColor::yellow:    return 0xFFB900;
+        case FluentColor::custom:    return customColor ? static_cast<QRgb>(customColor) : g_defaultAccentColor;
+        case FluentColor::defaultColor:
+            return useMono
+                ? (NppDarkMode::instance().isEnabled() ? g_cDefaultMainDark : g_cDefaultMainLight)
+                : g_defaultAccentColor;
+        default:                    return g_defaultAccentColor;
     }
-}; // namespace ImageListSetColors
-
-// -----------------------------------------------------------------------
-// Fluent toolbar colour helper (mirrors Win32 FluentColor enum usage)
-// -----------------------------------------------------------------------
-namespace FluentColorMap {
-    static QRgb fromEnum(FluentColor fc, int customColor = 0, bool useMono = false) {
-        using namespace ImageListSetColors;
-        switch (fc) {
-            case FluentColor::accent:    return g_defaultAccentColor;
-            case FluentColor::red:       return 0xE81123;
-            case FluentColor::green:     return 0x008B00;
-            case FluentColor::blue:      return 0x0078D4;
-            case FluentColor::purple:    return 0xB146C2;
-            case FluentColor::cyan:      return 0x00B7C3;
-            case FluentColor::olive:     return 0x498205;
-            case FluentColor::yellow:    return 0xFFB900;
-            case FluentColor::custom:    return customColor ? static_cast<QRgb>(customColor) : g_defaultAccentColor;
-            case FluentColor::defaultColor:
-                return useMono
-                    ? (NppDarkMode::instance().isEnabled() ? g_cDefaultMainDark : g_cDefaultMainLight)
-                    : g_defaultAccentColor;
-            default:                    return g_defaultAccentColor;
-        }
-    }
-} // namespace FluentColorMap
+}
 
 // -----------------------------------------------------------------------
 // IconList

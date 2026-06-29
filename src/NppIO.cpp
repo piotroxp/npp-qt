@@ -174,7 +174,7 @@ bool resolveLinkFile(std::wstring& linkFilePath)
 
 BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool isReadOnly, int encoding, const wchar_t *backupFileName, NppFileTime fileNameTimestamp)
 {
-	const rsize_t longFileNameBufferSize = MAX_PATH;
+	const size_t longFileNameBufferSize = MAX_PATH;
 	if (fileName.size() >= longFileNameBufferSize - 1)
 		return BUFFER_INVALID;
 
@@ -233,7 +233,7 @@ BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool is
 	}
 	else
 	{
-		QFileInfo fi(QString::fromWStdWString(targetFileName));
+		QFileInfo fi(QString::fromWCharArray(targetFileName));
 	QString absPath = fi.absoluteFilePath();
 	unsigned int getFullPathNameResult = absPath.length();
 	if (absPath.length() < longFileNameBufferSize) { absPath.toWCharArray(longFileName); longFileName[absPath.length()] = 0; }
@@ -251,7 +251,7 @@ BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool is
 		{
 			// ignore the returned value of function due to win64 redirection system
 			// GetLongPathName -> QFileInfo::canonicalFilePath
-	QFileInfo fi(QString::fromWStdWString(longFileName));
+	QFileInfo fi(QString::fromWCharArray(longFileName));
 	QString canon = fi.canonicalFilePath();
 	if (!canon.isEmpty()) { canon.toWCharArray(longFileName); longFileName[canon.length()] = 0; }
 		}
@@ -342,7 +342,7 @@ BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool is
 					_pPublicInterface->getHSelf(),
 					L"\"$STR_REPLACE$\" doesn't exist. Create it?",
 					L"Create new file",
-					MB_YESNO,
+					QRgb(0),
 					0,
 					longFileName);
 
@@ -415,7 +415,7 @@ BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool is
 	BufferID buffer;
 	if (isSnapshotMode)
 	{
-		buffer = MainFileManager.loadFile(longFileName, static_cast<Document>(nullptr), encoding, backupFileName, fileNameTimestamp);
+		buffer = MainFileManager.loadFile(longFileName, static_cast<Document>(0), encoding, backupFileName);
 
 		if (buffer != BUFFER_INVALID)
 		{
@@ -431,7 +431,7 @@ BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool is
 	}
 	else
 	{
-		buffer = MainFileManager.loadFile(longFileName, static_cast<Document>(nullptr), encoding);
+		buffer = MainFileManager.loadFile(longFileName, static_cast<Document>(0), encoding);
 	}
 
     if (buffer != BUFFER_INVALID)
@@ -476,7 +476,7 @@ BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool is
         scnN.nmhdr.code = NPPN_FILEOPENED;
         _pluginsManager.notify(&scnN);
         if (_pDocumentListPanel)
-            _pDocumentListPanel->newItem(buf, currentView());
+            _pDocumentListPanel->newItem(static_cast<int>(reinterpret_cast<long>(buf->getID().get())), currentView());
     }
     else
     {
@@ -519,7 +519,7 @@ BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool is
 					_pPublicInterface->getHSelf(),
                     L"$INT_REPLACE$ files are about to be opened.\rAre you sure to open them?",
                     L"Amount of files to open is too large",
-                    MB_YESNO|MB_APPLMODAL,
+                    QRgb(0)|MB_APPLMODAL,
 					static_cast<int32_t>(nbFiles2Open));
             }
 
@@ -563,7 +563,7 @@ bool Notepad_plus::doReload(BufferID id, bool alert)
 			_pPublicInterface->getHSelf(),
 			L"Are you sure you want to reload the current file and lose the changes made in Notepad++?",
 			L"Reload",
-			MB_YESNO | MB_ICONEXCLAMATION | MB_APPLMODAL);
+			QRgb(0) | MB_ICONEXCLAMATION | MB_APPLMODAL);
 		if (answer != IDYES)
 			return false;
 	}
@@ -673,7 +673,7 @@ bool Notepad_plus::doSave(BufferID id, const wchar_t * filename, bool isCopy)
 		_pluginsManager.notify(&scnN);
 	}
 
-	SavingStatus res = MainFileManager.saveBuffer(id, filename, isCopy);
+	QtSavingStatus res = MainFileManager.saveBuffer(id, filename, isCopy);
 
 	if (!isCopy)
 	{
@@ -681,7 +681,7 @@ bool Notepad_plus::doSave(BufferID id, const wchar_t * filename, bool isCopy)
 		_pluginsManager.notify(&scnN);
 	}
 
-	if (res == SavingStatus::FullReadOnlySavingForbidden)
+	if (res == QtSavingStatus::QtReadOnlyForbidden)
 	{
 		_nativeLangSpeaker.messageBox("FullReadOnlySavingForbidden",
 			_pPublicInterface->getHSelf(),
@@ -689,7 +689,7 @@ bool Notepad_plus::doSave(BufferID id, const wchar_t * filename, bool isCopy)
 			L"Save failed",
 			0);
 	}
-	else if (res == SavingStatus::NotEnoughRoom)
+	else if (res == QtSavingStatus::QtNotEnoughRoom)
 	{
 		_nativeLangSpeaker.messageBox("NotEnoughRoom4Saving",
 			_pPublicInterface->getHSelf(),
@@ -697,7 +697,7 @@ bool Notepad_plus::doSave(BufferID id, const wchar_t * filename, bool isCopy)
 			L"Save failed",
 			0);
 	}
-	else if (res == SavingStatus::SaveWritingFailed)
+	else if (res == QtSavingStatus::QtSaveWritingFailed)
 	{
 		if (!(NppParameters::getInstance()).isEndSessionCritical()) // can we report to the user?
 		{
@@ -705,7 +705,7 @@ bool Notepad_plus::doSave(BufferID id, const wchar_t * filename, bool isCopy)
 			QMessageBox::warning(qobject_cast<QWidget*>(_pPublicInterface->getHSelf()), QStringLiteral("Save failed"), QString::fromStdWString(errorMessage));
 		}
 	}
-	else if (res == SavingStatus::SaveOpenFailed)
+	else if (res == QtSavingStatus::QtSaveOpenFailed)
 	{
 		Buffer* buf = MainFileManager.getBufferByID(id);
 		if (buf->isFromNetwork())
@@ -732,7 +732,7 @@ bool Notepad_plus::doSave(BufferID id, const wchar_t * filename, bool isCopy)
 				// try to open Notepad++ in admin mode
 				const NppGUI& nppGui = NppParameters::getInstance().getNppGUI();
 				bool isSnapshotMode = nppGui.isSnapshotMode();
-				bool isAlwaysInMultiInstMode = nppGui._multiInstSetting == multiInst;
+				bool isAlwaysInMultiInstMode = nppGui._multiInstSetting == MultiInstSetting::MULTI_INSTANCE;
 				if (isSnapshotMode && !isAlwaysInMultiInstMode) // if both rememberSession && backup mode are enabled and "Always In Multi-Instance Mode" option not activated:
 				{                                               // Open the 2nd Notepad++ instance in Admin mode, then close the 1st instance.
 
@@ -740,7 +740,7 @@ bool Notepad_plus::doSave(BufferID id, const wchar_t * filename, bool isCopy)
 						_pPublicInterface->getHSelf(),
 						L"This file cannot be saved and it may be protected.\rDo you want to launch Notepad++ in Administrator mode?",
 						L"Save failed",
-						MB_YESNO);
+						QRgb(0));
 
 					if (openInAdminModeRes == IDYES)
 					{
@@ -752,7 +752,7 @@ bool Notepad_plus::doSave(BufferID id, const wchar_t * filename, bool isCopy)
 
 						wstring args = L"-multiInst";
 						size_t shellExecRes = 0;
-	if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) { QProcess p; shellExecRes = p.startDetached(QString::fromWCharArray(nppFullPath), QStringList() << QString::fromWStdWString(args)) ? 33 : 0; }
+	if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) { QProcess p; shellExecRes = p.startDetached(QString::fromWCharArray(nppFullPath), QStringList() << QString::fromWCharArray(args.c_str())) ? 33 : 0; }
 
 						// If the function succeeds, it returns a value greater than 32. If the function fails,
 						// it returns an error value that indicates the cause of the failure.
@@ -780,7 +780,7 @@ bool Notepad_plus::doSave(BufferID id, const wchar_t * filename, bool isCopy)
 						_pPublicInterface->getHSelf(),
 						L"The file cannot be saved and it may be protected.\rDo you want to launch Notepad++ in Administrator mode?",
 						L"Save failed",
-						MB_YESNO);
+						QRgb(0));
 
 					if (openInAdminModeRes == IDYES)
 					{
@@ -800,7 +800,7 @@ bool Notepad_plus::doSave(BufferID id, const wchar_t * filename, bool isCopy)
 						args += fileNamePath;
 						args += L"\"";
 						size_t shellExecRes = 0;
-	if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) { QProcess p; shellExecRes = p.startDetached(QString::fromWCharArray(nppFullPath), QStringList() << QString::fromWStdWString(args)) ? 33 : 0; }
+	if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) { QProcess p; shellExecRes = p.startDetached(QString::fromWCharArray(nppFullPath), QStringList() << QString::fromWCharArray(args.c_str())) ? 33 : 0; }
 
 						// If the function succeeds, it returns a value greater than 32. If the function fails,
 						// it returns an error value that indicates the cause of the failure.
@@ -1220,7 +1220,7 @@ bool Notepad_plus::fileCloseAll(bool doDeleteBackup, bool isSnapshotMode)
 						_pPublicInterface->getHSelf(),
 						L"Your backup file cannot be found (deleted from outside).\rSave it otherwise your data will be lost\rDo you want to save file \"$STR_REPLACE$\" ?",
 						L"Save",
-						MB_YESNOCANCEL | MB_ICONQUESTION | MB_APPLMODAL,
+						QRgb(0)CANCEL | MB_ICONQUESTION | MB_APPLMODAL,
 						0, // not used
 						buf->getFullPathName());
 
@@ -1303,7 +1303,7 @@ bool Notepad_plus::fileCloseAll(bool doDeleteBackup, bool isSnapshotMode)
 						_pPublicInterface->getHSelf(),
 						L"Your backup file cannot be found (deleted from outside).\rSave it otherwise your data will be lost\rDo you want to save file \"$STR_REPLACE$\" ?",
 						L"Save",
-						MB_YESNOCANCEL | MB_ICONQUESTION | MB_APPLMODAL,
+						QRgb(0)CANCEL | MB_ICONQUESTION | MB_APPLMODAL,
 						0, // not used
 						buf->getFullPathName());
 
@@ -1789,7 +1789,7 @@ bool Notepad_plus::fileSave(BufferID bufferID)
 			{
 				// Get the current file's directory
 				wstring path = fn;
-				QFileInfo fi_p(QString::fromWStdWString(path));
+				QFileInfo fi_p(QString::fromWCharArray(path));
 	path = fi_p.absolutePath().toStdWString();
 				fn_bak = path;
 				fn_bak += L"\\";
@@ -1804,7 +1804,7 @@ bool Notepad_plus::fileSave(BufferID bufferID)
 			// Expand any environment variables
 			wchar_t fn_bak_expanded[MAX_PATH] = { '\0' };
 			QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-	QString fnBakEnv = env.value(QString::fromWStdWString(fn_bak.c_str()), QString::fromWStdWString(fn_bak));
+	QString fnBakEnv = env.value(QString::fromWCharArray(fn_bak.c_str()), QString::fromWCharArray(fn_bak));
 	fnBakEnv.toWCharArray(fn_bak_expanded);
 	fn_bak_expanded[fnBakEnv.length()] = 0;
 			fn_bak = fn_bak_expanded;
@@ -1812,7 +1812,7 @@ bool Notepad_plus::fileSave(BufferID bufferID)
 			// Make sure the directory exists
 			if (!doesDirectoryExist(fn_bak.c_str()))
 			{
-				QDir().mkpath(QString::fromWStdWString(fn_bak));
+				QDir().mkpath(QString::fromWCharArray(fn_bak));
 			}
 
 			// Determine what to name the backed-up file
@@ -1841,13 +1841,13 @@ bool Notepad_plus::fileSave(BufferID bufferID)
 			}
 
 			bool doCancel = false;
-			if (!QFile::copy(QString::fromWStdWString(fn), QString::fromWStdWString(fn_bak)))
+			if (!QFile::copy(QString::fromWCharArray(fn), QString::fromWCharArray(fn_bak)))
 			{
 				int res = _nativeLangSpeaker.messageBox("FileBackupFailed",
 					_pPublicInterface->getHSelf(),
 					L"The previous version of the file could not be saved into the backup directory at \"$STR_REPLACE$\".\r\rDo you want to save the current file anyway?",
 					L"File Backup Failed",
-					MB_YESNO | MB_ICONERROR,
+					QRgb(0) | MB_ICONERROR,
 					0,
 					fn_bak.c_str());
 
@@ -2177,10 +2177,10 @@ bool Notepad_plus::fileRename(BufferID bufferID)
 					newBackUpFileName.replace(newBackUpFileName.rfind(oldFileNamePath), oldFileNamePath.length(), tabNewNameStr);
 
 					if (doesFileExist(newBackUpFileName.c_str()))
-						QFile::remove(QString::fromWStdWString(newBackUpFileName));
-	QFile::copy(QString::fromWStdWString(oldBackUpFileName), QString::fromWStdWString(newBackUpFileName));
+						QFile::remove(QString::fromWCharArray(newBackUpFileName));
+	QFile::copy(QString::fromWCharArray(oldBackUpFileName), QString::fromWCharArray(newBackUpFileName));
 					else
-						QFile::rename(QString::fromWStdWString(oldBackUpFileName), QString::fromWStdWString(newBackUpFileName));
+						QFile::rename(QString::fromWCharArray(oldBackUpFileName), QString::fromWCharArray(newBackUpFileName));
 
 					buf->setBackupFileName(newBackUpFileName);
 				}
@@ -2236,10 +2236,10 @@ bool Notepad_plus::useFirstLineAsTabName(BufferID bufferID)
 			newBackUpFileName.replace(newBackUpFileName.rfind(oldFileNamePath), oldFileNamePath.length(), content1stLineTabName);
 
 			if (doesFileExist(newBackUpFileName.c_str()))
-				QFile::remove(QString::fromWStdWString(newBackUpFileName));
-	QFile::copy(QString::fromWStdWString(oldBackUpFileName), QString::fromWStdWString(newBackUpFileName));
+				QFile::remove(QString::fromWCharArray(newBackUpFileName));
+	QFile::copy(QString::fromWCharArray(oldBackUpFileName), QString::fromWCharArray(newBackUpFileName));
 			else
-				QFile::rename(QString::fromWStdWString(oldBackUpFileName), QString::fromWStdWString(newBackUpFileName));
+				QFile::rename(QString::fromWCharArray(oldBackUpFileName), QString::fromWCharArray(newBackUpFileName));
 
 			buffer->setBackupFileName(newBackUpFileName);
 		}
@@ -2315,10 +2315,10 @@ bool Notepad_plus::fileRenameUntitledPluginAPI(BufferID id, const wchar_t* tabNe
 		newBackUpFileName.replace(newBackUpFileName.rfind(oldName), oldName.length(), tabNewNameStr);
 
 		if (doesFileExist(newBackUpFileName.c_str()))
-			QFile::remove(QString::fromWStdWString(newBackUpFileName));
-	QFile::copy(QString::fromWStdWString(oldBackUpFileName), QString::fromWStdWString(newBackUpFileName));
+			QFile::remove(QString::fromWCharArray(newBackUpFileName));
+	QFile::copy(QString::fromWCharArray(oldBackUpFileName), QString::fromWCharArray(newBackUpFileName));
 		else
-			QFile::rename(QString::fromWStdWString(oldBackUpFileName), QString::fromWStdWString(newBackUpFileName));
+			QFile::rename(QString::fromWCharArray(oldBackUpFileName), QString::fromWCharArray(newBackUpFileName));
 
 		buf->setBackupFileName(newBackUpFileName);
 	}
@@ -2866,7 +2866,7 @@ bool Notepad_plus::fileLoadSession(const wchar_t *fn)
 			Buffer * buf2 = MainFileManager.getBufferByID(_subDocTab.getBufferByIndex(0));
 			isEmptyNpp = (!buf1->isDirty() && buf1->isUntitled() && !buf2->isDirty() && buf2->isUntitled());
 		}
-		if (!isEmptyNpp && (nppGUI._multiInstSetting == multiInstOnSession || nppGUI._multiInstSetting == multiInst))
+		if (!isEmptyNpp && (nppGUI._multiInstSetting == MultiInstSetting::MULTI_INSTANCE || nppGUI._multiInstSetting == MultiInstSetting::MULTI_INSTANCE))
 		{
 			wchar_t nppFullPath[MAX_PATH]{};
 			QString appPath = QCoreApplication::applicationFilePath();
@@ -2891,7 +2891,7 @@ bool Notepad_plus::fileLoadSession(const wchar_t *fn)
 				const bool isSnapshotMode = false;
 				result = loadSession(session2Load, isSnapshotMode, sessionFileName.c_str());
 
-				if (isEmptyNpp && nppGUI._multiInstSetting == multiInstOnSession)
+				if (isEmptyNpp && nppGUI._multiInstSetting == MultiInstSetting::MULTI_INSTANCE)
 					nppParam.setLoadedSessionFilePath(sessionFileName);
 			}
 		}
