@@ -108,6 +108,13 @@ public:
     void setFocusColor(const QColor& col) { if (_vzWidget) _vzWidget->setFocusColor(col); }
     void setFrostColor(const QColor& col) { if (_vzWidget) _vzWidget->setFrostColor(col); }
 
+    // Win32 compat: setColour with enum
+    enum class ViewZoneColorIndex { focus, frost };
+    void setColour(const QColor& col, ViewZoneColorIndex idx) {
+        if (idx == ViewZoneColorIndex::focus) setFocusColor(col);
+        else setFrostColor(col);
+    }
+
     // Set transparency (mirrors NppParameters::setTransparent)
     void setTransparency(int alpha); // 0-255
 
@@ -188,6 +195,15 @@ signals:
     void switchIn();
     void switchOff();
     void floatDropped();
+
+public:
+    // Win32 compat: isClosed() — checks if panel is hidden/minimized
+    bool isClosed() const { return !isVisible(); }
+    // Win32 compat: setText(bool) — show/hide panel
+    void setText(bool show = true) { display(show); }
+    void setText(const QString& /*title*/) { /* stub */ }
+    // Win32 compat: ViewZoneDlg color setting (mirrors ViewZoneDlg::setColour)
+    void setViewZoneColour(QRgb color, ViewZoneDlg::ViewZoneColorIndex idx) { _vzDlg.setColour(QColor(color), idx); }
 
 public slots:
     void redraw(bool forceUpdate = false);

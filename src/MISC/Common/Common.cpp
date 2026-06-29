@@ -1090,6 +1090,25 @@ void getFilesInFolder(QVector<QString>& files, const QString& extTypeFilter, con
     }
 }
 
+void getFilesInFolder(std::vector<std::wstring>& files, const std::wstring& extTypeFilter, const std::wstring& inFolder)
+{
+    QDir dir(QString::fromStdWString(inFolder));
+    QStringList filters;
+    QString ext = QString::fromStdWString(extTypeFilter);
+    if (ext == QStringLiteral("*.*") || ext == QStringLiteral("*"))
+        filters = { QStringLiteral("*") };
+    else
+        filters = ext.split(';', Qt::SkipEmptyParts);
+
+    dir.setNameFilters(filters);
+    dir.setFilter(QDir::Files | QDir::NoSymLinks);
+
+    for (const QFileInfo& fi : dir.entryInfoList())
+    {
+        files.push_back(fi.absoluteFilePath().toStdWString());
+    }
+}
+
 void trim(QString& str)
 {
     str = str.trimmed();

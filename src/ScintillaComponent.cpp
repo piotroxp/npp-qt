@@ -660,12 +660,6 @@ intptr_t ScintillaComponent::searchInTarget(const char* text, size_t len, size_t
     return send(SCI_SEARCHINTARGET, len, reinterpret_cast<sptr_t>(text));
 }
 
-intptr_t ScintillaComponent::searchInTarget(const std::string& text, intptr_t& fromPos, intptr_t& toPos) const
-{
-    return searchInTarget(text.c_str(), static_cast<size_t>(text.size()),
-                          static_cast<size_t>(fromPos), static_cast<size_t>(toPos));
-}
-
 intptr_t ScintillaComponent::searchInTarget(const std::string& text, intptr_t& fromPos, intptr_t toPos) const
 {
     return searchInTarget(text.c_str(), static_cast<size_t>(text.size()),
@@ -676,6 +670,12 @@ intptr_t ScintillaComponent::searchInTarget(const std::string& text, intptr_t& f
 {
     return searchInTarget(text.c_str(), static_cast<size_t>(text.size()),
                           static_cast<size_t>(fromPos), static_cast<size_t>(fromPos + len));
+}
+
+intptr_t ScintillaComponent::searchInTarget(const std::string& text, intptr_t& fromPos, intptr_t&& toPos) const
+{
+    return searchInTarget(text.c_str(), static_cast<size_t>(text.size()),
+                          static_cast<size_t>(fromPos), static_cast<size_t>(toPos));
 }
 
 intptr_t ScintillaComponent::replaceTarget(const QString& replacement, intptr_t fromPos, intptr_t toPos)
@@ -920,6 +920,17 @@ std::vector<size_t> ScintillaComponent::getCurrentFoldStates() const
         result.push_back(send(SCI_GETFOLDLEVEL, i));
     }
     return result;
+}
+
+void ScintillaComponent::getCurrentFoldStates(std::vector<size_t>& outFoldStates) const
+{
+    // Win32 compat: fills provided vector with fold states
+    intptr_t lineCount = send(SCI_GETLINECOUNT);
+    outFoldStates.clear();
+    outFoldStates.reserve(static_cast<size_t>(lineCount));
+    for (intptr_t i = 0; i < lineCount; ++i) {
+        outFoldStates.push_back(static_cast<size_t>(send(SCI_GETFOLDLEVEL, i)));
+    }
 }
 
 bool ScintillaComponent::isTextDirectionRTL() const

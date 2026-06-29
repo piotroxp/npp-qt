@@ -335,6 +335,7 @@ namespace npp_sci {
     constexpr int SCI_SCROLLCARET               = 2169;
     constexpr int SCI_LINELENGTH                = 2350;
     constexpr int SCI_TEXTHEIGHT                = 2279;
+    constexpr int SCI_TEXTWIDTH                 = 2276;
     constexpr int SCI_SETTARGETRANGE            = 2686;
     constexpr int SCI_COLOURISE               = 2613;
     constexpr int SCI_POSITIONFROMPOINT       = 2562;
@@ -439,6 +440,8 @@ namespace npp_sci {
     constexpr int SCI_INDICATORVALUEAT       = 2507;
     constexpr int SCI_INDICATORSTART         = 2508;
     constexpr int SCI_INDICATOREND           = 2509;
+    constexpr int SCI_INDICSETSTYLE          = 2080;
+    constexpr int SCI_INDICGETSTYLE          = 2081;
     constexpr int SCI_INDICGETHOVERSTYLE     = 2681;
     constexpr int SCI_INDICSETHOVERSTYLE     = 2680;
     constexpr int SCI_INDICSETALPHA          = 2523;

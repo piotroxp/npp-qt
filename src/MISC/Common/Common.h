@@ -28,6 +28,8 @@
 #include <QtCore/QVector>
 #include <QtCore/Qt>
 #include <QtGui/QFont>
+#include <string>
+#include <vector>
 #include <QtWidgets/QWidget>
 
 #include <algorithm>
@@ -161,7 +163,7 @@ private:
     StringBuffer<wchar_t> _wideCharStr;
 };
 
-template <> /*static*/ wchar_t WcharMbcsConvertor::StringBuffer<wchar_t>::_nullStr = 0;
+template <> inline /*static*/ wchar_t WcharMbcsConvertor::StringBuffer<wchar_t>::_nullStr = 0;
 
 QString pathRemoveFileSpec(QString& path);
 QString pathAppend(QString& strDest, const QString& str2append);
@@ -216,6 +218,7 @@ bool isAssoCommandExisting(const QString& fullPathName);
 bool deleteFileOrFolder(const QString& f2delete);
 
 void getFilesInFolder(QStringList& files, const QString& extTypeFilter, const QString& inFolder);
+void getFilesInFolder(std::vector<std::wstring>& files, const std::wstring& extTypeFilter, const std::wstring& inFolder);
 
 template <typename T>
 size_t vecRemoveDuplicates(QVector<T>& vec, bool isSorted = false, bool canSort = false)
@@ -304,6 +307,9 @@ inline bool doesFileExist(const char* filePath, unsigned int timeout = 0, bool* 
     return doesFileExist(QString::fromUtf8(filePath), timeout, timedOut);
 }
 inline bool doesFileExist(const wchar_t* filePath, unsigned int timeout = 0, bool* timedOut = nullptr) {
+    return doesFileExist(QString::fromStdWString(filePath), timeout, timedOut);
+}
+inline bool doesFileExist(const std::wstring& filePath, unsigned int timeout = 0, bool* timedOut = nullptr) {
     return doesFileExist(QString::fromStdWString(filePath), timeout, timedOut);
 }
 bool doesDirectoryExist(const QString& dirPath, unsigned int = 0, bool* = nullptr);

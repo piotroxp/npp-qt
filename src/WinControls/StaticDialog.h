@@ -59,8 +59,8 @@ public:
 
     bool isRtl() const { return _isRTL; }
 
-    // Pure virtual — subclasses must implement
-    virtual intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam) = 0;
+    // Virtual — subclasses should override; default returns 0
+    virtual intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam);
 
     // Optional override — default no-op
     virtual void destroy() {}

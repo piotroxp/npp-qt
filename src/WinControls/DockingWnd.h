@@ -116,8 +116,8 @@ public:
     virtual void setBackgroundColor(const QColor& col);
     virtual void setForegroundColor(const QColor& col);
 
-    // Win32 message dispatcher (pure virtual — must be overridden)
-    virtual intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam) = 0;
+    // Win32 message dispatcher (default implementation — override as needed)
+    virtual intptr_t run_dlgProc(unsigned int message, intptr_t wParam, intptr_t lParam);
 
     // getHSelf() — returns this widget (mirrors Win32 getHSelf())
     QWidget* getHSelf() const { return const_cast<DockingDlgInterface*>(this); }
@@ -181,6 +181,10 @@ public:
 
     void setActive(bool active);
     bool isActive() const { return _isActive; }
+
+    // setText(bool) — Qt6 equivalent of Win32 show/hide for docking containers
+    void setText(bool shouldShow) { shouldShow ? QWidget::show() : QWidget::hide(); }
+    void setText(const QString& /*title*/) { /* stub: caption set via DockedWidgetData */ }
 
     bool isFloating() const { return _isFloating; }
     void setFloating(bool floating);
@@ -324,6 +328,9 @@ public slots:
 
     // Win32 API stub (returns containers for save/restore)
     std::vector<DockingContainer*> getContainerInfo() const;
+
+    // resize() stub — Qt6 uses QWidget::resize; this provides Win32 compat signature
+    void resize() { /* triggers internal relayout via resizeEvent */ update(); }
 
 signals:
     void dockInfoChanged();

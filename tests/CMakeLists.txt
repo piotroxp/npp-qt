@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.16)
 # =============================================================================
 
 # Require Qt Test component (supplied by the Qt6 package found in parent)
-find_package(Qt6 REQUIRED COMPONENTS TestCore)
+find_package(Qt6 REQUIRED COMPONENTS Test)
 
 # Collect test source files
 set(TEST_SOURCES

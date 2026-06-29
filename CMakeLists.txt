@@ -368,11 +368,6 @@ set(SOURCES
     src/verifySignedfile.h
 
     # Top-level infrastructure implementations
-    src/NppNotification.cpp
-    src/dpiManagerV2.cpp
-    src/lastRecentFileList.cpp
-    src/localization.cpp
-    src/shortcut.cpp
 
     # MISC/Common implementations (separate from forwarding headers at root)
     src/MISC/Common/NppNotification.cpp
@@ -385,11 +380,11 @@ set(SOURCES
 
     # Core application files — fully ported to Qt6
     src/Parameters.h
-    # src/Parameters.cpp  # TEMPORARILY DISABLED — Win32 remnants, fixing separately
+    # src/Parameters.cpp  # Cascading errors — see separate subagent
     src/NppIO.h
-    # src/NppIO.cpp  # TEMPORARILY DISABLED — Win32 remnants, fixing separately
+    # src/NppIO.cpp  # Cascading errors — see separate subagent
     src/NppCommands.h
-    # src/NppCommands.cpp  # TEMPORARILY DISABLED — depends on Parameters.cpp
+    # src/NppCommands.cpp  # Cascading errors — see separate subagent
     src/NppBigSwitch.h
     src/NppBigSwitch.cpp
     src/Notepad_plus.h
@@ -489,12 +484,13 @@ if(WIN32)
 endif()
 
 # -----------------------------------------------------------------------
-# Tests — enable only if Qt6TestCore is available
+# Tests — enable if Qt6::Test is available (Qt 6.4+)
 # -----------------------------------------------------------------------
-find_package(Qt6TestCore QUIET)
-if(Qt6TestCore_FOUND)
+find_package(Qt6 COMPONENTS Test QUIET)
+if(Qt6_FOUND)
     enable_testing()
     add_subdirectory(tests)
+    message(STATUS "Tests enabled (Qt6::Test)")
 else()
-    message(STATUS "Qt6TestCore not found — tests disabled")
+    message(STATUS "Qt6::Test not found — tests disabled")
 endif()

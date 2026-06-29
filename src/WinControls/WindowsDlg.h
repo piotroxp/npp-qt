@@ -23,6 +23,7 @@
 #include <QScrollBar>
 #include <QAbstractItemModel>
 #include <QLabel>
+#include <QLineEdit>
 
 #include "StaticDialog.h"
 #include "Window.h"
@@ -175,4 +176,96 @@ private:
     static QRect _lastKnownLocation;
     static QSize _szMinButton;
     static QSize _szMinListCtrl;
+};
+
+// =============================================================================
+// StringDlg — input dialog for renaming tabs (Qt6 lift)
+// Replaces Win32 resource-based dialog (IDDrename_tab_STRING)
+// =============================================================================
+class StringDlg : public QDialog {
+    Q_OBJECT
+public:
+    StringDlg(QWidget* parent = nullptr) : QDialog(parent) {}
+
+    void init(void* /*hInst*/, QWidget* parentWin,
+              const wchar_t* title,
+              const wchar_t* prompt,
+              const wchar_t* defaultValue,
+              int maxLen,
+              const wchar_t* reservedChars,
+              bool /*flag*/)
+    {
+        _result.clear();
+        _reservedChars = reservedChars ? QString::fromWCharArray(reservedChars) : QString();
+        _maxLen = maxLen;
+
+        setWindowTitle(QString::fromWCharArray(title));
+        setParent(parentWin);
+        setModal(true);
+
+        QVBoxLayout* layout = new QVBoxLayout(this);
+
+        QLabel* lblPrompt = new QLabel(QString::fromWCharArray(prompt), this);
+        layout->addWidget(lblPrompt);
+
+        _lineEdit = new QLineEdit(QString::fromWCharArray(defaultValue), this);
+        _lineEdit->setMaxLength(maxLen);
+        layout->addWidget(_lineEdit);
+
+        // Validate on text change
+        connect(_lineEdit, &QLineEdit::textChanged, this, [this](const QString& text) {
+            validateInput(text);
+        });
+
+        QHBoxLayout* btnLayout = new QHBoxLayout();
+        btnLayout->addStretch();
+
+        _btnOk = new QPushButton("OK", this);
+        _btnOk->setDefault(true);
+        connect(_btnOk, &QPushButton::clicked, this, &StringDlg::accept);
+        btnLayout->addWidget(_btnOk);
+
+        QPushButton* btnCancel = new QPushButton("Cancel", this);
+        connect(btnCancel, &QPushButton::clicked, this, &StringDlg::reject);
+        btnLayout->addWidget(btnCancel);
+
+        layout->addLayout(btnLayout);
+
+        validateInput(_lineEdit->text());
+        adjustSize();
+    }
+
+    // Returns pointer to internal buffer (null if cancelled)
+    wchar_t* doDialog()
+    {
+        if (exec() == Accepted) {
+            _result = _lineEdit->text();
+            _resultW.resize(_result.length() + 1);
+            _resultW[_result.length()] = L'\0';
+            _result.toWCharArray(_resultW.data());
+            return _resultW.data();
+        }
+        return nullptr;
+    }
+
+private:
+    void validateInput(const QString& text)
+    {
+        bool valid = true;
+        // Check for reserved characters
+        for (const QChar& ch : text) {
+            if (_reservedChars.contains(ch)) {
+                valid = false;
+                break;
+            }
+        }
+        _btnOk->setEnabled(valid && !text.isEmpty());
+    }
+
+    QLineEdit* _lineEdit = nullptr;
+    QPushButton* _btnOk = nullptr;
+    QString _reservedChars;
+    int _maxLen = 0;
+    QString _result;       // UTF-16 stored in QString
+    std::vector<wchar_t> _resultW;  // stable buffer for return pointer
 };

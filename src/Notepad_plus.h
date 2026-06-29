@@ -164,6 +164,9 @@ struct VisibleGUIConf final
 	//used by distractionFree
 	bool _was2ViewModeOn = false;
 	std::vector<DockingCont*> _pVisibleDockingContainers;
+
+	// Qt6: saved geometry for fullscreen restore
+	QRect _savedGeom;
 };
 
 struct QuoteParams
@@ -319,7 +322,7 @@ public:
 	void launchDocumentBackupTask();
 	int getQuoteIndexFrom(const wchar_t* quoter) const;
 	void showQuoteFromIndex(int index) const;
-	void showQuote(const QuoteParams* quote);
+	void showQuote(const QuoteParams* quote) const;
 
 	std::wstring getPluginListVerStr() const {
 		return _pluginsAdminDlg.getPluginListVerStr();
@@ -562,7 +565,7 @@ private:
 
     void getMainClientRect(QRect & rc) const;
     void getClientRect(QRect& rc) const { rc = this->geometry(); }  // Win32 compat shim
-	void staticCheckMenuAndTB() const;
+	void staticCheckMenuAndTB();
 	void dynamicCheckMenuAndTB() const;
 	void enableConvertMenuItems(EolType f) const;
 	void checkUnicodeMenuItems() const;

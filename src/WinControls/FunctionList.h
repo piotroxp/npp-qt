@@ -118,6 +118,12 @@ public:
     bool serialize(const QString& outputFilename = QString());
     void searchFuncAndSwitchView();
 
+    // Win32 compat: isClosed() — checks if panel is hidden/minimized
+    bool isClosed() const { return !isVisible(); }
+    // Win32 compat: setText(bool) — show/hide panel
+    void setText(bool show = true) { display(show); }
+    void setText(const QString& /*title*/) { /* stub */ }
+
 public slots:
     void onSortToggled();
     void onReloadClicked();

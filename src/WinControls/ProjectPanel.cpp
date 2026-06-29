@@ -911,3 +911,15 @@ void ProjectPanel::enumWorkSpaceFiles(std::vector<QString>& paths, int type) con
     Q_UNUSED(paths);
     Q_UNUSED(type);
 }
+
+bool ProjectPanel::saveWorkspaceRequest()
+{
+    auto reply = QMessageBox::question(this, QStringLiteral("Save Workspace"),
+        QStringLiteral("Do you want to save the current workspace before opening a new one?"),
+        QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+    if (reply == QMessageBox::Save) {
+        // Save workspace logic — stub (requires full Workspace persistence lift)
+        return true;
+    }
+    return false;
+}

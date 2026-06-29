@@ -29,6 +29,16 @@
 QCursor URLCtrl::s_handCursor(Qt::PointingHandCursor);
 bool URLCtrl::s_cursorInitialized = false;
 
+// Constructor
+URLCtrl::URLCtrl(const QString& link, const QString& text, QWidget* parent)
+    : QLabel(text.isEmpty() ? link : text, parent), _url(link)
+{
+    setTextFormat(Qt::PlainText);
+    setTextInteractionFlags(Qt::TextBrowserInteraction);
+    connect(this, &QLabel::linkActivated, this, [this](const QString&) { action(); });
+    setCursor(Qt::PointingHandCursor);
+}
+
 // static
 void URLCtrl::create(QLabel* label, const QString& link, const QColor& linkColor)
 {

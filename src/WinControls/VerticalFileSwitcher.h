@@ -6,6 +6,7 @@
 
 #include "DockingWnd.h"
 #include "StaticDialog.h"
+#include "Buffer.h"
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QMenu>
@@ -14,6 +15,7 @@
 #include <QMap>
 #include <QPair>
 #include <functional>
+#include <map>
 
 // Sort direction constants (mirrors Win32 SORT_DIRECTION_*)
 const int SORT_DIRECTION_NONE  = -1;
@@ -41,14 +43,14 @@ const int LVGROUPS_ID = 3;
 // =============================================================================
 
 struct FileEntry {
-    int _bufID = 0;         // Buffer ID
+    BufferID _bufID;        // Buffer ID
     int _iView = 0;         // MAIN_VIEW or SUB_VIEW
     QString _fn;            // Full file path
     int _status = 0;        // Icon status: 0=clean, 1=dirty, 2=readonly, 3=monitoring
     int _docColor = -1;     // Color ID (-1 = no color)
 
     FileEntry() = default;
-    FileEntry(int bufID, int iView, const QString& fn, int status = 0, int docColor = -1)
+    FileEntry(BufferID bufID, int iView, const QString& fn, int status = 0, int docColor = -1)
         : _bufID(bufID), _iView(iView), _fn(fn), _status(status), _docColor(docColor) {}
 };
 
@@ -70,13 +72,14 @@ public:
     void initList();
 
     // Buffer/view management (mirrors Win32 LVM_* + buffer management)
-    int getBufferInfoFromIndex(int index, int& view) const;
-    int newItem(int bufferID, int iView);
-    int closeItem(int bufferID, int iView);
-    void activateItem(int bufferID, int iView);
-    void setItemIconStatus(int bufferID);
+    BufferID getBufferInfoFromIndex(int index, int& view) const;
+    int newItem(BufferID bufferID, int iView);
+    int closeItem(BufferID bufferID, int iView);
+    void activateItem(BufferID bufferID, int iView);
+    void setItemIconStatus(BufferID bufferID);
+    void setItemIconStatus(BufferID bufferID, int row);
     QString getFullFilePath(size_t i) const;
-    void setItemColor(int bufferID);
+    void setItemColor(BufferID bufferID);
 
     // Column management
     void insertColumn(const QString& name, int width, int index);
@@ -119,13 +122,21 @@ protected:
 private:
     int _currentIndex = 0;
     void selectCurrentItem();
-    int find(int bufferID, int iView) const;
-    int add(int bufferID, int iView);
+    int find(BufferID bufferID, int iView) const;
+    int add(BufferID bufferID, int iView);
     void remove(int index, bool removeRow = true);
-    void setItemIconStatus(int bufferID, int row);
+
+    // Comparator for QPair<BufferID, int> since BufferID has no operator<
+    struct BufferIDPairLess {
+        bool operator()(const QPair<BufferID, int>& a, const QPair<BufferID, int>& b) const {
+            if (a.first._p != b.first._p)
+                return a.first._p < b.first._p;
+            return a.second < b.second;
+        }
+    };
 
     // Entries keyed by bufferID+view
-    QMap<QPair<int, int>, FileEntry> _entries;
+    std::map<QPair<BufferID, int>, FileEntry, BufferIDPairLess> _entries;
     int _nextInsertIndex = 0;
 };
 
@@ -150,22 +161,22 @@ public:
     void closeDoc(int bufferID, int iView) const;
 
     int newItem(int bufferID, int iView) {
-        return _fileListView.newItem(bufferID, iView);
+        return _fileListView.newItem(BufferID(reinterpret_cast<void*>(bufferID)), iView);
     }
 
-    int closeItem(int bufferID, int iView) {
+    int closeItem(BufferID bufferID, int iView) {
         return _fileListView.closeItem(bufferID, iView);
     }
 
     void activateItem(int bufferID, int iView) {
-        _fileListView.activateItem(bufferID, iView);
+        _fileListView.activateItem(BufferID(reinterpret_cast<void*>(bufferID)), iView);
     }
 
     void setItemIconStatus(int bufferID) {
-        _fileListView.setItemIconStatus(bufferID);
+        _fileListView.setItemIconStatus(BufferID(reinterpret_cast<void*>(bufferID)));
     }
 
-    void setItemColor(int bufferID) {
+    void setItemColor(BufferID bufferID) {
         _fileListView.setItemColor(bufferID);
     }
 
@@ -195,6 +206,10 @@ public:
             _fileListView.reload();
         }
     }
+
+    // setText(bool) — show/hide the panel (Qt6 equivalent of Win32 show/hide)
+    void setText() { QWidget::show(); }
+    void setText(bool shouldShow) { shouldShow ? QWidget::show() : QWidget::hide(); }
 
     void setBackgroundColor(const QColor& bgColour) override {
         DockingDlgInterface::setBackgroundColor(bgColour);

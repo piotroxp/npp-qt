@@ -134,6 +134,19 @@ struct SessionMapPosition
 private:
     static constexpr intptr_t _maxPeekLenInKB = 512;
 public:
+    SessionMapPosition() = default;
+    // Construct from Buffer::MapPosition (fields are identical)
+    explicit SessionMapPosition(const MapPosition& mp)
+        : _firstVisibleDisplayLine(mp._firstVisibleDisplayLine),
+          _firstVisibleDocLine(mp._firstVisibleDocLine),
+          _lastVisibleDocLine(mp._lastVisibleDocLine),
+          _nbLine(mp._nbLine),
+          _higherPos(mp._higherPos),
+          _width(mp._width),
+          _height(mp._height),
+          _wrapIndentMode(mp._wrapIndentMode),
+          _KByteInDoc(mp._KByteInDoc),
+          _isWrap(mp._isWrap) {}
     intptr_t _firstVisibleDisplayLine = -1;
     intptr_t _firstVisibleDocLine = -1;
     intptr_t _lastVisibleDocLine = -1;
@@ -153,16 +166,26 @@ public:
 struct sessionFileInfo : public SessionPosition
 {
     sessionFileInfo(const wchar_t* fn, const wchar_t* ln, int encoding, bool userReadOnly,
-                    bool isPinned, bool isUntitleTabRenamed, const SessionPosition& pos,
+                    bool isPinned, bool isUntitleTabRenamed, const Position& pos,
                     const wchar_t* backupFilePath, NppFileTime originalFileLastModifTimestamp,
                     const SessionMapPosition& mapPos) noexcept
-        : SessionPosition(pos), _fileName(fn ? fn : L""), _langName(ln ? ln : L"")
+        : _fileName(fn ? fn : L""), _langName(ln ? ln : L"")
         , _encoding(encoding), _isUserReadOnly(userReadOnly), _isPinned(isPinned)
         , _isUntitledTabRenamed(isUntitleTabRenamed)
         , _backupFilePath(backupFilePath ? backupFilePath : L"")
         , _originalFileLastModifTimestamp(originalFileLastModifTimestamp)
         , _mapPos(mapPos)
-    {}
+    {
+        // Map Buffer::Position fields to sessionFileInfo fields
+        _firstVisibleLine = pos._firstVisibleLine;
+        _startPos = pos._selectionStart;
+        _endPos = pos._selectionEnd;
+        _xOffset = 0;
+        _selMode = 0;
+        _scrollWidth = pos._scrollWidth;
+        _offset = pos._offset;
+        _wrapCount = 0;
+    }
 
     explicit sessionFileInfo(const std::wstring& fn) noexcept : _fileName(fn) {}
 
@@ -986,6 +1009,13 @@ public:
     static NppParameters& getInstance() { return *getInstancePointer(); }
     static LangType getLangIDFromStr(const wchar_t *langName);
     static std::wstring getLocPathFromStr(const std::wstring & localizationCode);
+
+    // Win32 Wow64 file system redirection (no-op on non-Windows)
+    void safeWow64EnableWow64FsRedirection(bool enable) {
+#ifdef _WIN32
+        (void)enable; // stub: only meaningful on Windows 32-bit under Wow64
+#endif
+    }
 
     bool load();
     bool reloadLang();

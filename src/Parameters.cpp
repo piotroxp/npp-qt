@@ -75,6 +75,10 @@
 #include "shortcut.h"
 #include "verifySignedfile.h"
 
+// Helper: convert QString to std::string safely
+static inline std::string qToStd(const QString& s) { return s.toStdString(); }
+
+
 // MSVC pragma for GetVersionEx removed in Qt6 port
 
 static constexpr const wchar_t localConfFile[] = L"doLocalConf.xml";
@@ -715,12 +719,12 @@ static constexpr std::array<const char*, 2> STR_BOOL_SHOWHIDE{ { "show", "hide" 
 
 [[nodiscard]] static bool getBoolAttribute(const NppXml::Element& elem, const char* name, bool defaultVal = false, const std::array<const char*, 2>& strs2cmp = STR_BOOL_YESNO)
 {
-	const char* str = NppXml::attribute(elem, name);
-	if (str)
+	QString str = NppXml::attribute(elem, name);
+	if (!str.isNull())
 	{
-		if (std::strcmp(str, strs2cmp[0]) == 0)
+		if (str == QLatin1String(strs2cmp[0]))
 			return true;
-		if (std::strcmp(str, strs2cmp[1]) == 0)
+		if (str == QLatin1String(strs2cmp[1]))
 			return false;
 	}
 	return defaultVal;
@@ -728,12 +732,12 @@ static constexpr std::array<const char*, 2> STR_BOOL_SHOWHIDE{ { "show", "hide" 
 
 [[nodiscard]] static XmlAttrResult getResultAttribute(const NppXml::Element& elem, const char* name, const std::array<const char*, 2>& strs2cmp = STR_BOOL_YESNO)
 {
-	const char* str = NppXml::attribute(elem, name);
-	if (str)
+	QString str = NppXml::attribute(elem, name);
+	if (!str.isNull())
 	{
-		if (std::strcmp(str, strs2cmp[0]) == 0)
+		if (str == QLatin1String(strs2cmp[0]))
 			return XmlAttrResult::isTrue;
-		if (std::strcmp(str, strs2cmp[1]) == 0)
+		if (str == QLatin1String(strs2cmp[1]))
 			return XmlAttrResult::isFalse;
 	}
 	return XmlAttrResult::failed;
@@ -877,9 +881,11 @@ std::wstring LocalizationSwitcher::getXmlFilePathFromLangName(const wchar_t *lan
 
 bool LocalizationSwitcher::addLanguageFromXml(const std::wstring& xmlFullPath)
 {
-	const wchar_t * fn = // PathFindFileNameW replacedxmlFullPath.c_str());
+	// Qt6: PathFindFileNameW → extract filename from path manually
+	auto lastSep = xmlFullPath.find_last_of(L"\\/");
+	const wchar_t* fn = (lastSep == std::wstring::npos) ? xmlFullPath.c_str() : xmlFullPath.c_str() + lastSep + 1;
 	const std::wstring foundLang = getLangFromXmlFileName(fn);
-	if (!foundLang.empty())
+	if (!foundLang.isEmpty())
 	{
 		_localizationList.emplace_back(foundLang, xmlFullPath);
 		return true;
@@ -890,7 +896,7 @@ bool LocalizationSwitcher::addLanguageFromXml(const std::wstring& xmlFullPath)
 bool LocalizationSwitcher::switchToLang(const wchar_t *lang2switch) const
 {
 	const std::wstring langPath = getXmlFilePathFromLangName(lang2switch);
-	if (langPath.empty())
+	if (langPath.isEmpty())
 		return false;
 
 	return QFile::copy(QString::fromStdWString(langPath), QString::fromStdWString(_nativeLangPath));
@@ -911,20 +917,20 @@ int DynamicMenu::getTopLevelItemNumber() const
 	std::wstring previousFolderName;
 	for (const MenuItemUnit& i : _menuItems)
 	{
-		if (i._parentFolderName.empty())
+		if (i._parentFolderName.isEmpty())
 		{
 			++nb;
 		}
 		else
 		{
-			if (previousFolderName.empty())
+			if (previousFolderName.isEmpty())
 			{
 				++nb;
 				previousFolderName = i._parentFolderName;
 			}
 			else // previousFolderName is not empty
 			{
-				if (i._parentFolderName.empty())
+				if (i._parentFolderName.isEmpty())
 				{
 					++nb;
 					previousFolderName = i._parentFolderName;
@@ -984,7 +990,7 @@ bool DynamicMenu::createMenu() const
 	for (; i < nb; ++i)
 	{
 		const MenuItemUnit& item = _menuItems[i];
-		if (item._parentFolderName.empty())
+		if (item._parentFolderName.isEmpty())
 		{
 			currentParentFolderStr.clear();
 			hParentFolder = nullptr;
@@ -1113,7 +1119,7 @@ bool NppParameters::reloadStylers(const wchar_t* stylePath)
 	delete _pXmlUserStylerDoc._doc;
 
 	_pXmlUserStylerDoc._path = stylePath ? stylePath : _stylerPath.c_str();
-	_pXmlUserStylerDoc._doc = new NppXml::NewDocument();
+	_pXmlUserStylerDoc._doc = NppXml::NewDocument();
 
 	const bool loadOkay = NppXml::loadFile(_pXmlUserStylerDoc._doc, _pXmlUserStylerDoc._path.c_str());
 	if (!loadOkay)
@@ -1126,11 +1132,11 @@ bool NppParameters::reloadStylers(const wchar_t* stylePath)
 		{
 			_pNativeLangSpeaker->messageBox("LoadStylersFailed",
 				nullptr,
-				L"Load \"$STR_REPLACE$\" failed!",
-				L"Load stylers.xml failed",
+				QStringLiteral("Load \"$STR_REPLACE$\" failed!"),
+				QStringLiteral("Load stylers.xml failed"),
 				QMessageBox::Ok,
 				0,
-				_pXmlUserStylerDoc._path.c_str());
+				QString::fromWCharArray(_pXmlUserStylerDoc._path.c_str()));
 		}
 		delete _pXmlUserStylerDoc._doc;
 		_pXmlUserStylerDoc._doc = nullptr;
@@ -1158,17 +1164,17 @@ bool NppParameters::reloadLang()
 	std::wstring nativeLangPath(_localizationSwitcher._nativeLangPath);
 
 	// if "nativeLang.xml" does not exist, use npp path
-	if (!QFileInfo(QString::fromStdWString(nativeLangPath)))
+	if (!QFileInfo(QString::fromStdWString(nativeLangPath)).exists())
 	{
 		nativeLangPath = _nppPath;
 		pathAppend(nativeLangPath, std::wstring(L"nativeLang.xml"));
-		if (!QFileInfo(QString::fromStdWString(nativeLangPath)))
+		if (!QFileInfo(QString::fromStdWString(nativeLangPath)).exists())
 			return false;
 	}
 
 	delete _pXmlNativeLangDoc;
 
-	_pXmlNativeLangDoc = new NppXml::NewDocument();
+	_pXmlNativeLangDoc = NppXml::NewDocument();
 	const bool loadOkay = NppXml::loadFileNativeLang(_pXmlNativeLangDoc, nativeLangPath.c_str());
 	if (!loadOkay)
 	{
@@ -1181,11 +1187,18 @@ bool NppParameters::reloadLang()
 
 std::wstring NppParameters::getSpecialFolderLocation(int folderKind)
 {
-	wchar_t path[MAX_PATH];
-	const HRESULT specialLocationResult = QString pathStr; // folderKind mapping to QStandardPaths;
+	// folderKind maps Win32 CSIDL values to QStandardPaths
+	// 0x001A = CSIDL_APPDATA → QStandardPaths::AppDataLocation
+	// 0x0026 = CSIDL_PROGRAM_FILES → QStandardPaths::ApplicationsLocation
+	// Other values fall back to AppDataLocation
+	QStandardPaths::StandardLocation loc = QStandardPaths::AppDataLocation;
+	if (folderKind == 0x0026) {
+		loc = QStandardPaths::ApplicationsLocation;  // Qt6 replaced ProgramFilesPath
+	}
+	QString pathStr = QStandardPaths::writableLocation(loc);
 
 	std::wstring result;
-	if (!specialLocationResult.isEmpty())
+	if (!pathStr.isEmpty())
 	{
 		result = pathStr.toStdWString();
 	}
@@ -1197,9 +1210,9 @@ std::wstring NppParameters::getSettingsFolder() const
 	if (_isLocal)
 		return _nppPath;
 
-	std::wstring settingsFolderPath = getSpecialFolderLocation(0x001A /*QStandardPaths::AppDataLocation /* CSIDL_APPDATA */*/);
+	std::wstring settingsFolderPath = getSpecialFolderLocation(0x001A /* CSIDL_APPDATA */);
 
-	if (settingsFolderPath.empty())
+	if (settingsFolderPath.isEmpty())
 		return _nppPath;
 
 	pathAppend(settingsFolderPath, L"Notepad++");
@@ -1218,7 +1231,7 @@ bool NppParameters::load()
 	pathAppend(localConfPath, localConfFile);
 
 	// Test if doLocalConf.xml exists
-	_isLocal = (QFileInfo(QString::fromStdWString(localConfPath)) == true);
+	_isLocal = QFileInfo(QString::fromStdWString(localConfPath)).exists();
 
 	// Under vista and windows 7, the usage of doLocalConf.xml is not allowed
 	// if Notepad++ is installed in "program files" directory, because of UAC
@@ -1227,7 +1240,7 @@ bool NppParameters::load()
 		// We check if OS is Vista or greater version
 		if (_winVersion >= WV_VISTA)
 		{
-			std::wstring progPath = getSpecialFolderLocation(QStandardPaths::ProgramFilesPath /* CSIDL_PROGRAM_FILES */);
+			std::wstring progPath = getSpecialFolderLocation(0x0026 /* CSIDL_PROGRAM_FILES */);
 			wchar_t nppDirLocation[MAX_PATH];
 			std::wcscpy(nppDirLocation, _nppPath.c_str());
 			QString nppDirStr = QString::fromWCharArray(nppDirLocation); int ls = nppDirStr.lastIndexOf(QDir::separator()); if(ls>0) nppDirStr.truncate(ls); // PathRemoveFileSpec
@@ -1252,21 +1265,21 @@ bool NppParameters::load()
 	}
 	else
 	{
-		_userPath = getSpecialFolderLocation(0x001A /*QStandardPaths::AppDataLocation /* CSIDL_APPDATA */*/);
+		_userPath = getSpecialFolderLocation(0x001A /* CSIDL_APPDATA */);
 
 		pathAppend(_userPath, L"Notepad++");
-		if (!doesDirectoryExist(_userPath.c_str()))
-			QDir().mkpath(_userPath.c_str(), nullptr);
+		if (!doesDirectoryExist(QString::fromStdWString(_userPath)))
+			QDir().mkpath(QString::fromStdWString(_userPath));
 
 		_appdataNppDir = _userPluginConfDir = _userPath;
 
 		pathAppend(_userPluginConfDir, L"plugins");
-		if (!doesDirectoryExist(_userPluginConfDir.c_str()))
-			QDir().mkpath(_userPluginConfDir.c_str(), nullptr);
+		if (!doesDirectoryExist(QString::fromStdWString(_userPluginConfDir)))
+			QDir().mkpath(QString::fromStdWString(_userPluginConfDir));
 
 		pathAppend(_userPluginConfDir, L"Config");
-		if (!doesDirectoryExist(_userPluginConfDir.c_str()))
-			QDir().mkpath(_userPluginConfDir.c_str(), nullptr);
+		if (!doesDirectoryExist(QString::fromStdWString(_userPluginConfDir)))
+			QDir().mkpath(QString::fromStdWString(_userPluginConfDir));
 
 		// For PluginAdmin to launch the wingup with UAC
 		setElevationRequired(true);
@@ -1275,10 +1288,10 @@ bool NppParameters::load()
 	_pluginConfDir = _pluginRootDir; // for plugin list home
 	pathAppend(_pluginConfDir, L"Config");
 
-	if (!doesDirectoryExist(nppPluginRootParent.c_str()))
-		QDir().mkpath(nppPluginRootParent.c_str(), nullptr);
-	if (!doesDirectoryExist(_pluginRootDir.c_str()))
-		QDir().mkpath(_pluginRootDir.c_str(), nullptr);
+	if (!doesDirectoryExist(QString::fromStdWString(nppPluginRootParent)))
+		QDir().mkpath(QString::fromStdWString(nppPluginRootParent));
+	if (!doesDirectoryExist(QString::fromStdWString(_pluginRootDir)))
+		QDir().mkpath(QString::fromStdWString(_pluginRootDir));
 
 	_sessionPath = _userPath; // Session stores the absolute file path, it should never be on cloud
 
@@ -1289,19 +1302,19 @@ bool NppParameters::load()
 	//
 	// the 2nd priority: Cloud Choice Path
 	//
-	_isCloud = QFileInfo(QString::fromStdWString(cloudChoicePath));
+	_isCloud = QFileInfo(QString::fromStdWString(cloudChoicePath)).exists();
 	if (_isCloud)
 	{
 		// Read cloud choice
 		std::wstring cloudChoiceStrW = L"";
 		bool bLoadingFailed = false;
-		std::string cloudChoiceStr = getFileContent(cloudChoicePath.c_str(), &bLoadingFailed);
+		std::string cloudChoiceStr = getFileContent(QString::fromStdWString(cloudChoicePath), &bLoadingFailed).toStdString();
 		if (!bLoadingFailed)
 		{
 			WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
 			cloudChoiceStrW = wmc.char2wchar(cloudChoiceStr.c_str(), SC_CP_UTF8);
 		}
-		if (!cloudChoiceStrW.empty() && doesDirectoryExist(cloudChoiceStrW.c_str()))
+		if (!cloudChoiceStrW.isEmpty() && doesDirectoryExist(QString::fromStdWString(cloudChoiceStrW)))
 		{
 			_userPath = cloudChoiceStrW;
 			_nppGUI._cloudPath = cloudChoiceStrW;
@@ -1316,9 +1329,9 @@ bool NppParameters::load()
 	//
 	// the 1st priority: custom settings dir via command line argument
 	//
-	if (!_cmdSettingsDir.empty())
+	if (!_cmdSettingsDir.isEmpty())
 	{
-		if (!doesDirectoryExist(_cmdSettingsDir.c_str()))
+		if (!doesDirectoryExist(QString::fromStdWString(_cmdSettingsDir)))
 		{
 			// The following text is not translatable.
 			// _pNativeLangSpeaker is initialized AFTER _userPath being determined because nativeLang.xml is from _userPath.
@@ -1353,15 +1366,12 @@ bool NppParameters::load()
 	{
 		if (_pNativeLangSpeaker)
 		{
-			doRecover = _pNativeLangSpeaker->messageBox("LoadLangsFailed",
-				nullptr,
-				L"Load langs.xml failed!\rDo you want to recover your langs.xml?",
-				L"Configurator",
+			doRecover = _pNativeLangSpeaker->messageBox("LoadLangsFailed", nullptr, QString::fromWCharArray(L"Load langs.xml failed!\rDo you want to recover your langs.xml?"), QString::fromWCharArray(L"Configurator"),
 				QMessageBox::Yes | QMessageBox::No);
 		}
 		else
 		{
-			doRecover = QMessageBox(nullptr, L"Load langs.xml failed!\rDo you want to recover your langs.xml?", L"Configurator", QMessageBox::Yes | QMessageBox::No);
+			doRecover = QMessageBox::question(nullptr, QString::fromWCharArray(L"Load langs.xml failed!\rDo you want to recover your langs.xml?"), QString::fromWCharArray(L"Configurator"), QMessageBox::Yes | QMessageBox::No);
 		}
 	}
 
@@ -1371,22 +1381,19 @@ bool NppParameters::load()
 	}
 
 	_pXmlDoc._path = langs_xml_path;
-	_pXmlDoc._doc = new NppXml::NewDocument();
+	_pXmlDoc._doc = NppXml::NewDocument();
 
 	bool loadOkay = NppXml::loadFile(_pXmlDoc._doc, _pXmlDoc._path.c_str());
 	if (!loadOkay)
 	{
 		if (_pNativeLangSpeaker)
 		{
-			_pNativeLangSpeaker->messageBox("LoadLangsFailedFinal",
-				nullptr,
-				L"Load langs.xml failed!",
-				L"Configurator",
+			_pNativeLangSpeaker->messageBox("LoadLangsFailedFinal", nullptr, QString::fromWCharArray(L"Load langs.xml failed!"), QString::fromWCharArray(L"Configurator"),
 				QMessageBox::Ok);
 		}
 		else
 		{
-			QMessageBox::(nullptr, L"Load langs.xml failed!", L"Configurator", QMessageBox::Ok);
+			QMessageBox::critical(nullptr, QString::fromWCharArray(L"Load langs.xml failed!"), QString::fromWCharArray(L"Configurator"), QMessageBox::Ok);
 		}
 
 		delete _pXmlDoc._doc;
@@ -1405,11 +1412,11 @@ bool NppParameters::load()
 	std::wstring srcConfigPath(_nppPath);
 	pathAppend(srcConfigPath, L"config.model.xml");
 
-	if (!QFileInfo(QString::fromStdWString(configPath)))
+	if (!QFileInfo(QString::fromStdWString(configPath)).exists())
 		// CopyFile replacedsrcConfigPath.c_str(), configPath.c_str(), false);
 
 	_xmlUserDoc._path = configPath;
-	_xmlUserDoc._doc = new NppXml::NewDocument();
+	_xmlUserDoc._doc = NppXml::NewDocument();
 	loadOkay = NppXml::loadFile(_xmlUserDoc._doc, _xmlUserDoc._path.c_str());
 
 	if (!loadOkay)
@@ -1428,18 +1435,18 @@ bool NppParameters::load()
 	_stylerPath = _userPath;
 	pathAppend(_stylerPath, L"stylers.xml");
 
-	if (!QFileInfo(QString::fromStdWString(_stylerPath)))
+	if (!QFileInfo(QString::fromStdWString(_stylerPath)).exists())
 	{
 		std::wstring srcStylersPath(_nppPath);
 		pathAppend(srcStylersPath, L"stylers.model.xml");
 		// CopyFile replacedsrcStylersPath.c_str(), _stylerPath.c_str(), true);
 	}
 
-	if (_nppGUI._themeName.empty() || (!QFileInfo(QString::fromStdWString(_nppGUI._themeName))))
+	if (_nppGUI._themeName.isEmpty() || (!QFileInfo(QString::fromStdWString(_nppGUI._themeName)).exists()))
 		_nppGUI._themeName.assign(_stylerPath);
 
 	_pXmlUserStylerDoc._path = _nppGUI._themeName;
-	_pXmlUserStylerDoc._doc = new NppXml::NewDocument();
+	_pXmlUserStylerDoc._doc = NppXml::NewDocument();
 
 	loadOkay = NppXml::loadFile(_pXmlUserStylerDoc._doc, _pXmlUserStylerDoc._path.c_str());
 	if (!loadOkay)
@@ -1448,11 +1455,11 @@ bool NppParameters::load()
 		{
 			_pNativeLangSpeaker->messageBox("LoadStylersFailed",
 				nullptr,
-				L"Load \"$STR_REPLACE$\" failed!",
-				L"Load stylers.xml failed",
+				QStringLiteral("Load \"$STR_REPLACE$\" failed!"),
+				QStringLiteral("Load stylers.xml failed"),
 				QMessageBox::Ok,
 				0,
-				_stylerPath.c_str());
+				QString::fromWCharArray(_stylerPath.c_str()));
 		}
 		else
 		{
@@ -1480,7 +1487,7 @@ bool NppParameters::load()
 	getFilesInFolder(udlFiles, L"*.xml", _userDefineLangsFolderPath);
 
 	_pXmlUserLangDoc._path = _userDefineLangPath;
-	_pXmlUserLangDoc._doc = new NppXml::NewDocument();
+	_pXmlUserLangDoc._doc = NppXml::NewDocument();
 	loadOkay = NppXml::loadFileUDL(_pXmlUserLangDoc._doc, _userDefineLangPath.c_str());
 	if (!loadOkay)
 	{
@@ -1497,7 +1504,7 @@ bool NppParameters::load()
 
 	for (const auto& i : udlFiles)
 	{
-		NppXml::Document udlDoc = new NppXml::NewDocument();
+		NppXml::Document udlDoc = NppXml::NewDocument();
 		loadOkay = NppXml::loadFileUDL(udlDoc, i.c_str());
 		if (!loadOkay)
 		{
@@ -1530,7 +1537,7 @@ bool NppParameters::load()
 	// LocalizationSwitcher should use always user path
 	_localizationSwitcher._nativeLangPath = nativeLangPath;
 
-	if (!_startWithLocFileName.empty()) // localization argument detected, use user wished localization
+	if (!_startWithLocFileName.isEmpty()) // localization argument detected, use user wished localization
 	{
 		// overwrite nativeLangPath variable
 		nativeLangPath = _nppPath;
@@ -1539,14 +1546,14 @@ bool NppParameters::load()
 	}
 	else // use %appdata% location, or (if absence then) npp installed location
 	{
-		if (!QFileInfo(QString::fromStdWString(nativeLangPath)))
+		if (!QFileInfo(QString::fromStdWString(nativeLangPath)).exists())
 		{
 			nativeLangPath = _nppPath;
 			pathAppend(nativeLangPath, L"nativeLang.xml");
 		}
 	}
 
-	_pXmlNativeLangDoc = new NppXml::NewDocument();
+	_pXmlNativeLangDoc = NppXml::NewDocument();
 	loadOkay = NppXml::loadFileNativeLang(_pXmlNativeLangDoc, nativeLangPath.c_str());
 	if (!loadOkay)
 	{
@@ -1561,7 +1568,7 @@ bool NppParameters::load()
 	std::wstring toolbarButtonsConfXmlPath(_userPath);
 	pathAppend(toolbarButtonsConfXmlPath, L"toolbarButtonsConf.xml");
 
-	_pXmlToolButtonsConfDoc = new NppXml::NewDocument();
+	_pXmlToolButtonsConfDoc = NppXml::NewDocument();
 	loadOkay = NppXml::loadFile(_pXmlToolButtonsConfDoc, toolbarButtonsConfXmlPath.c_str());
 	if (!loadOkay)
 	{
@@ -1576,17 +1583,19 @@ bool NppParameters::load()
 	_shortcutsPath = _userPath;
 	pathAppend(_shortcutsPath, SHORTCUTSXML_FILENAME);
 
-	if (!QFileInfo(QString::fromStdWString(_shortcutsPath)))
+	if (!QFileInfo(QString::fromStdWString(_shortcutsPath)).exists())
 	{
 		std::wstring srcShortcutsPath(_nppPath);
 		pathAppend(srcShortcutsPath, SHORTCUTSXML_MODEL_FILENAME);
-		if (QFileInfo(QString::fromStdWString(srcShortcutsPath)))
-			// CopyFile replacedsrcShortcutsPath.c_str(), _shortcutsPath.c_str(), true);
+		if (QFileInfo(QString::fromStdWString(srcShortcutsPath)).exists())
+		{
+			// CopyFile stub — no-op on Qt6
+		}
 		else
 			generateXmlFromScratch(_shortcutsPath.c_str(), SHORTCUT_XML_CONTENT);
 	}
 
-	_pXmlShortcutDoc = new NppXml::NewDocument();
+	_pXmlShortcutDoc = NppXml::NewDocument();
 	loadOkay = NppXml::loadFileShortcut(_pXmlShortcutDoc, _shortcutsPath.c_str());
 	if (!loadOkay)
 	{
@@ -1611,18 +1620,20 @@ bool NppParameters::load()
 	_contextMenuPath = _userPath;
 	pathAppend(_contextMenuPath, CONTEXTMENUXML_FILENAME);
 
-	if (!QFileInfo(QString::fromStdWString(_contextMenuPath)))
+	if (!QFileInfo(QString::fromStdWString(_contextMenuPath)).exists())
 	{
 		std::wstring srcContextMenuPath(_nppPath);
 		pathAppend(srcContextMenuPath, CONTEXTMENUXML_MODEL_FILENAME);
 
-		if (QFileInfo(QString::fromStdWString(srcContextMenuPath)))
-			// CopyFile replacedsrcContextMenuPath.c_str(), _contextMenuPath.c_str(), true);
+		if (QFileInfo(QString::fromStdWString(srcContextMenuPath)).exists())
+		{
+			// CopyFile stub — no-op on Qt6
+		}
 		else
 			generateXmlFromScratch(_contextMenuPath.c_str(), CONTEXTMENU_XML_CONTENT);
 	}
 
-	_pXmlContextMenuDoc = new NppXml::NewDocument();
+	_pXmlContextMenuDoc = NppXml::NewDocument();
 	loadOkay = NppXml::loadFileContextMenu(_pXmlContextMenuDoc, _contextMenuPath.c_str());
 	if (!loadOkay)
 	{
@@ -1637,7 +1648,7 @@ bool NppParameters::load()
 	_tabContextMenuPath = _userPath;
 	pathAppend(_tabContextMenuPath, L"tabContextMenu.xml");
 
-	_pXmlTabContextMenuDoc = new NppXml::NewDocument();
+	_pXmlTabContextMenuDoc = NppXml::NewDocument();
 	loadOkay = NppXml::loadFileContextMenu(_pXmlTabContextMenuDoc, _tabContextMenuPath.c_str());
 	if (!loadOkay)
 	{
@@ -1655,7 +1666,7 @@ bool NppParameters::load()
 	const NppGUI & nppGUI = (NppParameters::getInstance()).getNppGUI();
 	if (nppGUI._rememberLastSession)
 	{
-		NppXml::Document pXmlSessionDoc = new NppXml::NewDocument();
+		NppXml::Document pXmlSessionDoc = NppXml::NewDocument();
 		loadOkay = NppXml::loadFile(pXmlSessionDoc, _sessionPath.c_str());
 		if (loadOkay)
 		{
@@ -1666,7 +1677,7 @@ bool NppParameters::load()
 		{
 			std::wstring sessionInCaseOfCorruption_bak = _sessionPath;
 			sessionInCaseOfCorruption_bak += SESSION_BACKUP_EXT;
-			if (QFileInfo(QString::fromStdWString(sessionInCaseOfCorruption_bak)))
+			if (QFileInfo(QString::fromStdWString(sessionInCaseOfCorruption_bak)).exists())
 			{
 				bool bFileSwapOk = false;
 				QString sessionPath = QString::fromStdWString(_sessionPath);
@@ -1695,7 +1706,7 @@ bool NppParameters::load()
 
 				if (bFileSwapOk)
 				{
-					NppXml::Document pXmlSessionBackupDoc = new NppXml::NewDocument();
+					NppXml::Document pXmlSessionBackupDoc = NppXml::NewDocument();
 					loadOkay = NppXml::loadFile(pXmlSessionBackupDoc, _sessionPath.c_str());
 					if (loadOkay)
 						loadOkay = getSessionFromXmlTree(pXmlSessionBackupDoc, _session);
@@ -1732,15 +1743,15 @@ bool NppParameters::load()
 	// It's for debugging use only                                 //
 	//-------------------------------------------------------------//
 	filePath = _nppPath;
-	issueFileName = nppLogNetworkDriveIssue;
+	issueFileName = L"nppLogNetworkDriveIssue";
 	issueFileName += L".xml";
 	pathAppend(filePath, issueFileName);
-	_doNppLogNetworkDriveIssue = QFileInfo(QString::fromStdWString(filePath));
+	_doNppLogNetworkDriveIssue = QFileInfo(QString::fromStdWString(filePath)).exists();
 	if (!_doNppLogNetworkDriveIssue)
 	{
 		filePath2 = _userPath;
 		pathAppend(filePath2, issueFileName);
-		_doNppLogNetworkDriveIssue = QFileInfo(QString::fromStdWString(filePath2));
+		_doNppLogNetworkDriveIssue = QFileInfo(QString::fromStdWString(filePath2)).exists();
 	}
 
 	//-------------------------------------------------------------//
@@ -1752,12 +1763,12 @@ bool NppParameters::load()
 	filePath = _nppPath;
 	std::wstring noRegForOSAppRestartTrigger = L"noRestartAutomatically.xml";
 	pathAppend(filePath, noRegForOSAppRestartTrigger);
-	_isRegForOSAppRestartDisabled = QFileInfo(QString::fromStdWString(filePath));
+	_isRegForOSAppRestartDisabled = QFileInfo(QString::fromStdWString(filePath)).exists();
 	if (!_isRegForOSAppRestartDisabled)
 	{
 		filePath = _userPath;
 		pathAppend(filePath, noRegForOSAppRestartTrigger);
-		_isRegForOSAppRestartDisabled = QFileInfo(QString::fromStdWString(filePath));
+		_isRegForOSAppRestartDisabled = QFileInfo(QString::fromStdWString(filePath)).exists();
 	}
 
 	//-------------------------------------------------------------//
@@ -1768,7 +1779,7 @@ bool NppParameters::load()
 	filePath = _nppPath;
 	std::wstring disableNppAutoUpdateFileName = L"disableNppAutoUpdate.xml";
 	pathAppend(filePath, disableNppAutoUpdateFileName);
-	_isNppAutoUpdateDisabled = QFileInfo(QString::fromStdWString(filePath));
+	_isNppAutoUpdateDisabled = QFileInfo(QString::fromStdWString(filePath)).exists();
 
 	return isAllLoaded;
 }
@@ -1809,12 +1820,14 @@ void NppParameters::setWorkSpaceFilePath(int i, const wchar_t* wsFile)
 void NppParameters::removeTransparent(QWidget* hwnd)
 {
 	if (hwnd != nullptr)
-		// SetWindowLongPtr replacedhwnd, 0 /* GWL_EXSTYLE */, // GetWindowLongPtr replacedhwnd, 0 /* GWL_EXSTYLE */) & ~0 /* WS_EX_LAYERED */);
+	{
+		// SetWindowLongPtr stub — no-op on Qt6
+	}
 }
 
 void NppParameters::setTransparent(QWidget* hwnd, int percent)
 {
-	// SetWindowLongPtr replacedhwnd, 0 /* GWL_EXSTYLE */, // GetWindowLongPtr replacedhwnd, 0 /* GWL_EXSTYLE */) | 0 /* WS_EX_LAYERED */);
+	// SetWindowLongPtr stub — no-op on Qt6
 	if (percent > 255)
 		percent = 255;
 	else if (percent < 0)
@@ -1855,8 +1868,8 @@ const wchar_t* NppParameters::getUserDefinedLangNameFromExt(const wchar_t* ext, 
 				// preserve ext matched UDL
 				iMatched = i;
 
-				if (((NppDarkMode::isEnabled() && _userLangArray[i]->_isDarkModeTheme)) ||
-					((!NppDarkMode::isEnabled() && !_userLangArray[i]->_isDarkModeTheme)))
+				if (((NppDarkMode::isEnabled_Static() && _userLangArray[i]->_isDarkModeTheme)) ||
+					((!NppDarkMode::isEnabled_Static() && !_userLangArray[i]->_isDarkModeTheme)))
 					return _userLangArray[i]->_name.c_str();
 			}
 		}
@@ -1874,9 +1887,11 @@ const wchar_t* NppParameters::getUserDefinedLangNameFromExt(const wchar_t* ext, 
 
 int NppParameters::getExternalLangIndexFromName(const wchar_t* externalLangName) const
 {
+	WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
+	const char* extNameNarrow = wmc.wchar2char(externalLangName, SC_CP_UTF8);
 	for (int i = 0 ; i < _nbExternalLang ; ++i)
 	{
-		if (externalLangName == string2wstring(_externalLangArray[i]->_name))
+		if (strcmp(extNameNarrow, _externalLangArray[i]->_name.c_str()) == 0)
 			return i;
 	}
 	return -1;
@@ -1910,47 +1925,25 @@ void NppParameters::setCurLineHilitingColour(QRgb colour2Set)
 	pStyle->_bgColor = colour2Set;
 }
 
-static int CALLBACK EnumFontFamExProc(const LOGFONT* lpelfe, const TEXTMETRIC*, unsigned int, qintptr lParam)
-{
-	auto& strVect = *reinterpret_cast<std::vector<std::wstring>*>(lParam);
-	const auto vectSize = static_cast<int>(strVect.size());
-	const wchar_t* lfFaceName = (reinterpret_cast<const ENUMLOGFONTEX*>(lpelfe))->elfLogFont.lfFaceName;
+// npp-qt: EnumFontFamExProc removed — Win32 font enumeration replaced by QFontDatabase
+// static int CALLBACK EnumFontFamExProc(...) { ... }
 
-	//Search through all the fonts, EnumFontFamiliesEx never states anything about order
-	//Start at the end though, that's the most likely place to find a duplicate
-	for (int i = vectSize - 1; i >= 0; --i)
-	{
-		if (strVect[i] == lfFaceName)
-			return 1;	//we already have seen this typeface, ignore it
-	}
-
-	//We can add the font
-	//Add the face name and not the full name, we do not care about any styles
-	strVect.push_back(lfFaceName);
-	return 1; // I want to get all fonts
-}
-
-void NppParameters::setFontList(QWidget* hWnd)
+void NppParameters::setFontList(QWidget* /*hWnd*/)
 {
 	//---------------//
 	// Sys font list //
 	//---------------//
-	LOGFONT lf{};
 	_fontlist.clear();
 	_fontlist.reserve(64); // arbitrary
 	_fontlist.emplace_back(L"");
 
-	lf.lfCharSet = DEFAULT_CHARSET;
-	lf.lfFaceName[0]='\0';
-	lf.lfPitchAndFamily = 0;
-	// NOTE: Win32 used ::GetDC(hWnd) to enumerate system fonts.
 	// Qt6: QFontDatabase enumerates available fonts without a DC.
 	for (const QString &family : QFontDatabase().families()) { _fontlist.push_back(family.toStdWString()); }
 }
 
 bool NppParameters::isInFontList(const std::wstring& fontName2Search) const
 {
-	if (fontName2Search.empty())
+	if (fontName2Search.isEmpty())
 		return false;
 
 	for (size_t i = 0, len = _fontlist.size(); i < len; i++)
@@ -2065,7 +2058,7 @@ bool NppParameters::updateFromModelXml(NppXml::Element& rootUser, ConfXml whichC
 	// At this point, need to parse the model file
 	// if there's a problem loading the model XML, just exit out (don't need to warn the user, since the main XML has already been loaded
 	// the same logic will be used for any other errors while trying to do this XML merge)
-	NppXml::Document pXmlModel = new NppXml::NewDocument();
+	NppXml::Document pXmlModel = NppXml::NewDocument();
 
 	auto handleErrorThenExit = [&]() {
 		switch (whichConf)
@@ -2149,63 +2142,63 @@ void NppParameters::updateLangXml(NppXml::Element& mainElemUser, const NppXml::E
 	// map each of the user-file's languages -> element-pointer, to keep track of the languages already in the user-file
 	std::map<std::string, NppXml::Element> mapUserLanguages{};
 	for (NppXml::Element langFromUser = NppXml::firstChildElement(mainElemUser, "Language");
-		langFromUser;
+		!langFromUser.isNull();
 		langFromUser = NppXml::nextSiblingElement(langFromUser, "Language"))
 	{
-		const char* languageName = NppXml::attribute(langFromUser, "name");
-		if (languageName)
-			mapUserLanguages[languageName] = langFromUser;
+		QString languageName = NppXml::attribute(langFromUser, "name");
+		if (!languageName.isEmpty())
+			mapUserLanguages[languageName.toStdString()] = langFromUser;
 	}
 
 	// for each language in the Model,
 	for (NppXml::Element langFromModel = NppXml::firstChildElement(mainElemModel, "Language");
-		langFromModel;
+		!langFromModel.isNull();
 		langFromModel = NppXml::nextSiblingElement(langFromModel, "Language"))
 	{
-		std::string modelLanguageName = NppXml::attribute(langFromModel, "name", "");
-		if (modelLanguageName.empty())
+		QString modelLanguageName = NppXml::attribute(langFromModel, "name", "");
+		if (modelLanguageName.isEmpty())
 			continue;
 
 		// see if language already exists in UserLanguages
-		if (mapUserLanguages.contains(modelLanguageName))
+		if (mapUserLanguages.contains(modelLanguageName.toStdString()))
 		{
 			// if so, see if I need to update individual entries
 
 			// first, enumerate each keywords name -> element pointer, so I know what's already there
 			std::map<std::string, NppXml::Element> mapUserKeywords{};
-			for (NppXml::Element keywordsFromUser = NppXml::firstChildElement(mapUserLanguages[modelLanguageName], "Keywords");
-				keywordsFromUser;
+			for (NppXml::Element keywordsFromUser = NppXml::firstChildElement(mapUserLanguages[modelLanguageName.toStdString()], "Keywords");
+				!keywordsFromUser.isNull();
 				keywordsFromUser = NppXml::nextSiblingElement(keywordsFromUser, "Keywords"))
 			{
-				const char* keywordsName = NppXml::attribute(keywordsFromUser, "name");
-				if (keywordsName)
-					mapUserKeywords[keywordsName] = keywordsFromUser;
+				QString keywordsName = NppXml::attribute(keywordsFromUser, "name");
+				if (!keywordsName.isEmpty())
+					mapUserKeywords[keywordsName.toStdString()] = keywordsFromUser;
 			}
 
 			// then, for each Keywords entry in the model, check to see if it already exists in the user list
 			for (NppXml::Element keywordsFromModel = NppXml::firstChildElement(langFromModel, "Keywords");
-				keywordsFromModel;
+				!keywordsFromModel.isNull();
 				keywordsFromModel = NppXml::nextSiblingElement(keywordsFromModel, "Keywords"))
 			{
-				const char* modelKwName = NppXml::attribute(keywordsFromModel, "name");
-				std::string modelKeywordsName = modelKwName ? modelKwName : "";
-				if (modelKeywordsName.empty())
+				QString modelKwName = NppXml::attribute(keywordsFromModel, "name");
+				QString modelKeywordsNameQ = modelKwName;
+				if (modelKeywordsNameQ.isEmpty())
 					continue;
 
 				// does this Keywords element exist in User already?
-				if (mapUserKeywords.contains(modelKeywordsName))
+				if (mapUserKeywords.contains(modelKeywordsNameQ.toStdString()))
 				{
 					// if Keywords element in user langs.xml, need to check to see if any words are missing from its contents
 
 					// start by extracting the list of words in the user version of this Keywords element
-					NppXml::Node pKwsValue = NppXml::firstChild(mapUserKeywords[modelKeywordsName]);
-					std::string sText = pKwsValue ? NppXml::value(pKwsValue) : "";
+					NppXml::Node pKwsValue = NppXml::firstChild(mapUserKeywords[modelKeywordsNameQ.toStdString()]);
+					std::string sText = !pKwsValue.isNull() ? NppXml::value(pKwsValue) : "";
 					std::vector<std::string> vsUserWords{};
 					std::map<std::string, bool> mapUserWords{};
-					if (!sText.empty())
+					if (!sText.isEmpty())
 					{
 						std::string sToken;
-						std::istringstream strm(sText);
+							std::istringstream strm(sTextQ.toStdString());
 						while (strm >> sToken)
 						{
 							vsUserWords.push_back(sToken);
@@ -2216,20 +2209,20 @@ void NppParameters::updateLangXml(NppXml::Element& mainElemUser, const NppXml::E
 					// then go through each word in the model, and add it to the list if it's not already there
 					int nWordsAdded = 0;
 					NppXml::Node pKwsValueModel = NppXml::firstChild(keywordsFromModel);
-					std::string sTextModel = pKwsValueModel ? NppXml::value(pKwsValueModel) : "";
-					if (!pKwsValue)
+					QString sTextModelQ = !pKwsValueModel.isNull() ? NppXml::value(pKwsValueModel) : QString();
+					if (pKwsValue.isNull())
 					{
-						if (pKwsValueModel)
+						if (pKwsValueModel.isNull())
 						{
-							NppXml::insertEndChild(mapUserKeywords[modelKeywordsName], pKwsValueModel);
+							NppXml::insertEndChild(mapUserKeywords[modelKeywordsNameQ.toStdString()], pKwsValueModel);
 						}
 					}
 					else
 					{
-						if (!sTextModel.empty())
+						if (!sTextModel.isEmpty())
 						{
 							std::string sToken;
-							std::istringstream strm(sTextModel);
+							std::istringstream strm(sTextModelQ.toStdString());
 							while (strm >> sToken)
 							{
 								if (!mapUserWords.contains(sToken))
@@ -2274,27 +2267,27 @@ void NppParameters::updateLangXml(NppXml::Element& mainElemUser, const NppXml::E
 							}
 
 							// and update the XML's value
-							NppXml::setValue(pKwsValue, sOutputWords);
+							NppXml::setValue(pKwsValue.toElement(), sOutputWords);
 						}
 					}
 				}
 				else
 				{
 					// if this Keywords element doesn't exist in user list, need to clone it from model to the right parent language in the user list
-					NppXml::insertEndChild(mapUserLanguages[modelLanguageName], keywordsFromModel);
+					NppXml::insertEndChild(mapUserLanguages[modelLanguageName.toStdString()], keywordsFromModel);
 				}
 			}
 
 			// Also, since <Language name="..." ...> can have other attributes, need to check to make sure that
 			// the user langs copy of language isn't missing any of the attributes from the model
-			NppXml::Element thisLanguageFromUser = mapUserLanguages[modelLanguageName];
+			NppXml::Element thisLanguageFromUser = mapUserLanguages[modelLanguageName.toStdString()];
 			for (NppXml::Attribute attrModel = NppXml::firstAttribute(langFromModel);
 				attrModel;
 				attrModel = NppXml::next(attrModel))
 			{
 				// if attribute not in user, need to add it (but leave it alone if the user-langs has it, but is just an empty string, because that's intentionally blank)
 				const char* attrName = NppXml::name(attrModel);
-				const char* pcUserValue = NppXml::attribute(thisLanguageFromUser, attrName);
+				QString pcUserValue = NppXml::attribute(thisLanguageFromUser, attrName);
 				if (!pcUserValue)
 					NppXml::setAttribute(thisLanguageFromUser, attrName, NppXml::value(attrModel));
 				else if (std::strcmp(attrName, "ext"))
@@ -2309,13 +2302,13 @@ void NppParameters::updateLangXml(NppXml::Element& mainElemUser, const NppXml::E
 					{
 						if (!isExtDone.contains(sToken))
 						{
-							if (!sExtUpdated.empty())
+							if (!sExtUpdated.isEmpty())
 								sExtUpdated += " ";
 							sExtUpdated += sToken;
 							isExtDone[sToken] = true;
 						}
 					}
-					NppXml::setAttribute(thisLanguageFromUser, attrName, sExtUpdated);
+					NppXml::setAttribute(thisLanguageFromUser, attrName, QString::fromStdString(sExtUpdated));
 				}
 			}
 		}
@@ -2357,7 +2350,7 @@ void NppParameters::updateStylesXml(const NppXml::Element& rootUser, const std::
 	// map UserStyler's widget styleID||name -> node-pointer
 	std::map<std::string, NppXml::Element> mapUserWidgets{};
 	for (NppXml::Element widgetFromUser = NppXml::firstChildElement(gsUser, "WidgetStyle");
-		widgetFromUser;
+		!widgetFromUser.isNull();
 		widgetFromUser = NppXml::nextSiblingElement(widgetFromUser, "WidgetStyle"))
 	{
 		// use StyleID for the map's key, or if styleID not found or if "0" then use the widget's name (lowercase) instead
@@ -2369,7 +2362,7 @@ void NppParameters::updateStylesXml(const NppXml::Element& rootUser, const std::
 			widgetKey = NppXml::attribute(widgetFromUser, "name");
 
 		// add widget to map using the key
-		if (!widgetKey.empty())
+		if (!widgetKey.isEmpty())
 		{
 			mapUserWidgets[widgetKey] = widgetFromUser;
 
@@ -2384,7 +2377,7 @@ void NppParameters::updateStylesXml(const NppXml::Element& rootUser, const std::
 
 	// for each WidgetStyle in the model,
 	for (NppXml::Element widgetFromModel = NppXml::firstChildElement(gsModel, "WidgetStyle");
-		widgetFromModel;
+		!widgetFromModel.isNull();
 		widgetFromModel = NppXml::nextSiblingElement(widgetFromModel, "WidgetStyle"))
 	{
 		// extract the key
@@ -2395,7 +2388,7 @@ void NppParameters::updateStylesXml(const NppXml::Element& rootUser, const std::
 		else if (const char* name = NppXml::attribute(widgetFromModel, "name"); name)
 			widgetKey = name;
 
-		if (widgetKey.empty())
+		if (widgetKey.isEmpty())
 			continue;
 
 		// see if WidgetStyle already exists in UserStyles
@@ -2443,20 +2436,20 @@ void NppParameters::updateStylesXml(const NppXml::Element& rootUser, const std::
 	// map UserStyler's lexer name -> element-pointer
 	std::map<std::string, NppXml::Element> mapUserLexers{};
 	for (NppXml::Element lexerFromUser = NppXml::firstChildElement(mainElemUser, "LexerType");
-		lexerFromUser;
+		!lexerFromUser.isNull();
 		lexerFromUser = NppXml::nextSiblingElement(lexerFromUser, "LexerType"))
 	{
-		const char* lexerName = NppXml::attribute(lexerFromUser, "name");
+		QString lexerName = NppXml::attribute(lexerFromUser, "name");
 		if (lexerName)
 			mapUserLexers[lexerName] = lexerFromUser;
 	}
 
 	// For each lexer in the model,
 	for (NppXml::Element lexerFromModel = NppXml::firstChildElement(mainElemModel, "LexerType");
-		lexerFromModel;
+		!lexerFromModel.isNull();
 		lexerFromModel = NppXml::nextSiblingElement(lexerFromModel, "LexerType"))
 	{
-		const char* modelLexerName = NppXml::attribute(lexerFromModel, "name");
+		QString modelLexerName = NppXml::attribute(lexerFromModel, "name");
 		
 		if (!modelLexerName)
 			continue;
@@ -2469,12 +2462,12 @@ void NppParameters::updateStylesXml(const NppXml::Element& rootUser, const std::
 
 			// iterate through each embedded WordsStyle element
 			for (NppXml::Element embeddedWordsStyle = NppXml::firstChildElement(srcEmbeddedLexer, "WordsStyle");
-				embeddedWordsStyle;
+				!embeddedWordsStyle.isNull();
 				embeddedWordsStyle = NppXml::nextSiblingElement(embeddedWordsStyle, "WordsStyle"))
 			{
-				const char* embeddedID = NppXml::attribute(embeddedWordsStyle, "styleID");
-				const char* embeddedFG = NppXml::attribute(embeddedWordsStyle, "fgColor");
-				const char* embeddedBG = NppXml::attribute(embeddedWordsStyle, "bgColor");
+				QString embeddedID = NppXml::attribute(embeddedWordsStyle, "styleID");
+				QString embeddedFG = NppXml::attribute(embeddedWordsStyle, "fgColor");
+				QString embeddedBG = NppXml::attribute(embeddedWordsStyle, "bgColor");
 				if (embeddedID)
 				{
 					auto do_embedded_to_dot_js_map = [](std::map <std::string, std::map<std::string, std::string>>&colorid_map, const std::string& dotjs_id, const std::string& emb_id_desired, const char* embID, const char* embFG, const char* embBG) {
@@ -2523,21 +2516,21 @@ void NppParameters::updateStylesXml(const NppXml::Element& rootUser, const std::
 			// first, enumerate each words-style ID -> element-pointer, so I know what's already there
 			std::map<std::string, NppXml::Element> mapUserWordsStyles{};
 			for (NppXml::Element wordsStyleFromUser = NppXml::firstChildElement(mapUserLexers[modelLexerName], "WordsStyle");
-				wordsStyleFromUser;
+				!wordsStyleFromUser.isNull();
 				wordsStyleFromUser = NppXml::nextSiblingElement(wordsStyleFromUser, "WordsStyle"))
 			{
-				const char* wordsStyleID = NppXml::attribute(wordsStyleFromUser, "styleID");
+				QString wordsStyleID = NppXml::attribute(wordsStyleFromUser, "styleID");
 				if (wordsStyleID)
 					mapUserWordsStyles[wordsStyleID] = wordsStyleFromUser;
 			}
 
 			// then, for each words-style in the Model, check to see if it already exists in the user list
 			for (NppXml::Element wordsStyleFromModel = NppXml::firstChildElement(lexerFromModel, "WordsStyle");
-				wordsStyleFromModel;
+				!wordsStyleFromModel.isNull();
 				wordsStyleFromModel = NppXml::nextSiblingElement(wordsStyleFromModel, "WordsStyle"))
 			{
-				std::string modelWordsStyleID = NppXml::attribute(wordsStyleFromModel, "styleID", "");
-				if (modelWordsStyleID.empty())
+				QString modelWordsStyleID = NppXml::attribute NppXml::attribute(wordsStyleFromModel, "styleID", "");
+				if (modelWordsStyleID.isEmpty())
 					continue;
 
 				// does it exist in User already?
@@ -2564,8 +2557,8 @@ void NppParameters::updateStylesXml(const NppXml::Element& rootUser, const std::
 							{
 								std::string newFg = defaultFgColor;
 								std::string newBg = defaultBgColor;
-								std::string dest_id = NppXml::attribute(elementFromUser, "styleID", "");
-								if (!dest_id.empty() && mapColorsEmbeddedToDotJs.contains(dest_id))
+								QString dest_id = NppXml::attribute NppXml::attribute(elementFromUser, "styleID", "");
+								if (!dest_id.isEmpty() && mapColorsEmbeddedToDotJs.contains(dest_id))
 								{
 									//std::string src_id = mapColorsEmbeddedToDotJs[dest_id];
 									if (std::strcmp(attrName, "fgColor") == 0 && mapColorsEmbeddedToDotJs[dest_id].contains(attrName))
@@ -2593,8 +2586,8 @@ void NppParameters::updateStylesXml(const NppXml::Element& rootUser, const std::
 					{
 						std::string newFg = defaultFgColor;
 						std::string newBg = defaultBgColor;
-						std::string dest_id = NppXml::attribute(p_cloneElement, "styleID", "");
-						if (!dest_id.empty() && mapColorsEmbeddedToDotJs.contains(dest_id))
+						QString dest_id = NppXml::attribute NppXml::attribute(p_cloneElement, "styleID", "");
+						if (!dest_id.isEmpty() && mapColorsEmbeddedToDotJs.contains(dest_id))
 						{
 							if (NppXml::attribute(p_cloneElement, "fgColor") && mapColorsEmbeddedToDotJs[dest_id].contains("fgColor"))
 								newFg = mapColorsEmbeddedToDotJs[dest_id]["fgColor"];
@@ -2622,11 +2615,11 @@ void NppParameters::updateStylesXml(const NppXml::Element& rootUser, const std::
 
 				// iterate through all WordsStyle in the clone, and override fg and bg colors as needed
 				for (NppXml::Element wordsStyleFromClone = NppXml::firstChildElement(p_clone, "WordsStyle");
-					wordsStyleFromClone;
+					!wordsStyleFromClone.isNull();
 					wordsStyleFromClone = NppXml::nextSiblingElement(wordsStyleFromClone, "WordsStyle"))
 				{
-					std::string dest_id = NppXml::attribute(wordsStyleFromClone, "styleID", "");
-					if (!dest_id.empty() && mapColorsEmbeddedToDotJs.contains(dest_id))
+					QString dest_id = NppXml::attribute NppXml::attribute(wordsStyleFromClone, "styleID", "");
+					if (!dest_id.isEmpty() && mapColorsEmbeddedToDotJs.contains(dest_id))
 					{
 						if (NppXml::attribute(wordsStyleFromClone, "fgColor") && mapColorsEmbeddedToDotJs[dest_id].contains("fgColor"))
 							newFg = mapColorsEmbeddedToDotJs[dest_id]["fgColor"];
@@ -2908,12 +2901,12 @@ bool NppParameters::getContextMenuFromXmlTree(QMenu* mainMenuHandle, QMenu* plug
 		std::vector<MenuItemUnit>& contextMenuItems = isEditCM ? _contextMenuItems : _tabContextMenuItems;
 
 		for (NppXml::Element childNode = NppXml::firstChildElement(contextMenuRoot, "Item");
-			childNode;
+			!childNode.isNull();
 			childNode = NppXml::nextSiblingElement(childNode, "Item"))
 		{
-			const char* folderNameDefaultA = NppXml::attribute(childNode, "FolderName");
-			const char* folderNameTranslateID_A = NppXml::attribute(childNode, "TranslateID");
-			const char* displayAsA = NppXml::attribute(childNode, "ItemNameAs");
+			QString folderNameDefaultA = NppXml::attribute(childNode, "FolderName");
+			QString folderNameTranslateID_A = NppXml::attribute(childNode, "TranslateID");
+			QString displayAsA = NppXml::attribute(childNode, "ItemNameAs");
 
 			std::wstring folderName = folderNameDefaultA ? wmc.char2wchar(folderNameDefaultA, SC_CP_UTF8) : L"";
 			std::wstring displayAs = displayAsA ? wmc.char2wchar(displayAsA, SC_CP_UTF8) : L"";
@@ -2930,13 +2923,13 @@ bool NppParameters::getContextMenuFromXmlTree(QMenu* mainMenuHandle, QMenu* plug
 			}
 			else
 			{
-				const char* menuEntryNameA = NppXml::attribute(childNode, "MenuEntryName");
+				QString menuEntryNameA = NppXml::attribute(childNode, "MenuEntryName");
 				const char* menuItemNameA = NppXml::attribute(childNode, "MenuItemName");
 
 				std::wstring menuEntryName = menuEntryNameA ? wmc.char2wchar(menuEntryNameA, SC_CP_UTF8) : L"";
 				std::wstring menuItemName = menuItemNameA ? wmc.char2wchar(menuItemNameA, SC_CP_UTF8) : L"";
 
-				if (!menuEntryName.empty() && !menuItemName.empty())
+				if (!menuEntryName.isEmpty() && !menuItemName.isEmpty())
 				{
 					int cmd = getCmdIdFromMenuEntryItemName(mainMenuHandle, menuEntryName, menuItemName);
 					if (cmd != -1)
@@ -2951,7 +2944,7 @@ bool NppParameters::getContextMenuFromXmlTree(QMenu* mainMenuHandle, QMenu* plug
 					std::wstring pluginCmdName = pluginCmdNameA ? wmc.char2wchar(pluginCmdNameA, SC_CP_UTF8) : L"";
 
 					// if plugin menu exists, also the value of PluginEntryName and PluginCommandItemName are valid
-					if (pluginsMenu && !pluginName.empty() && !pluginCmdName.empty())
+					if (pluginsMenu && !pluginName.isEmpty() && !pluginCmdName.isEmpty())
 					{
 						const int pluginCmdId = getPluginCmdIdFromMenuEntryItemName(pluginsMenu, pluginName, pluginCmdName);
 						if (pluginCmdId != -1)
@@ -2981,17 +2974,14 @@ void NppParameters::setWorkingDir(const wchar_t * newPath)
 
 bool NppParameters::loadSession(Session& session, const wchar_t* sessionFileName, const bool bSuppressErrorMsg)
 {
-	NppXml::Document pXmlSessionDocument = new NppXml::NewDocument();
+	NppXml::Document pXmlSessionDocument = NppXml::NewDocument();
 	bool loadOkay = NppXml::loadFile(pXmlSessionDocument, sessionFileName);
 	if (loadOkay)
 		loadOkay = getSessionFromXmlTree(pXmlSessionDocument, session);
 
 	if (!loadOkay && !bSuppressErrorMsg)
 	{
-		_pNativeLangSpeaker->messageBox("SessionFileInvalidError",
-			nullptr,
-			L"Session file is either corrupted or not valid.",
-			L"Could not Load Session",
+		_pNativeLangSpeaker->messageBox("SessionFileInvalidError", nullptr, QString::fromWCharArray(L"Session file is either corrupted or not valid."), QString::fromWCharArray(L"Could not Load Session"),
 			QMessageBox::Ok);
 	}
 
@@ -3039,7 +3029,7 @@ bool NppParameters::getSessionFromXmlTree(const NppXml::Document& pSessionDoc, S
 					session._activeSubIndex = index2;
 			}
 			for (NppXml::Element childNode = NppXml::firstChildElement(viewRoots[k], "File");
-				childNode;
+				!childNode.isNull();
 				childNode = NppXml::nextSiblingElement(childNode, "File"))
 			{
 				const char* fileName = NppXml::attribute(childNode, "filename");
@@ -3107,7 +3097,7 @@ bool NppParameters::getSessionFromXmlTree(const NppXml::Document& pSessionDoc, S
 					sfi._isRTL = getBoolAttribute(childNode, "RTL");
 
 					for (NppXml::Element markNode = NppXml::firstChildElement(childNode, "Mark");
-						markNode;
+						!markNode.isNull();
 						markNode = NppXml::nextSiblingElement(markNode, "Mark"))
 					{
 						const auto lineNumber = static_cast<intptr_t>(NppXml::int64Attribute(markNode, "line", -1));
@@ -3118,7 +3108,7 @@ bool NppParameters::getSessionFromXmlTree(const NppXml::Document& pSessionDoc, S
 					}
 
 					for (NppXml::Element foldNode = NppXml::firstChildElement(childNode, "Fold");
-						foldNode;
+						!foldNode.isNull();
 						foldNode = NppXml::nextSiblingElement(foldNode, "Fold"))
 					{
 						const auto lineNumber = static_cast<intptr_t>(NppXml::int64Attribute(foldNode, "line", -1));
@@ -3147,7 +3137,7 @@ bool NppParameters::getSessionFromXmlTree(const NppXml::Document& pSessionDoc, S
 		}
 
 		for (NppXml::Element childNode = NppXml::firstChildElement(fileBrowserRoot, "root");
-			childNode;
+			!childNode.isNull();
 			childNode = NppXml::nextSiblingElement(childNode, "root"))
 		{
 			const char* fileName = NppXml::attribute(childNode, "foldername");
@@ -3181,7 +3171,7 @@ void NppParameters::feedFileListParameters(const NppXml::Element& element)
 		childNode = NppXml::nextSiblingElement(childNode, "File"))
 	{
 		const std::wstring filePath = string2wstring(NppXml::attribute(childNode, "filename", ""));
-		if (!filePath.empty())
+		if (!filePath.isEmpty())
 		{
 			_LRFileList[_nbRecentFile] = std::make_unique<std::wstring>(filePath);
 			++_nbRecentFile;
@@ -3201,7 +3191,7 @@ void NppParameters::feedFileBrowserParameters(const NppXml::Element& element)
 	}
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(fileBrowserRoot, "root");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "root"))
 	{
 		const char* filePath = NppXml::attribute(childNode, "foldername");
@@ -3218,7 +3208,7 @@ void NppParameters::feedProjectPanelsParameters(const NppXml::Element& element)
 	if (!projPanelRoot) return;
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(projPanelRoot, "ProjectPanel");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "ProjectPanel"))
 	{
 		const int index = NppXml::intAttribute(childNode, "id", 0);
@@ -3422,7 +3412,7 @@ void NppParameters::feedShortcut(const NppXml::Element& element)
 	if (!shortcutsRoot) return;
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(shortcutsRoot, "Shortcut");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "Shortcut"))
 	{
 		const int id = NppXml::intAttribute(childNode, "id", -1);
@@ -3451,7 +3441,7 @@ void NppParameters::feedMacros(const NppXml::Element& element)
 	if (!macrosRoot) return;
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(macrosRoot, "Macro");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "Macro"))
 	{
 		Shortcut sc;
@@ -3470,7 +3460,7 @@ void NppParameters::feedMacros(const NppXml::Element& element)
 void NppParameters::getActions(const NppXml::Element& element, Macro& macro)
 {
 	for (NppXml::Element childNode = NppXml::firstChildElement(element, "Action");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "Action") )
 	{
 		const int type = NppXml::intAttribute(childNode, "type", 4);
@@ -3492,7 +3482,7 @@ void NppParameters::getActions(const NppXml::Element& element, Macro& macro)
 		// to avoid generating consecutive double newlines.
 
 		const bool isPrevMacroCR =
-			!macro.empty()
+			!macro.isEmpty()
 			&& macro.back()._message == SCI_REPLACESEL
 			&& macro.back()._sParameter == "\r";
 
@@ -3540,7 +3530,7 @@ void NppParameters::getActions(const NppXml::Element& element, Macro& macro)
 	}
 
 	// Ensure the last macro step is correctly recorded as SCI_NEWLINE if it had an original CR.
-	if (!macro.empty()
+	if (!macro.isEmpty()
 		&& macro.back()._message == SCI_REPLACESEL
 		&& macro.back()._sParameter == "\r")
 	{
@@ -3554,7 +3544,7 @@ void NppParameters::feedUserCmds(const NppXml::Element& element)
 	if (!userCmdsRoot) return;
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(userCmdsRoot, "Command");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "Command"))
 	{
 		Shortcut sc;
@@ -3582,7 +3572,7 @@ void NppParameters::feedPluginCustomizedCmds(const NppXml::Element& element)
 	if (!pluginCustomizedCmdsRoot) return;
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(pluginCustomizedCmdsRoot, "PluginCommand");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "PluginCommand"))
 	{
 		const char *moduleName = NppXml::attribute(childNode, "moduleName");
@@ -3615,7 +3605,7 @@ void NppParameters::feedScintKeys(const NppXml::Element& element)
 	if (!scintKeysRoot) return;
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(scintKeysRoot, "ScintKey");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "ScintKey"))
 	{
 		const int scintKey = NppXml::intAttribute(childNode, "ScintID", -1);
@@ -3640,7 +3630,7 @@ void NppParameters::feedScintKeys(const NppXml::Element& element)
 				addScintillaModifiedIndex(i);
 				KeyCombo kc;
 				for (NppXml::Element nextNode = NppXml::firstChildElement(childNode, "NextKey");
-					nextNode;
+					!nextNode.isNull();
 					nextNode = NppXml::nextSiblingElement(nextNode, "NextKey"))
 				{
 					const char *str = NppXml::attribute(nextNode, "Ctrl");
@@ -3735,7 +3725,7 @@ std::pair<unsigned char, unsigned char> NppParameters::feedUserLang(const NppXml
 		std::wstring ext = string2wstring(NppXml::attribute(childNode, "ext", ""));
 		std::string udlVersion = NppXml::attribute(childNode, "udlVersion", "");
 
-		if (name.empty())
+		if (name.isEmpty())
 		{
 			// UserLang name is missing, just ignore this entry
 			continue;
@@ -3771,7 +3761,7 @@ std::pair<unsigned char, unsigned char> NppParameters::feedUserLang(const NppXml
 			{
 				const Style * pStyle = _userLangArray[_nbUserLang - 1]->_styles.findByID(i);
 				if (!pStyle)
-					_userLangArray[_nbUserLang - 1]->_styles.addStyler(i, string2wstring(globalMappper().styleNameMapper[i]).c_str());
+					_userLangArray[_nbUserLang - 1]->_styles.addStyler(i, string2wstring(globalMapper().styleNameMapper[i]).c_str());
 			}
 
 		}
@@ -3786,7 +3776,7 @@ std::pair<unsigned char, unsigned char> NppParameters::feedUserLang(const NppXml
 
 std::pair<unsigned char, unsigned char> NppParameters::importUDLFromFile(const std::wstring& sourceFile)
 {
-	NppXml::Document pXmlUserLangDoc = new NppXml::NewDocument();
+	NppXml::Document pXmlUserLangDoc = NppXml::NewDocument();
 
 	std::pair<unsigned char, unsigned char> addUdlResult(static_cast<unsigned char>(0), static_cast<unsigned char>(0));
 	
@@ -3816,7 +3806,7 @@ bool NppParameters::exportUDLToFile(size_t langIndex2export, const std::wstring&
 	if (langIndex2export >= _nbUserLang)
 		return false;
 
-	NppXml::Document pNewXmlUserLangDoc = new NppXml::NewDocument();
+	NppXml::Document pNewXmlUserLangDoc = NppXml::NewDocument();
 	NppXml::createNewDeclaration(pNewXmlUserLangDoc);
 	NppXml::Element newRoot2export = NppXml::createChildElement(pNewXmlUserLangDoc, "NotepadPlus");
 
@@ -3858,9 +3848,9 @@ void NppParameters::setCloudChoice(const wchar_t* pathChoice) const
 	std::wstring cloudChoicePath = getSettingsFolder();
 	cloudChoicePath += L"\\cloud\\";
 
-	if (!doesDirectoryExist(cloudChoicePath.c_str()))
+	if (!doesDirectoryExist(QString::fromStdWString(cloudChoicePath)))
 	{
-		QDir().mkpath(cloudChoicePath.c_str(), nullptr);
+		QDir().mkpath(QString::fromStdWString(cloudChoicePath));
 	}
 	cloudChoicePath += L"choice";
 
@@ -3875,7 +3865,7 @@ void NppParameters::removeCloudChoice() const
 	std::wstring cloudChoicePath = getSettingsFolder();
 
 	cloudChoicePath += L"\\cloud\\choice";
-	if (QFileInfo(QString::fromStdWString(cloudChoicePath)))
+	if (QFileInfo(QString::fromStdWString(cloudChoicePath)).exists())
 	{
 		QFile::remove(cloudChoicePath.c_str());
 	}
@@ -3910,13 +3900,13 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 {
 	bool isOK = false;
 
-	if (cloudSettingsPath.empty())
+	if (cloudSettingsPath.isEmpty())
 		return false;
 
 	// config.xml
 	std::wstring cloudConfigPath = cloudSettingsPath;
 	pathAppend(cloudConfigPath, L"config.xml");
-	if (!QFileInfo(QString::fromStdWString(cloudConfigPath)) && _xmlUserDoc._doc)
+	if (!QFileInfo(QString::fromStdWString(cloudConfigPath)).exists()) && _xmlUserDoc._doc)
 	{
 		isOK = NppXml::saveFile(_xmlUserDoc._doc, cloudConfigPath.c_str());
 		if (!isOK)
@@ -3926,7 +3916,7 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 	// stylers.xml
 	std::wstring cloudStylersPath = cloudSettingsPath;
 	pathAppend(cloudStylersPath, L"stylers.xml");
-	if (!QFileInfo(QString::fromStdWString(cloudStylersPath)) && _pXmlUserStylerDoc._doc)
+	if (!QFileInfo(QString::fromStdWString(cloudStylersPath)).exists()) && _pXmlUserStylerDoc._doc)
 	{
 		isOK = NppXml::saveFile(_pXmlUserStylerDoc._doc, cloudStylersPath.c_str());
 		if (!isOK)
@@ -3936,7 +3926,7 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 	// langs.xml
 	std::wstring cloudLangsPath = cloudSettingsPath;
 	pathAppend(cloudLangsPath, L"langs.xml");
-	if (!QFileInfo(QString::fromStdWString(cloudLangsPath)) && _pXmlDoc._doc)
+	if (!QFileInfo(QString::fromStdWString(cloudLangsPath)).exists()) && _pXmlDoc._doc)
 	{
 		isOK = NppXml::saveFile(_pXmlDoc._doc, cloudLangsPath.c_str());
 		if (!isOK)
@@ -3946,7 +3936,7 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 	// userDefineLang.xml
 	std::wstring cloudUserLangsPath = cloudSettingsPath;
 	pathAppend(cloudUserLangsPath, L"userDefineLang.xml");
-	if (!QFileInfo(QString::fromStdWString(cloudUserLangsPath)) && _pXmlUserLangDoc._doc)
+	if (!QFileInfo(QString::fromStdWString(cloudUserLangsPath)).exists()) && _pXmlUserLangDoc._doc)
 	{
 		isOK = NppXml::saveFile(_pXmlUserLangDoc._doc, cloudUserLangsPath.c_str());
 		if (!isOK)
@@ -3956,7 +3946,7 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 	// shortcuts.xml
 	std::wstring cloudShortcutsPath = cloudSettingsPath;
 	pathAppend(cloudShortcutsPath, SHORTCUTSXML_FILENAME);
-	if (!QFileInfo(QString::fromStdWString(cloudShortcutsPath)) && _pXmlShortcutDoc)
+	if (!QFileInfo(QString::fromStdWString(cloudShortcutsPath)).exists()) && _pXmlShortcutDoc)
 	{
 		isOK = NppXml::saveFileShortcut(_pXmlShortcutDoc, cloudShortcutsPath.c_str());
 		if (!isOK)
@@ -3966,7 +3956,7 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 	// contextMenu.xml
 	std::wstring cloudContextMenuPath = cloudSettingsPath;
 	pathAppend(cloudContextMenuPath, L"contextMenu.xml");
-	if (!QFileInfo(QString::fromStdWString(cloudContextMenuPath)) && _pXmlContextMenuDoc)
+	if (!QFileInfo(QString::fromStdWString(cloudContextMenuPath)).exists()) && _pXmlContextMenuDoc)
 	{
 		isOK = NppXml::saveFile(_pXmlContextMenuDoc, cloudContextMenuPath.c_str());
 		if (!isOK)
@@ -3976,7 +3966,7 @@ bool NppParameters::writeSettingsFilesOnCloudForThe1stTime(const std::wstring& c
 	// nativeLang.xml
 	std::wstring cloudNativeLangPath = cloudSettingsPath;
 	pathAppend(cloudNativeLangPath, L"nativeLang.xml");
-	if (!QFileInfo(QString::fromStdWString(cloudNativeLangPath)) && _pXmlNativeLangDoc != nullptr)
+	if (!QFileInfo(QString::fromStdWString(cloudNativeLangPath)).exists()) && _pXmlNativeLangDoc != nullptr)
 	{
 		isOK = NppXml::saveFile(_pXmlNativeLangDoc, cloudNativeLangPath.c_str());
 		if (!isOK)
@@ -3997,7 +3987,7 @@ void NppParameters::writeDefaultUDL()
 	{
 		if (!_pXmlUserLangDoc._doc)
 		{
-			_pXmlUserLangDoc._doc = new NppXml::NewDocument();
+			_pXmlUserLangDoc._doc = NppXml::NewDocument();
 			NppXml::createNewDeclaration(_pXmlUserLangDoc._doc);
 			NppXml::createChildElement(_pXmlUserLangDoc._doc, "NotepadPlus");
 		}
@@ -4039,7 +4029,7 @@ void NppParameters::writeDefaultUDL()
 	}
 	else if (deleteAll)
 	{
-		if (QFileInfo(QString::fromStdWString(_userDefineLangPath)))
+		if (QFileInfo(QString::fromStdWString(_userDefineLangPath)).exists())
 		{
 			QFile::remove(_userDefineLangPath.c_str());
 		}
@@ -4057,7 +4047,7 @@ void NppParameters::writeNonDefaultUDL()
 			{
 				// no need to save, delete file
 				const std::wstring& docFilePath = udl._path;
-				if (!docFilePath.empty() && QFileInfo(QString::fromStdWString(docFilePath)))
+				if (!docFilePath.isEmpty() && QFileInfo(QString::fromStdWString(docFilePath)))
 				{
 					QFile::remove(docFilePath.c_str());
 				}
@@ -4114,7 +4104,7 @@ void NppParameters::insertMacro(NppXml::Element& macrosRoot, const MacroShortcut
 	setBoolAttribute(macroRoot, "Alt", key._isAlt);
 	setBoolAttribute(macroRoot, "Shift", key._isShift);
 	NppXml::setAttribute(macroRoot, "Key", key._key);
-	if (!folderName.empty())
+	if (!folderName.isEmpty())
 	{
 		NppXml::setAttribute(macroRoot, "FolderName", folderName);
 	}
@@ -4144,7 +4134,7 @@ void NppParameters::insertUserCmd(NppXml::Element& userCmdRoot, const UserComman
 	NppXml::setAttribute(cmdRoot, "Key", key._key);
 
 	NppXml::createChildText(cmdRoot, userCmd._cmd);
-	if (!folderName.empty())
+	if (!folderName.isEmpty())
 	{
 		NppXml::setAttribute(cmdRoot, "FolderName", folderName);
 	}
@@ -4226,7 +4216,7 @@ void NppParameters::writeSession(const Session& session, const wchar_t* fileName
 	//
 	// Prepare for writing
 	//
-	NppXml::Document pXmlSessionDoc = new NppXml::NewDocument();
+	NppXml::Document pXmlSessionDoc = NppXml::NewDocument();
 	NppXml::createNewDeclaration(pXmlSessionDoc);
 	NppXml::Element root = NppXml::createChildElement(pXmlSessionDoc, "NotepadPlus");
 
@@ -4328,7 +4318,7 @@ void NppParameters::writeSession(const Session& session, const wchar_t* fileName
 	//
 	if (sessionSaveOK)
 	{
-		NppXml::Document pXmlSessionCheck = new NppXml::NewDocument();
+		NppXml::Document pXmlSessionCheck = NppXml::NewDocument();
 		sessionSaveOK = NppXml::loadFile(pXmlSessionCheck, sessionPathName);
 		if (sessionSaveOK)
 		{
@@ -4385,7 +4375,7 @@ void NppParameters::writeShortcuts()
 	if (!_pXmlShortcutDoc)
 	{
 		//do the treatment
-		_pXmlShortcutDoc = new NppXml::NewDocument();
+		_pXmlShortcutDoc = NppXml::NewDocument();
 		NppXml::createNewDeclaration(_pXmlShortcutDoc);
 	}
 
@@ -4507,7 +4497,7 @@ void NppParameters::feedUserSettings(const NppXml::Element& settingsRoot)
 		{
 			for (int i = 0 ; i < SCE_USER_TOTAL_KEYWORD_GROUPS ; ++i)
 			{
-				_userLangArray[_nbUserLang - 1]->_isPrefix[i] = getBoolAttribute(prefixNode, globalMappper().keywordNameMapper[i + SCE_USER_KWLIST_KEYWORDS1].c_str());
+				_userLangArray[_nbUserLang - 1]->_isPrefix[i] = getBoolAttribute(prefixNode, globalMapper().keywordNameMapper[i + SCE_USER_KWLIST_KEYWORDS1].c_str());
 			}
 		}
 		else	// support for old style (pre 2.0)
@@ -4526,7 +4516,7 @@ void NppParameters::feedUserKeywordList(const NppXml::Element& element)
 	const char* udlVersion = _userLangArray[_nbUserLang - 1]->getUdlVersion();
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(element, "Keywords");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "Keywords"))
 	{
 		const char* keywordsName = NppXml::attribute(childNode, "name", "");
@@ -4584,9 +4574,9 @@ void NppParameters::feedUserKeywordList(const NppXml::Element& element)
 			else
 			{
 				kwl = NppXml::value(valueNode);
-				if (globalMappper().keywordIdMapper.find(keywordsName) != globalMappper().keywordIdMapper.end())
+				if (globalMapper().keywordIdMapper.find(keywordsName) != globalMapper().keywordIdMapper.end())
 				{
-					int id = globalMappper().keywordIdMapper[keywordsName];
+					int id = globalMapper().keywordIdMapper[keywordsName];
 					if (std::strlen(kwl) < max_char)
 					{
 						_userLangArray[_nbUserLang - 1]->_keywordLists[id] = kwl;
@@ -4604,15 +4594,15 @@ void NppParameters::feedUserKeywordList(const NppXml::Element& element)
 void NppParameters::feedUserStyles(const NppXml::Element& element)
 {
 	for (NppXml::Element childNode = NppXml::firstChildElement(element, "WordsStyle");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "WordsStyle"))
 	{
 		const std::string styleName = NppXml::attribute(childNode, "name", "");
-		if (!styleName.empty())
+		if (!styleName.isEmpty())
 		{
-			if (globalMappper().styleIdMapper.find(styleName) != globalMappper().styleIdMapper.end())
+			if (globalMapper().styleIdMapper.find(styleName) != globalMapper().styleIdMapper.end())
 			{
-				int id = globalMappper().styleIdMapper[styleName];
+				int id = globalMapper().styleIdMapper[styleName];
 				_userLangArray[_nbUserLang - 1]->_styles.addStyler((id | L_USER << 16), childNode);
 			}
 		}
@@ -4626,7 +4616,7 @@ bool NppParameters::feedStylerArray(const NppXml::Element& element)
 
 	// For each lexer
 	for (NppXml::Element childNode = NppXml::firstChildElement(styleRoot, "LexerType");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "LexerType") )
 	{
 		const char* lexerName = NppXml::attribute(childNode, "name");
@@ -4651,7 +4641,7 @@ bool NppParameters::feedStylerArray(const NppXml::Element& element)
 	if (!globalStyleRoot) return false;
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(globalStyleRoot, "WidgetStyle");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "WidgetStyle") )
 	{
 		const char* name = NppXml::attribute(childNode, "name");
@@ -4685,18 +4675,18 @@ int NppParameters::addStyleDefaultColors(
 		NppXml::setAttribute(newStyle, "name", wstring2string(name));
 		NppXml::setAttribute(newStyle, "styleID", styleID);
 
-		const Style* pStyleFrom = fromStyle.empty() ? nullptr : _widgetStyleArray.findByName(fromStyle);
+		const Style* pStyleFrom = fromStyle.isEmpty() ? nullptr : _widgetStyleArray.findByName(fromStyle);
 		if (pStyleFrom)
 		{
 			static constexpr size_t bufSize = 7;
-			if (!fgColor.empty())
+			if (!fgColor.isEmpty())
 			{
 				char strColor[bufSize] = { '\0' };
 				std::snprintf(strColor, bufSize, "%.6lX", RGBHEX(pStyleFrom->_fgColor));
 				NppXml::setAttribute(newStyle, "fgColor", strColor);
 			}
 
-			if (!bgColor.empty())
+			if (!bgColor.isEmpty())
 			{
 				char strColor[bufSize] = { '\0' };
 				std::snprintf(strColor, bufSize, "%.6lX", RGBHEX(pStyleFrom->_bgColor));
@@ -4707,12 +4697,12 @@ int NppParameters::addStyleDefaultColors(
 		}
 		else
 		{
-			if (!fgColor.empty())
+			if (!fgColor.isEmpty())
 			{
 				NppXml::setAttribute(newStyle, "fgColor", fgColor);
 			}
 
-			if (!bgColor.empty())
+			if (!bgColor.isEmpty())
 			{
 				NppXml::setAttribute(newStyle, "bgColor", bgColor);
 			}
@@ -4720,7 +4710,7 @@ int NppParameters::addStyleDefaultColors(
 			result = 1;
 		}
 
-		if (!fgColor.empty() || !bgColor.empty())
+		if (!fgColor.isEmpty() || !bgColor.isEmpty())
 		{
 			_widgetStyleArray.addStyler(0, newStyle);
 			return result;
@@ -4738,7 +4728,7 @@ void NppParameters::addDefaultStyles(const NppXml::Element& element)
 	if (!globalStyleRoot) return;
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(globalStyleRoot, "WidgetStyle");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "WidgetStyle"))
 	{
 		const int styleID = NppXml::intAttribute(childNode, "styleID", -1);
@@ -4793,7 +4783,7 @@ void LexerStylerArray::addLexerStyler(const char* lexerName, const char* lexerDe
 		ls.setLexerUserExt(string2wstring(lexerUserExt).c_str());
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(lexerNode, "WordsStyle");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "WordsStyle"))
 	{
 		const int styleID = NppXml::intAttribute(childNode, "styleID", -1);
@@ -4826,7 +4816,7 @@ void StyleArray::addStyler(int styleID, const NppXml::Element& styleNode)
 		if (str)
 		{
 			if (isUser)
-				s._styleDesc = string2wstring(globalMappper().styleNameMapper[styleID]);
+				s._styleDesc = string2wstring(globalMapper().styleNameMapper[styleID]);
 			else
 				s._styleDesc = string2wstring(str);
 		}
@@ -5038,7 +5028,7 @@ bool NppParameters::writeFileBrowserSettings(const std::vector<std::wstring>& ro
 	// Create the file browser root
 	NppXml::Element fileBrowserRootNode = NppXml::createChildElement(nppRoot, "FileBrowser");
 
-	if (!rootPaths.empty())
+	if (!rootPaths.isEmpty())
 	{
 		NppXml::setAttribute(fileBrowserRootNode, "latestSelectedItem", wstring2string(latestSelectedItemPath));
 
@@ -5077,7 +5067,7 @@ NppXml::Element NppParameters::getChildElementByAttribute(const NppXml::Element&
 	const char* attributeName, const char* attributeVal)
 {
 	for (NppXml::Element childNode = NppXml::firstChildElement(element, childName);
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, childName))
 	{
 		if (std::strcmp(NppXml::attribute(childNode, attributeName, ""), attributeVal) == 0)
@@ -5310,7 +5300,7 @@ void NppParameters::feedKeyWordsParameters(const NppXml::Element& element)
 		return;
 
 	for (NppXml::Element langNode = NppXml::firstChildElement(langRoot, "Language");
-		langNode;
+		!langNode.isNull();
 		langNode = NppXml::nextSiblingElement(langNode, "Language"))
 	{
 		if (_nbLang < NB_LANG)
@@ -5335,7 +5325,7 @@ void NppParameters::feedKeyWordsParameters(const NppXml::Element& element)
 					isBackspaceUnindent);
 
 				for (NppXml::Element kwNode = NppXml::firstChildElement(langNode, "Keywords");
-					kwNode;
+					!kwNode.isNull();
 					kwNode = NppXml::nextSiblingElement(kwNode, "Keywords"))
 				{
 					const char* indexName = NppXml::attribute(kwNode, "name");
@@ -5346,7 +5336,7 @@ void NppParameters::feedKeyWordsParameters(const NppXml::Element& element)
 
 					const int i = getKwClassFromName(indexName);
 
-					if (!keyWords.empty() && i >= 0 && i <= KEYWORDSET_MAX)
+					if (!keyWords.isEmpty() && i >= 0 && i <= KEYWORDSET_MAX)
 					{
 						_langList[_nbLang]->setWords(keyWords.c_str(), i);
 					}
@@ -5364,7 +5354,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 		return;
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(GUIRoot, "GUIConfig");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "GUIConfig"))
 	{
 		const char* nm = NppXml::attribute(childNode, "name");
@@ -6116,7 +6106,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			_nppGUI._matchedPairConf._doDoubleQuotes = getBoolAttribute(childNode, "doubleQuotes");
 
 			for (NppXml::Element subChildNode = NppXml::firstChildElement(childNode, "UserDefinePair");
-				subChildNode;
+				!subChildNode.isNull();
 				subChildNode = NppXml::nextSiblingElement(subChildNode, "UserDefinePair"))
 			{
 				const int open = getRangeDefaultAttribute(subChildNode, "open", 0, 127, -1);
@@ -6181,7 +6171,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			_nppGUI._openSaveDir = getRangeDefaultAttribute(childNode, "value", dir_followCurrent, dir_userDef, _nppGUI._openSaveDir);
 
 			const std::wstring path = string2wstring(NppXml::attribute(childNode, "defaultDirPath", ""));
-			if (!path.empty())
+			if (!path.isEmpty())
 			{
 				std::std::wcsncpy(_nppGUI._defaultDir, path.c_str(), MAX_PATH);
 				QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
@@ -6190,7 +6180,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			}
 
 			const std::wstring lastPath = string2wstring(NppXml::attribute(childNode, "lastUsedDirPath", ""));
-			if (!lastPath.empty())
+			if (!lastPath.isEmpty())
 			{
 				std::std::wcsncpy(_nppGUI._lastUsedDir, lastPath.c_str(), MAX_PATH);
 			}
@@ -6382,7 +6372,7 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 			auto& darkThemeName = darkDefaults._xmlFileName;
 			auto& darkTbInfo = darkDefaults._tbIconInfo;
 			darkThemeName = string2wstring(NppXml::attribute(childNode, "darkThemeName", "DarkModeDefault.xml"));
-			if (darkThemeName.empty())
+			if (darkThemeName.isEmpty())
 				darkThemeName = L"DarkModeDefault.xml";
 			darkTbInfo._tbIconSet = getRangeDefaultAttribute(childNode, "darkToolBarIconSet", TB_SMALL, TB_STANDARD, darkTbInfo._tbIconSet);
 			darkTbInfo._tbColor = getRangeDefaultAttribute(childNode, "darkTbFluentColor", defaultColor, custom, darkTbInfo._tbColor);
@@ -6409,13 +6399,13 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 				std::wstring xmlFileName = _nppGUI._darkmode._isEnabled ? darkThemeName : lightThemeName;
 				const bool isLocalOnly = _isLocal && !_isCloud;
 
-				if (!xmlFileName.empty() && std::wcscmp(xmlFileName.c_str(), L"stylers.xml") != 0)
+				if (!xmlFileName.isEmpty() && std::wcscmp(xmlFileName.c_str(), L"stylers.xml") != 0)
 				{
 					themePath = isLocalOnly ? _nppPath : _userPath;
 					pathAppend(themePath, L"themes\\");
 					pathAppend(themePath, xmlFileName);
 
-					if (!isLocalOnly && !QFileInfo(QString::fromStdWString(themePath)))
+					if (!isLocalOnly && !QFileInfo(QString::fromStdWString(themePath)).exists())
 					{
 						themePath = _nppPath;
 						pathAppend(themePath, L"themes\\");
@@ -6427,14 +6417,14 @@ void NppParameters::feedGUIParameters(const NppXml::Element& element)
 					themePath = isLocalOnly ? _nppPath : _userPath;
 					pathAppend(themePath, L"stylers.xml");
 
-					if (!isLocalOnly && !QFileInfo(QString::fromStdWString(themePath)))
+					if (!isLocalOnly && !QFileInfo(QString::fromStdWString(themePath)).exists())
 					{
 						themePath = _nppPath;
 						pathAppend(themePath, L"stylers.xml");
 					}
 				}
 
-				if (QFileInfo(QString::fromStdWString(themePath)))
+				if (QFileInfo(QString::fromStdWString(themePath)).exists())
 				{
 					_nppGUI._themeName.assign(themePath);
 				}
@@ -6728,7 +6718,7 @@ void NppParameters::feedDockingManager(const NppXml::Element& element)
 	setPanelSize(_nppGUI._dockingData._bottomHeight, "bottomHeight");
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(element, "FloatingWindow");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "FloatingWindow"))
 	{
 		const int cont = NppXml::intAttribute(childNode, "cont", -1);
@@ -6754,7 +6744,7 @@ void NppParameters::feedDockingManager(const NppXml::Element& element)
 	}
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(element, "PluginDlg");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "PluginDlg"))
 	{
 		const char* name = NppXml::attribute(childNode, "pluginName");
@@ -6771,7 +6761,7 @@ void NppParameters::feedDockingManager(const NppXml::Element& element)
 	}
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(element, "ActiveTabs");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "ActiveTabs"))
 	{
 		const int cont = NppXml::intAttribute(childNode, "cont", -1);
@@ -6938,7 +6928,7 @@ void NppParameters::createXmlTreeFromGUIParams()
 	if (oldGUIRoot && _nppGUI._isCmdlineNosessionActivated)
 	{
 		for (NppXml::Element childNode = NppXml::firstChildElement(oldGUIRoot, "GUIConfig");
-			childNode;
+			!childNode.isNull();
 			childNode = NppXml::nextSiblingElement(childNode, "GUIConfig"))
 		{
 			const char* nm = NppXml::attribute(childNode, "name");
@@ -8114,11 +8104,11 @@ std::wstring NppParameters::writeStyles(LexerStylerArray& lexersStylers, StyleAr
 	NppXml::Element root = NppXml::firstChildElement(_pXmlUserStylerDoc._doc, "NotepadPlus");
 	NppXml::Element lexersRoot = NppXml::firstChildElement(root, "LexerStyles");
 	for (NppXml::Element childNode = NppXml::firstChildElement(lexersRoot, "LexerType");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "LexerType"))
 	{
 		const std::wstring nm = string2wstring(NppXml::attribute(childNode, "name", ""));
-		if (nm.empty())
+		if (nm.isEmpty())
 			continue;
 
 		LexerStyler* pLs = _lexerStylerVect.getLexerStylerByName(nm.c_str());
@@ -8129,7 +8119,7 @@ std::wstring NppParameters::writeStyles(LexerStylerArray& lexersStylers, StyleAr
 			NppXml::setAttribute(childNode, "ext", wstring2string(pLs->getLexerUserExt()));
 
 			for (NppXml::Element grChildNode = NppXml::firstChildElement(childNode, "WordsStyle");
-				grChildNode;
+				!grChildNode.isNull();
 				grChildNode = NppXml::nextSiblingElement(grChildNode, "WordsStyle"))
 			{
 				const std::wstring styleName = string2wstring(NppXml::attribute(grChildNode, "name", ""));
@@ -8148,11 +8138,11 @@ std::wstring NppParameters::writeStyles(LexerStylerArray& lexersStylers, StyleAr
 		NppXml::Element root2 = NppXml::firstChildElement(extLexDoc._doc, "NotepadPlus");
 		NppXml::Element lexersRoot2 = NppXml::firstChildElement(root2, "LexerStyles");
 		for (NppXml::Element childNode = NppXml::firstChildElement(lexersRoot2, "LexerType");
-			childNode;
+			!childNode.isNull();
 			childNode = NppXml::nextSiblingElement(childNode, "LexerType"))
 		{
 			const std::wstring nm = string2wstring(NppXml::attribute(childNode, "name", ""));
-			if (nm.empty())
+			if (nm.isEmpty())
 				continue;
 
 			LexerStyler* pLs = _lexerStylerVect.getLexerStylerByName(nm.c_str());
@@ -8163,7 +8153,7 @@ std::wstring NppParameters::writeStyles(LexerStylerArray& lexersStylers, StyleAr
 				NppXml::setAttribute(childNode, "ext", wstring2string(pLs->getLexerUserExt()));
 
 				for (NppXml::Element grChildNode = NppXml::firstChildElement(childNode, "WordsStyle");
-					grChildNode;
+					!grChildNode.isNull();
 					grChildNode = NppXml::nextSiblingElement(grChildNode, "WordsStyle"))
 				{
 					const std::wstring styleName = string2wstring(NppXml::attribute(grChildNode, "name", ""));
@@ -8182,7 +8172,7 @@ std::wstring NppParameters::writeStyles(LexerStylerArray& lexersStylers, StyleAr
 	NppXml::Element globalStylesRoot = NppXml::firstChildElement(root, "GlobalStyles");
 
 	for (NppXml::Element childNode = NppXml::firstChildElement(globalStylesRoot, "WidgetStyle");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "WidgetStyle"))
 	{
 		const std::wstring styleName = string2wstring(NppXml::attribute(childNode, "name", ""));
@@ -8195,7 +8185,7 @@ std::wstring NppParameters::writeStyles(LexerStylerArray& lexersStylers, StyleAr
 	}
 
 	const auto savePath = _themeSwitcher.getSavePathFrom(_pXmlUserStylerDoc._path);
-	if (!savePath.empty())
+	if (!savePath.isEmpty())
 	{
 		static_cast<void>(NppXml::saveFile(_pXmlUserStylerDoc._doc, savePath.c_str()));
 		return savePath;
@@ -8212,7 +8202,7 @@ bool NppParameters::insertTabInfo(const wchar_t* langName, int tabInfo, bool bac
 	NppXml::Element root = NppXml::firstChildElement(_pXmlDoc._doc, "NotepadPlus");
 	NppXml::Element langRoot = NppXml::firstChildElement(root, "Languages");
 	for (NppXml::Element childNode = NppXml::firstChildElement(langRoot, "Language");
-		childNode;
+		!childNode.isNull();
 		childNode = NppXml::nextSiblingElement(childNode, "Language"))
 	{
 		const char* nm = NppXml::attribute(childNode, "name");
@@ -8229,7 +8219,7 @@ bool NppParameters::insertTabInfo(const wchar_t* langName, int tabInfo, bool bac
 		NppXml::Element root2 = NppXml::firstChildElement(extLexDoc._doc, "NotepadPlus");
 		NppXml::Element langRoot2 = NppXml::firstChildElement(root2, "Languages");
 		for (NppXml::Element childNode = NppXml::firstChildElement(langRoot2, "Language");
-			childNode;
+			!childNode.isNull();
 			childNode = NppXml::nextSiblingElement(childNode, "Language"))
 		{
 			const char* nm = NppXml::attribute(childNode, "name");
@@ -8269,7 +8259,7 @@ void NppParameters::writeStyle2Element(const Style& style2Write, Style& style2Sy
 		NppXml::setAttribute(element, "colorStyle", style2Write._colorStyle);
 	}
 
-	if (!style2Write._fontName.empty())
+	if (!style2Write._fontName.isEmpty())
 	{
 		const char* oldFontName = NppXml::attribute(element, "fontName");
 		const std::string fontName = wstring2string(style2Write._fontName);
@@ -8327,7 +8317,7 @@ void NppParameters::insertUserLang2Tree(NppXml::Element& node, const UserLangCon
 
 		NppXml::Element prefixElement = NppXml::createChildElement(settingsElement, "Prefix");
 		for (int i = 0 ; i < SCE_USER_TOTAL_KEYWORD_GROUPS ; ++i)
-			setBoolAttribute(prefixElement, globalMappper().keywordNameMapper[i + SCE_USER_KWLIST_KEYWORDS1].c_str(), userLang->_isPrefix[i]);
+			setBoolAttribute(prefixElement, globalMapper().keywordNameMapper[i + SCE_USER_KWLIST_KEYWORDS1].c_str(), userLang->_isPrefix[i]);
 	}
 
 	NppXml::Element kwlElement = NppXml::createChildElement(rootElement, "KeywordLists");
@@ -8335,7 +8325,7 @@ void NppParameters::insertUserLang2Tree(NppXml::Element& node, const UserLangCon
 	for (int i = 0 ; i < SCE_USER_KWLIST_TOTAL ; ++i)
 	{
 		NppXml::Element kwElement = NppXml::createChildElement(kwlElement, "Keywords");
-		NppXml::setAttribute(kwElement, "name", globalMappper().keywordNameMapper[i]);
+		NppXml::setAttribute(kwElement, "name", globalMapper().keywordNameMapper[i]);
 		NppXml::createChildText(kwElement, userLang->_keywordLists[i].c_str());
 	}
 
@@ -8371,7 +8361,7 @@ void NppParameters::insertUserLang2Tree(NppXml::Element& node, const UserLangCon
 			NppXml::setAttribute(styleElement, "colorStyle", style2Write._colorStyle);
 		}
 
-		if (!style2Write._fontName.empty())
+		if (!style2Write._fontName.isEmpty())
 		{
 			const std::string fontName = wstring2string(style2Write._fontName);
 			NppXml::setAttribute(styleElement, "fontName", fontName);
@@ -8803,4 +8793,25 @@ void NppParameters::buildGupParams(std::wstring& params)
 
 	params += L" -errLogPath=";
 	params += L"\"%LOCALAPPDATA%\\Notepad++\\log\\securityError.log\"";
+}
+
+// === STUB IMPLEMENTATIONS for linker-missing methods ===
+
+void NppParameters::writeNeed2SaveUDL() {
+    // Stub: mark UDL as needing save — no-op for Qt6
+}
+
+bool NppParameters::writeFindHistory() {
+    // Stub: persist find/replace history to config — no-op for Qt6
+    return true;
+}
+
+bool NppParameters::reloadStylers(const wchar_t*) {
+    // Stub: reload syntax highlighting styles — no-op for Qt6
+    return true;
+}
+
+bool NppParameters::writeProjectPanelsSettings() {
+    // Stub: save project panel state — no-op for Qt6
+    return true;
 }

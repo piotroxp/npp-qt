@@ -235,10 +235,13 @@ public:
     // Search in target (SciLexer find/replace)
     intptr_t searchInTarget(const QString& text, size_t fromPos, size_t toPos) const;
     intptr_t searchInTarget(const char* text, size_t len, size_t fromPos, size_t toPos) const;
-    // Overloads used by Notepad_plus.cpp: std::string& text, non-const ref for pos
-    intptr_t searchInTarget(const std::string& text, intptr_t& fromPos, intptr_t& toPos) const;
+    // Overloads used by Notepad_plus.cpp: std::string& text, non-const ref for fromPos
+    // Overload 1: toPos as intptr_t by value — disambiguates lvalue calls (preferred over refs)
     intptr_t searchInTarget(const std::string& text, intptr_t& fromPos, intptr_t toPos) const;
+    // Overload 2: len as int
     intptr_t searchInTarget(const std::string& text, intptr_t& fromPos, int len) const;
+    // Overload 3: toPos as rvalue ref (for callers passing rvalue — intptr_t&& only binds temporaries)
+    intptr_t searchInTarget(const std::string& text, intptr_t& fromPos, intptr_t&& toPos) const;
 
     // Replace the target range
     intptr_t replaceTarget(const QString& replacement, intptr_t fromPos = -1, intptr_t toPos = -1);
@@ -291,6 +294,9 @@ public:
     bool isWrapSymbolVisible() const;
     void showEOL(bool show = true);
     bool isShownEOL() const;
+
+    // Win32 compat: getWidth() — return viewport width
+    int getWidth() const { return width(); }
 
     // --- Scrolling / cursor ---
 
@@ -443,13 +449,20 @@ public:
     void maintainStateForNpc(Buffer* /*buf*/) {}
     void maintainStateForNpc() {}  // no-arg overload used by Notepad_plus.cpp
 
-    // Stub: inserts generic text from a source
-    void insertGenericTextFrom(const char* /*text*/, size_t /*length*/) {}
+    // Inserts generic text at a given line indentation position
+    // Position: zero-based line indent position; text: null-terminated string
+    void insertGenericTextFrom(size_t position, const char* text) {
+        if (!text) return;
+        send(SCI_INSERTTEXT, static_cast<uptr_t>(position),
+             reinterpret_cast<sptr_t>(text));
+    }
 
     // Document map / fold helpers
     QRect getClientRect() const { return rect(); }
     size_t getCurrentDocLen() const { return static_cast<size_t>(send(SCI_GETLENGTH)); }
     std::vector<size_t> getCurrentFoldStates() const;
+    // Win32 compat: getCurrentFoldStates(out_vector) — fills the provided vector
+    void getCurrentFoldStates(std::vector<size_t>& outFoldStates) const;
     bool isTextDirectionRTL() const;
     void changeTextDirection(bool toRTL);
 

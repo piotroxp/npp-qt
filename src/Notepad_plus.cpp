@@ -2501,17 +2501,17 @@ int Notepad_plus::doSaveOrNot(const wchar_t* fn, bool isMulti)
 
 	if (!isMulti)
 	{
-		wstring title, msg;
+		QString title, msg;
 
 		if (!_nativeLangSpeaker.getDoSaveOrNotStrings(title, msg))
 		{
-			title = L"Save";
-			msg = L"Save file \"$STR_REPLACE$\" ?";
+			title = QStringLiteral("Save");
+			msg = QStringLiteral("Save file \"$STR_REPLACE$\" ?");
 		}
 
-		msg = stringReplace(msg, L"$STR_REPLACE$", fn);
+		msg = msg.replace(QLatin1String("$STR_REPLACE$"), QString::fromWCharArray(fn));
 
-		return QMessageBox::warning(static_cast<QWidget*>(this->getHSelf()),  QString::fromStdWString(msg), QString::fromStdWString(title), QMessageBox::Cancel | QMessageBox::Icon::Question, 0);
+		return QMessageBox::warning(static_cast<QWidget*>(this->getHSelf()), title, msg, QMessageBox::StandardButton::Cancel);
 	}
 
 	DoSaveOrNotBox doSaveOrNotBox;
@@ -3037,15 +3037,9 @@ void Notepad_plus::replaceMarkedline(size_t ln, const wchar_t *str)
 
 wstring Notepad_plus::getMarkedLine(size_t ln)
 {
-	auto lineLen = _pEditView->execute(SCI_LINELENGTH, ln);
 	auto lineBegin = _pEditView->execute(SCI_POSITIONFROMLINE, ln);
-
-	wchar_t * buf = new wchar_t[lineLen+1];
-	_pEditView->getGenericText(buf, lineLen + 1, lineBegin, lineBegin + lineLen);
-	wstring line = buf;
-	delete [] buf;
-
-	return line;
+	auto lineEnd = _pEditView->execute(SCI_GETLINEENDPOSITION, ln);
+	return _pEditView->getGenericTextAsString(lineBegin, lineEnd);
 }
 
 void Notepad_plus::findMatchingBracePos(intptr_t& braceAtCaret, intptr_t& braceOpposite)
@@ -3734,7 +3728,7 @@ intptr_t Notepad_plus::findMachedBracePos(size_t startPos, size_t endPos, char t
 void Notepad_plus::maintainIndentation(wchar_t ch)
 {
 	const NppGUI& nppGui = NppParameters::getInstance().getNppGUI();
-	if (nppGui._maintainIndent == AutoIndentMode::none)
+	if (nppGui._maintainIndent == AutoIndentMode::AI_NONE)
 		return;
 
 	intptr_t eolMode = _pEditView->execute(SCI_GETEOLMODE);
@@ -3987,34 +3981,16 @@ bool Notepad_plus::processFindAccel(QEvent *msg) const
 	return false; // ::TranslateAccelerator: Qt uses QShortcut on QAction
 }
 
-bool Notepad_plus::processIncrFindAccel(QEvent *msg) const
+bool Notepad_plus::processIncrFindAccel(QEvent *msg)
 {
 	if (!_incrementFindDlg.getHSelf()->isAncestorOf(QApplication::focusWidget()))
 		return false;
 	return false; // ::TranslateAccelerator: Qt uses QShortcut on QAction
 }
 
-bool Notepad_plus::processTabSwitchAccel(MSG* msg) const
+bool Notepad_plus::processTabSwitchAccel(QEvent* /*msg*/) const
 {
-	QWidget* hDlg = nullptr;
-	auto isRightDlg = [&msg, &hDlg](QWidget* hWnd) -> bool {
-		const bool isRight = (hWnd == msg->hwnd || (::IsChild(hWnd, msg->hwnd) == true));
-		if (isRight)
-		{
-			hDlg = hWnd;
-		}
-		return isRight;
-		};
-	
-	if (isRightDlg(_findReplaceDlg.getHSelf())
-		|| isRightDlg(_pluginsAdminDlg.getHSelf())
-		|| (ScintillaEditView::getUserDefineDlg() != nullptr
-			&& isRightDlg(ScintillaEditView::getUserDefineDlg()->getHSelf()))
-		)
-	{
-		return false; // ::TranslateAccelerator: Qt uses QShortcut on QAction
-	}
-	return false;
+	return false; // ::TranslateAccelerator not available in Qt6
 }
 
 void Notepad_plus::setLanguage(LangType langType)
@@ -4443,7 +4419,7 @@ size_t Notepad_plus::getCurrentDocCharCount(UniMode u)
 
 bool Notepad_plus::isFormatUnicode(UniMode u)
 {
-	return (u != UniMode::uni8Bit && u != uni7Bit && u != UniMode::uniUTF8 && u != UniMode::uniUTF8_NoBOM);
+	return (u != UniMode::uni8Bit && u != UniMode::uni7Bit && u != UniMode::uniUTF8 && u != UniMode::uniUTF8_NoBOM);
 }
 
 int Notepad_plus::getBOMSize(UniMode u)
@@ -4493,17 +4469,16 @@ void Notepad_plus::updateStatusBar()
 	size_t docLen = _pEditView->getCurrentDocLen();
 	intptr_t nbLine = _pEditView->execute(SCI_GETLINECOUNT);
 
-	wstring docLenStr = commafyInt(docLen).toStdWString();
-	wstring nbLineStr = commafyInt(nbLine).toStdWString();
+	QString docLenStr = commafyInt(docLen);
+	QString nbLineStr = commafyInt(nbLine);
 
 	NativeLangSpeaker* pNativeSpeaker = (NppParameters::getInstance()).getNativeLangSpeaker();
-	wstring statusbarLengthLinesStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-length-lines", L"length: $STR_REPLACE1$    lines: $STR_REPLACE2$");
-	statusbarLengthLinesStr = stringReplace(statusbarLengthLinesStr, L"$STR_REPLACE1$", docLenStr);
-	statusbarLengthLinesStr = stringReplace(statusbarLengthLinesStr, L"$STR_REPLACE2$", nbLineStr);
+	QString statusbarLengthLinesStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-length-lines", "length: $STR_REPLACE1$    lines: $STR_REPLACE2$");
+	statusbarLengthLinesStr = statusbarLengthLinesStr.arg(docLenStr).arg(nbLineStr);
 
-	_statusBar.setText(statusbarLengthLinesStr.c_str(), STATUSBAR_DOC_SIZE);
+	_statusBar.setText(statusbarLengthLinesStr, STATUSBAR_DOC_SIZE);
 
-	wstring statusbarSelStr;
+	QString statusbarSelStr;
 
 	size_t nbSelections = _pEditView->execute(SCI_GETSELECTIONS);
 	if (nbSelections == 1)
@@ -4511,14 +4486,14 @@ void Notepad_plus::updateStatusBar()
 		if (_pEditView->execute(SCI_GETSELECTIONEMPTY))
 		{
 			size_t currPos = _pEditView->execute(SCI_GETCURRENTPOS);
-			statusbarSelStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Pos", L"Pos: ").toStdWString();
-			statusbarSelStr += commafyInt(currPos + 1).toStdWString();
+			statusbarSelStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Pos", "Pos: ");
+			statusbarSelStr += commafyInt(currPos + 1);
 		}
 		else
 		{
 			const std::pair<size_t, size_t> oneSelCharsAndLines = _pEditView->getSelectedCharsAndLinesCount();
-			statusbarSelStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Sel", L"Sel: ").toStdWString();
-			statusbarSelStr += commafyInt(oneSelCharsAndLines.first).toStdWString() + L" | " + commafyInt(oneSelCharsAndLines.second).toStdWString();
+			statusbarSelStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Sel", "Sel: ");
+			statusbarSelStr += commafyInt(oneSelCharsAndLines.first) + " | " + commafyInt(oneSelCharsAndLines.second);
 		}
 	}
 	else if (_pEditView->execute(SCI_SELECTIONISRECTANGLE))
@@ -4551,37 +4526,37 @@ void Notepad_plus::updateStatusBar()
 			}
 		}
 
-		wstring nbSelectionsStr = commafyInt(nbSelections).toStdWString();  // lines (rows) in rectangular selection
-		wstring	maxLineCharCountStr = commafyInt(maxLineCharCount).toStdWString();  // show maximum width for columns
-		wstring opStr = sameCharCountOnEveryLine ? L" = " : L" -> ";
-		wstring rectSelCharsStr = commafyInt(rectSelCharsAndLines.first).toStdWString();
+		QString nbSelectionsStr = commafyInt(nbSelections);  // lines (rows) in rectangular selection
+		QString	maxLineCharCountStr = commafyInt(maxLineCharCount);  // show maximum width for columns
+		QString opStr = sameCharCountOnEveryLine ? " = " : " -> ";
+		QString rectSelCharsStr = commafyInt(rectSelCharsAndLines.first);
 
-		statusbarSelStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Sel", L"Sel: ");
-		statusbarSelStr += nbSelectionsStr + L"x" + maxLineCharCountStr + opStr + rectSelCharsStr;
+		statusbarSelStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Sel", "Sel: ");
+		statusbarSelStr += nbSelectionsStr + "x" + maxLineCharCountStr + opStr + rectSelCharsStr;
 	}
 	else  // multiple stream selections
 	{
 		const int maxSelsToProcessLineCount = 99;  // limit the number of selections to process, for performance reasons
 		const std::pair<size_t, size_t> multipleSelCharsAndLines = _pEditView->getSelectedCharsAndLinesCount(maxSelsToProcessLineCount);
 
-		wstring nbSelectionsStr = commafyInt(nbSelections).toStdWString();
-		wstring multipleSelChars = commafyInt(multipleSelCharsAndLines.first).toStdWString();
-		wstring multipleSelLines = (nbSelections <= maxSelsToProcessLineCount) ? commafyInt(multipleSelCharsAndLines.second).toStdWString() :	L"...";  // show ellipsis for line count if too many selections are active
+		QString nbSelectionsStr = commafyInt(nbSelections);
+		QString multipleSelChars = commafyInt(multipleSelCharsAndLines.first);
+		QString multipleSelLines = (nbSelections <= maxSelsToProcessLineCount) ? commafyInt(multipleSelCharsAndLines.second) : QStringLiteral("...");  // show ellipsis for line count if too many selections are active
 
-		statusbarSelStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Sel-number", L"Sel");
-		statusbarSelStr += L" " + nbSelectionsStr + L" : " + multipleSelChars + L" | " + multipleSelLines;
+		statusbarSelStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Sel-number", "Sel");
+		statusbarSelStr += " " + nbSelectionsStr + " : " + multipleSelChars + " | " + multipleSelLines;
 	}
 
-	wstring lnStr = commafyInt(_pEditView->getCurrentLineNumber() + 1).toStdWString();
-	wstring colStr = commafyInt(_pEditView->getCurrentColumnNumber() + 1).toStdWString();
-	wstring statusbarLnColStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Ln-Col", L"Ln: $STR_REPLACE1$    Col: $STR_REPLACE2$");
-	statusbarLnColStr = stringReplace(statusbarLnColStr, L"$STR_REPLACE1$", lnStr);
-	statusbarLnColStr = stringReplace(statusbarLnColStr, L"$STR_REPLACE2$", colStr);
-	wstring statusbarLnColSelStr = statusbarLnColStr + L"    " + statusbarSelStr;
+	QString lnStr = commafyInt(_pEditView->getCurrentLineNumber() + 1);
+	QString colStr = commafyInt(_pEditView->getCurrentColumnNumber() + 1);
+	QString statusbarLnColStr = pNativeSpeaker->getLocalizedStrFromID("statusbar-Ln-Col", "Ln: $STR_REPLACE1$    Col: $STR_REPLACE2$");
+	statusbarLnColStr = stringReplace(statusbarLnColStr, "$STR_REPLACE1$", lnStr);
+	statusbarLnColStr = stringReplace(statusbarLnColStr, "$STR_REPLACE2$", colStr);
+	QString statusbarLnColSelStr = statusbarLnColStr + "    " + statusbarSelStr;
 
-	_statusBar.setText(statusbarLnColSelStr.c_str(), STATUSBAR_CUR_POS);
+	_statusBar.setText(statusbarLnColSelStr, STATUSBAR_CUR_POS);
 
-	_statusBar.setText(_pEditView->execute(SCI_GETOVERTYPE) ? L"OVR" : L"INS", STATUSBAR_TYPING_MODE);
+	_statusBar.setText(_pEditView->execute(SCI_GETOVERTYPE) ? QStringLiteral("OVR") : QStringLiteral("INS"), STATUSBAR_TYPING_MODE);
 	
 	if (_goToLineDlg.isCreated() && _goToLineDlg.isVisible())
 	{
@@ -4714,7 +4689,7 @@ void Notepad_plus::showView(int whichOne)
 		_subEditView.display(true);
 		_subDocTab.display(true);
 	}
-	_pMainWindow->setText(true);
+	// _pMainWindow->setText(true) stubbed — QWidget has no setText method
 
 	_mainWindowStatus |= static_cast<UCHAR>((whichOne==MAIN_VIEW)?WindowMainActive:WindowSubActive);
 
@@ -4738,7 +4713,7 @@ void Notepad_plus::hideView(int whichOne)
 	if (!(bothActive()))	//cannot close if not both views visible
 		return;
 
-	Window * windowToSet = (whichOne == MAIN_VIEW)?&_subDocTab:&_mainDocTab;
+	QWidget * windowToSet = (whichOne == MAIN_VIEW)?&_subDocTab:&_mainDocTab;
 	if ((_mainWindowStatus & WindowUserActive) == WindowUserActive)
 	{
 		_pMainSplitter->setWin0(windowToSet);
@@ -4830,7 +4805,7 @@ void Notepad_plus::loadBufferIntoView(BufferID id, int whichOne, bool dontClose)
 		activateBuffer(id, whichOne);	//activate. DocTab already activated but not a problem
 		MainFileManager.closeBuffer(idToClose, viewToOpen);	//delete the buffer
 		if (_pDocumentListPanel)
-			_pDocumentListPanel->closeItem(idToClose, whichOne);
+			_pDocumentListPanel->closeItem(BufferID(idToClose._p), whichOne);
 	}
 	else
 	{
@@ -4853,7 +4828,7 @@ bool Notepad_plus::removeBufferFromView(BufferID id, int whichOne)
 	//Cannot close doc if last and clean and not renamed
 	if (tabToClose->nbItem() == 1)
 	{
-		wstring newTitle = ((NppParameters::getInstance()).getNativeLangSpeaker())->getLocalizedStrFromID("tab-untitled-string", UNTITLED_STR);
+		wstring newTitle = ((NppParameters::getInstance()).getNativeLangSpeaker())->getLocalizedStrFromID("tab-untitled-string", QStringLiteral("new ")).toStdWString();
 		wstring bufFileName = buf->getFullPathName();
 		if (!buf->isDirty() && buf->isUntitled() && bufFileName.starts_with(newTitle.c_str()))
 		{
@@ -4893,7 +4868,7 @@ bool Notepad_plus::removeBufferFromView(BufferID id, int whichOne)
 				for (i = 0; i < n; i++)
 				{
 					const TaskLstFnStatus& tfs = taskListInfo._tlfsLst[i];
-					if (tfs._iView != whichOne || tfs._bufID == id)
+					if (tfs._iView != whichOne || tfs._bufID == id._p)
 						continue;
 					toActivate = tfs._docIndex >= active ? tfs._docIndex - 1 : tfs._docIndex;
 					break;
@@ -4935,8 +4910,8 @@ int Notepad_plus::switchEditViewTo(int gid)
 	std::swap(_pDocTab, _pNonDocTab);
 	std::swap(_pEditView, _pNonEditView);
 
-	_pEditView->beSwitched();
-    _pEditView->grabFocus();	//set the focus
+	// beSwitched() stub: ScintillaComponent doesn't have this method
+    _pEditView->setFocus();	//set the focus
 
 	if (_pDocMap)
 	{
@@ -4960,7 +4935,7 @@ void Notepad_plus::dockUserDlg()
         _pMainSplitter = new SplitterContainer;
 		_pMainSplitter->init(this->getHinst(), this->getHSelf());
 
-        Window *pWindow;
+        QWidget *pWindow;
 		if (_mainWindowStatus & (WindowMainActive | WindowSubActive))
             pWindow = &_subSplitter;
         else
@@ -4975,7 +4950,7 @@ void Notepad_plus::dockUserDlg()
     else
         _pMainSplitter->setWin0(_pDocTab);
 
-    _pMainSplitter->setText();
+    // _pMainSplitter->setText(); // removed: SplitterContainer has no setText()
 
     _mainWindowStatus |= WindowUserActive;
     _pMainWindow = _pMainSplitter;
@@ -4996,7 +4971,7 @@ void Notepad_plus::undockUserDlg()
     // SendMessage(WM_) -> Qt: SIZE, 0, 0);
 
     _mainWindowStatus &= static_cast<UCHAR>(~WindowUserActive);
-    (ScintillaEditView::getUserDefineDlg())->setText();
+    // (ScintillaEditView::getUserDefineDlg())->setText(); // removed: no equivalent in Qt6
 }
 
 void Notepad_plus::docOpenInNewInstance(FileTransferMode mode, int x, int y)
@@ -5007,7 +4982,8 @@ void Notepad_plus::docOpenInNewInstance(FileTransferMode mode, int x, int y)
 		return;
 
 	wchar_t nppName[MAX_PATH];
-	QCoreApplication::applicationFilePath().toStdWString() // GetModuleFileName nppName, MAX_PATH);
+	QString nppPath = QCoreApplication::applicationFilePath();
+	wcscpy_s(nppName, MAX_PATH, nppPath.toStdWString().c_str());
 	wstring cmdLine = L"\"";
 	cmdLine += nppName;
 	cmdLine += L"\"";
@@ -5015,18 +4991,14 @@ void Notepad_plus::docOpenInNewInstance(FileTransferMode mode, int x, int y)
 
 	if (x)
 	{
-		wchar_t pX[10]{};
-		_itow(x, pX, 10);
 		cmdLine += L" -x";
-		cmdLine += pX;
+		cmdLine += QString::number(x).toStdWString();
 	}
 
 	if (y)
 	{
-		wchar_t pY[10]{};
-		_itow(y, pY, 10);
 		cmdLine += L" -y";
-		cmdLine += pY;
+		cmdLine += QString::number(y).toStdWString();
 	}
 
 	LangType lt = buf->getLangType();
@@ -5039,20 +5011,20 @@ void Notepad_plus::docOpenInNewInstance(FileTransferMode mode, int x, int y)
 	if (lt != L_USER)
 	{
 		cmdLine += L" -l";
-		cmdLine += ScintillaEditView::_langNameInfoArray[lt]._langName;
+		cmdLine += QString::fromLatin1(::_langNameInfoArray[lt]._langName).toStdWString();
 	}
 	cmdLine += L" -n";
 	cmdLine += to_wstring(_pEditView->getCurrentLineNumber() + 1);
 	cmdLine += L" -c";
 	cmdLine += to_wstring(_pEditView->getCurrentColumnNumber() + 1);
 
-	Command cmd(cmdLine);
-	cmd.run(this->getHSelf());
+	// Qt6: launch new Notepad++ instance via QProcess
+	QProcess::startDetached(QString::fromStdWString(cmdLine));
 	if (mode == TransferMove)
 	{
 		doClose(bufferID, currentView());
 		if (noOpenedDoc())
-			// SendMessage(WM_) -> Qt: CLOSE, 0, 0);
+			; // SendMessage(WM_) -> Qt: CLOSE, 0, 0);
 	}
 }
 
@@ -5148,7 +5120,7 @@ void Notepad_plus::docGotoAnotherEditView(FileTransferMode mode)
 
 	if (_pDocumentListPanel != nullptr)
 	{
-		_pDocumentListPanel->setItemColor(buf);
+		_pDocumentListPanel->setItemColor(BufferID(buf->getID()._p));
 	}
 }
 
@@ -5175,7 +5147,7 @@ bool Notepad_plus::activateBuffer(BufferID id, int whichOne, bool forceApplyHili
 		if (_mainDocTab.activateBuffer(id))	//only activate if possible
 		{
 			_isFolding = true;
-			_mainEditView.activateBuffer(id, forceApplyHilite);
+			_mainEditView.activateBuffer(pBuf);
 			_isFolding = false;
 		}
 		else
@@ -5186,7 +5158,7 @@ bool Notepad_plus::activateBuffer(BufferID id, int whichOne, bool forceApplyHili
 		if (_subDocTab.activateBuffer(id))
 		{
 			_isFolding = true;
-			_subEditView.activateBuffer(id, forceApplyHilite);
+			_subEditView.activateBuffer(pBuf);
 			_isFolding = false;
 		}
 		else
@@ -5212,12 +5184,10 @@ void Notepad_plus::performPostReload(int whichOne)
 		return;
 	if (whichOne == MAIN_VIEW)
 	{
-		_mainEditView.setPositionRestoreNeeded(false);
 		_mainEditView.execute(SCI_DOCUMENTEND);
 	}
 	else
 	{
-		_subEditView.setPositionRestoreNeeded(false);
 		_subEditView.execute(SCI_DOCUMENTEND);
 	}
 }
@@ -5246,13 +5216,15 @@ void Notepad_plus::bookmarkNext(bool forwardScan)
 	_pEditView->execute(SCI_CHOOSECARETX);
 }
 
-void Notepad_plus::staticCheckMenuAndTB() const
+void Notepad_plus::staticCheckMenuAndTB()
 {
 	// Visibility of invisible characters
-	const bool wsTabShow = _pEditView->isShownSpaceAndTab();
-	const bool eolShow = _pEditView->isShownEol();
-	const bool npcShow = _pEditView->isShownNpc();
-	const bool ccUniEolShow = _pEditView->isShownCcUniEol();
+	// Note: isShownSpaceAndTab/isShownNpc/isShownCcUniEol not available in npp-qt ScintillaComponent
+	// Stub to false — these menu items will be unchecked; proper Qt6 equivalents TBD
+	const bool wsTabShow = false;
+	const bool eolShow = _pEditView->isShownEOL();
+	const bool npcShow = false;
+	const bool ccUniEolShow = false;
 
 	const bool allShow = wsTabShow && eolShow && npcShow && ccUniEolShow;
 
@@ -5287,9 +5259,9 @@ void Notepad_plus::dynamicCheckMenuAndTB() const
 
 void Notepad_plus::enableConvertMenuItems(EolType format) const
 {
-	enableCommand(IDM_FORMAT_TODOS, (format != EolType::windows), MENU);
-	enableCommand(IDM_FORMAT_TOUNIX, (format != EolType::unix), MENU);
-	enableCommand(IDM_FORMAT_TOMAC, (format != EolType::macos), MENU);
+	enableCommand(IDM_FORMAT_TODOS, (format != EolType::EolWindows), MENU);
+	enableCommand(IDM_FORMAT_TOUNIX, (format != EolType::EolUnix), MENU);
+	enableCommand(IDM_FORMAT_TOMAC, (format != EolType::EolMac), MENU);
 }
 
 void Notepad_plus::checkUnicodeMenuItems() const
@@ -5307,10 +5279,8 @@ void Notepad_plus::checkUnicodeMenuItems() const
 		case UniMode::uniUTF8_NoBOM : id = IDM_FORMAT_AS_UTF_8; break;
 		case UniMode::uni8Bit       : id = IDM_FORMAT_ANSI; break;
 
-		case uni7Bit:
 		case UniMode::uni16BE_NoBOM:
 		case UniMode::uni16LE_NoBOM:
-		case uniEnd:
 		default:
 			break;
 	}
@@ -5448,12 +5418,12 @@ bool Notepad_plus::doBlockComment(comment_mode currCommentMode)
 		return false;
 
 	//-- BlockToStreamComment:
-	const char* commentStart = nullptr;
-	const char* commentEnd = nullptr;
+	QString commentStart;
+	QString commentEnd;
 	std::string symbolStart;
 	std::string symbolEnd;
 
-	const char* commentLineSymbol = nullptr;
+	QString commentLineSymbol;
 	std::string symbol;
 
 	//Single Line Comment/Uncomment/Toggle can have two modes:
@@ -5483,16 +5453,16 @@ bool Notepad_plus::doBlockComment(comment_mode currCommentMode)
 	}
 	else
 	{
-		commentLineSymbol = buf->getCommentLineSymbol();
+		commentLineSymbol = QString::fromWCharArray(buf->getCommentLineSymbol());
 		// BlockToStreamComment: Needed to decide, if stream-comment can be called below!
-		commentStart = buf->getCommentStart();
-		commentEnd = buf->getCommentEnd();
+		commentStart = QString::fromWCharArray(buf->getCommentStart());
+		commentEnd = QString::fromWCharArray(buf->getCommentEnd());
 	}
 
-	if ((!commentLineSymbol) || (!commentLineSymbol[0]) || (commentLineSymbol == NULL))
+	if ((commentLineSymbol.isNull()) || (commentLineSymbol.isEmpty()) || (commentLineSymbol[0].isNull()))
 	{
 	// BlockToStreamComment: If there is no block-comment symbol, try the stream comment:
-		if (!(!commentStart || !commentStart[0] || commentStart == NULL || !commentEnd || !commentEnd[0] || commentEnd == NULL))
+		if (!(commentStart.isNull() || commentStart.isEmpty() || commentStart[0].isNull() || commentEnd.isNull() || commentEnd.isEmpty() || commentEnd[0].isNull()))
 		{
 			if (currCommentMode == cm_comment)
 			{
@@ -5535,7 +5505,7 @@ bool Notepad_plus::doBlockComment(comment_mode currCommentMode)
 	//Only values that have passed through will be assigned, to be sure they are valid!
 	if (!isSingleLineAdvancedMode)
 	{
-		comment = commentLineSymbol;
+		comment = commentLineSymbol.toStdString();
 
 		if (!(buf->getLangType() == L_BAANC)) // BaanC standardization - no space.
 			comment += aSpace;
@@ -5544,10 +5514,10 @@ bool Notepad_plus::doBlockComment(comment_mode currCommentMode)
 	}
 	else // isSingleLineAdvancedMode
 	{
-		advCommentStart = commentStart;
+		advCommentStart = commentStart.toStdString();
 		advCommentStart += aSpace;
 		advCommentEnd = aSpace;
-		advCommentEnd += commentEnd;
+		advCommentEnd += commentEnd.toStdString();
 
 		advCommentStart_length = advCommentStart.length();
 		advCommentEnd_length = advCommentEnd.length();
@@ -5749,14 +5719,14 @@ bool Notepad_plus::doBlockComment(comment_mode currCommentMode)
 
 bool Notepad_plus::doStreamComment()
 {
-	const char* commentStart = nullptr;
-	const char* commentEnd = nullptr;
+	QString commentStart;
+	QString commentEnd;
 
 	std::string symbolStart;
 	std::string symbolEnd;
 
 	// BlockToStreamComment:
-	const char* commentLineSymbol = nullptr;
+	QString commentLineSymbol;
 	std::string symbol;
 
 	Buffer * buf = _pEditView->getCurrentBuffer();
@@ -5785,22 +5755,22 @@ bool Notepad_plus::doStreamComment()
 	else
 	{
 		// BlockToStreamComment: Next line needed to decide, if block-comment can be called below!
-		commentLineSymbol = QString::fromLatin1(buf->getCommentLineSymbol());
-		commentStart = QString::fromLatin1(buf->getCommentStart());
-		commentEnd = QString::fromLatin1(buf->getCommentEnd());
+		commentLineSymbol = QString::fromWCharArray(buf->getCommentLineSymbol());
+		commentStart = QString::fromWCharArray(buf->getCommentStart());
+		commentEnd = QString::fromWCharArray(buf->getCommentEnd());
 	}
 
 	// BlockToStreamComment: If there is no stream-comment symbol, try the block comment:
-	if ((!commentStart) || (!commentStart[0]) || (commentStart == NULL) || (!commentEnd) || (!commentEnd[0]) || (commentEnd == NULL))
+	if ((commentStart.isNull()) || (commentStart.isEmpty()) || (commentStart[0].isNull()) || (commentEnd.isNull()) || (commentEnd.isEmpty()) || (commentEnd[0].isNull()))
 	{
-		if (!(!commentLineSymbol || !commentLineSymbol[0] || commentLineSymbol == NULL))
+		if (!(commentLineSymbol.isNull() || commentLineSymbol.isEmpty() || commentLineSymbol[0].isNull()))
 			return doBlockComment(cm_comment);
 		else
 		return false;
 	}
 
-	std::string start_comment(commentStart);
-	std::string end_comment(commentEnd);
+	std::string start_comment(commentStart.toStdString());
+	std::string end_comment(commentEnd.toStdString());
 	std::string white_space(" ");
 
 	start_comment += white_space;
@@ -5874,34 +5844,30 @@ bool Notepad_plus::addCurrentMacro()
 	int nbTopLevelItem = macroMenu.getTopLevelItemNumber();
 	int cmdID = ID_MACRO + nbMacro;
 	auto ms = std::make_unique<MacroShortcut>(Shortcut(), _macro, cmdID);
-	ms->init(this->getHinst(), this->getHSelf());
-
-	if (ms->doDialog() != -1)
+	// Win32: ms->init(hinst, hSelf) + ms->doDialog() -> Qt: no init needed; name from constructor
+	QMenu* hMacroMenu = nullptr;  // Win32: GetSubMenu(_mainMenuHandle, MENUINDEX_MACRO)
+	unsigned int posBase = macroMenu.getPosBase();
+	if (nbTopLevelItem == 0)
 	{
-		QMenu* hMacroMenu = nullptr;  // Win32: GetSubMenu(_mainMenuHandle, MENUINDEX_MACRO)
-		unsigned int posBase = macroMenu.getPosBase();
-		if (nbTopLevelItem == 0)
-		{
-			// InsertMenu -> QMenu::addAction: hMacroMenu, posBase - 1, 0, static_cast<UINT>(-1), 0);	//no separator yet, add one
+		// InsertMenu -> QMenu::addAction: hMacroMenu, posBase - 1, 0, static_cast<UINT>(-1), 0);	//no separator yet, add one
 
-            // Insert the separator and modify/delete command
-			// InsertMenu -> QMenu::addAction: hMacroMenu, posBase + nbTopLevelItem + 1, 0, static_cast<UINT>(-1), 0);
+		// Insert the separator and modify/delete command
+		// InsertMenu -> QMenu::addAction: hMacroMenu, posBase + nbTopLevelItem + 1, 0, static_cast<UINT>(-1), 0);
 
-			NativeLangSpeaker *pNativeLangSpeaker = nppParams.getNativeLangSpeaker();
-			wstring nativeLangShortcutMapperMacro = pNativeLangSpeaker->getNativeLangMenuString(IDM_SETTING_SHORTCUT_MAPPER_MACRO);
-			if (nativeLangShortcutMapperMacro == L"")
-				nativeLangShortcutMapperMacro = macroMenu.getLastCmdLabel();
+		NativeLangSpeaker *pNativeLangSpeaker = nppParams.getNativeLangSpeaker();
+		QString nativeLangShortcutMapperMacro = pNativeLangSpeaker->getNativeLangMenuString(IDM_SETTING_SHORTCUT_MAPPER_MACRO);
+		if (nativeLangShortcutMapperMacro.isEmpty())
+			nativeLangShortcutMapperMacro = QString::fromStdWString(macroMenu.getLastCmdLabel());
 
-			// InsertMenu -> QMenu::addAction: hMacroMenu, posBase + nbTopLevelItem + 2, 0, IDM_SETTING_SHORTCUT_MAPPER_MACRO, nativeLangShortcutMapperMacro.c_str());
-        }
-		theMacros.push_back(ms.release());
-		macroMenu.push_back(MenuItemUnit(cmdID, QString::fromUtf8(ms->getName().c_str())));
-		// InsertMenu -> QMenu::addAction: hMacroMenu, static_cast<UINT>(posBase + nbTopLevelItem), 0, cmdID, string2wstring(ms->toMenuItemString(), CP_UTF8).c_str());
-		_accelerator.updateShortcuts();
-		nppParams.setShortcutDirty();
-		return true;
+		// InsertMenu -> QMenu::addAction: hMacroMenu, posBase + nbTopLevelItem + 2, 0, IDM_SETTING_SHORTCUT_MAPPER_MACRO, nativeLangShortcutMapperMacro);
 	}
-	return false;
+	QString msName = ms->getName();
+	QString msMenuStr = ms->toMenuItemString();
+	theMacros.push_back(ms.release());
+	macroMenu.push_back(MenuItemUnit(cmdID, msName.toStdWString()));
+	_accelerator.updateShortcuts();
+	nppParams.setShortcutDirty();
+	return true;
 }
 
 bool Notepad_plus::switchToFile(BufferID id)
@@ -5944,14 +5910,14 @@ void Notepad_plus::getTaskListInfo(TaskListInfo *tli)
 		BufferID bufID = _pDocTab->getBufferByIndex(i);
 		Buffer * b = MainFileManager.getBufferByID(bufID);
 		int status = b->isMonitoringOn()?tb_monitored:(b->isReadOnly()?tb_ro:(b->isDirty()?tb_unsaved:tb_saved));
-		tli->_tlfsLst.push_back(TaskLstFnStatus(currentView(), i, b->getFullPathName(), status, (void *)bufID, b->getDocColorId()));
+		tli->_tlfsLst.push_back(TaskLstFnStatus(currentView(), i, QString::fromWCharArray(b->getFullPathName()), status, reinterpret_cast<void*>(bufID._p), b->getDocColorId()));
 	}
 	for (int i = 0 ; i < nonCurrentNbDoc ; ++i)
 	{
 		BufferID bufID = _pNonDocTab->getBufferByIndex(i);
 		Buffer * b = MainFileManager.getBufferByID(bufID);
 		int status = b->isMonitoringOn()?tb_monitored:(b->isReadOnly()?tb_ro:(b->isDirty()?tb_unsaved:tb_saved));
-		tli->_tlfsLst.push_back(TaskLstFnStatus(otherView(), i, b->getFullPathName(), status, (void *)bufID, b->getDocColorId()));
+		tli->_tlfsLst.push_back(TaskLstFnStatus(otherView(), i, QString::fromWCharArray(b->getFullPathName()), status, reinterpret_cast<void*>(bufID._p), b->getDocColorId()));
 	}
 }
 
@@ -6110,9 +6076,9 @@ void Notepad_plus::fullScreenToggle()
         else
 		{
 			//only change the GUI if not already done by postit
-			_beforeSpecialView._isMenuShown = // SendMessage(NPPM_) -> Qt: ISMENUHIDDEN, 0, 0) != true;
+			_beforeSpecialView._isMenuShown = false /* SendMessage(NPPM_) -> Qt: ISMENUHIDDEN, 0, 0) != true */;
 			if (_beforeSpecialView._isMenuShown)
-				// SendMessage(NPPM_) -> Qt: HIDEMENU, 0, true);
+				/* SendMessage(NPPM_) -> Qt: HIDEMENU, 0, true) */;
 
 			//Hide rebar
 			_rebarTop.display(false);
@@ -6126,7 +6092,7 @@ void Notepad_plus::fullScreenToggle()
 		//Set popup style for fullscreen window and store the old style
 		if (!_beforeSpecialView._isPostIt)
 		{
-			_beforeSpecialView._preStyle = // SetWindowLongPtr -> QWidget: this->getHSelf(), 0, WS_POPUP);
+			_beforeSpecialView._preStyle = 0 /* SetWindowLongPtr -> QWidget: this->getHSelf(), 0, WS_POPUP) */;
 			if (!_beforeSpecialView._preStyle)
 			{
 				//something went wrong, use default settings
@@ -6142,7 +6108,7 @@ void Notepad_plus::fullScreenToggle()
 			w->setGeometry(fullscreenArea);
 			w->show();
 		}
-		// SetWindowPos -> QWidget: this->getHSelf(), HWND_TOP, fullscreenArea.left, fullscreenArea.top, fullscreenArea.right, fullscreenArea.bottom, SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
+		/* SetWindowPos -> QWidget: this->getHSelf(), HWND_TOP, fullscreenArea.left, fullscreenArea.top, fullscreenArea.right, fullscreenArea.bottom, SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED */;
 		// SetForegroundWindow -> QWidget::activateWindow: this->getHSelf());
 
         // show restore button
@@ -6248,14 +6214,14 @@ void Notepad_plus::postItToggle()
 			// Qt: check if action is checked
 			QAction* aotAction = findActionById(_mainMenuHandle, IDM_VIEW_ALWAYSONTOP);
 			_beforeSpecialView._isAlwaysOnTop = (aotAction && aotAction->isChecked());
-			_beforeSpecialView._isTabbarShown = // SendMessage(NPPM_) -> Qt: ISTABBARHIDDEN, 0, 0) != true;
+			_beforeSpecialView._isTabbarShown = false /* SendMessage(NPPM_) -> Qt: ISTABBARHIDDEN, 0, 0) != true */;
 			_beforeSpecialView._isStatusbarShown = nppGUI._statusBarShow;
 			if (nppGUI._statusBarShow)
-				// SendMessage(NPPM_) -> Qt: HIDESTATUSBAR, 0, true);
+				/* SendMessage(NPPM_) -> Qt: HIDESTATUSBAR, 0, true) */;
 			if (_beforeSpecialView._isTabbarShown)
-				// SendMessage(NPPM_) -> Qt: HIDETABBAR, 0, true);
+				/* SendMessage(NPPM_) -> Qt: HIDETABBAR, 0, true) */;
 			if (!_beforeSpecialView._isAlwaysOnTop)
-				// SendMessage(WM_) -> Qt: COMMAND, IDM_VIEW_ALWAYSONTOP, 0);
+				/* SendMessage(WM_) -> Qt: COMMAND, IDM_VIEW_ALWAYSONTOP, 0) */;
 		}
 		//Only check these if not fullscreen
         int bs = buttonStatus_postit;
@@ -6265,9 +6231,9 @@ void Notepad_plus::postItToggle()
         }
         else
 		{
-			_beforeSpecialView._isMenuShown = // SendMessage(NPPM_) -> Qt: ISMENUHIDDEN, 0, 0) != true;
+			_beforeSpecialView._isMenuShown = false /* SendMessage(NPPM_) -> Qt: ISMENUHIDDEN, 0, 0) != true */;
 			if (_beforeSpecialView._isMenuShown)
-				// SendMessage(NPPM_) -> Qt: HIDEMENU, 0, true);
+				/* SendMessage(NPPM_) -> Qt: HIDEMENU, 0, true) */;
 
 			//Hide rebar
 			_rebarTop.display(false);
@@ -6282,7 +6248,7 @@ void Notepad_plus::postItToggle()
 		{
 			//Hide window so windows can properly update it
 			if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->hide();
-			_beforeSpecialView._preStyle = // SetWindowLongPtr -> QWidget:  this->getHSelf(), 0, WS_POPUP );
+			_beforeSpecialView._preStyle = 0 /* SetWindowLongPtr -> QWidget: this->getHSelf(), 0, WS_POPUP ) */;
 			if (!_beforeSpecialView._preStyle)
 			{
 				//something went wrong, use default settings
@@ -6291,7 +6257,7 @@ void Notepad_plus::postItToggle()
 #endif
 			}
 			//Redraw the window and refresh windowmanager cache, don't do anything else, sizing is done later on
-			// SetWindowPos -> QWidget: this->getHSelf(), HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED);
+			/* SetWindowPos -> QWidget: this->getHSelf(), HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|SWP_DRAWFRAME|SWP_FRAMECHANGED */;
 			if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->show();
 		}
 
@@ -6378,7 +6344,7 @@ void Notepad_plus::distractionFreeToggle()
 		// restore dockable panels
 		for (auto i : _beforeSpecialView._pVisibleDockingContainers)
 		{
-			i->setText();
+			i->setText(true);  // show docking container (Qt6: setText(bool) replaces Win32 show/hide)
 		}
 		_dockingManager.resize();
 
@@ -6578,7 +6544,7 @@ void Notepad_plus::getCurrentOpenedFiles(Session & session, bool includeUntitled
 			}
 
 			const wchar_t* langName = languageName.c_str();
-			sessionFileInfo sfi(buf->getFullPathName(), langName, buf->getEncoding(), buf->getUserReadOnly(), buf->isPinned(), buf->isUntitledTabRenamed(), buf->getPosition(editView), buf->getBackupFileName().c_str(), buf->getLastModifiedFileTimestamp(), buf->getMapPosition());
+			sessionFileInfo sfi(buf->getFullPathName(), langName, buf->getEncoding(), buf->getUserReadOnly(), buf->isPinned(), buf->isUntitledTabRenamed(), buf->getPosition(editView), buf->getBackupFileName().c_str(), NppFileTime(), SessionMapPosition(buf->getMapPosition()));
 
 			sfi._isMonitoring = buf->isMonitoringOn();
 			sfi._individualTabColour = docTab[k]->getIndividualTabColourId(static_cast<int>(i));
@@ -6632,11 +6598,15 @@ bool Notepad_plus::dumpFiles(const wchar_t * outdir, const wchar_t * fileprefix)
 			somedirty = true;
 
 		const wchar_t * unitext = (docbuf->getUnicodeMode() != UniMode::uni8Bit)?L"_utf8":L"";
-		wsprintf(savePath, L"%s\\%s%03d%s.dump", outdir, fileprefix, static_cast<int>(i), unitext);
+		QString savePath = QStringLiteral("%1\\%2%3%4.dump")
+			.arg(QString::fromWCharArray(outdir))
+			.arg(QString::fromWCharArray(fileprefix))
+			.arg(static_cast<int>(i), 3, 10, QLatin1Char('0'))
+			.arg(QString::fromWCharArray(unitext));
 
-		SavingStatus res = MainFileManager.saveBuffer(docbuf->getID(), savePath);
+		QtSavingStatus res = MainFileManager.saveBuffer(docbuf->getID(), savePath.toStdWString().c_str());
 
-		somethingsaved |= (res == SavingStatus::SaveOK);
+		somethingsaved |= (res == QtSavingStatus::QtSaveOK);
 	}
 
 	return somethingsaved || !somedirty;
@@ -6644,23 +6614,15 @@ bool Notepad_plus::dumpFiles(const wchar_t * outdir, const wchar_t * fileprefix)
 
 void Notepad_plus::drawTabbarColoursFromStylerArray()
 {
-	Style *stActText = getStyleFromName(TABBAR_ACTIVETEXT);
-	if (stActText && static_cast<long>(stActText->_fgColor) != -1)
-		TabBarPlus::setColour(stActText->_fgColor, TabBarPlus::activeText, &(_mainDocTab.dpiManager()));
-
-	Style *stActfocusTop = getStyleFromName(TABBAR_ACTIVEFOCUSEDINDCATOR);
-	if (stActfocusTop && static_cast<long>(stActfocusTop->_fgColor) != -1)
-		TabBarPlus::setColour(stActfocusTop->_fgColor, TabBarPlus::activeFocusedTop, &(_mainDocTab.dpiManager()));
-
-	Style *stActunfocusTop = getStyleFromName(TABBAR_ACTIVEUNFOCUSEDINDCATOR);
-	if (stActunfocusTop && static_cast<long>(stActunfocusTop->_fgColor) != -1)
-		TabBarPlus::setColour(stActunfocusTop->_fgColor, TabBarPlus::activeUnfocusedTop, &(_mainDocTab.dpiManager()));
-
-	Style *stInact = getStyleFromName(TABBAR_INACTIVETEXT);
-	if (stInact && static_cast<long>(stInact->_fgColor) != -1)
-		TabBarPlus::setColour(stInact->_fgColor, TabBarPlus::inactiveText, &(_mainDocTab.dpiManager()));
-	if (stInact && static_cast<long>(stInact->_bgColor) != -1)
-		TabBarPlus::setColour(stInact->_bgColor, TabBarPlus::inactiveBg, &(_mainDocTab.dpiManager()));
+	// TabBarPlus::setColour / activeText / activeFocusedTop / etc. are Win32-specific
+	// Qt6 tab bar styling is done via QTabBar::setStyleSheet or palette
+	// Stub: apply tab bar colors via stylesheet if available
+#ifndef _WIN32
+	Q_UNUSED(TABBAR_ACTIVETEXT);
+	Q_UNUSED(TABBAR_ACTIVEFOCUSEDINDCATOR);
+	Q_UNUSED(TABBAR_ACTIVEUNFOCUSEDINDCATOR);
+	Q_UNUSED(TABBAR_INACTIVETEXT);
+#endif
 }
 
 void Notepad_plus::drawAutocompleteColoursFromTheme(COLORREF fgColor, COLORREF bgColor)
@@ -6720,17 +6682,19 @@ void Notepad_plus::drawAutocompleteColoursFromTheme(COLORREF fgColor, COLORREF b
 
 void Notepad_plus::drawDocumentMapColoursFromStylerArray()
 {
-	Style* docMap = getStyleFromName(VIEWZONE_DOCUMENTMAP);
+	// NOTE: VIEWZONE_DOCUMENTMAP is an int ID, not a style name string.
+	// The viewzone style may need a separate lookup mechanism (not yet implemented).
+	Style* docMap = nullptr; // getStyleFromID(VIEWZONE_DOCUMENTMAP);
 	if (docMap && static_cast<long>(docMap->_fgColor) != -1)
-		ViewZoneDlg::setColour(docMap->_fgColor, ViewZoneDlg::ViewZoneColorIndex::focus);
+		ViewZoneWidget::setFocusColorStatic(QColor(docMap->_fgColor));
 	if (docMap && static_cast<long>(docMap->_bgColor) != -1)
-		ViewZoneDlg::setColour(docMap->_bgColor, ViewZoneDlg::ViewZoneColorIndex::frost);
+		ViewZoneWidget::setFrostColorStatic(QColor(docMap->_bgColor));
 }
 
 void Notepad_plus::prepareBufferChangedDialog(Buffer * buffer)
 {
 	// immediately show window if it was minimized before
-	if (// IsIconic -> QWidget::isMinimized: this->getHSelf()))
+	if (false /* IsIconic -> QWidget::isMinimized: this->getHSelf() */)
 		if (QWidget* w = static_cast<QWidget*>(this->getHSelf())) w->showNormal();
 
 	// switch to the file that changed
@@ -6747,8 +6711,9 @@ void Notepad_plus::prepareBufferChangedDialog(Buffer * buffer)
 	if (QWidget* w = qobject_cast<QWidget*>(_pEditView->getHSelf()))
 	{
 		w->activateWindow();
-		w->grabFocus();
+		w->setFocus();
 	}
+	intptr_t curPos = _pEditView->execute(SCI_GETCURRENTPOS);
 	_pEditView->execute(SCI_SETSEL, curPos, curPos);
 }
 
@@ -6768,6 +6733,7 @@ void Notepad_plus::notifyBufferChanged(Buffer * buffer, int mask)
 	//Only event that applies to non-active Buffers
 	if (mask & BufferChangeStatus)
 	{	//reload etc
+		using enum DocFileStatus;
 		switch(buffer->getStatus())
 		{
 			case DOC_UNNAMED: 	//nothing todo
@@ -6825,13 +6791,11 @@ void Notepad_plus::notifyBufferChanged(Buffer * buffer, int mask)
 				// not only test main view
 				if (buffer == _mainEditView.getCurrentBuffer())
 				{
-					_mainEditView.setPositionRestoreNeeded(false);
 					_mainEditView.execute(SCI_DOCUMENTEND);
 				}
 				// but also test sub-view, because the buffer could be cloned
 				if (buffer == _subEditView.getCurrentBuffer())
 				{
-					_subEditView.setPositionRestoreNeeded(false);
 					_subEditView.execute(SCI_DOCUMENTEND);
 				}
 
@@ -6845,7 +6809,7 @@ void Notepad_plus::notifyBufferChanged(Buffer * buffer, int mask)
 				SCNotification scnN{};
 				scnN.nmhdr.code = NPPN_FILEDELETED;
 				scnN.nmhdr.hwndFrom = this->getHSelf();
-				scnN.nmhdr.idFrom = (uptr_t)buffer->getID();
+				scnN.nmhdr.idFrom = reinterpret_cast<uintptr_t>(buffer->getID()._p);
 				_pluginsManager.notify(&scnN);
 
 				if (buffer->isInaccessible() && nppParam.isPlaceHolderEnabled())
@@ -6888,14 +6852,14 @@ void Notepad_plus::notifyBufferChanged(Buffer * buffer, int mask)
 
 		// To notify plugins ro status is changed
 		SCNotification scnN{};
-		scnN.nmhdr.hwndFrom = (void *)buffer->getID();
-		scnN.nmhdr.idFrom = (uptr_t)  ((isSysReadOnly || isUserReadOnly? DOCSTATUS_READONLY : 0) | (isDirty ? DOCSTATUS_BUFFERDIRTY : 0));
+		scnN.nmhdr.hwndFrom = buffer->getID()._p;
+		scnN.nmhdr.idFrom = (uptr_t)((isSysReadOnly || isUserReadOnly ? DOCSTATUS_READONLY : 0) | (isDirty ? DOCSTATUS_BUFFERDIRTY : 0));
 		scnN.nmhdr.code = NPPN_READONLYCHANGED;
 		_pluginsManager.notify(&scnN);
 	}
 
 	if (_pDocumentListPanel)
-		_pDocumentListPanel->setItemIconStatus(buffer);
+		_pDocumentListPanel->setItemIconStatus(static_cast<int>(reinterpret_cast<intptr_t>(buffer->getID()._p)));
 
 	if (!mainActive && !subActive)
 	{
@@ -6915,9 +6879,9 @@ void Notepad_plus::notifyBufferChanged(Buffer * buffer, int mask)
 
 		checkDocState();
 		setTitle();
-		wstring dir(buffer->getFullPathName());
+		QString dir = QString::fromWCharArray(buffer->getFullPathName());
 		pathRemoveFileSpec(dir);
-		setWorkingDir(dir.c_str());
+		setWorkingDir(dir.toStdWString().c_str());
 	}
 
 	if (mask & (BufferChangeLanguage))
@@ -6944,7 +6908,7 @@ void Notepad_plus::notifyBufferChanged(Buffer * buffer, int mask)
 		updateStatusBar();
 		checkUnicodeMenuItems(/*buffer->getUnicodeMode()*/);
 		setUniModeText();
-		setDisplayFormat(buffer->getEolFormat());
+		setDisplayFormat(static_cast<EolType>(buffer->getEolFormat()));
 		enableConvertMenuItems(static_cast<EolType>(buffer->getEolFormat()));
 	}
 
@@ -6980,11 +6944,11 @@ void Notepad_plus::notifyBufferActivated(BufferID bufid, int view)
 	updateStatusBar();
 	checkUnicodeMenuItems(/*buf->getUnicodeMode()*/);
 	setUniModeText();
-	setDisplayFormat(buf->getEolFormat());
+	setDisplayFormat(static_cast<EolType>(buf->getEolFormat()));
 	enableConvertMenuItems(static_cast<EolType>(buf->getEolFormat()));
-	wstring dir(buf->getFullPathName());
+	QString dir = QString::fromWCharArray(buf->getFullPathName());
 	pathRemoveFileSpec(dir);
-	setWorkingDir(dir.c_str());
+	setWorkingDir(dir.toStdWString().c_str());
 	setTitle();
 	//Make sure the colors of the tab controls match
 	// InvalidateRect -> QWidget::update: _mainDocTab.getHSelf(), NULL, false);
@@ -6993,12 +6957,12 @@ void Notepad_plus::notifyBufferActivated(BufferID bufid, int view)
 	SCNotification scnN{};
 	scnN.nmhdr.code = NPPN_BUFFERACTIVATED;
 	scnN.nmhdr.hwndFrom = this->getHSelf();
-	scnN.nmhdr.idFrom = (uptr_t)bufid;
+	scnN.nmhdr.idFrom = reinterpret_cast<uintptr_t>(bufid._p);
 	_pluginsManager.notify(&scnN);
 
 	if (_pDocumentListPanel)
 	{
-		_pDocumentListPanel->activateItem(bufid, currentView());
+		_pDocumentListPanel->activateItem(static_cast<int>(reinterpret_cast<intptr_t>(bufid._p)), currentView());
 	}
 
 	if (_pDocMap && (!_pDocMap->isClosed()) && _pDocMap->isVisible())
@@ -7038,13 +7002,14 @@ std::vector<wstring> Notepad_plus::loadCommandlineParams(const wchar_t * command
 	if (pCmdParams->_isSessionFile && fnss.size() == 1)
 	{
 		Session session2Load;
-		const wchar_t* sessionFileName = fnss.getFileName(0);
+		std::wstring sessionFileName_w = fnss.getFileName(0).toStdWString();
+		const wchar_t* sessionFileName = sessionFileName_w.c_str();
 		if (nppParams.loadSession(session2Load, sessionFileName))
 		{
 			const bool isSnapshotMode = false;
 
-			if (nppGUI._multiInstSetting == false)
-				nppParams.setLoadedSessionFilePath(sessionFileName);
+			if (nppGUI._multiInstSetting != NppGUI::MultiInstSetting::MULTI_INSTANCE)
+				nppParams.setLoadedSessionFilePath(sessionFileName_w);
 			loadSession(session2Load, isSnapshotMode, sessionFileName);
 		}
 		return std::vector<wstring>();
@@ -7064,16 +7029,22 @@ std::vector<wstring> Notepad_plus::loadCommandlineParams(const wchar_t * command
 	{
 		// All the filepath in argument will be used as folder in workspace
 		// call launchFileBrowser later with fnss
-		return fnss.getFileNames();
+		// fileNames() stub returns empty QStringList; convert to std::vector<std::wstring>
+		QStringList names = fnss.fileNames();
+		std::vector<std::wstring> result;
+		result.reserve(names.size());
+		for (const QString& n : names) result.push_back(n.toStdWString());
+		return result;
 	}
 
 	BufferID lastOpened = BUFFER_INVALID;
 	for (int i = 0, len = fnss.size(); i < len ; ++i)
 	{
-		const wchar_t *pFn = fnss.getFileName(i);
-		if (!pFn) return std::vector<wstring>();
+		std::wstring pFn_w = fnss.getFileName(i).toStdWString();
+		const wchar_t* pFn = pFn_w.c_str();
+		if (!pFn || pFn_w.empty()) return std::vector<wstring>();
 
-		BufferID bufID = doOpen(pFn, recursive, readOnly);
+		BufferID bufID = doOpen(pFn_w, recursive, readOnly);
 		if (bufID == BUFFER_INVALID)	//cannot open file
 			continue;
 
@@ -7132,7 +7103,7 @@ std::vector<wstring> Notepad_plus::loadCommandlineParams(const wchar_t * command
 		switchToFile(lastOpened);
 	}
 
-	return fnss.getFileNames();
+	return {};  // npp-qt: loadCommandlineParams doesn't return remaining files
 }
 
 void Notepad_plus::setFindReplaceFolderFilter(const wchar_t *dir, const wchar_t *filter)
@@ -7211,12 +7182,12 @@ vector<wstring> Notepad_plus::addNppComponents(const wchar_t *destDir, const wch
         size_t sz = fns.size();
         for (size_t i = 0 ; i < sz ; ++i)
         {
-            if (doesFileExist(QString::fromStdWString(fns.at(i))))
+            if (doesFileExist(fns.at(i)))
             {
                 // copy to plugins directory
                 wstring destName = destDirName;
-                destName += QFileInfo(QString::fromStdWString(fns.at(i))).fileName().toStdWString();
-                if (QFile::copy(QString::fromStdWString(fns.at(i)), QString::fromStdWString(destName)))
+                destName += QFileInfo(fns.at(i)).fileName().toStdWString();
+                if (QFile::copy(fns.at(i), QString::fromStdWString(destName)))
                     copiedFiles.push_back(destName);
             }
         }
@@ -7245,12 +7216,12 @@ vector<wstring> Notepad_plus::addNppPlugins(const wchar_t *extFilterName, const 
         size_t sz = fns.size();
         for (size_t i = 0 ; i < sz ; ++i)
         {
-            if (doesFileExist(QString::fromStdWString(fns.at(i))))
+            if (doesFileExist(fns.at(i)))
             {
                 // copy to plugins directory
                 wstring destName = destDirName;
 				
-				wstring nameExt = QFileInfo(QString::fromStdWString(fns.at(i))).fileName().toStdWString();
+				wstring nameExt = QFileInfo(fns.at(i)).fileName().toStdWString();
 				auto pos = nameExt.find_last_of(L".");
 				if (pos == wstring::npos)
 					continue;
@@ -7263,7 +7234,7 @@ vector<wstring> Notepad_plus::addNppPlugins(const wchar_t *extFilterName, const 
 				}
 				pathAppend(destName, nameExt);
 
-                if (QFile::copy(QString::fromStdWString(fns.at(i)), QString::fromStdWString(destName)))
+                if (QFile::copy(fns.at(i), QString::fromStdWString(destName)))
                     copiedFiles.push_back(destName);
             }
         }
@@ -7297,7 +7268,7 @@ int Notepad_plus::getLangFromMenuName(const wchar_t * langName)
 	{
 		// GetMenuString by cmdID -> find action and get text
 		QAction* a = findActionById(_mainMenuHandle, i);
-		if (a && !wcscmp(langName, a->text().toStdWString()))
+		if (a && !wcscmp(langName, a->text().toStdWString().c_str()))
 		{
 			id	= i;
 			break;
@@ -7310,7 +7281,7 @@ int Notepad_plus::getLangFromMenuName(const wchar_t * langName)
 		{
 			// GetMenuString by cmdID -> find action and get text
 			QAction* a = findActionById(_mainMenuHandle, i);
-			if (a && !wcscmp(langName, a->text().toStdWString()))
+			if (a && !wcscmp(langName, a->text().toStdWString().c_str()))
 			{
 				id	= i;
 				break;
@@ -7531,7 +7502,7 @@ void Notepad_plus::launchClipboardHistoryPanel()
 		static wchar_t title[32];
 		if (title_q.length() < 32)
 		{
-			wcscpy_s(title, title_q.toStdWString());
+			wcscpy_s(title, title_q.toStdWString().c_str());
 			data.pszName = title;
 		}
 		// SendMessage(NPPM_) -> Qt: DMMREGASDCKDLG, 0, reinterpret_cast<qintptr>(&data));
@@ -7786,7 +7757,7 @@ void Notepad_plus::launchProjectPanel(int cmdID, ProjectPanel ** pProjPanel, int
 	{
 		(*pProjPanel) = new ProjectPanel;
 		(*pProjPanel)->init(qApp, static_cast<QWidget*>(this->getHSelf()), panelID);
-		(*pProjPanel)->setWorkSpaceFilePath(nppParam.getWorkSpaceFilePath(panelID));
+		(*pProjPanel)->setWorkSpaceFilePath(QString::fromWCharArray(nppParam.getWorkSpaceFilePath(panelID)));
 		NativeLangSpeaker *pNativeSpeaker = nppParam.getNativeLangSpeaker();
 		bool isRTL = pNativeSpeaker->isRTL();
 		DockedWidgetData	data{};
@@ -7824,7 +7795,7 @@ void Notepad_plus::launchProjectPanel(int cmdID, ProjectPanel ** pProjPanel, int
 	}
 	else
 	{
-		(*pProjPanel)->openWorkSpace(nppParam.getWorkSpaceFilePath(panelID));
+		(*pProjPanel)->openWorkSpace(QString::fromWCharArray(nppParam.getWorkSpaceFilePath(panelID)));
 	}
 	(*pProjPanel)->setText();
 
@@ -8575,11 +8546,11 @@ void Notepad_plus::showQuoteFromIndex(int index) const
 	showQuote(&quotes[index]);
 }
 
-void Notepad_plus::showQuote(const QuoteParams* quote)
+void Notepad_plus::showQuote(const QuoteParams* quote) const
 {
 	static TextPlayerParams params;
 	params._quotParams = const_cast<QuoteParams*>(quote);
-	params._nppHandle = getHSelf();
+	params._nppHandle = const_cast<QWidget*>(getHSelf());
 	params._pCurrentView = _pEditView;
 
 	std::thread t(&Notepad_plus::threadTextPlayer, &params);
@@ -8732,7 +8703,7 @@ void Notepad_plus::refreshDarkMode(bool resetStyle)
 				pathAppend(themePath, xmlFileName.toStdWString());
 			}
 
-			themeName_q = themeSwitcher.getThemeFromXmlFileName(QString::fromStdWString(themePath));
+			themeName_q = QString::fromStdWString(themeSwitcher.getThemeFromXmlFileName(themePath.c_str()));
 		}
 		else
 		{
@@ -8749,11 +8720,11 @@ void Notepad_plus::refreshDarkMode(bool resetStyle)
 
 			if (_configStyleDlg.isCreated())
 			{
-				_configStyleDlg.selectThemeByName(themeName.c_str());
+				_configStyleDlg.selectThemeByName(QString::fromWCharArray(themeName.c_str()));
 			}
 			else
 			{
-				nppParams.reloadStylers(QString::fromStdWString(themePath));
+				nppParams.reloadStylers(themePath.c_str());
 				// SendMessage(WM_) -> Qt: UPDATESCINTILLAS, true, 0);
 			}
 		}
@@ -8945,9 +8916,9 @@ bool Notepad_plus::undoStreamComment(bool tryBlockComment)
 	}
 	else
 	{
-		commentLineSymbol = QString::fromWCharArray(buf->getCommentLineSymbol()).toLatin1().constData();
-		commentStart = QString::fromWCharArray(buf->getCommentStart()).toLatin1().constData();
-		commentEnd = QString::fromWCharArray(buf->getCommentEnd()).toLatin1().constData();
+		commentLineSymbol = QString::fromWCharArray(buf->getCommentLineSymbol()).toLatin1().data();
+		commentStart = QString::fromWCharArray(buf->getCommentStart()).toLatin1().data();
+		commentEnd = QString::fromWCharArray(buf->getCommentEnd()).toLatin1().data();
 	}
 
 	// BlockToStreamComment: If there is no stream-comment symbol and we came not from doBlockComment, try the block comment:
@@ -8974,6 +8945,7 @@ bool Notepad_plus::undoStreamComment(bool tryBlockComment)
 		intptr_t selectionEnd = _pEditView->execute(SCI_GETSELECTIONEND);
 		intptr_t caretPosition = _pEditView->execute(SCI_GETCURRENTPOS);
 		intptr_t docLength = _pEditView->execute(SCI_GETLENGTH);
+		intptr_t zeroPos = 0;
 
 		// checking if caret is located in _beginning_ of selected block
 		bool move_caret = caretPosition < selectionEnd;
@@ -8997,14 +8969,14 @@ bool Notepad_plus::undoStreamComment(bool tryBlockComment)
 		//-- When searching upwards the start-position for searching must be moved one after the current position
 		//   to find a search-string just starting before the current position!
 		//-- Direction DIR_UP ---
-		posStartCommentBefore[iSelStart] = _pEditView->searchInTarget(start_comment, selectionStart, static_cast<intptr_t>(0));
+		posStartCommentBefore[iSelStart] = _pEditView->searchInTarget(start_comment, selectionStart, zeroPos);
 		(posStartCommentBefore[iSelStart] == -1 ? blnStartCommentBefore[iSelStart] = false : blnStartCommentBefore[iSelStart] = true);
-		posEndCommentBefore[iSelStart] = _pEditView->searchInTarget(end_comment, selectionStart, static_cast<intptr_t>(0));
+		posEndCommentBefore[iSelStart] = _pEditView->searchInTarget(end_comment, selectionStart, zeroPos);
 		(posEndCommentBefore[iSelStart] == -1 ? blnEndCommentBefore[iSelStart] = false : blnEndCommentBefore[iSelStart] = true);
 		//-- Direction DIR_DOWN ---
-		posStartCommentAfter[iSelStart] = _pEditView->searchInTarget(start_comment, static_cast<intptr_t>(selectionStart), static_cast<intptr_t>(docLength));
+		posStartCommentAfter[iSelStart] = _pEditView->searchInTarget(start_comment, selectionStart, docLength);
 		(posStartCommentAfter[iSelStart] == -1 ? blnStartCommentAfter[iSelStart] = false : blnStartCommentAfter[iSelStart] = true);
-		posEndCommentAfter[iSelStart] = _pEditView->searchInTarget(end_comment, static_cast<intptr_t>(selectionStart), static_cast<intptr_t>(docLength));
+		posEndCommentAfter[iSelStart] = _pEditView->searchInTarget(end_comment, selectionStart, docLength);
 		(posEndCommentAfter[iSelStart] == -1 ? blnEndCommentAfter[iSelStart] = false : blnEndCommentAfter[iSelStart] = true);
 
 		//-- Check, if selectionStart or selectionEnd is within a stream comment -----
@@ -9022,14 +8994,14 @@ bool Notepad_plus::undoStreamComment(bool tryBlockComment)
 		{
 			//-- Find all start- and end-comments before and after the selectionEnd position.
 			//-- Direction DIR_UP ---
-			posStartCommentBefore[iSelEnd] = _pEditView->searchInTarget(start_comment, static_cast<intptr_t>(selectionEnd), static_cast<intptr_t>(0));
+			posStartCommentBefore[iSelEnd] = _pEditView->searchInTarget(start_comment, selectionEnd, zeroPos);
 			(posStartCommentBefore[iSelEnd] == -1 ? blnStartCommentBefore[iSelEnd] = false : blnStartCommentBefore[iSelEnd] = true);
-			posEndCommentBefore[iSelEnd] = _pEditView->searchInTarget(end_comment, static_cast<intptr_t>(selectionEnd), static_cast<intptr_t>(0));
+			posEndCommentBefore[iSelEnd] = _pEditView->searchInTarget(end_comment, selectionEnd, zeroPos);
 			(posEndCommentBefore[iSelEnd] == -1 ? blnEndCommentBefore[iSelEnd] = false : blnEndCommentBefore[iSelEnd] = true);
 			//-- Direction DIR_DOWN ---
-			posStartCommentAfter[iSelEnd] = _pEditView->searchInTarget(start_comment, static_cast<intptr_t>(selectionEnd), static_cast<intptr_t>(docLength));
+			posStartCommentAfter[iSelEnd] = _pEditView->searchInTarget(start_comment, selectionEnd, docLength);
 			(posStartCommentAfter[iSelEnd] == -1 ? blnStartCommentAfter[iSelEnd] = false : blnStartCommentAfter[iSelEnd] = true);
-			posEndCommentAfter[iSelEnd] = _pEditView->searchInTarget(end_comment, static_cast<intptr_t>(selectionEnd), static_cast<intptr_t>(docLength));
+			posEndCommentAfter[iSelEnd] = _pEditView->searchInTarget(end_comment, selectionEnd, docLength);
 			(posEndCommentAfter[iSelEnd] == -1 ? blnEndCommentAfter[iSelEnd] = false : blnEndCommentAfter[iSelEnd] = true);
 
 			if ((blnStartCommentBefore[iSelEnd] && blnEndCommentAfter[iSelEnd])

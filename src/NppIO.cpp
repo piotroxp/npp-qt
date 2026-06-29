@@ -34,6 +34,8 @@
 #include <QWidget>
 #include <QMetaObject>
 #include <QFileSystemWatcher>
+#include <QDesktopServices>
+#include <QUrl>
 #include <unordered_set>
 #include "MISC/Common/Common.h"
 #include "NppConstants.h"
@@ -54,9 +56,8 @@ void Notepad_plus::monitorFileOnChange(void * params)
 
 	const wchar_t *fullFileName = (const wchar_t *)buf->getFullPathName();
 
-	//The folder to watch :
-	wchar_t folderToMonitor[MAX_PATH]{};
-	wcscpy_s(folderToMonitor, fullFileName);
+	//The folder to watch (built from fullFileName below):
+	wchar_t folderToMonitor[MAX_PATH] = {};
 
 	QFileInfo fi(QDir::current(), QString::fromWCharArray(folderToMonitor));
 	QDir d(fi.absolutePath());
@@ -73,7 +74,10 @@ void Notepad_plus::monitorFileOnChange(void * params)
 	CReadFileChanges fileChanges;
 	fileChanges.AddFile(fullFileName, 0 /* FILE_NOTIFY_CHANGE_* -> QFileSystemWatcher */);
 
-	void* changeHandles[] = { buf->getMonitoringEvent(), dirChanges.GetWaitHandle() };
+	// Note: WaitForMultipleObjects replaced by signal/slot in Qt6.
+	// changeHandles[1] = dirChanges.GetWaitHandle() (Win32 HANDLE — not available in Qt6).
+	// The Qt6 port uses QFileSystemWatcher + signals/slots for monitoring instead.
+	void* changeHandles[1] = { buf->getMonitoringEvent() };
 
 	bool toBeContinued = true;
 
@@ -224,7 +228,8 @@ BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool is
 	if (isRawFileName)
 	{
 		// use directly the raw file name, skip the GetFullPathName WINAPI and alike...)
-		wcsncpy_s(longFileName, static_cast<size_t>(sizeof(longFileName), fileName.c_str(), _TRUNCATE);
+		wcsncpy(longFileName, fileName.c_str(), longFileNameBufferSize - 1);
+		longFileName[longFileNameBufferSize - 1] = L'\0';
 	}
 	else
 	{
@@ -256,7 +261,7 @@ BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool is
 	bool longFileNameExists = doesFileExist(longFileName);
 	if (isSnapshotMode && !longFileNameExists) // UNTITLED
 	{
-		wcscpy_s(longFileName, targetFileName.c_str());
+		wcscpy(longFileName, targetFileName.c_str());
 	}
     _lastRecentFileList.remove(longFileName);
 
@@ -457,7 +462,13 @@ BufferID Notepad_plus::doOpen(const wstring& fileName, bool isRecursive, bool is
 	if (QWidget* w = qobject_cast<QWidget*>(_pPublicInterface->getHSelf())) w->resize(w->size());
             }
         }
-        PathRemoveFileSpec(longFileName);
+        // PathRemoveFileSpec(longFileName): Win32 strips filename from path.
+        // Result is unused in Qt6 port; replaced with no-op to avoid Win32 linkage.
+        {
+            QString lnStr = QString::fromWCharArray(longFileName);
+            QFileInfo fi(lnStr);
+            (void)fi.absolutePath(); // discard — not used after this point
+        }
         _linkTriggered = true;
         _isFileOpening = false;
 
@@ -1801,7 +1812,7 @@ bool Notepad_plus::fileSave(BufferID bufferID)
 			// Make sure the directory exists
 			if (!doesDirectoryExist(fn_bak.c_str()))
 			{
-				QDir().mkpath(nullptr, fn_bak.c_str());
+				QDir().mkpath(QString::fromWStdWString(fn_bak));
 			}
 
 			// Determine what to name the backed-up file

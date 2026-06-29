@@ -75,6 +75,11 @@ public:
     void setForegroundColor(const QColor& fgColor);
 
     // Track clipboard operations
+    // Win32 compat: setText(bool) — show/hide panel
+    void setText(bool show = true) { display(show); }
+    void setText(const QString& /*title*/) { /* stub */ }
+
+    // Track clipboard operations
     bool trackClipboardOps(bool bTrack);
     bool isTrackingClipboardOps() const { return _isTrackingClipboardOps; }
 

@@ -25,7 +25,7 @@ constexpr int buttonStatus_distractionFree = 4;
 class ButtonDlg : public StaticDialog
 {
 public:
-    void* getHSelf() const { return nullptr; }
+    QWidget* getHSelf() const { return const_cast<ButtonDlg*>(this); }
     Q_OBJECT
 
 public:

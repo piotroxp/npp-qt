@@ -335,3 +335,8 @@ intptr_t RunDialog::run_dlgProc(unsigned int message, intptr_t wParam, intptr_t 
     }
     return 0;
 }
+
+
+intptr_t StaticDialog::run_dlgProc(unsigned int, intptr_t, intptr_t) {
+    return 0;
+}

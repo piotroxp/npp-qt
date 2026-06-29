@@ -229,6 +229,10 @@ public:
     void setBackgroundColor(const QColor& col);
     void setForegroundColor(const QColor& col);
 
+    // Win32 compat: setText(bool) — show/hide panel
+    void setText(bool show = true) { display(show); }
+    void setText(const QString& /*title*/) { /* stub */ }
+
     // File system operations
     QString getNodePath(QTreeWidgetItem* node) const;
     QString getNodeName(QTreeWidgetItem* node) const;

@@ -60,13 +60,13 @@ VerticalFileSwitcherListView::VerticalFileSwitcherListView(QWidget* parent)
                 if (!sel.isEmpty())
                 {
                     int row = sel.first()->row();
-                    auto key = qMakePair(
-                        item(row, COL_NAME)->data(Qt::UserRole).toInt(),
+                    auto key = std::make_pair(
+                        BufferID(reinterpret_cast<void*>(item(row, COL_NAME)->data(Qt::UserRole).toLongLong())),
                         item(row, COL_NAME)->data(Qt::UserRole + 1).toInt()
                     );
                     auto it = _entries.find(key);
                     if (it != _entries.end())
-                        emit fileActivated(it.value()._bufID, it.value()._iView);
+                        emit fileActivated(static_cast<int>(reinterpret_cast<intptr_t>(it->second._bufID._p)), it->second._iView);
                 }
             });
 
@@ -107,25 +107,25 @@ void VerticalFileSwitcherListView::initList()
 // Mirrors Win32 ListView messages for buffer management.
 // =============================================================================
 
-int VerticalFileSwitcherListView::getBufferInfoFromIndex(int index, int& view) const
+BufferID VerticalFileSwitcherListView::getBufferInfoFromIndex(int index, int& view) const
 {
     if (index < 0 || index >= rowCount())
-        return -1;
+        return BufferID(nullptr);
 
     const QTableWidgetItem* nameItem = item(index, COL_NAME);
     if (!nameItem)
-        return -1;
+        return BufferID(nullptr);
 
     view = nameItem->data(Qt::UserRole + 1).toInt();
-    return nameItem->data(Qt::UserRole).toInt();
+    return BufferID(reinterpret_cast<void*>(nameItem->data(Qt::UserRole).toLongLong()));
 }
 
-int VerticalFileSwitcherListView::find(int bufferID, int iView) const
+int VerticalFileSwitcherListView::find(BufferID bufferID, int iView) const
 {
     for (int r = 0; r < rowCount(); ++r)
     {
         QTableWidgetItem* it = item(r, COL_NAME);
-        if (it && it->data(Qt::UserRole).toInt() == bufferID &&
+        if (it && it->data(Qt::UserRole).toLongLong() == reinterpret_cast<long long>(bufferID._p) &&
             it->data(Qt::UserRole + 1).toInt() == iView)
         {
             return r;
@@ -134,7 +134,7 @@ int VerticalFileSwitcherListView::find(int bufferID, int iView) const
     return -1;
 }
 
-int VerticalFileSwitcherListView::newItem(int bufferID, int iView)
+int VerticalFileSwitcherListView::newItem(BufferID bufferID, int iView)
 {
     int existing = find(bufferID, iView);
     if (existing != -1)
@@ -142,7 +142,7 @@ int VerticalFileSwitcherListView::newItem(int bufferID, int iView)
     return add(bufferID, iView);
 }
 
-int VerticalFileSwitcherListView::add(int bufferID, int iView)
+int VerticalFileSwitcherListView::add(BufferID bufferID, int iView)
 {
     int row = rowCount();
     insertRow(row);
@@ -150,11 +150,11 @@ int VerticalFileSwitcherListView::add(int bufferID, int iView)
     // Query buffer info from DocTabView — stub requires DocTabView lift
     // For now, create a placeholder entry
     FileEntry entry(bufferID, iView, QStringLiteral(""), 0, -1);
-    QPair<int, int> key = qMakePair(bufferID, iView);
+    auto key = std::make_pair(bufferID, iView);
     _entries[key] = entry;
 
     QTableWidgetItem* nameItem = new QTableWidgetItem(QStringLiteral("(new file)"));
-    nameItem->setData(Qt::UserRole, bufferID);
+    nameItem->setData(Qt::UserRole, reinterpret_cast<long long>(bufferID._p));
     nameItem->setData(Qt::UserRole + 1, iView);
     setItem(row, COL_NAME, nameItem);
 
@@ -172,13 +172,13 @@ int VerticalFileSwitcherListView::add(int bufferID, int iView)
     return row;
 }
 
-int VerticalFileSwitcherListView::closeItem(int bufferID, int iView)
+int VerticalFileSwitcherListView::closeItem(BufferID bufferID, int iView)
 {
     int index = find(bufferID, iView);
     if (index >= 0)
     {
-        QPair<int, int> key = qMakePair(bufferID, iView);
-        _entries.remove(key);
+        auto key = std::make_pair(bufferID, iView);
+        _entries.erase(key);
         removeRow(index);
         if (_currentIndex >= index && _currentIndex > 0)
             --_currentIndex;
@@ -186,7 +186,7 @@ int VerticalFileSwitcherListView::closeItem(int bufferID, int iView)
     return index;
 }
 
-void VerticalFileSwitcherListView::activateItem(int bufferID, int iView)
+void VerticalFileSwitcherListView::activateItem(BufferID bufferID, int iView)
 {
     int row = find(bufferID, iView);
     if (row >= 0)
@@ -194,21 +194,21 @@ void VerticalFileSwitcherListView::activateItem(int bufferID, int iView)
         setCurrentCell(row, COL_NAME);
         _currentIndex = row;
         ensureVisibleCurrentItem();
-        QPair<int, int> key = qMakePair(bufferID, iView);
+        auto key = std::make_pair(bufferID, iView);
         auto it = _entries.find(key);
         if (it != _entries.end())
-            emit fileActivated(it.value()._bufID, it.value()._iView);
+            emit fileActivated(static_cast<int>(reinterpret_cast<intptr_t>(it->second._bufID._p)), it->second._iView);
     }
 }
 
-void VerticalFileSwitcherListView::setItemIconStatus(int bufferID)
+void VerticalFileSwitcherListView::setItemIconStatus(BufferID bufferID)
 {
     // Requires DocTabView to query buffer status (dirty/readonly/monitoring)
     // For now: update row if found
     for (int r = 0; r < rowCount(); ++r)
     {
         QTableWidgetItem* it = item(r, COL_NAME);
-        if (it && it->data(Qt::UserRole).toInt() == bufferID)
+        if (it && it->data(Qt::UserRole).toLongLong() == reinterpret_cast<long long>(bufferID._p))
         {
             setItemIconStatus(bufferID, r);
             return;
@@ -216,7 +216,7 @@ void VerticalFileSwitcherListView::setItemIconStatus(int bufferID)
     }
 }
 
-void VerticalFileSwitcherListView::setItemIconStatus(int bufferID, int row)
+void VerticalFileSwitcherListView::setItemIconStatus(BufferID bufferID, int row)
 {
     // Requires DocTabView: get buffer status flags
     // 0 = clean, 1 = dirty, 2 = readonly, 3 = monitoring
@@ -225,7 +225,7 @@ void VerticalFileSwitcherListView::setItemIconStatus(int bufferID, int row)
     // Icon/styling would be applied here when DocTabView is lifted
 }
 
-void VerticalFileSwitcherListView::setItemColor(int bufferID)
+void VerticalFileSwitcherListView::setItemColor(BufferID bufferID)
 {
     // Requires DocTabView: get buffer color ID
     Q_UNUSED(bufferID);
@@ -403,13 +403,13 @@ void VerticalFileSwitcherListView::keyPressEvent(QKeyEvent* event)
         if (!sel.isEmpty())
         {
             int row = sel.first()->row();
-            auto key = qMakePair(
-                item(row, COL_NAME)->data(Qt::UserRole).toInt(),
+            auto key = std::make_pair(
+                BufferID(reinterpret_cast<void*>(item(row, COL_NAME)->data(Qt::UserRole).toLongLong())),
                 item(row, COL_NAME)->data(Qt::UserRole + 1).toInt()
             );
             auto it = _entries.find(key);
             if (it != _entries.end())
-                emit fileActivated(it.value()._bufID, it.value()._iView);
+                emit fileActivated(static_cast<int>(reinterpret_cast<intptr_t>(it->second._bufID._p)), it->second._iView);
         }
     }
     else if (event->key() == Qt::Key_Delete)
@@ -418,13 +418,13 @@ void VerticalFileSwitcherListView::keyPressEvent(QKeyEvent* event)
         for (const QTableWidgetItem* s : sel)
         {
             int row = s->row();
-            auto key = qMakePair(
-                item(row, COL_NAME)->data(Qt::UserRole).toInt(),
+            auto key = std::make_pair(
+                BufferID(reinterpret_cast<void*>(item(row, COL_NAME)->data(Qt::UserRole).toLongLong())),
                 item(row, COL_NAME)->data(Qt::UserRole + 1).toInt()
             );
             auto it = _entries.find(key);
             if (it != _entries.end())
-                emit fileClosed(it.value()._bufID, it.value()._iView);
+                emit fileClosed(static_cast<int>(reinterpret_cast<intptr_t>(it->second._bufID._p)), it->second._iView);
         }
     }
     else
@@ -451,8 +451,13 @@ void VerticalFileSwitcherListView::showContextMenu(const QPoint& pos)
         auto sel = getSelectedBuffers();
         if (!sel.empty())
         {
-            auto& entry = _entries[qMakePair(sel[0].first, sel[0].second)];
-            emit fileActivated(entry._bufID, entry._iView);
+            auto key = std::make_pair(
+                BufferID(reinterpret_cast<void*>(static_cast<long long>(sel[0].first))),
+                sel[0].second
+            );
+            auto it = _entries.find(key);
+            if (it != _entries.end())
+                emit fileActivated(static_cast<int>(reinterpret_cast<intptr_t>(it->second._bufID._p)), it->second._iView);
         }
     });
 
@@ -460,9 +465,13 @@ void VerticalFileSwitcherListView::showContextMenu(const QPoint& pos)
         auto sel = getSelectedBuffers();
         for (auto& p : sel)
         {
-            auto it = _entries.find(qMakePair(p.first, p.second));
+            auto key = std::make_pair(
+                BufferID(reinterpret_cast<void*>(static_cast<long long>(p.first))),
+                p.second
+            );
+            auto it = _entries.find(key);
             if (it != _entries.end())
-                emit fileClosed(it.value()._bufID, it.value()._iView);
+                emit fileClosed(static_cast<int>(reinterpret_cast<intptr_t>(it->second._bufID._p)), it->second._iView);
         }
     });
 

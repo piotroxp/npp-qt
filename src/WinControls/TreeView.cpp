@@ -462,7 +462,7 @@ void TreeView::dropEvent(QDropEvent* event)
 {
     if (event->source() != this) return;
 
-    QTreeWidgetItem* target = itemAt(event->pos());
+    QTreeWidgetItem* target = itemAt(event->position().toPoint());
     if (!target) return;
 
     QList<QTreeWidgetItem*> items = selectedItems();

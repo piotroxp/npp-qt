@@ -5,6 +5,7 @@
 #include <QtCore/Qt>
 #include <QtGui/qrgb.h>   // QRgb used by COLORREF typedef
 #include <QtCore/QString>
+#include <cstdarg>
 
 // Forward declarations for types used across npp-qt
 class ScintillaComponent;       // defined in ScintillaComponent.h
@@ -91,6 +92,7 @@ inline constexpr int NPPN_DOCORDERCHANGED = NPPN_FIRST + 24;
 inline constexpr int NPPN_SNAPSHOTDIRTYFILELOADED = NPPN_FIRST + 25;
 inline constexpr int NPPN_QUERYMODIFIED = NPPN_FIRST + 26;
 inline constexpr int NPPN_CANCEL = NPPN_FIRST + 27;
+inline constexpr int NPPN_FILEDELETED = NPPN_FIRST + 28;
 
 // Buffer ID sentinel
 inline constexpr int INVALID_BUFFER_ID = -1;
@@ -147,6 +149,9 @@ inline constexpr int NB_LIST = 0;
 inline constexpr int HIGHCAPTION = 0;
 inline constexpr int HIGH_CAPTION = 0;
 inline constexpr int CDENABLEDNEW = 0;
+inline constexpr int CDENABLEDOLD = 1;
+inline constexpr int CDGO2END = 2;
+inline constexpr int CDAUTOUPDATE = 4;
 
 // Find/Replace defaults
 inline constexpr int FINDREPLACE_INSELECTION_THRESHOLD_DEFAULT = 0;
@@ -380,7 +385,20 @@ enum folderStyle {
 
 // URL mode
 enum class UrlMode { URL_NONE = 0, URL_HTML = 1, URL_XML = 2, URL_JS = 4, URL_CSS = 8 };
-enum urlMode { URL_NONE = 0, URL_HTML = 1, URL_XML = 2, URL_JS = 4, URL_CSS = 8 };
+enum urlMode {
+    urlDisable = 0,
+    urlNoUnderLineFg = 1,
+    urlUnderLineFg = 2,
+    urlNoUnderLineBg = 3,
+    urlUnderLineBg = 4,
+    URL_NONE = 0,
+    URL_HTML = 1,
+    URL_XML = 2,
+    URL_JS = 4,
+    URL_CSS = 8,
+    urlMin = urlDisable,
+    urlMax = urlUnderLineBg
+};
 
 // Change history state
 enum class ChangeHistoryState { CHG_HIST_DISABLED = 0, CHG_HIST_ENABLED = 1, CHG_HIST_PERSISTENT = 2 };
@@ -892,6 +910,32 @@ inline constexpr int EolType_macLegacy = 3; // CR (classic)
 inline constexpr int DocFileStatus_clean = 0;
 inline constexpr int DocFileStatus_observed = 1;
 inline constexpr int DocFileStatus_modified = 2;
+
+// cdModes flags (from original NPP's cdModes enum)
+inline constexpr int cdAutoUpdate = 0x04;
+inline constexpr int cdGo2end = 0x08;
+
+// DOCSTATUS flags for NPPN_DOCMODIFIED notification idFrom field
+inline constexpr int DOCSTATUS_READONLY = 0x01;
+inline constexpr int DOCSTATUS_BUFFERDIRTY = 0x02;
+
+// RGB macro (Win32 color)
+inline constexpr int RGB(int r, int g, int b) { return ((((unsigned int)(r)) & 0xff) | ((((unsigned int)(g)) & 0xff) << 8) | ((((unsigned int)(b)) & 0xff) << 16)); }
+inline constexpr int GetRValue(int rgb) { return ((int)(((unsigned int)(rgb)) & 0xff)); }
+inline constexpr int GetGValue(int rgb) { return ((int)(((unsigned int)(rgb) >> 8) & 0xff)); }
+inline constexpr int GetBValue(int rgb) { return ((int)(((unsigned int)(rgb) >> 16) & 0xff)); }
+
+// ID_MACRO base (missing)
+inline constexpr int ID_MACRO = 41000;
+
+// wsprintf replacement (safe wstring formatting)
+inline int npp_wsprintf(wchar_t* buf, size_t bufsize, const wchar_t* format, ...) {
+    va_list args;
+    va_start(args, format);
+    int result = vswprintf(buf, bufsize, format, args);
+    va_end(args);
+    return result;
+}
 
 // Additional missing IDI constants
 inline constexpr int IDI_VIEW_ALL_CHAR_ICON_DM   = 324;

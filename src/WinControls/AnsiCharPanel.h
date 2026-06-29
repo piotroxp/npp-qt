@@ -49,6 +49,10 @@ public:
     void setBackgroundColor(const QColor& bgColour);
     void setForegroundColor(const QColor& fgColour);
 
+    // Win32 compat: setText(bool) — show/hide panel
+    void setText(bool show = true) { display(show); }
+    void setText(const QString& /*title*/) { /* stub */ }
+
 signals:
     // Emitted when the user double-clicks a character cell.
     // MainWindow connects this and sends to Scintilla.

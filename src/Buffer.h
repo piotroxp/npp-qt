@@ -33,9 +33,20 @@ public:
     void* _p = nullptr;
     bool operator==(const BufferID& o) const { return _p == o._p; }
     bool operator!=(const BufferID& o) const { return _p != o._p; }
-    bool operator==(const BufferID& o) { return _p == o._p; }
-    bool operator!=(const BufferID& o) { return _p != o._p; }
+    // get() returns the raw pointer — caller is responsible for null checks.
+    // This avoids needing the full Buffer definition in the header.
+    void* get() const { return _p; }
+    explicit operator bool() const { return _p != nullptr; }
 };
+
+// std::hash specialization so BufferID can be used in unordered_set/unordered_map
+namespace std {
+    template<> struct hash<BufferID> {
+        size_t operator()(BufferID id) const noexcept {
+            return std::hash<void*>{}(id.get());
+        }
+    };
+}
 // Note: BUFFER_INVALID is defined as constexpr in ScintillaComponent.h
 
 // BufferViewInfo — lightweight pair of (buffer, view) used by file-close operations
@@ -229,6 +240,10 @@ public:
     bool isPinned() const { return _isPinned; }
     void setPinned(bool pinned) { _isPinned = pinned; }
     std::wstring getBackupFileName() const { return _backupFileName; }
+
+    // getLastModifiedFileTimestamp — returns last modified time as wstring
+    // Used in session save/restore (stub: returns empty)
+    QString getLastModifiedFileTimestamp() const { return QString(); }
     void setBackupFileName(const std::wstring& fn) { _backupFileName = fn; }
 
     // File monitoring stub (Win32: returns event handle for WaitForMultipleObjects).

@@ -787,3 +787,8 @@ QWidget* DockingManager::findDockedWidgetByName(const QString& name) {
 }
 
 
+
+
+intptr_t DockingDlgInterface::run_dlgProc(unsigned int, intptr_t, intptr_t) {
+    return 0;
+}

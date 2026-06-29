@@ -41,7 +41,12 @@ public:
     QString operator[](int index) const;
     int size() const { return componentCount(); }
     QString getFileName(int index) const { return (*this)[index]; }
-    QStringList fileNames() const { return QStringList(); } // stub
+    // Return all components as a QStringList (for command-line batch processing)
+    QStringList fileNames() const {
+        QStringList result;
+        for (int i = 0; i < componentCount(); ++i) result.push_back((*this)[i]);
+        return result;
+    }
 
 private:
     const QString& _str;

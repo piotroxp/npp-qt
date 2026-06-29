@@ -357,6 +357,8 @@ void Buffer::stopMonitoring() { _isMonitoringOn = false; _monitorCond.wakeOne();
 size_t Buffer::docLength() const { return _pManager ? _pManager->docLength(const_cast<Buffer*>(this)) : 0; }
 
 // FileManager ===========================================================
+FileManager::FileManager() = default;
+
 FileManager::~FileManager() { for (Buffer* b : _buffers) delete b; }
 
 void FileManager::init(Notepad_plus* pNotepadPlus, ScintillaEditView* pscratchTilla)
@@ -802,4 +804,10 @@ void FileManager::removeHotSpot(Buffer* buffer) const
     _pscratchTilla->send(SCI_SETINDICATORCURRENT, 8); // URL indicator
     _pscratchTilla->send(SCI_INDICATORCLEARRANGE, 0, docLen);
     _pscratchTilla->send(SCI_SETDOCPOINTER, 0, curDoc);
+}
+
+// === STUB for linker-missing methods ===
+
+void Buffer::increaseRecentTag() {
+    // Stub: update recent file timestamp — no-op for Qt6
 }

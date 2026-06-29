@@ -137,6 +137,10 @@ public:
     bool isDirty() const { return _isDirty; }
     bool checkIfNeedSave();
 
+    // Win32 compat: setText(bool) — show/hide panel
+    void setText(bool show = true) { display(show); }
+    void setText(const QString& /*title*/) { /* stub */ }
+
     // Colors
     void setBackgroundColor(const QColor& col) override;
     void setForegroundColor(const QColor& col) override;
