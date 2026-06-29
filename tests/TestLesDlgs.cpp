@@ -31,7 +31,7 @@ private slots:
 void TestLesDlgs::test_buttonStatus_nada()
 {
     if (buttonStatus_nada != 0)
-        QFAIL(QString("buttonStatus_nada must be 0, got %1").arg(buttonStatus_nada).toUtf8());
+        QFAIL(QString("buttonStatus_nada must be 0, got %1").arg(buttonStatus_nada).toUtf8().constData());
 }
 
 void TestLesDlgs::test_buttonStatus_flags()

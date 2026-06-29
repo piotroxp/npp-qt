@@ -689,7 +689,7 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	// EnableMenuItem -> QAction::setEnabled: _mainMenuHandle, IDM_SEARCH_FINDPREV, 0 | 0 | 0);
 
 	//Main menu is loaded, now load editor context menu items
-	nppParam.getContextMenuFromXmlTree(_mainMenuHandle, _pluginsManager.getMenuHandle());
+        nppParam.getContextMenuFromXmlTree(_mainMenuHandle, _pluginsManager.getMenuHandle());
 
 	//Main menu is loaded, now load tab context menu items
 	nppParam.getContextMenuFromXmlTree(_mainMenuHandle, _pluginsManager.getMenuHandle(), false);
@@ -9477,3 +9477,17 @@ void Notepad_plus::onTrayMenuAction(QAction* action)
 	}
 }
 
+
+
+// === STUB IMPLEMENTATIONS for linker-missing methods ===
+
+void Notepad_plus::command(int)
+{
+    // Stub: menu command handler — no-op for Qt6 build
+}
+
+unsigned int Notepad_plus::monitorFileOnChange(void*)
+{
+    // Stub: file monitoring thread — no-op for Qt6 build
+    return 0;
+}

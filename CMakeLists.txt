@@ -380,11 +380,12 @@ set(SOURCES
 
     # Core application files — fully ported to Qt6
     src/Parameters.h
-    # src/Parameters.cpp  # Cascading errors — see separate subagent
+    src/Parameters.cpp
     src/NppIO.h
     # src/NppIO.cpp  # Cascading errors — see separate subagent
     src/NppCommands.h
     # src/NppCommands.cpp  # Cascading errors — see separate subagent
+    src/NppCommandsSlots_stub.cpp
     src/NppBigSwitch.h
     src/NppBigSwitch.cpp
     src/Notepad_plus.h

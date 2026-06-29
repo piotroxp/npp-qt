@@ -245,3 +245,4 @@ void ClipboardHistoryPanel::onItemClicked(QListWidgetItem* item)
     int row = _listWidget->row(item);
     emit clipboardItemClicked(row);
 }
+intptr_t ClipboardHistoryPanel::run_dlgProc(unsigned int, intptr_t, intptr_t) { return 0; }

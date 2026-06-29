@@ -1566,3 +1566,4 @@ void FileBrowser::setFileIcon(QTreeWidgetItem* item, const QString& fileName)
     item->setIcon(0, provider->icon(fi));
 }
 
+intptr_t FileBrowser::run_dlgProc(unsigned int, intptr_t, intptr_t) { return 0; }

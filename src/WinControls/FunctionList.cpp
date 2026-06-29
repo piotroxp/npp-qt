@@ -613,3 +613,5 @@ bool FunctionListPanel::event(QEvent* event) {
 void FunctionListPanel::resizeEvent(QResizeEvent* event) {
     QWidget::resizeEvent(event);
 }
+intptr_t FunctionListPanel::run_dlgProc(unsigned int, intptr_t, intptr_t) { return 0; }
+FunctionListPanel::~FunctionListPanel() = default;

@@ -40,6 +40,7 @@
 #undef SC_PERFORMED_REDO
 
 #include <QtCore>
+#include <QtWidgets>
 #include <QtGui>
 #include <algorithm>
 #include <array>
@@ -1161,8 +1162,8 @@ public:
     bool asNotepadStyle() const { return _asNotepadStyle; }
     bool reloadPluginCmds() { return getPluginCmdsFromXmlTree(); }
 
-    bool getContextMenuFromXmlTree(void* mainMenuHandle, void* pluginsMenu, bool isEditCM = true);
-    bool reloadContextMenuFromXmlTree(void* mainMenuHandle, void* pluginsMenu);
+    bool getContextMenuFromXmlTree(QMenuBar* mainMenuHandle, QMenu* pluginsMenu, bool isEditCM = true);
+    bool reloadContextMenuFromXmlTree(QMenuBar* mainMenuHandle, QMenu* pluginsMenu);
     winVer getWinVersion() const { return _winVersion; }
     std::wstring getWinVersionStr() const;
     std::wstring getWinVerBitStr() const;
@@ -1430,8 +1431,8 @@ private:
     void writePrintSetting(NppXml::Element& element) const;
     void initMenuKeys();
     void initScintillaKeys();
-    static int getCmdIdFromMenuEntryItemName(void* mainMenuHandle, const std::wstring& menuEntryName, const std::wstring& menuItemName);
-    static int getPluginCmdIdFromMenuEntryItemName(void* pluginsMenu, const std::wstring& pluginName, const std::wstring& pluginCmdName);
+    int getCmdIdFromMenuEntryItemName(QMenu* mainMenuHandle, const std::wstring& menuEntryName, const std::wstring& menuItemName);
+    int getPluginCmdIdFromMenuEntryItemName(QMenu* pluginsMenu, const std::wstring& pluginName, const std::wstring& pluginCmdName);
     winVer getWindowsVersion();
     static void generateXmlFromScratch(const wchar_t* filePathToWrite, const char* content2write);
 };
