@@ -13,17 +13,29 @@
 
 #include "Utf8_16.h"
 
+// ---------------------------------------------------------------------------
+// Utf8_16 base-class members for the shared m_Iter16 pointer.
+// ---------------------------------------------------------------------------
+::Utf16_Iter& Utf8_16::iter16()
+{
+    if (!m_Iter16)
+        m_Iter16 = new Utf16_Iter();
+    return *m_Iter16;
+}
+
+void Utf8_16::ensureIter16()
+{
+    if (!m_Iter16)
+        m_Iter16 = new Utf16_Iter();
+}
+
 // qbswap — byte-swap a 16-bit value (was Qt-internal, now inlined)
 static inline unsigned short qbswap(unsigned short x) {
     return (x << 8) | (x >> 8);
 }
 
-const Utf8_16::utf8 Utf8_16::k_Boms[utf8_16_end][3] = {
-    {0x00, 0x00, 0x00},  // Unknown
-    {0xEF, 0xBB, 0xBF},  // UTF-8 with BOM
-    {0xFE, 0xFF, 0x00},  // UTF-16 big-endian with BOM
-    {0xFF, 0xFE, 0x00},  // UTF-16 little-endian with BOM
-};
+// BOM array indexed by enum (utf8_16_*).
+// UTF-16 BE/LE are 2-byte BOMs; the 3rd byte is unused (kept for array shape).
 
 
 // =============================================================================
@@ -77,15 +89,17 @@ void Utf16_Iter::read()
 {
     if (m_eEncoding == utf8_16_16le || m_eEncoding == utf8_16_16le_nobom)
     {
+        // Little-endian: low byte first.
         m_nCur16 = *m_pRead++;
         m_nCur16 |= static_cast<utf16>(*m_pRead << 8);
+        ++m_pRead;
     }
     else // utf8_16_16be or utf8_16_16be_nobom
     {
         m_nCur16 = static_cast<utf16>(*m_pRead << 8);
         m_nCur16 |= *m_pRead;
+        m_pRead += 2;
     }
-    ++m_pRead;
 }
 
 void Utf16_Iter::operator++()
@@ -155,15 +169,16 @@ Utf8_Iter::Utf8_Iter()
 
 void Utf8_Iter::reset()
 {
-    m_pBuf      = nullptr;
-    m_pRead     = nullptr;
-    m_pEnd      = nullptr;
-    m_eState    = eStart;
-    m_out1st    = 0;
-    m_outLst    = 0;
-    m_eEncoding = utf8_16_8bit;
-    m_code      = 0;
-    m_count     = 0;
+    m_pBuf         = nullptr;
+    m_pRead        = nullptr;
+    m_pEnd         = nullptr;
+    m_eState       = eStart;
+    m_out1st       = 0;
+    m_outLst       = 0;
+    m_eEncoding    = utf8_16_8bit;
+    m_code         = 0;
+    m_count        = 0;
+    m_leadingByte  = 0;
 }
 
 void Utf8_Iter::set(const ubyte* pBuf, size_t nLen, unsigned eEncoding)
@@ -173,6 +188,14 @@ void Utf8_Iter::set(const ubyte* pBuf, size_t nLen, unsigned eEncoding)
     m_pEnd      = pBuf + nLen;
     m_eEncoding = eEncoding;
     // m_eState, m_code, m_count, m_out* not reset
+    // m_eState, m_code, m_count, m_out* not reset
+    // Only initialise the shared Utf16_Iter for UTF-16 encodings.
+    // UTF-8 input is handled natively byte-by-byte by operator++().
+    if (eEncoding == utf8_16_16be || eEncoding == utf8_16_16le ||
+        eEncoding == utf8_16_16be_nobom || eEncoding == utf8_16_16le_nobom)
+    {
+        iter16().set(pBuf, nLen, eEncoding);
+    }
 }
 
 bool Utf8_Iter::get(utf16* c)
@@ -193,6 +216,12 @@ void Utf8_Iter::pushout(utf16 c)
 void Utf8_Iter::toStart()
 {
     bool swap = (m_eEncoding == utf8_16_16be || m_eEncoding == utf8_16_16be_nobom);
+
+    // 4-byte UTF-8 sequences are accumulated with an extra left-shift.
+    // Correct by shifting right: the accumulated m_code is 6 bits too high.
+    if (m_leadingByte)
+        m_code >>= 6;
+
     if (m_code < 0x10000)
     {
         utf16 c = swap ? qbswap(m_code) : static_cast<utf16>(m_code);
@@ -238,12 +267,21 @@ void Utf8_Iter::operator++()
                 m_code = static_cast<utf16>(0x0f & *m_pRead);
                 m_eState = eFollow;
                 m_count = 2;
+                m_leadingByte = 0; // 3-byte sequence
             }
-            else
+            else if (*m_pRead < 0xF5)
             {
                 m_code = static_cast<utf16>(0x07 & *m_pRead);
                 m_eState = eFollow;
                 m_count = 3;
+                m_leadingByte = 1; // 4-byte sequence: toStart() shifts >>6
+            }
+            else
+            {
+                // Invalid or reserved UTF-8 lead byte (> U+10FFFF range).
+                // Treat as raw byte.
+                m_code = *m_pRead;
+                toStart();
             }
         }
         break;
@@ -524,13 +562,13 @@ QByteArray Utf8_16_Read::convert(const QByteArray& data)
                 return QByteArray();
 
             unsigned char* pCur = reinterpret_cast<unsigned char*>(m_pNewBuf);
-            m_Iter16.set(m_pBuf + skip, dataLen, m_eEncoding);
+            m_myIter16.set(m_pBuf + skip, dataLen, m_eEncoding);
 
-            while (m_Iter16)
+            while (m_myIter16)
             {
-                ++m_Iter16;
+                ++m_myIter16;
                 utf8 c;
-                while (m_Iter16.get(&c))
+                while (m_myIter16.get(&c))
                     *pCur++ = c;
             }
             m_nNewBufSize = pCur - reinterpret_cast<unsigned char*>(m_pNewBuf);

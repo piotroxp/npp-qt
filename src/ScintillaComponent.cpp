@@ -21,7 +21,7 @@
 // are defined locally in this file (see local struct definitions near line 527).
 
 #include "Buffer.h"
-#include "UserDefineDialog.h"
+#include "ScintillaComponent/UserDefineDialog.h"
 
 #include <QApplication>
 #include <QColorDialog>

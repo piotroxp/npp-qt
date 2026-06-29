@@ -228,9 +228,7 @@ set(SCINTILLA_LAYERS
     src/xmlMatchedTagsHighlighter.h
     src/xmlMatchedTagsHighlighter.cpp
 
-    # User-defined language dialog
-    src/UserDefineDialog.h
-    src/UserDefineDialog.cpp
+    # User-defined language dialog (in ScintillaComponent/)
 )
 
 # =============================================================================
