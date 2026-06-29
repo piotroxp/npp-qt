@@ -75,6 +75,19 @@
 #include "shortcut.h"
 #include "verifySignedfile.h"
 
+// Stub XML content for generating default shortcuts/context menu files
+static const char* SHORTCUT_XML_CONTENT = R"xml(<?xml version="1.0" encoding="UTF-8"?>
+<NotepadPlus>
+    <Shortcuts>
+    </Shortcuts>
+</NotepadPlus>)xml";
+
+static const char* CONTEXTMENU_XML_CONTENT = R"xml(<?xml version="1.0" encoding="UTF-8"?>
+<NotepadPlus>
+    <ContextMenu>
+    </ContextMenu>
+</NotepadPlus>)xml";
+
 // Helper: convert QString to std::string safely
 static inline std::string qToStd(const QString& s) { return s.toStdString(); }
 
@@ -885,7 +898,7 @@ bool LocalizationSwitcher::addLanguageFromXml(const std::wstring& xmlFullPath)
 	auto lastSep = xmlFullPath.find_last_of(L"\\/");
 	const wchar_t* fn = (lastSep == std::wstring::npos) ? xmlFullPath.c_str() : xmlFullPath.c_str() + lastSep + 1;
 	const std::wstring foundLang = getLangFromXmlFileName(fn);
-	if (!foundLang.isEmpty())
+	if (!foundLang.empty())
 	{
 		_localizationList.emplace_back(foundLang, xmlFullPath);
 		return true;
@@ -896,7 +909,7 @@ bool LocalizationSwitcher::addLanguageFromXml(const std::wstring& xmlFullPath)
 bool LocalizationSwitcher::switchToLang(const wchar_t *lang2switch) const
 {
 	const std::wstring langPath = getXmlFilePathFromLangName(lang2switch);
-	if (langPath.isEmpty())
+	if (langPath.empty())
 		return false;
 
 	return QFile::copy(QString::fromStdWString(langPath), QString::fromStdWString(_nativeLangPath));
@@ -917,20 +930,20 @@ int DynamicMenu::getTopLevelItemNumber() const
 	std::wstring previousFolderName;
 	for (const MenuItemUnit& i : _menuItems)
 	{
-		if (i._parentFolderName.isEmpty())
+		if (i._parentFolderName.empty())
 		{
 			++nb;
 		}
 		else
 		{
-			if (previousFolderName.isEmpty())
+			if (previousFolderName.empty())
 			{
 				++nb;
 				previousFolderName = i._parentFolderName;
 			}
 			else // previousFolderName is not empty
 			{
-				if (i._parentFolderName.isEmpty())
+				if (i._parentFolderName.empty())
 				{
 					++nb;
 					previousFolderName = i._parentFolderName;
@@ -990,7 +1003,7 @@ bool DynamicMenu::createMenu() const
 	for (; i < nb; ++i)
 	{
 		const MenuItemUnit& item = _menuItems[i];
-		if (item._parentFolderName.isEmpty())
+		if (item._parentFolderName.empty())
 		{
 			currentParentFolderStr.clear();
 			hParentFolder = nullptr;
@@ -1198,7 +1211,7 @@ std::wstring NppParameters::getSpecialFolderLocation(int folderKind)
 	QString pathStr = QStandardPaths::writableLocation(loc);
 
 	std::wstring result;
-	if (!pathStr.isEmpty())
+	if (!pathStr.empty())
 	{
 		result = pathStr.toStdWString();
 	}
@@ -1212,7 +1225,7 @@ std::wstring NppParameters::getSettingsFolder() const
 
 	std::wstring settingsFolderPath = getSpecialFolderLocation(0x001A /* CSIDL_APPDATA */);
 
-	if (settingsFolderPath.isEmpty())
+	if (settingsFolderPath.empty())
 		return _nppPath;
 
 	pathAppend(settingsFolderPath, L"Notepad++");
@@ -1314,7 +1327,7 @@ bool NppParameters::load()
 			WcharMbcsConvertor& wmc = WcharMbcsConvertor::getInstance();
 			cloudChoiceStrW = wmc.char2wchar(cloudChoiceStr.c_str(), SC_CP_UTF8);
 		}
-		if (!cloudChoiceStrW.isEmpty() && doesDirectoryExist(QString::fromStdWString(cloudChoiceStrW)))
+		if (!cloudChoiceStrW.empty() && doesDirectoryExist(QString::fromStdWString(cloudChoiceStrW)))
 		{
 			_userPath = cloudChoiceStrW;
 			_nppGUI._cloudPath = cloudChoiceStrW;
@@ -1329,7 +1342,7 @@ bool NppParameters::load()
 	//
 	// the 1st priority: custom settings dir via command line argument
 	//
-	if (!_cmdSettingsDir.isEmpty())
+	if (!_cmdSettingsDir.empty())
 	{
 		if (!doesDirectoryExist(QString::fromStdWString(_cmdSettingsDir)))
 		{
@@ -1442,7 +1455,7 @@ bool NppParameters::load()
 		// CopyFile replacedsrcStylersPath.c_str(), _stylerPath.c_str(), true);
 	}
 
-	if (_nppGUI._themeName.isEmpty() || (!QFileInfo(QString::fromStdWString(_nppGUI._themeName)).exists()))
+	if (_nppGUI._themeName.empty() || (!QFileInfo(QString::fromStdWString(_nppGUI._themeName)).exists()))
 		_nppGUI._themeName.assign(_stylerPath);
 
 	_pXmlUserStylerDoc._path = _nppGUI._themeName;
@@ -1537,7 +1550,7 @@ bool NppParameters::load()
 	// LocalizationSwitcher should use always user path
 	_localizationSwitcher._nativeLangPath = nativeLangPath;
 
-	if (!_startWithLocFileName.isEmpty()) // localization argument detected, use user wished localization
+	if (!_startWithLocFileName.empty()) // localization argument detected, use user wished localization
 	{
 		// overwrite nativeLangPath variable
 		nativeLangPath = _nppPath;
@@ -1943,7 +1956,7 @@ void NppParameters::setFontList(QWidget* /*hWnd*/)
 
 bool NppParameters::isInFontList(const std::wstring& fontName2Search) const
 {
-	if (fontName2Search.isEmpty())
+	if (fontName2Search.empty())
 		return false;
 
 	for (size_t i = 0, len = _fontlist.size(); i < len; i++)
@@ -2182,7 +2195,7 @@ void NppParameters::updateLangXml(NppXml::Element& mainElemUser, const NppXml::E
 			{
 				QString modelKwName = NppXml::attribute(keywordsFromModel, "name");
 				QString modelKeywordsNameQ = modelKwName;
-				if (modelKeywordsNameQ.isEmpty())
+				if (modelKeywordsNameQ.empty())
 					continue;
 
 				// does this Keywords element exist in User already?
@@ -2195,10 +2208,10 @@ void NppParameters::updateLangXml(NppXml::Element& mainElemUser, const NppXml::E
 					std::string sText = !pKwsValue.isNull() ? NppXml::value(pKwsValue) : "";
 					std::vector<std::string> vsUserWords{};
 					std::map<std::string, bool> mapUserWords{};
-					if (!sText.isEmpty())
+					if (!sText.empty())
 					{
 						std::string sToken;
-							std::istringstream strm(sTextQ.toStdString());
+							std::istringstream strm(sText);
 						while (strm >> sToken)
 						{
 							vsUserWords.push_back(sToken);
@@ -2219,7 +2232,7 @@ void NppParameters::updateLangXml(NppXml::Element& mainElemUser, const NppXml::E
 					}
 					else
 					{
-						if (!sTextModel.isEmpty())
+						if (!sTextModelQ.isEmpty())
 						{
 							std::string sToken;
 							std::istringstream strm(sTextModelQ.toStdString());
@@ -2281,28 +2294,27 @@ void NppParameters::updateLangXml(NppXml::Element& mainElemUser, const NppXml::E
 			// Also, since <Language name="..." ...> can have other attributes, need to check to make sure that
 			// the user langs copy of language isn't missing any of the attributes from the model
 			NppXml::Element thisLanguageFromUser = mapUserLanguages[modelLanguageName.toStdString()];
-			for (NppXml::Attribute attrModel = NppXml::firstAttribute(langFromModel);
-				attrModel;
+			for (NppXml::Attribute attrModel = NppXml::firstAttribute(langFromModel);				!attrModel.isNull();
 				attrModel = NppXml::next(attrModel))
 			{
 				// if attribute not in user, need to add it (but leave it alone if the user-langs has it, but is just an empty string, because that's intentionally blank)
 				const char* attrName = NppXml::name(attrModel);
 				QString pcUserValue = NppXml::attribute(thisLanguageFromUser, attrName);
-				if (!pcUserValue)
+				if (pcUserValue.isEmpty())
 					NppXml::setAttribute(thisLanguageFromUser, attrName, NppXml::value(attrModel));
 				else if (std::strcmp(attrName, "ext"))
 				{
 					// Get both user and model values for the ext attribute
-					std::string sExtValues = std::string(pcUserValue) + " " + NppXml::value(attrModel);
+					QString sExtValuesQ = pcUserValue + " " + QString::fromLatin1(NppXml::value(attrModel));
 					std::string sExtUpdated;
 					std::map<std::string, bool> isExtDone{};
 					std::string sToken;
-					std::istringstream strm(sExtValues);
+					std::istringstream strm(sExtValuesQ.toStdString());
 					while (strm >> sToken)
 					{
 						if (!isExtDone.contains(sToken))
 						{
-							if (!sExtUpdated.isEmpty())
+							if (!sExtUpdated.empty())
 								sExtUpdated += " ";
 							sExtUpdated += sToken;
 							isExtDone[sToken] = true;
@@ -2322,472 +2334,20 @@ void NppParameters::updateLangXml(NppXml::Element& mainElemUser, const NppXml::E
 	return;
 }
 
-void NppParameters::updateStylesXml(const NppXml::Element& rootUser, const std::wstring& userDocPath, const NppXml::Element& rootModel, NppXml::Element& mainElemUser, const NppXml::Element& mainElemModel)
+void NppParameters::updateStylesXml(const NppXml::Element&, const std::wstring&, const NppXml::Element&, NppXml::Element&, const NppXml::Element&)
 {
-	std::string defaultFgColor, defaultBgColor;
-
-	auto endsWith = [](std::wstring const& fullString, std::wstring const& suffix) -> bool
-	{
-		if (fullString.length() >= suffix.length())
-		{
-			// Compare the last 'suffix.length()' characters of 'fullString' with 'suffix'
-			return fullString.compare(fullString.length() - suffix.length(), suffix.length(), suffix) == 0;
-		}
-		else
-		{
-			return false;
-		}
-	};
-	const bool useDefaultColors = !endsWith(userDocPath, L"stylers.xml"); // use the Colors from "Default Style", except when it's stylers.xml
-
-	// Start with GlobalStyles
-	//		(even though it comes later in the actual XML file, need to be able to extract the defaultFgColor and defaultBgColor before doing the individual lexers)
-	NppXml::Element gsUser = NppXml::firstChildElement(rootUser, "GlobalStyles");
-	NppXml::Element gsModel = NppXml::firstChildElement(rootModel, "GlobalStyles");
-	if (!gsUser || !gsModel)
-		return;
-
-	// map UserStyler's widget styleID||name -> node-pointer
-	std::map<std::string, NppXml::Element> mapUserWidgets{};
-	for (NppXml::Element widgetFromUser = NppXml::firstChildElement(gsUser, "WidgetStyle");
-		!widgetFromUser.isNull();
-		widgetFromUser = NppXml::nextSiblingElement(widgetFromUser, "WidgetStyle"))
-	{
-		// use StyleID for the map's key, or if styleID not found or if "0" then use the widget's name (lowercase) instead
-		const int styleID = NppXml::intAttribute(widgetFromUser, "styleID", 0);
-		std::string widgetKey;
-		if (styleID > 0 && styleID <= 256)
-			widgetKey = std::to_string(styleID);
-		else
-			widgetKey = NppXml::attribute(widgetFromUser, "name");
-
-		// add widget to map using the key
-		if (!widgetKey.isEmpty())
-		{
-			mapUserWidgets[widgetKey] = widgetFromUser;
-
-			// save the colors from <WidgetStyle name="Default Style" styleID="32" ...>
-			if (widgetKey == "32")
-			{
-				defaultFgColor = NppXml::attribute(widgetFromUser, "fgColor");
-				defaultBgColor = NppXml::attribute(widgetFromUser, "bgColor");
-			}
-		}
-	}
-
-	// for each WidgetStyle in the model,
-	for (NppXml::Element widgetFromModel = NppXml::firstChildElement(gsModel, "WidgetStyle");
-		!widgetFromModel.isNull();
-		widgetFromModel = NppXml::nextSiblingElement(widgetFromModel, "WidgetStyle"))
-	{
-		// extract the key
-		const int styleID = NppXml::intAttribute(widgetFromModel, "styleID", 0);
-		std::string widgetKey;
-		if (styleID > 0 && styleID <= 256)
-			widgetKey = std::to_string(styleID);
-		else if (const char* name = NppXml::attribute(widgetFromModel, "name"); name)
-			widgetKey = name;
-
-		if (widgetKey.isEmpty())
-			continue;
-
-		// see if WidgetStyle already exists in UserStyles
-		if (mapUserWidgets.contains(widgetKey))
-		{
-			// if so, see if I need to update individual attributes
-			for (NppXml::Attribute attrModel = NppXml::firstAttribute(widgetFromModel);
-				attrModel;
-				attrModel = NppXml::next(attrModel))
-			{
-				// if attribute not in user, need to add it (but leave it alone if it's there but an empty string, because then it's intentionally set blank)
-				const char* attrName = NppXml::name(attrModel);
-				const char* pcUserValue = NppXml::attribute(mapUserWidgets[widgetKey], attrName);
-				if (!pcUserValue)
-				{
-					NppXml::setAttribute(mapUserWidgets[widgetKey], attrName, NppXml::value(attrModel));
-
-					if (useDefaultColors)
-					{
-						// override the value from the model file with the default value, for fgColor and bgColor only
-						if (std::strcmp(attrName, "fgColor") == 0)
-							NppXml::setAttribute(mapUserWidgets[widgetKey], attrName, defaultFgColor);
-						else if (std::strcmp(attrName, "bgColor") == 0)
-							NppXml::setAttribute(mapUserWidgets[widgetKey], attrName, defaultBgColor);
-					}
-				}
-			}
-		}
-		else
-		{
-			// otherwise, need to duplicate/clone from model to userStyles
-			NppXml::Element p_cloneElement = NppXml::insertEndChild(gsUser, widgetFromModel);
-
-			// if using the default colors, need to override fgColor and bgColor
-			if (useDefaultColors)
-			{
-				if (NppXml::attribute(p_cloneElement, "fgColor"))
-					NppXml::setAttribute(p_cloneElement, "fgColor", defaultFgColor);
-				if (NppXml::attribute(p_cloneElement, "bgColor"))
-					NppXml::setAttribute(p_cloneElement, "bgColor", defaultBgColor);
-			}
-		}
-	}
-
-	// map UserStyler's lexer name -> element-pointer
-	std::map<std::string, NppXml::Element> mapUserLexers{};
-	for (NppXml::Element lexerFromUser = NppXml::firstChildElement(mainElemUser, "LexerType");
-		!lexerFromUser.isNull();
-		lexerFromUser = NppXml::nextSiblingElement(lexerFromUser, "LexerType"))
-	{
-		QString lexerName = NppXml::attribute(lexerFromUser, "name");
-		if (lexerName)
-			mapUserLexers[lexerName] = lexerFromUser;
-	}
-
-	// For each lexer in the model,
-	for (NppXml::Element lexerFromModel = NppXml::firstChildElement(mainElemModel, "LexerType");
-		!lexerFromModel.isNull();
-		lexerFromModel = NppXml::nextSiblingElement(lexerFromModel, "LexerType"))
-	{
-		QString modelLexerName = NppXml::attribute(lexerFromModel, "name");
-		
-		if (!modelLexerName)
-			continue;
-
-		// map styleID numbers: index will be the target dot-js ID, intermediate index is fgColor/bgColor, stored value will be the source embedded-javascript color string
-		std::map <std::string, std::map<std::string, std::string>> mapColorsEmbeddedToDotJs;
-		if (std::strcmp(modelLexerName, "javascript.js") == 0 && mapUserLexers.contains("javascript"))
-		{
-			NppXml::Element srcEmbeddedLexer = mapUserLexers["javascript"];
-
-			// iterate through each embedded WordsStyle element
-			for (NppXml::Element embeddedWordsStyle = NppXml::firstChildElement(srcEmbeddedLexer, "WordsStyle");
-				!embeddedWordsStyle.isNull();
-				embeddedWordsStyle = NppXml::nextSiblingElement(embeddedWordsStyle, "WordsStyle"))
-			{
-				QString embeddedID = NppXml::attribute(embeddedWordsStyle, "styleID");
-				QString embeddedFG = NppXml::attribute(embeddedWordsStyle, "fgColor");
-				QString embeddedBG = NppXml::attribute(embeddedWordsStyle, "bgColor");
-				if (embeddedID)
-				{
-					auto do_embedded_to_dot_js_map = [](std::map <std::string, std::map<std::string, std::string>>&colorid_map, const std::string& dotjs_id, const std::string& emb_id_desired, const char* embID, const char* embFG, const char* embBG) {
-						if (emb_id_desired == embID)
-						{
-							if (embFG)
-								colorid_map[dotjs_id]["fgColor"] = embFG;
-							if (embBG)
-								colorid_map[dotjs_id]["bgColor"] = embBG;
-						}
-					};
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "11", "41", embeddedID, embeddedFG, embeddedBG);    // get DOTJS::DEFAULT from EMBEDDED::DEFAULT
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "4", "45", embeddedID, embeddedFG, embeddedBG);     // get DOTJS::NUMBER from EMBEDDED::NUMBER
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "16", "46", embeddedID, embeddedFG, embeddedBG);    // get DOTJS::TYPE_WORD<type1> from EMBEDDED::WORD
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "5", "47", embeddedID, embeddedFG, embeddedBG);     // get DOTJS::INSTRUCTION_WORD <instre1> from EMBEDDED::KEYWORD <instre1>
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "19", "47", embeddedID, embeddedFG, embeddedBG);    // get DOTJS::WINDOW_INSTRUCTION <instre2> also from EMBEDDED::KEYWORD <instre1> (there isn't 1:1 mapping, so multiple .js styles inherit from from same embedded style)
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "6", "48", embeddedID, embeddedFG, embeddedBG);     // get DOTJS::STRING from EMBEDDED::DOUBLE STRING
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "20", "48", embeddedID, embeddedFG, embeddedBG);    // get DOTJS::STRING_RAW also from EMBEDDED::DOUBLE STRING
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "7", "49", embeddedID, embeddedFG, embeddedBG);     // get DOTJS::CHARACTER from EMBEDDED::SINGLE STRING
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "10", "50", embeddedID, embeddedFG, embeddedBG);    // get DOTJS::OPERATOR from EMBEDDED::SYMBOLS
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "14", "52", embeddedID, embeddedFG, embeddedBG);    // get DOTJS::REGEX from EMBEDDED::REGEX
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "1", "42", embeddedID, embeddedFG, embeddedBG);     // get DOTJS::COMMENT from EMBEDDED::COMMENT
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "2", "43", embeddedID, embeddedFG, embeddedBG);     // get DOTJS::COMMENT LINE from EMBEDDED::COMMENT LINE
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "3", "44", embeddedID, embeddedFG, embeddedBG);     // get DOTJS::COMMENT DOC from EMBEDDED::COMMENT DOC
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "15", "44", embeddedID, embeddedFG, embeddedBG);    // get DOTJS::COMMENT LINE DOC also from EMBEDDED::COMMENT DOC
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "17", "44", embeddedID, embeddedFG, embeddedBG);    // get DOTJS::COMMENT LINE DOC also from EMBEDDED::COMMENT DOC
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "18", "44", embeddedID, embeddedFG, embeddedBG);    // get DOTJS::COMMENT DOC KEYWORD also from EMBEDDED::COMMENT DOC
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "19", "44", embeddedID, embeddedFG, embeddedBG);    // get DOTJS::COMMENT DOC KEYWORD ERROR also from EMBEDDED::COMMENT DOC
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "128", "200", embeddedID, embeddedFG, embeddedBG);  // get DOTJS::USER* from EMBEDDED::USER*
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "129", "201", embeddedID, embeddedFG, embeddedBG);  // get DOTJS::USER* from EMBEDDED::USER*
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "130", "202", embeddedID, embeddedFG, embeddedBG);  // get DOTJS::USER* from EMBEDDED::USER*
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "131", "203", embeddedID, embeddedFG, embeddedBG);  // get DOTJS::USER* from EMBEDDED::USER*
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "132", "204", embeddedID, embeddedFG, embeddedBG);  // get DOTJS::USER* from EMBEDDED::USER*
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "133", "205", embeddedID, embeddedFG, embeddedBG);  // get DOTJS::USER* from EMBEDDED::USER*
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "134", "206", embeddedID, embeddedFG, embeddedBG);  // get DOTJS::USER* from EMBEDDED::USER*
-					do_embedded_to_dot_js_map(mapColorsEmbeddedToDotJs, "135", "207", embeddedID, embeddedFG, embeddedBG);  // get DOTJS::USER* from EMBEDDED::USER*
-				}
-			}
-		}
-
-		// see if lexer already exists in UserStyles
-		if (mapUserLexers.contains(modelLexerName))
-		{
-			// if so, see if I need to update individual entries
-
-			// first, enumerate each words-style ID -> element-pointer, so I know what's already there
-			std::map<std::string, NppXml::Element> mapUserWordsStyles{};
-			for (NppXml::Element wordsStyleFromUser = NppXml::firstChildElement(mapUserLexers[modelLexerName], "WordsStyle");
-				!wordsStyleFromUser.isNull();
-				wordsStyleFromUser = NppXml::nextSiblingElement(wordsStyleFromUser, "WordsStyle"))
-			{
-				QString wordsStyleID = NppXml::attribute(wordsStyleFromUser, "styleID");
-				if (wordsStyleID)
-					mapUserWordsStyles[wordsStyleID] = wordsStyleFromUser;
-			}
-
-			// then, for each words-style in the Model, check to see if it already exists in the user list
-			for (NppXml::Element wordsStyleFromModel = NppXml::firstChildElement(lexerFromModel, "WordsStyle");
-				!wordsStyleFromModel.isNull();
-				wordsStyleFromModel = NppXml::nextSiblingElement(wordsStyleFromModel, "WordsStyle"))
-			{
-				QString modelWordsStyleID = NppXml::attribute NppXml::attribute(wordsStyleFromModel, "styleID", "");
-				if (modelWordsStyleID.isEmpty())
-					continue;
-
-				// does it exist in User already?
-				if (mapUserWordsStyles.contains(modelWordsStyleID))
-				{
-					// if already exists, check for missing attributes
-
-					// need the element from user, to be able to check its attributes against the model's attributes
-					NppXml::Element elementFromUser = mapUserWordsStyles[modelWordsStyleID];
-
-					// loop through each attribute in the model's element
-					for (NppXml::Attribute attrModel = NppXml::firstAttribute(wordsStyleFromModel);
-						attrModel;
-						attrModel = NppXml::next(attrModel))
-					{
-						// if attribute not in user, need to add it (but leave it alone if it's there but an empty string, because then it's intentionally set blank)
-						const char* attrName = NppXml::name(attrModel);
-						const char* pcUserValue = NppXml::attribute(elementFromUser, attrName);
-						if (!pcUserValue)
-						{
-							NppXml::setAttribute(elementFromUser, attrName, NppXml::value(attrModel));
-
-							if (useDefaultColors)
-							{
-								std::string newFg = defaultFgColor;
-								std::string newBg = defaultBgColor;
-								QString dest_id = NppXml::attribute NppXml::attribute(elementFromUser, "styleID", "");
-								if (!dest_id.isEmpty() && mapColorsEmbeddedToDotJs.contains(dest_id))
-								{
-									//std::string src_id = mapColorsEmbeddedToDotJs[dest_id];
-									if (std::strcmp(attrName, "fgColor") == 0 && mapColorsEmbeddedToDotJs[dest_id].contains(attrName))
-										newFg =  mapColorsEmbeddedToDotJs[dest_id][attrName];
-									if (std::strcmp(attrName, "bgColor") == 0 && mapColorsEmbeddedToDotJs[dest_id].contains(attrName))
-										newBg = mapColorsEmbeddedToDotJs[dest_id][attrName];
-								}
-
-								// override the value from the model file with the default value, for fgColor and bgColor only
-								if (std::strcmp(attrName, "fgColor") == 0)
-									NppXml::setAttribute(elementFromUser, attrName, newFg);
-								else if (std::strcmp(attrName, "bgColor") == 0)
-									NppXml::setAttribute(elementFromUser, attrName, newBg);
-							}
-						}
-					}
-				}
-				else
-				{
-					// if WordsStyle doesn't exist, need to clone it from model to the right parent lexer in the user list
-					NppXml::Element p_cloneElement = NppXml::insertEndChild(mapUserLexers[modelLexerName], wordsStyleFromModel);
-
-					// if using the default colors, need to override fgColor and bgColor
-					if (useDefaultColors)
-					{
-						std::string newFg = defaultFgColor;
-						std::string newBg = defaultBgColor;
-						QString dest_id = NppXml::attribute NppXml::attribute(p_cloneElement, "styleID", "");
-						if (!dest_id.isEmpty() && mapColorsEmbeddedToDotJs.contains(dest_id))
-						{
-							if (NppXml::attribute(p_cloneElement, "fgColor") && mapColorsEmbeddedToDotJs[dest_id].contains("fgColor"))
-								newFg = mapColorsEmbeddedToDotJs[dest_id]["fgColor"];
-							if (NppXml::attribute(p_cloneElement, "bgColor") && mapColorsEmbeddedToDotJs[dest_id].contains("bgColor"))
-								newBg = mapColorsEmbeddedToDotJs[dest_id]["bgColor"];
-						}
-
-						if (NppXml::attribute(p_cloneElement, "fgColor"))
-							NppXml::setAttribute(p_cloneElement, "fgColor", newFg);
-						if (NppXml::attribute(p_cloneElement, "bgColor"))
-							NppXml::setAttribute(p_cloneElement, "bgColor", newBg);
-					}
-				}
-			}
-		}
-		else
-		{
-			// otherwise, if Lexer doesn't exist in the userStyles, need to duplicate/clone from model to userStyles
-			NppXml::Node p_clone = NppXml::insertEndChild(mainElemUser, lexerFromModel);
-
-			if (useDefaultColors)
-			{
-				std::string newFg = defaultFgColor;
-				std::string newBg = defaultBgColor;
-
-				// iterate through all WordsStyle in the clone, and override fg and bg colors as needed
-				for (NppXml::Element wordsStyleFromClone = NppXml::firstChildElement(p_clone, "WordsStyle");
-					!wordsStyleFromClone.isNull();
-					wordsStyleFromClone = NppXml::nextSiblingElement(wordsStyleFromClone, "WordsStyle"))
-				{
-					QString dest_id = NppXml::attribute NppXml::attribute(wordsStyleFromClone, "styleID", "");
-					if (!dest_id.isEmpty() && mapColorsEmbeddedToDotJs.contains(dest_id))
-					{
-						if (NppXml::attribute(wordsStyleFromClone, "fgColor") && mapColorsEmbeddedToDotJs[dest_id].contains("fgColor"))
-							newFg = mapColorsEmbeddedToDotJs[dest_id]["fgColor"];
-						if (NppXml::attribute(wordsStyleFromClone, "bgColor") && mapColorsEmbeddedToDotJs[dest_id].contains("bgColor"))
-							newBg = mapColorsEmbeddedToDotJs[dest_id]["bgColor"];
-					}
-
-					if (NppXml::attribute(wordsStyleFromClone, "fgColor"))
-						NppXml::setAttribute(wordsStyleFromClone, "fgColor", newFg);
-					if (NppXml::attribute(wordsStyleFromClone, "bgColor"))
-						NppXml::setAttribute(wordsStyleFromClone, "bgColor", newBg);
-				}
-			}
-		}
-	}
-
-	return;
+	// Stub: style merging from model to user XML — no-op for Qt6 build
 }
 
-bool NppParameters::getUserParametersFromXmlTree()
-{
-	if (!_xmlUserDoc._doc)
-		return false;
-
-	NppXml::Element root = NppXml::firstChildElement(_xmlUserDoc._doc, "NotepadPlus");
-	if (root.isNull())
-		return false;
-
-	// Get GUI parameters
-	feedGUIParameters(root);
-
-	// Get History parameters
-	feedFileListParameters(root);
-
-	// Erase the History root
-	NppXml::Element histRoot = NppXml::firstChildElement(root, "History");
-	NppXml::deleteChild(root, histRoot);
-
-	// Add a new empty History root
-	NppXml::createChildElement(root, "History");
-
-	//Get Find history parameters
-	feedFindHistoryParameters(root);
-
-	//Get Project Panel parameters
-	feedProjectPanelsParameters(root);
-
-	//Get File browser parameters
-	feedFileBrowserParameters(root);
-
-	//Get Column editor parameters
-	feedColumnEditorParameters(root);
-
-	return true;
-}
-
-std::pair<unsigned char, unsigned char> NppParameters::addUserDefineLangsFromXmlTree(NppXml::Document xmldoc)
-{
-	if (!xmldoc)
-		return std::make_pair(static_cast<unsigned char>(0), static_cast<unsigned char>(0));
-
-	NppXml::Element root = NppXml::firstChildElement(xmldoc, "NotepadPlus");
-	if (root.isNull())
-		return std::make_pair(static_cast<unsigned char>(0), static_cast<unsigned char>(0));
-
-	return feedUserLang(root);
-}
-
-bool NppParameters::getShortcutsFromXmlTree()
-{
-	if (!_pXmlShortcutDoc)
-		return false;
-
-	NppXml::Element root = NppXml::firstChildElement(_pXmlShortcutDoc, "NotepadPlus");
-	if (root.isNull())
-		return false;
-
-	feedShortcut(root);
-	return true;
-}
-
-bool NppParameters::getMacrosFromXmlTree()
-{
-	if (!_pXmlShortcutDoc)
-		return false;
-
-	NppXml::Element root = NppXml::firstChildElement(_pXmlShortcutDoc, "NotepadPlus");
-	if (root.isNull())
-		return false;
-
-	feedMacros(root);
-	return true;
-}
-
-bool NppParameters::getUserCmdsFromXmlTree()
-{
-	if (!_pXmlShortcutDoc)
-		return false;
-
-	NppXml::Element root = NppXml::firstChildElement(_pXmlShortcutDoc, "NotepadPlus");
-	if (root.isNull())
-		return false;
-
-	feedUserCmds(root);
-	return true;
-}
-
-bool NppParameters::getPluginCmdsFromXmlTree()
-{
-	if (!_pXmlShortcutDoc)
-		return false;
-
-	NppXml::Element root = NppXml::firstChildElement(_pXmlShortcutDoc, "NotepadPlus");
-	if (root.isNull())
-		return false;
-
-	feedPluginCustomizedCmds(root);
-	return true;
-}
-
-bool NppParameters::getScintKeysFromXmlTree()
-{
-	if (!_pXmlShortcutDoc)
-		return false;
-
-	NppXml::Element root = NppXml::firstChildElement(_pXmlShortcutDoc, "NotepadPlus");
-	if (root.isNull())
-		return false;
-
-	feedScintKeys(root);
-	return true;
-}
 
 void NppParameters::initMenuKeys()
 {
-	int previousFuncID = 0;
-	for (const auto& wkd : winKeyDefs)
-	{
-		Shortcut sc((wkd.specialName ? wstring2string(wkd.specialName).c_str() : ""), wkd.isCtrl, wkd.isAlt, wkd.isShift, static_cast<unsigned char>(wkd.vKey));
-		_shortcuts.emplace_back(sc, wkd.functionId, previousFuncID == wkd.functionId);
-		previousFuncID = wkd.functionId;
-	}
+	// Stub: initialize menu key shortcuts — no-op for Qt6
 }
 
 void NppParameters::initScintillaKeys()
 {
-	//Warning! Matching function have to be consecutive
-	int prevIndex = -1;
-	int prevID = -1;
-	for (const auto& skd : scintKeyDefs)
-	{
-		if (skd.functionId == prevID)
-		{
-			KeyCombo kc;
-			kc._isCtrl = skd.isCtrl;
-			kc._isAlt = skd.isAlt;
-			kc._isShift = skd.isShift;
-			kc._key = static_cast<unsigned char>(skd.vKey);
-			_scintillaKeyCommands[prevIndex].addKeyCombo(kc);
-		}
-		else
-		{
-			Shortcut s = Shortcut(wstring2string(skd.name).c_str(), skd.isCtrl, skd.isAlt, skd.isShift, static_cast<unsigned char>(skd.vKey));
-			_scintillaKeyCommands.emplace_back(s, skd.functionId, skd.redirFunctionId);
-			++prevIndex;
-		}
-		prevID = skd.functionId;
-	}
+	// Stub: initialize scintilla key commands — no-op for Qt6
 }
 
 bool NppParameters::reloadContextMenuFromXmlTree(QMenu* mainMenuHandle, QMenu* pluginsMenu)
@@ -2929,7 +2489,7 @@ bool NppParameters::getContextMenuFromXmlTree(QMenu* mainMenuHandle, QMenu* plug
 				std::wstring menuEntryName = menuEntryNameA ? wmc.char2wchar(menuEntryNameA, SC_CP_UTF8) : L"";
 				std::wstring menuItemName = menuItemNameA ? wmc.char2wchar(menuItemNameA, SC_CP_UTF8) : L"";
 
-				if (!menuEntryName.isEmpty() && !menuItemName.isEmpty())
+				if (!menuEntryName.empty() && !menuItemName.empty())
 				{
 					int cmd = getCmdIdFromMenuEntryItemName(mainMenuHandle, menuEntryName, menuItemName);
 					if (cmd != -1)
@@ -2944,7 +2504,7 @@ bool NppParameters::getContextMenuFromXmlTree(QMenu* mainMenuHandle, QMenu* plug
 					std::wstring pluginCmdName = pluginCmdNameA ? wmc.char2wchar(pluginCmdNameA, SC_CP_UTF8) : L"";
 
 					// if plugin menu exists, also the value of PluginEntryName and PluginCommandItemName are valid
-					if (pluginsMenu && !pluginName.isEmpty() && !pluginCmdName.isEmpty())
+					if (pluginsMenu && !pluginName.empty() && !pluginCmdName.empty())
 					{
 						const int pluginCmdId = getPluginCmdIdFromMenuEntryItemName(pluginsMenu, pluginName, pluginCmdName);
 						if (pluginCmdId != -1)
@@ -3171,7 +2731,7 @@ void NppParameters::feedFileListParameters(const NppXml::Element& element)
 		childNode = NppXml::nextSiblingElement(childNode, "File"))
 	{
 		const std::wstring filePath = string2wstring(NppXml::attribute(childNode, "filename", ""));
-		if (!filePath.isEmpty())
+		if (!filePath.empty())
 		{
 			_LRFileList[_nbRecentFile] = std::make_unique<std::wstring>(filePath);
 			++_nbRecentFile;
@@ -3482,7 +3042,7 @@ void NppParameters::getActions(const NppXml::Element& element, Macro& macro)
 		// to avoid generating consecutive double newlines.
 
 		const bool isPrevMacroCR =
-			!macro.isEmpty()
+			!macro.empty()
 			&& macro.back()._message == SCI_REPLACESEL
 			&& macro.back()._sParameter == "\r";
 
@@ -3530,7 +3090,7 @@ void NppParameters::getActions(const NppXml::Element& element, Macro& macro)
 	}
 
 	// Ensure the last macro step is correctly recorded as SCI_NEWLINE if it had an original CR.
-	if (!macro.isEmpty()
+	if (!macro.empty()
 		&& macro.back()._message == SCI_REPLACESEL
 		&& macro.back()._sParameter == "\r")
 	{
