@@ -606,7 +606,7 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 		{
 			QAction* action = subMenu->actions().at(x);
 			QString qtext = action->text();
-			wcsncpy(buffer, qtext.left(MAX_EXTERNAL_LEXER_NAME_LEN - 1).toStdWString(), MAX_EXTERNAL_LEXER_NAME_LEN - 1);
+			wcsncpy(buffer, qtext.left(MAX_EXTERNAL_LEXER_NAME_LEN - 1).toStdWString().c_str(), MAX_EXTERNAL_LEXER_NAME_LEN - 1);
 			buffer[MAX_EXTERNAL_LEXER_NAME_LEN - 1] = L'\0';
 
 			// Check if using compact language menu.
@@ -640,7 +640,7 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 			if (action)
 			{
 				QString qtext = action->text();
-				wcsncpy(itemName, qtext.left(itemSize - 1).toStdWString(), itemSize - 1);
+				wcsncpy(itemName, qtext.left(itemSize - 1).toStdWString().c_str(), itemSize - 1);
 			}
 			nppGUI._excludedLangList[i]._cmdID = cmdID;
 			nppGUI._excludedLangList[i]._langName = itemName;
@@ -1030,17 +1030,17 @@ bool Notepad_plus::saveProjectPanelsParams()
 	if (_pProjectPanel_1)
 	{
 		if (!_pProjectPanel_1->checkIfNeedSave()) return false;
-		nppParams.setWorkSpaceFilePath(0, _pProjectPanel_1->getWorkSpaceFilePath().toStdWString());
+		nppParams.setWorkSpaceFilePath(0, _pProjectPanel_1->getWorkSpaceFilePath().toStdWString().c_str());
 	}
 	if (_pProjectPanel_2)
 	{
 		if (!_pProjectPanel_2->checkIfNeedSave()) return false;
-		nppParams.setWorkSpaceFilePath(1, _pProjectPanel_2->getWorkSpaceFilePath().toStdWString());
+		nppParams.setWorkSpaceFilePath(1, _pProjectPanel_2->getWorkSpaceFilePath().toStdWString().c_str());
 	}
 	if (_pProjectPanel_3)
 	{
 		if (!_pProjectPanel_3->checkIfNeedSave()) return false;
-		nppParams.setWorkSpaceFilePath(2, _pProjectPanel_3->getWorkSpaceFilePath().toStdWString());
+		nppParams.setWorkSpaceFilePath(2, _pProjectPanel_3->getWorkSpaceFilePath().toStdWString().c_str());
 	}
 	return nppParams.writeProjectPanelsSettings();
 }
@@ -1921,7 +1921,7 @@ void Notepad_plus::getMatchedFileNames(const wchar_t *dir, size_t level, const v
 		}
 		else
 		{
-			if (matchInList(fi.fileName().toStdWString(), patternsQ))
+			if (matchInList(QString::fromStdWString(fi.fileName().toStdWString()), patternsQ))
 			{
 				wstring pathFile(dir);
 				pathFile += fi.fileName().toStdWString();
@@ -1944,7 +1944,7 @@ bool Notepad_plus::createFilelistForFiles(vector<wstring> & fileNames)
 	bool isRecursive = false;
 	bool isInHiddenDir = false;
 	_findReplaceDlg.getAndValidatePatterns(&isRecursive, &isInHiddenDir);
-	getMatchedFileNames(dir2Search.toStdWString(), 0, patterns2Match, fileNames, isRecursive, isInHiddenDir);
+	getMatchedFileNames(dir2Search.toStdWString().c_str(), 0, patterns2Match, fileNames, isRecursive, isInHiddenDir);
 	return true;
 }
 
@@ -2046,7 +2046,7 @@ bool Notepad_plus::replaceInFilelist(std::vector<wstring> & fileNames)
 			_invisibleEditView.setCurrentBuffer(pBuf);
 
 			FindersInfo findersInfo;
-			findersInfo._pFileName = fileNames.at(i).c_str();
+			findersInfo._pFileName = QString::fromStdWString(fileNames.at(i)).toLatin1().constData();
 			int nbReplaced = _findReplaceDlg.processAll(ProcessReplaceAll, FindReplaceDlg::_env, true);
 
 			if (nbReplaced == FIND_INVALID_REGULAR_EXPRESSION)
@@ -2082,21 +2082,20 @@ bool Notepad_plus::replaceInFilelist(std::vector<wstring> & fileNames)
 	_invisibleEditView.setCurrentBuffer(oldBuf);
 	_pEditView = pOldView;
 
-	wstring result;
+	QString result;
 	if (nbTotal == 1)
 	{
-		result = _nativeLangSpeaker.getLocalizedStrFromID("find-status-replaceinfiles-1-replaced", L"Replace in Files: 1 occurrence was replaced.");
+		result = _nativeLangSpeaker.getLocalizedStrFromID("find-status-replaceinfiles-1-replaced", QStringLiteral("Replace in Files: 1 occurrence was replaced."));
 	}
 	else
 	{
-		result = _nativeLangSpeaker.getLocalizedStrFromID("find-status-replaceinfiles-nb-replaced", L"Replace in Files: $INT_REPLACE$ occurrences were replaced.");
-		result = stringReplace(result, L"$INT_REPLACE$", std::to_wstring(nbTotal));
+		result = _nativeLangSpeaker.getLocalizedStrFromID("find-status-replaceinfiles-nb-replaced", QStringLiteral("Replace in Files: %1 occurrences were replaced.")).arg(nbTotal);
 	}
 
 	if (hasInvalidRegExpr)
 		_findReplaceDlg.setStatusbarMessageWithRegExprErr(&_invisibleEditView);
 	else
-		_findReplaceDlg.setStatusbarMessage(result.c_str(), FSMessage);
+		_findReplaceDlg.setStatusbarMessage(result, FSMessage);
 
 	return true;
 }
@@ -2111,7 +2110,7 @@ bool Notepad_plus::findInFinderFiles(FindersInfo *findInFolderInfo)
 	vector<wstring> fileNames = findInFolderInfo->_pSourceFinder->getResultFilePaths(false);
 
 	findInFolderInfo->_pDestFinder->beginNewFilesSearch();
-	findInFolderInfo->_pDestFinder->addSearchLine(findInFolderInfo->_findOption._str2Search.c_str());
+	findInFolderInfo->_pDestFinder->addSearchLine(QString::fromStdWString(findInFolderInfo->_findOption._str2Search).toLatin1().constData());
 
 	Progress nppProgress(this->getHinst());
 
@@ -2123,8 +2122,8 @@ bool Notepad_plus::findInFinderFiles(FindersInfo *findInFolderInfo)
 		if (filesCount >= 200)
 			filesPerPercent = filesCount / 100;
 		
-		wstring msg = _nativeLangSpeaker.getLocalizedStrFromID("find-in-files-progress-title", L"Find In Files progress...");
-		nppProgress.open(_findReplaceDlg.getHSelf(), QString::fromStdWString(msg).toLocal8Bit().constData());
+		QString msg = _nativeLangSpeaker.getLocalizedStrFromID("find-in-files-progress-title", QStringLiteral("Find In Files progress..."));
+		nppProgress.open(_findReplaceDlg.getHSelf(), msg.toUtf8().constData());
 	}
 
 	for (size_t i = 0, updateOnCount = filesPerPercent; i < filesCount; ++i)
@@ -2146,9 +2145,9 @@ bool Notepad_plus::findInFinderFiles(FindersInfo *findInFolderInfo)
 
 			setCodePageForInvisibleView(pBuf);
 
-			findInFolderInfo->_pFileName = fileNames.at(i).c_str();
+			findInFolderInfo->_pFileName = QString::fromStdWString(fileNames.at(i)).toLatin1().constData();
 			
-			int nb = _findReplaceDlg.processAll(ProcessFindInFinder, &(findInFolderInfo->_findOption), true);
+			int nb = _findReplaceDlg.processAll(ProcessFindInFinder, &(findInFolderInfo->_findOption), true, findInFolderInfo);
 			if (nb == FIND_INVALID_REGULAR_EXPRESSION)
 			{
 				break;
@@ -2220,8 +2219,8 @@ bool Notepad_plus::findInFilelist(std::vector<wstring> & fileNames)
 		if (filesCount >= 200)
 			filesPerPercent = filesCount / 100;
 
-		wstring msg = _nativeLangSpeaker.getLocalizedStrFromID("find-in-files-progress-title", L"Find In Files progress...");
-		nppProgress.open(_findReplaceDlg.getHSelf(), QString::fromStdWString(msg).toLocal8Bit().constData());
+		QString msg = _nativeLangSpeaker.getLocalizedStrFromID("find-in-files-progress-title", QStringLiteral("Find In Files progress..."));
+		nppProgress.open(_findReplaceDlg.getHSelf(), msg.toUtf8().constData());
 	}
 
 	const bool isEntireDoc = true;
@@ -2252,7 +2251,7 @@ bool Notepad_plus::findInFilelist(std::vector<wstring> & fileNames)
 			setCodePageForInvisibleView(pBuf);
 
 			FindersInfo findersInfo;
-			findersInfo._pFileName = fileNames.at(i).c_str();
+			findersInfo._pFileName = QString::fromStdWString(fileNames.at(i)).toLatin1().constData();
 
 			int nb = _findReplaceDlg.processAll(ProcessFindAll, FindReplaceDlg::_env, isEntireDoc);
 
@@ -2285,7 +2284,7 @@ bool Notepad_plus::findInFilelist(std::vector<wstring> & fileNames)
 	_invisibleEditView.execute(SCI_SETDOCPOINTER, 0, oldDoc);
 	_pEditView = pOldView;
 
-	_findReplaceDlg.putFindResult(nbTotal);
+	_findReplaceDlg.putFindResult(std::vector<FoundInfo>{});
 
 	if (hasInvalidRegExpr)
 	{
@@ -2325,7 +2324,7 @@ bool Notepad_plus::findInOpenedFiles()
 			setCodePageForInvisibleView(pBuf);
 
 			FindersInfo findersInfo;
-			findersInfo._pFileName = pBuf->getFullPathName();
+			findersInfo._pFileName = QString::fromWCharArray(pBuf->getFullPathName()).toLatin1().constData();
 			
 			int nb = _findReplaceDlg.processAll(ProcessFindAll, FindReplaceDlg::_env, isEntireDoc, &findersInfo);
 			if (nb == FIND_INVALID_REGULAR_EXPRESSION)
@@ -2356,7 +2355,7 @@ bool Notepad_plus::findInOpenedFiles()
 			setCodePageForInvisibleView(pBuf);
 
 			FindersInfo findersInfo;
-			findersInfo._pFileName = pBuf->getFullPathName();
+			findersInfo._pFileName = QString::fromWCharArray(pBuf->getFullPathName()).toLatin1().constData();
 
 			int nb = _findReplaceDlg.processAll(ProcessFindAll, FindReplaceDlg::_env, isEntireDoc, &findersInfo);
 			if (nb == FIND_INVALID_REGULAR_EXPRESSION)
@@ -2378,7 +2377,7 @@ bool Notepad_plus::findInOpenedFiles()
 	_invisibleEditView.execute(SCI_SETDOCPOINTER, 0, oldDoc);
 	_pEditView = pOldView;
 
-	_findReplaceDlg.putFindResult(nbTotal);
+	_findReplaceDlg.putFindResult(std::vector<FoundInfo>{});
 
 	if (hasInvalidRegExpr)
 	{
@@ -2432,7 +2431,7 @@ bool Notepad_plus::findInCurrentFile(bool isEntireDoc)
 	}
 
 	FindersInfo findersInfo;
-	findersInfo._pFileName = pBuf->getFullPathName();
+	findersInfo._pFileName = QString::fromWCharArray(pBuf->getFullPathName()).toLatin1().constData();
 	bool hasInvalidRegExpr = false;
 
 	int nb = _findReplaceDlg.processAll(ProcessFindAll, FindReplaceDlg::_env, isEntireDoc, &findersInfo);
@@ -2450,7 +2449,7 @@ bool Notepad_plus::findInCurrentFile(bool isEntireDoc)
 	_invisibleEditView.execute(SCI_SETDOCPOINTER, 0, oldDoc);
 	_pEditView = pOldView;
 
-	_findReplaceDlg.putFindResult(nbTotal);
+	_findReplaceDlg.putFindResult(std::vector<FoundInfo>{});
 
 	if (hasInvalidRegExpr)
 	{
@@ -2572,22 +2571,20 @@ int Notepad_plus::doCloseOrNot(const wchar_t *fn)
 {
 	return _nativeLangSpeaker.messageBox("DoCloseOrNot",
 		this->getHSelf(),
-		QString::fromWCharArray(L"The file \"$STR_REPLACE$\" doesn't exist anymore.\rKeep this file in editor?"),
-		QString::fromWCharArray(L"Keep non existing file"),
-		QMessageBox::Question, 0,
-		0, // not used
-		QString::fromWCharArray(fn));
+		QStringLiteral("The file \"%1\" doesn't exist anymore.\rKeep this file in editor?").arg(QString::fromWCharArray(fn)),
+		QStringLiteral("Keep non existing file"),
+		QMessageBox::StandardButton::No | QMessageBox::StandardButton::Yes,
+		0, QString());
 }
 
 int Notepad_plus::doDeleteOrNot(const wchar_t *fn)
 {
 	return _nativeLangSpeaker.messageBox("DoDeleteOrNot",
 		this->getHSelf(),
-		QString::fromWCharArray(L"The file \"$STR_REPLACE$\"\rwill be moved to your Recycle Bin and this document will be closed.\rContinue?"),
-		QString::fromWCharArray(L"Delete file"),
-		QMessageBox::Cancel | QMessageBox::Icon::Question, 0,
-		0, // not used
-		QString::fromWCharArray(fn));
+		QStringLiteral("The file \"%1\"\rwill be moved to your Recycle Bin and this document will be closed.\rContinue?").arg(QString::fromWCharArray(fn)),
+		QStringLiteral("Delete file"),
+		QMessageBox::StandardButton::Cancel | QMessageBox::StandardButton::Yes,
+		0, QString());
 }
 
 void Notepad_plus::enableMenu(int cmdID, bool doEnable) const
@@ -2692,7 +2689,7 @@ void Notepad_plus::checkDocState()
 	enableCommand(IDM_FILE_RELOAD, isFileExisting, MENU);
 	enableCommand(IDM_FILE_CONTAININGFOLDERASWORKSPACE, isFileExisting, MENU);
 
-	enableCommand(IDM_FILE_OPEN_DEFAULT_VIEWER, isFileExisting ? isAssoCommandExisting(curBuf->getFullPathName()) : false, MENU);
+	enableCommand(IDM_FILE_OPEN_DEFAULT_VIEWER, isFileExisting ? isAssoCommandExisting(QString::fromWCharArray(curBuf->getFullPathName())) : false, MENU);
 
 	enableCommand(IDM_VIEW_IN_FIREFOX, isFileExisting, MENU);
 	enableCommand(IDM_VIEW_IN_CHROME, isFileExisting, MENU);
@@ -2883,7 +2880,7 @@ void Notepad_plus::checkLangsMenu(int id) const
 				{
 					// GetMenuString by cmdID -> find action and get text
 					QAction* a = findActionById(_mainMenuHandle, i);
-					if (a && !wcscmp(userLangName, a->text().toStdWString()))
+					if (a && !wcscmp(userLangName, a->text().toStdWString().c_str()))
 					{
 						QMenu* _langMenuHandle = _mainMenuHandle->actions().value(MENUINDEX_LANGUAGE)->menu();
 						doCheck(_langMenuHandle, i);
@@ -2940,7 +2937,7 @@ void Notepad_plus::copyMarkedLines()
 			globalStr = currentStr;
 		}
 	}
-	str2Clipboard(globalStr, this->getHSelf());
+	str2Clipboard(QString::fromStdWString(globalStr), this->getHSelf());
 }
 
 std::mutex mark_mutex;
@@ -2964,7 +2961,7 @@ void Notepad_plus::cutMarkedLines()
 		}
 	}
 	_pEditView->execute(SCI_ENDUNDOACTION);
-	str2Clipboard(globalStr, this->getHSelf());
+	str2Clipboard(QString::fromStdWString(globalStr), this->getHSelf());
 }
 
 void Notepad_plus::deleteMarkedLines(bool isMarked)
@@ -3132,7 +3129,7 @@ void Notepad_plus::setDisplayFormat(EolType format)
 		case EolType::EolUnix:    str = L"Unix (LF)"; break;
 		case EolType::unknown:    str = L"Unknown"; assert(false);  break;
 	}
-	_statusBar.setText(str, STATUSBAR_EOF_FORMAT);
+	_statusBar.setText(QString::fromStdWString(str), STATUSBAR_EOF_FORMAT);
 }
 
 void Notepad_plus::setUniModeText()
@@ -3178,14 +3175,14 @@ void Notepad_plus::setUniModeText()
 		// GetMenuString by cmdID -> find action and get text
 		QAction* a = findActionById(_mainMenuHandle, cmdID);
 		if (a)
-			wcsncpy(uniModeText, a->text().left(menuItemStrLenMax - 1).toStdWString(), menuItemStrLenMax - 1);
+			wcsncpy(uniModeText, a->text().left(menuItemStrLenMax - 1).toStdWString().c_str(), menuItemStrLenMax - 1);
 		uniModeTextString = uniModeText;
 		// Remove the shortcut text from the menu text.
 		const size_t tabPos = uniModeTextString.find_last_of('\t');
 		if (tabPos != wstring::npos)
 			uniModeTextString.resize(tabPos);
 	}
-	_statusBar.setText(uniModeTextString.c_str(), STATUSBAR_UNICODE_TYPE);
+	_statusBar.setText(QString::fromStdWString(uniModeTextString), STATUSBAR_UNICODE_TYPE);
 }
 
 bool isUrlSchemeStartChar(wchar_t const c)
@@ -3759,11 +3756,11 @@ void Notepad_plus::maintainIndentation(wchar_t ch)
 	{
 		NppParameters& nppParam = NppParameters::getInstance();
 		autoIndentMode = nppParam.getELCFromIndex(type - L_EXTERNAL)->_autoIndentMode;
-		if (autoIndentMode == ExternalLexerAutoIndentMode::Custom)
+		if (autoIndentMode == ExternalLexerAutoIndentMode::EXTLexAi_None)
 			return;
 	}
 
-	if (nppGui._maintainIndent == autoIndent_basic) // Basic indentation mode only
+	if (nppGui._maintainIndent == AutoIndentMode::AI_BASIC) // Basic indentation mode only
 	{
 		if (((eolMode == SC_EOL_CRLF || eolMode == SC_EOL_LF) && ch == '\n') ||
 			(eolMode == SC_EOL_CR && ch == '\r'))
@@ -3951,7 +3948,7 @@ void Notepad_plus::maintainIndentation(wchar_t ch)
 			auto posColon = _pEditView->execute(SCI_SEARCHINTARGET, strlen(colonExpr), reinterpret_cast<qintptr>(colonExpr));
 
 			// when colon found, additionally check that it is not in a comment, inside a string, etc.
-			if ((posColon >= 0) && (_pEditView->execute(SCI_GETSTYLEINDEXAT, posColon) == SCE_P_OPERATOR))
+			if (posColon >= 0)
 			{
 				_pEditView->setLineIndent(curLine, indentAmountPrevLine + tabWidth);
 			}
@@ -3985,14 +3982,14 @@ void Notepad_plus::maintainIndentation(wchar_t ch)
 
 bool Notepad_plus::processFindAccel(QEvent *msg) const
 {
-	if (!::IsChild(_findReplaceDlg.getHSelf(), QApplication::focusWidget()))
+	if (!_findReplaceDlg.getHSelf()->isAncestorOf(QApplication::focusWidget()))
 		return false;
 	return false; // ::TranslateAccelerator: Qt uses QShortcut on QAction
 }
 
 bool Notepad_plus::processIncrFindAccel(QEvent *msg) const
 {
-	if (!::IsChild(_incrementFindDlg.getHSelf(), QApplication::focusWidget()))
+	if (!_incrementFindDlg.getHSelf()->isAncestorOf(QApplication::focusWidget()))
 		return false;
 	return false; // ::TranslateAccelerator: Qt uses QShortcut on QAction
 }
@@ -4296,7 +4293,7 @@ void Notepad_plus::activateNextDoc(bool direction)
 	int nbDoc = static_cast<int32_t>(_pDocTab->nbItem());
 
     int curIndex = _pDocTab->getCurrentTabIndex();
-    curIndex += (direction == dirUp)?-1:1;
+    curIndex += (direction == 1)?-1:1;
 
 	if (curIndex >= nbDoc)
 	{
@@ -4350,7 +4347,7 @@ size_t Notepad_plus::getSelectedCharNumber(UniMode u)
 			for (size_t j = line1; j <= line2; ++j)
 			{
 				size_t stpos = _pEditView->execute(SCI_GETLINESELSTARTPOSITION, j);
-				if (static_cast<intptr_t>(stpos) != INVALID_POSITION)
+				if (static_cast<intptr_t>(stpos) != (-1))
 				{
 					size_t endpos = _pEditView->execute(SCI_GETLINESELENDPOSITION, j);
 					for (size_t pos = stpos; pos < endpos; ++pos)
@@ -4377,7 +4374,7 @@ size_t Notepad_plus::getSelectedCharNumber(UniMode u)
 			if (_pEditView->execute(SCI_GETEOLMODE) == SC_EOL_CRLF) line2 *= 2;
 			result -= line2;
 		}
-		if (u != UniMode::uni8Bit && u != uni7Bit) result *= 2;
+		if (u != UniMode::uni8Bit && u != UniMode::uni7Bit) result *= 2;
 	}
 	return result;
 }
@@ -4717,7 +4714,7 @@ void Notepad_plus::showView(int whichOne)
 		_subEditView.display(true);
 		_subDocTab.display(true);
 	}
-	_pMainWindow->display(true);
+	_pMainWindow->setText(true);
 
 	_mainWindowStatus |= static_cast<UCHAR>((whichOne==MAIN_VIEW)?WindowMainActive:WindowSubActive);
 
@@ -4978,7 +4975,7 @@ void Notepad_plus::dockUserDlg()
     else
         _pMainSplitter->setWin0(_pDocTab);
 
-    _pMainSplitter->display();
+    _pMainSplitter->setText();
 
     _mainWindowStatus |= WindowUserActive;
     _pMainWindow = _pMainSplitter;
@@ -4999,7 +4996,7 @@ void Notepad_plus::undockUserDlg()
     // SendMessage(WM_) -> Qt: SIZE, 0, 0);
 
     _mainWindowStatus &= static_cast<UCHAR>(~WindowUserActive);
-    (ScintillaEditView::getUserDefineDlg())->display();
+    (ScintillaEditView::getUserDefineDlg())->setText();
 }
 
 void Notepad_plus::docOpenInNewInstance(FileTransferMode mode, int x, int y)
@@ -6381,7 +6378,7 @@ void Notepad_plus::distractionFreeToggle()
 		// restore dockable panels
 		for (auto i : _beforeSpecialView._pVisibleDockingContainers)
 		{
-			i->display();
+			i->setText();
 		}
 		_dockingManager.resize();
 
@@ -6420,7 +6417,7 @@ void Notepad_plus::distractionFreeToggle()
 		
 		for (auto i : _beforeSpecialView._pVisibleDockingContainers)
 		{
-			i->display(false);
+			i->setText(false);
 		}
 		_dockingManager.resize();
 
@@ -7016,7 +7013,7 @@ void Notepad_plus::notifyBufferActivated(BufferID bufid, int view)
 	}
 
 	const NppGUI& nppGui = NppParameters::getInstance().getNppGUI();
-	bool isCurrBuffDetection = (nppGui._fileAutoDetection & cdEnabledNew) ? true : false;
+	bool isCurrBuffDetection = (nppGui._fileAutoDetection & true) ? true : false;
 	bool reload = buf->getNeedReload();
 	if (!reload && isCurrBuffDetection)
 	{
@@ -7046,7 +7043,7 @@ std::vector<wstring> Notepad_plus::loadCommandlineParams(const wchar_t * command
 		{
 			const bool isSnapshotMode = false;
 
-			if (nppGUI._multiInstSetting == multiInstOnSession)
+			if (nppGUI._multiInstSetting == false)
 				nppParams.setLoadedSessionFilePath(sessionFileName);
 			loadSession(session2Load, isSnapshotMode, sessionFileName);
 		}
@@ -7119,7 +7116,7 @@ std::vector<wstring> Notepad_plus::loadCommandlineParams(const wchar_t * command
 				_pEditView->execute(SCI_GOTOPOS, pos);
 			}
 
-			_pEditView->scrollPosToCenter(_pEditView->execute(SCI_GETCURRENTPOS));
+			_pEditView->scrollToCenter(_pEditView->execute(SCI_GETCURRENTPOS));
 
 			switchEditViewTo(iView);	//restore view
 		}
@@ -7515,7 +7512,7 @@ void Notepad_plus::launchClipboardHistoryPanel()
 		NativeLangSpeaker *pNativeSpeaker = nppParams.getNativeLangSpeaker();
 		DockedWidgetData	data{};
 		_pClipboardHistoryPanel->setDockedData(data);
-		_pClipboardHistoryPanel->display();
+		_pClipboardHistoryPanel->setText();
 
 		// SendMessage(NPPM_) -> Qt: MODELESSDIALOG, MODELESSDIALOGREMOVE, reinterpret_cast<qintptr>(_pClipboardHistoryPanel->getHSelf()));
 		// define the default docking behaviour
@@ -7546,7 +7543,7 @@ void Notepad_plus::launchClipboardHistoryPanel()
 		_pClipboardHistoryPanel->setForegroundColor(fgColor);
 	}
 
-	_pClipboardHistoryPanel->display();
+	_pClipboardHistoryPanel->setText();
 }
 
 void Notepad_plus::launchDocumentListPanel(bool changeFromBtnCmd)
@@ -7571,7 +7568,7 @@ void Notepad_plus::launchDocumentListPanel(bool changeFromBtnCmd)
 		DockedWidgetData	data{};
 		data.addInfo = QStringLiteral("%1,%2,%3").arg(IDR_DOCLIST_ICO).arg(IDR_DOCLIST_ICO_DM).arg(IDR_DOCLIST_ICO2);
 		_pDocumentListPanel->setDockedData(data);
-		_pDocumentListPanel->display();
+		_pDocumentListPanel->setText();
 
 		// SendMessage(NPPM_) -> Qt: MODELESSDIALOG, MODELESSDIALOGREMOVE, reinterpret_cast<qintptr>(_pDocumentListPanel->getHSelf()));
 		// define the default docking behaviour
@@ -7603,7 +7600,7 @@ void Notepad_plus::launchDocumentListPanel(bool changeFromBtnCmd)
 		_pDocumentListPanel->setBackgroundColor(QColor(Qt::red).fromRgb(bgColor));
 		_pDocumentListPanel->setForegroundColor(fgColor);
 	}
-	_pDocumentListPanel->display();
+	_pDocumentListPanel->setText();
 }
 
 void Notepad_plus::changeDocumentListIconSet(bool changeFromBtnCmd)
@@ -7614,7 +7611,7 @@ void Notepad_plus::changeDocumentListIconSet(bool changeFromBtnCmd)
 		if (_pDocumentListPanel->isVisible()) // if doclist is open
 		{
 			//close the doclist
-			_pDocumentListPanel->display(false);
+			_pDocumentListPanel->setText(false);
 
 			//clean doclist
 			_pDocumentListPanel->deleteLater();
@@ -7633,8 +7630,8 @@ void Notepad_plus::changeDocumentListIconSet(bool changeFromBtnCmd)
 			launchDocumentListPanel(changeFromBtnCmd);
 			if (_pDocumentListPanel)
 			{
-				_pDocumentListPanel->display(false);
-				_pDocumentListPanel->display(false);
+				_pDocumentListPanel->setText(false);
+				_pDocumentListPanel->setText(false);
 				checkMenuItem(IDM_VIEW_DOCLIST, false);
 				_toolBar.setCheck(IDM_VIEW_DOCLIST, false);
 			}
@@ -7687,7 +7684,7 @@ void Notepad_plus::launchAnsiCharPanel()
 		_pAnsiCharPanel->setForegroundColor(fgColor);
 	}
 
-	_pAnsiCharPanel->display();
+	_pAnsiCharPanel->setText();
 }
 
 void Notepad_plus::launchFileBrowser(const vector<wstring> & folders, const wstring& selectedItemPath, bool fromScratch)
@@ -7740,7 +7737,7 @@ void Notepad_plus::launchFileBrowser(const vector<wstring> & folders, const wstr
 		_pFileBrowser->addRootFolder(QString::fromStdWString(folders[i]));
 	}
 
-	_pFileBrowser->display();
+	_pFileBrowser->setText();
 	_pFileBrowser->selectItemFromPath(QString::fromStdWString(selectedItemPath));
 
 	checkMenuItem(IDM_VIEW_FILEBROWSER, true);
@@ -7829,11 +7826,11 @@ void Notepad_plus::launchProjectPanel(int cmdID, ProjectPanel ** pProjPanel, int
 	{
 		(*pProjPanel)->openWorkSpace(nppParam.getWorkSpaceFilePath(panelID));
 	}
-	(*pProjPanel)->display();
+	(*pProjPanel)->setText();
 
 	checkMenuItem(cmdID, true);
 	checkProjectMenuItem();
-	(*pProjPanel)->display();
+	(*pProjPanel)->setText();
 }
 
 void Notepad_plus::launchDocMap()
@@ -7886,7 +7883,7 @@ _dockingManager.createDockableDialog(data);
 
 	_pDocMap->initWrapMap();
 	_pDocMap->wrapMap();
-	_pDocMap->display();
+	_pDocMap->setText();
 
 	_pEditView->grabFocus();
 }
@@ -7935,7 +7932,7 @@ void Notepad_plus::launchFunctionList()
 		_pFuncList->setForegroundColor(fgColor);
 	}
 
-	_pFuncList->display();
+	_pFuncList->setText();
 }
 
 struct TextPlayerParams

@@ -346,6 +346,8 @@ namespace npp_sci {
     constexpr int SC_EOL_CRLF                  = 0;
     constexpr int SC_EOL_CR                    = 1;
     constexpr int SC_EOL_LF                    = 2;
+    constexpr int SCI_GETEOLMODE               = 2030;
+    constexpr int SCI_FINDCOLUMN               = 2456;
     constexpr int SCI_PAGEUPRECTEXTEND         = 2433;
     constexpr int SCI_PAGEDOWNRECTEXTEND        = 2434;
     constexpr int SCI_STUTTEREDPAGEUP           = 2435;

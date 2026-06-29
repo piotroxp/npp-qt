@@ -71,6 +71,7 @@ inline constexpr int NPPN_FILEOPENED = NPPN_FIRST + 5;
 inline constexpr int NPPN_FILEBEFOREOPEN = NPPN_FIRST + 6;
 inline constexpr int NPPN_BUFFERACTIVATED = NPPN_FIRST + 7;
 inline constexpr int NPPN_LANGCHANGED = NPPN_FIRST + 8;
+inline constexpr int NPPN_READONLYCHANGED = NPPN_FIRST + 16;
 inline constexpr int NPPN_WORDSTYLECHANGED = NPPN_FIRST + 9;
 inline constexpr int NPPN_SHORTCUTREMAPPED = NPPN_FIRST + 10;
 inline constexpr int NPPN_READCONFIGS = NPPN_FIRST + 11;
@@ -400,7 +401,7 @@ enum class BackupFeature { BackupNone = 0, BackupSimple = 1, BackupVerbose = 2 }
 enum class AutoIndentMode { AI_NONE = 0, AI_BASIC = 1, AI_SMART = 2 };
 
 // External lexer auto indent
-enum class ExternalLexerAutoIndentMode { EXTLexAi_None = 0, EXTLexAi_Param = 1, EXTLexAi_aggressive = 2, Standard = 0 };
+enum class ExternalLexerAutoIndentMode { EXTLexAi_None = 0, EXTLexAi_Param = 1, EXTLexAi_aggressive = 2, Standard = 0, Custom = 3, C_Like = 4 };
 
 // Write technology engine — plain enum (used in NppGUI as writeTechnologyEngine)
 // Guard against any Scintilla/QScintilla macro definitions of SC_TECH_*

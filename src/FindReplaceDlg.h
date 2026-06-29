@@ -86,6 +86,7 @@ public:
     int markAll(const wchar_t* txt2find, int styleID);
     int processAll(ProcessOperation op, const FindOption* opt, bool isEntire = false);
     int processAll(ProcessOperation op, const FindOption* opt, bool isEntire, FindersInfo* findersInfo);
+    int processAll(ProcessOperation op, const FindersInfo::FindOption* opt, bool isEntire, FindersInfo* findersInfo);
     int processRange(ProcessOperation op, const std::wstring& findReplaceInfo,
                      const FindOption* opt, int colourStyleID, int extraArg,
                      ScintillaComponent* view2Process);

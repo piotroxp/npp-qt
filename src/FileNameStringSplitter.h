@@ -39,6 +39,9 @@ public:
 
     // Get the nth component (0-indexed from left)
     QString operator[](int index) const;
+    int size() const { return componentCount(); }
+    QString getFileName(int index) const { return (*this)[index]; }
+    QStringList fileNames() const { return QStringList(); } // stub
 
 private:
     const QString& _str;

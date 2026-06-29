@@ -319,7 +319,7 @@ public:
 	void launchDocumentBackupTask();
 	int getQuoteIndexFrom(const wchar_t* quoter) const;
 	void showQuoteFromIndex(int index) const;
-	void showQuote(const QuoteParams* quote) const;
+	void showQuote(const QuoteParams* quote);
 
 	std::wstring getPluginListVerStr() const {
 		return _pluginsAdminDlg.getPluginListVerStr();
@@ -577,7 +577,7 @@ private:
     void setLanguage(LangType langType);
 	LangType menuID2LangType(int cmdID);
 
-	bool processIncrFindAccel(QEvent *msg) const;
+	bool processIncrFindAccel(QEvent *msg);
 	bool processFindAccel(QEvent *msg) const;
 	bool processTabSwitchAccel(QEvent* msg) const;
 
