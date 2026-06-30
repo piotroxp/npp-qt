@@ -960,12 +960,16 @@ bool doesDirectoryExist(const QString& dirPath, unsigned int, bool*)
 {
     return QFileInfo::exists(dirPath) && QFileInfo(dirPath).isDir();
 }
-
 bool doesPathExist(const QString& path)
 {
     return QFileInfo::exists(path);
 }
 
+bool doesPathExist(const QString& path, unsigned int, bool* exists)
+{
+    if (exists) *exists = QFileInfo::exists(path);
+    return QFileInfo::exists(path);
+}
 // ============================================================================
 // Path helpers
 // ============================================================================

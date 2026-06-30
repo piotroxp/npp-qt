@@ -69,7 +69,7 @@ public:
 
     // Build image lists from button-unit array and dynamic-button registry.
     void init(const QVector<ToolBarButtonUnit>& buttonUnits, int arraySize,
-              const QVector<DynamicCmdIcoBmp>& dynButtons);
+              const QVector<DynamicIconCmd>& dynButtons);
 
     // Create icons at a given size (DPI-scaled).
     void create(const QSize& iconSize);
@@ -110,13 +110,9 @@ private:
     QMap<int, QIcon> _dynIconMap;
 };
 
-// DynamicCmdIcoBmp — dynamically registered plugin button icons
-struct DynamicCmdIcoBmp {
-    int _message = 0;
-    QIcon _icon;
-    QIcon _iconDM;
-    QIcon _absentIcon;
-};
+// DynamicIconCmd — dynamically registered plugin button icons
+// (was DynamicCmdIcoBmp in Win32)
+struct DynamicIconCmd;
 
 // toolbarIcons — Win32 plugin toolbar icon handles (HBITMAP + HICON)
 // Qt port: QPixmap + QIcon
@@ -173,7 +169,7 @@ public:
     void initTheme(const QDomElement& toolIconsDocRoot);
 
     // Load persisted toolbar button visibility state from config XML.
-    void initHideButtonsConf(NppXml::Document toolButtonsDocRoot,
+    void initHideButtonsConf(void* toolButtonsDocRoot,
                              const IconListButtonUnit* buttonUnitArray,
                              int buttonCount);
 
@@ -185,16 +181,16 @@ public:
              void* /*unusedHInstance*/ = nullptr, int /*iconSizeOverride*/ = 0);
 
     // Tear down: remove from ReBar, destroy icon lists, delete self.
-    void destroy() override;
+    void destroy();
 
     // Enable or disable a button by command ID (TB_ENABLEBUTTON).
     void enable(int cmdID, bool doEnable) const;
 
     // Current total width (sum of all visible item widths).
-    int getWidth() const override;
+    int getWidth() const;
 
     // Toolbar height including padding (TB_GETBUTTONSIZE + TB_GETPADDING).
-    int getHeight() const override;
+    int getHeight() const;
 
     // Icon-size state transitions (reduce/enlarge, sets 1 & 2).
     void reduce();
@@ -211,7 +207,7 @@ public:
     ToolBarStatusType getState() const { return _state; }
 
     // Replace icon at a specific image-list index (custom user icons).
-    bool changeIcons(int whichLst, int iconIndex, const QString& iconLocation) const;
+    bool changeIcons(int whichLst, int iconIndex, const QString& iconLocation);
 
     // Register a dynamically-added plugin button (must be called before init()).
     // Translates: Win32 NPPM_ADDTOOLBARICON_DEPRECATED → Qt
@@ -268,10 +264,10 @@ private:
     ToolBarIcons _toolBarIcons;
 
     // Current icon-size state.
-    ToolBarStatusType _state = TB_SMALL;
+    ToolBarStatusType _state = ToolBarDisplayType::TB_SMALL;
 
     // Dynamic (plugin) buttons registered before init().
-    QVector<DynamicCmdIcoBmp> _vDynBtnReg;
+    QVector<DynamicIconCmd> _vDynBtnReg;
 
     // Total button count: static + separators + dynamic.
     int _nbButtons = 0;

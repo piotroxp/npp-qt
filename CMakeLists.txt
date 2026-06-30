@@ -31,9 +31,9 @@ set(CMAKE_AUTOMOC_INCLUDE_DIRECTORIES
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core Xml PrintSupport)
 # QScintilla2 has no CMake config; link manually via pkg-config or library path
-find_library(QSCINTILLA2_LIB NAMES qscintilla2_qt6 PATHS /usr/lib/x86_64-linux-gnu)
+find_library(QSCINTILLA2_LIB NAMES qscintilla2_qt6 qscintilla2)
 if(NOT QSCINTILLA2_LIB)
-    message(FATAL_ERROR "QScintilla2 library not found — install libqscintilla2-qt6-dev")
+    message(FATAL_ERROR "QScintilla2 library not found — install libqscintilla2-qt6")
 endif()
 message(STATUS "QScintilla2: ${QSCINTILLA2_LIB}")
 
@@ -56,6 +56,7 @@ set(WINCONTROLS_BASE
     src/WinControls/DockingWnd.cpp
     src/WinControls/SplitterContainer.h
     src/WinControls/SplitterContainer.cpp
+    src/WinControls/Splitter.cpp
     src/WinControls/StaticDialog.h
     src/WinControls/StaticDialog.cpp
 )
@@ -475,6 +476,7 @@ set(LEXILLA_INCLUDE "/home/piotro/.openclaw/workspace/notepad-plus-plus-translat
 
 target_include_directories(npp-qt PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/MISC/Common
     ${CMAKE_CURRENT_SOURCE_DIR}/src/WinControls
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}/npp-qt_autogen  # WORKAROUND: AUTOMOC mocs_compilation.cpp includes "SUBDIR/moc_Foo.cpp"

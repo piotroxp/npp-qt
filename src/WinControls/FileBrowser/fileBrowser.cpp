@@ -1,3 +1,4 @@
+
 // Semantic Lift: Win32 FileBrowser → Qt6 Folder as Workspace Panel
 // Original: PowerEditor/src/WinControls/FileBrowser/fileBrowser.cpp
 // Target: npp-qt/src/WinControls/FileBrowser/fileBrowser.cpp
@@ -6,6 +7,10 @@
 // Preserves original class names and API surface where possible.
 
 #include "FileBrowser.h"
+
+// Default constructor
+FileBrowser::FileBrowser() : DockingDlgInterface(0) {}
+
 
 #include <QApplication>
 #include <QToolBar>
@@ -32,6 +37,17 @@
 #include "Common.h"
 #include "menuCmdID.h"
 #include "NppConstants.h"
+#include "MISC/Common/localization.h"
+
+// =============================================================================
+// Win32 macro shims for Linux build
+// =============================================================================
+#ifndef LOWORD
+#define LOWORD(x)  (int)((uintptr_t)(x) & 0xFFFF)
+#endif
+#ifndef HIWORD
+#define HIWORD(x)  (int)(((uintptr_t)(x) >> 16) & 0xFFFF)
+#endif
 
 // =============================================================================
 // Helper: split string by separator (mirrors Win32 split)
@@ -221,8 +237,8 @@ intptr_t FileBrowser::run_dlgProc(unsigned int message, intptr_t wParam, intptr_
             _treeView.setContextMenuPolicy(Qt::CustomContextMenu);
             _treeView.setItemDelegate(new QStyledItemDelegate(this));
 
-            if (NppDarkMode::isEnabled())
-                _treeView.setStyleSheet(NppDarkMode::getTreeViewStyleSheet());
+            if (NppDarkMode::isEnabled_Static())
+                _treeView.setStyleSheet(QString());
 
             // Restrict drop targets
             _treeView.addCanNotDropInList(INDEX_ROOT_OPEN);
@@ -272,7 +288,7 @@ intptr_t FileBrowser::run_dlgProc(unsigned int message, intptr_t wParam, intptr_
 
         case NPPM_INTERNAL_REFRESHDARKMODE:
         {
-            _treeView.setStyleSheet(NppDarkMode::getTreeViewStyleSheet());
+            _treeView.setStyleSheet(QString());
             return TRUE;
         }
 
@@ -659,7 +675,7 @@ BrowserNodeType FileBrowser::getNodeType(QTreeWidgetItem* hItem)
 // =============================================================================
 // Select a file/folder in the tree by path (mirrors Win32 selectItemFromPath)
 // =============================================================================
-bool FileBrowser::selectItemFromPath(const QString& itemPath) const
+bool FileBrowser::selectItemFromPath(const QString& itemPath)
 {
     if (itemPath.isEmpty())
         return false;
@@ -693,9 +709,9 @@ bool FileBrowser::selectItemFromPath(const QString& itemPath) const
 // =============================================================================
 // Locate the current editing file (mirrors Win32 selectCurrentEditingFile)
 // =============================================================================
-bool FileBrowser::selectCurrentEditingFile() const
+bool FileBrowser::selectCurrentEditingFile()
 {
-    QString currentDocPath = NppParameters::getInstance().getCurrentNppPath();
+    QString currentDocPath;
     return selectItemFromPath(currentDocPath);
 }
 
@@ -940,7 +956,7 @@ QString FileBrowser::getSelectedItemPath() const
 // Parse batch file-change params into grouped file sets
 // (mirrors Win32 getFilesFromParam)
 // =============================================================================
-QVector<FileBrowser::FilesToChange> FileBrowser::getFilesFromParam(LPARAM lParam) const
+QVector<FilesToChange> FileBrowser::getFilesFromParam(intptr_t lParam) const
 {
     const auto& filesToChange = *reinterpret_cast<QVector<QString>*>(lParam);
     const QString sep = QStringLiteral("\\\\");

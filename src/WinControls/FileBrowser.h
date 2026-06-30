@@ -6,6 +6,7 @@
 // Preserves original class names and API surface where possible.
 
 #pragma once
+#include "NppConstants.h"
 
 #include <QWidget>
 #include <QTreeWidget>
@@ -174,6 +175,9 @@ public:
     class FileBrowser* _pFileBrowser = nullptr;
 
 private slots:
+    void doAdd();
+    void doRemove();
+    void doRename();
     void onDirectoryChanged(const QString& path);
     void processChanges();
 
@@ -322,6 +326,8 @@ public:
     // Compatibility shims
     void setBackgroundColor(const QColor& col);
     void setForegroundColor(const QColor& col);
+    void setText() {}
+    void setText(const QString& text) { Q_UNUSED(text); }
 
     // Node queries
     QString getNodePath(QTreeWidgetItem* node) const;
@@ -346,8 +352,8 @@ public:
                       const QString& renameTo);
 
     // Path selection
-    bool selectItemFromPath(const QString& itemPath) const;
-    bool selectCurrentEditingFile() const;
+    bool selectItemFromPath(const QString& itemPath);
+    bool selectCurrentEditingFile();
 
     // Custom events (Win32 registered messages)
     bool handleAddFile(LPARAM lParam);
@@ -383,7 +389,7 @@ private:
                                                      const FolderInfo& directoryStructure);
 
     // File batch helpers (Win32 getFilesFromParam)
-    QVector<FilesToChange> getFilesFromParam(LPARAM lParam) const;
+    QVector<FilesToChange> getFilesFromParam(intptr_t lParam) const;
 
     // addToTree / deleteFromTree (Win32 methods)
     bool addToTree(FilesToChange& group, QTreeWidgetItem* node);

@@ -21,8 +21,6 @@ class ScintillaComponent;
 //   - ScintillaComponent  (was ScintillaEditView — single editor widget)
 //   - ScintillaCtrls      (was ScintillaCtrls  — factory/manager for multiple editors)
 
-#pragma once
-
 #include <QWidget>
 #include <QString>
 #include <QByteArray>
@@ -33,6 +31,9 @@ class ScintillaComponent;
 #include <QScrollBar>
 #include <QEvent>
 #include "NppConstants.h"
+// Forward declarations for Win32 interface types not yet fully lifted
+class ISorter;         // line-sorter interface (stubbed in npp-qt)
+struct ColumnModeInfos; // column-mode selection data (stubbed)
 
 // ScintillaEditBase provides the Qt6 platform layer for Scintilla.
 // Stub implementation lives in src/ScintillaEditBase.{h,cpp}; replace with
@@ -402,7 +403,6 @@ public:
     bool expandWordSelection();
 
     // --- Selection info ---
-    std::pair<size_t, size_t> getSelectedCharsAndLinesCount(size_t maxSels) const;
     size_t getUnicodeSelectedLength() const;
     std::pair<size_t, size_t> getSelectionLinesRangeSel(intptr_t selNum) const;
     bool getIndicatorRangeForPos(size_t indicatorNumber, size_t* from = nullptr,
@@ -533,8 +533,6 @@ public:
 
     // Static: returns the UserDefineDialog singleton (alternate entry point)
     static UserDefineDialog* getUserDefineDialog() { return getUserDefineDlg(); }
-
-signals:
 
 signals:
     // Forward Scintilla notifications as Qt signals.

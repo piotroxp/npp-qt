@@ -14,6 +14,8 @@
 //   drawItem()                      → ClipboardListDelegate::paint()
 
 #pragma once
+#include "Window.h"
+#include "ScintillaComponent.h"
 
 #include <QWidget>
 #include <QListWidget>
@@ -35,6 +37,8 @@
 #include <QContextMenuEvent>
 
 #include "DockingWnd.h"
+#include "Window.h"              // for HWND, HINSTANCE shims
+#include "ScintillaComponent.h"  // for ScintillaEditView
 
 // =============================================================================
 // Win32 API stubs used by this class
@@ -42,15 +46,6 @@
 #define IDM_CLIPBOARD_FIND_DATA   0x1000
 #define IDM_CLIPBOARD_CLEAR       0x1001
 #define IDM_CLIPBOARD_PASTE       0x1002
-
-// =============================================================================
-// clipboardFormatNppTextLen — N++ internal clipboard format
-// Win32:  RegisterClipboardFormat(CF_NPPTEXTLEN)
-// Qt6:    QMimeData custom format (application/x-notepadpp-textlen)
-// =============================================================================
-static inline QString clipboardFormatNppTextLen() {
-    return QStringLiteral("application/x-notepadpp-textlen");
-}
 
 // =============================================================================
 // ClipboardDataInfo — raw clipboard data + binary flag
@@ -152,7 +147,7 @@ public:
     ~ClipboardHistoryPanel() override;
 
     // Win32 compat: init(HINSTANCE, HWND, ScintillaEditView**)
-    void init(HINSTANCE hInst, HWND hPere, ScintillaEditView** ppEditView);
+    void init(HWND hPere, ScintillaEditView** ppEditView);
 
     // Dark mode colors — mirrors Win32 setBackgroundColor / setForegroundColor
     void setBackgroundColor(const QColor& bgColor) override;
@@ -173,6 +168,11 @@ public:
 
     // Get/set the list widget (for dark mode scrollbar)
     QListWidget* getListWidget() const { return _listWidget; }
+
+    // Win32 compat shim
+    void setText(const QString& text) { Q_UNUSED(text); }
+    void setText() {}
+    void init() { init(nullptr, nullptr); }
 
 signals:
     // Emitted when user double-clicks a clipboard item

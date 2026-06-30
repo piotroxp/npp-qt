@@ -32,6 +32,26 @@
 #include "MISC/Common/clipboardFormats.h"
 #include "NppDarkMode.h"
 #include "Scintilla.h"
+#include "NppConstants.h"
+#include "Notepad_plus_msgs.h"
+
+// =============================================================================
+// Win32 stub declarations — compile-time shims for Linux build
+// =============================================================================
+// Messages / identifiers
+#ifdef _WIN32
+#include <windows.h>
+#else
+// Win32 message / notification constants for Linux (WM_INITDIALOG is in NppConstants.h)
+constexpr int WM_CHANGECBCHAIN = 0x030D;
+constexpr int WM_DRAWCLIPBOARD = 0x0308;
+constexpr int WM_CTLCOLORLISTBOX = 0x0135;
+constexpr int LBN_DBLCLK = 4;
+constexpr int IDC_LIST_CLIPBOARD = 0;
+// Helper macros (WORD is already a macro in windows.h; on Linux use unparenthesized form)
+static inline int _LOWORD(intptr_t x) { return int(uintptr_t(x) & 0xFFFF); }
+static inline int _HIWORD(intptr_t x) { return int((uintptr_t(x) >> 16) & 0xFFFF); }
+#endif
 
 // =============================================================================
 // ByteArray — copies ClipboardDataInfo bytes into a heap buffer
@@ -207,7 +227,7 @@ ClipboardHistoryPanel::~ClipboardHistoryPanel()
 // =============================================================================
 // init — Win32: WM_INITDIALOG handler
 // =============================================================================
-void ClipboardHistoryPanel::init(HINSTANCE, HWND hPere, ScintillaEditView** ppEditView)
+void ClipboardHistoryPanel::init(HWND hPere, ScintillaEditView** ppEditView)
 {
     Q_UNUSED(hPere);
     _ppEditView = ppEditView;
@@ -215,8 +235,8 @@ void ClipboardHistoryPanel::init(HINSTANCE, HWND hPere, ScintillaEditView** ppEd
     // Win32: SetClipboardViewer(_hSelf) — begins watching clipboard changes
     // Qt6: QClipboard::changed signal is always active; no registration needed
 
-    // Win32: NppDarkMode::setDarkScrollBar(GetDlgItem(_hSelf, IDC_LIST_CLIPBOARD))
-    NppDarkMode::setDarkScrollBar(_listWidget);
+    // Win32: NppDarkMode::instance().setDarkScrollBar(GetDlgItem(_hSelf, IDC_LIST_CLIPBOARD))
+    NppDarkMode::instance().setDarkScrollBar(_listWidget);
 }
 
 // =============================================================================
@@ -557,7 +577,7 @@ void ClipboardHistoryPanel::onClipboardChanged(QClipboard::Mode mode)
 
 // =============================================================================
 // onItemDoubleClicked — Qt slot: user double-clicked a list item
-// Win32: IDC_LIST_CLIPBOARD, HIWORD(wParam) == LBN_DBLCLK
+// Win32: IDC_LIST_CLIPBOARD, _HIWORD(wParam) == LBN_DBLCLK
 // =============================================================================
 void ClipboardHistoryPanel::onItemDoubleClicked(QListWidgetItem* item)
 {
@@ -647,14 +667,14 @@ intptr_t ClipboardHistoryPanel::run_dlgProc(unsigned int message,
     switch (message) {
 
     case WM_INITDIALOG: {
-        // Win32: SetClipboardViewer(_hSelf) + NppDarkMode::setDarkScrollBar
-        NppDarkMode::setDarkScrollBar(_listWidget);
+        // Win32: SetClipboardViewer(_hSelf) + NppDarkMode::instance().setDarkScrollBar
+        NppDarkMode::instance().setDarkScrollBar(_listWidget);
         return 1;  // TRUE (message handled)
     }
 
     case NPPM_INTERNAL_REFRESHDARKMODE: {
         // Win32: refresh dark scrollbar on theme change
-        NppDarkMode::setDarkScrollBar(_listWidget);
+        NppDarkMode::instance().setDarkScrollBar(_listWidget);
         return 1;
     }
 
@@ -687,9 +707,9 @@ intptr_t ClipboardHistoryPanel::run_dlgProc(unsigned int message,
 
     case WM_COMMAND: {
         // Win32: IDC_LIST_CLIPBOARD notification (LBN_*)
-        switch (LOWORD(wParam)) {
+        switch (_LOWORD(wParam)) {
         case IDC_LIST_CLIPBOARD: {
-            if (HIWORD(wParam) == LBN_DBLCLK) {
+            if (_HIWORD(wParam) == LBN_DBLCLK) {
                 int sel = _listWidget->currentRow();
                 if (sel >= 0)
                     pasteItemAt(sel);
@@ -712,8 +732,8 @@ intptr_t ClipboardHistoryPanel::run_dlgProc(unsigned int message,
 
     case WM_SIZE: {
         // Win32: MoveWindow(GetDlgItem(_hSelf, IDC_LIST_CLIPBOARD), 0, 0, w, h, TRUE)
-        int width  = LOWORD(lParam);
-        int height = HIWORD(lParam);
+        int width  = _LOWORD(lParam);
+        int height = _HIWORD(lParam);
         if (_listWidget)
             _listWidget->resize(width, height);
         return 0;

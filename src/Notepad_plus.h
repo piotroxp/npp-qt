@@ -369,7 +369,7 @@ private:
 	ContextMenu _tabPopupDropMenu;
 	ContextMenu _fileSwitcherMultiFilePopupMenu;
 
-	ToolBar	_toolBar;
+	Toolbar	_toolBar;
 
     StatusBar _statusBar;
 	ReBar _rebarTop;

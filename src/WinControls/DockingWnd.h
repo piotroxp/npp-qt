@@ -177,12 +177,8 @@ public:
     QWidget* getCaptionWnd() const { return _captionBar; }
 
     void setCaptionTop(bool isTop);
-    void setCaptionTop(BOOL isTopCaption);
-    bool isCaptionTop() const { return _isTopCaption; }
 
     void setActive(bool active);
-    void SetActive(BOOL bState);
-    bool isActive() const { return _isActive; }
 
     // setText(bool) — Qt6 equivalent of Win32 show/hide for docking containers
     void setText(bool shouldShow) { shouldShow ? QWidget::show() : QWidget::hide(); }
@@ -193,13 +189,9 @@ public:
 
     // Win32 compatibility
     size_t getElementCnt() const { return static_cast<size_t>(_widgetData.size()); }
-    void setCaptionTop(BOOL isTopCaption);
-    void SetActive(BOOL bState);
-    BOOL startMovingFromTab();
 
     // Font cleanup (mirrors Win32 destroyFonts)
     void destroyFonts();
-    void setFloating(bool floating);
 
     QSize minimumSizeHint() const override;
 
@@ -346,7 +338,7 @@ public slots:
 
     // Focus management
     void onFocusChanged(QWidget* old, QWidget* now);
-    void focusClient();
+    QWidget* focusClient();
 
     // Container existence check
     bool doesContExist(size_t iCont) const;

@@ -594,6 +594,9 @@ void DockingSplitter::paintEvent(QPaintEvent* event) {
 // DockingManager
 // =============================================================================
 
+
+// Static member definition
+bool DockingManager::_isRegistered = false;
 DockingManager::DockingManager(QWidget* parent)
     : QWidget(parent)
 {
@@ -791,4 +794,15 @@ QWidget* DockingManager::findDockedWidgetByName(const QString& name) {
 
 intptr_t DockingDlgInterface::run_dlgProc(unsigned int, intptr_t, intptr_t) {
     return 0;
+}
+// Stub implementations for DockingManager methods not yet ported from Win32
+void DockingManager::onFocusChanged(QWidget* old, QWidget* now) {
+    Q_UNUSED(old); Q_UNUSED(now);
+    // Will be implemented when DockingManager focus tracking is wired up
+}
+QWidget* DockingManager::focusClient() {
+    return _mainWindow;
+}
+bool DockingManager::doesContExist(unsigned long hClient) const {
+    return hClient != 0;
 }

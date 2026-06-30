@@ -3,7 +3,6 @@
 // Target: npp-qt/src/WinControls/SplitterContainer.cpp
 
 #include "SplitterContainer.h"
-#include "SplitterContainer/Splitter.cpp"  // concrete Splitter implementation
 #include <QApplication>
 #include <QDebug>
 #include <QVBoxLayout>

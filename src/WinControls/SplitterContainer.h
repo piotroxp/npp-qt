@@ -12,85 +12,7 @@
 #include <QVector>
 #include <QPair>
 #include "Window.h"
-#include "SplitterContainer/Splitter.h"
-
-// =============================================================================
-// Splitter — single resize handle widget (lifted from Splitter.h + Splitter.cpp)
-// =============================================================================
-
-class Splitter : public QWidget
-{
-    Q_OBJECT
-
-public:
-    explicit Splitter(Qt::Orientation orient, QWidget* parent = nullptr);
-    ~Splitter() override = default;
-
-    void setSize(int size) { _splitterSize = size; update(); }
-    int size() const { return _splitterSize; }
-
-    void setRatio(double ratio) { _splitRatio = ratio; }
-    double ratio() const { return _splitRatio; }
-
-    void setFixed(bool fixed) { _isFixed = fixed; }
-    bool isFixed() const { return _isFixed; }
-
-    void setDraggable(bool draggable) { _draggable = draggable; }
-    bool isDraggable() const { return _draggable; }
-
-    void setFlags(unsigned int flags) { _flags = flags; }
-    unsigned int flags() const { return _flags; }
-
-    bool isVertical() const { return _orientation == Qt::Vertical; }
-
-    void updateClickZones();
-
-signals:
-    void splitterMoved(double newRatio);
-    void doubleClicked(Qt::MouseButton button);
-
-protected:
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void mouseDoubleClickEvent(QMouseEvent* event) override;
-    void paintEvent(QPaintEvent* event) override;
-    void enterEvent(QEnterEvent* event) override;
-    void leaveEvent(QEvent* event) override;
-
-private:
-    int getClickZone(WH which) const;
-    void adjustZoneToDraw(QRect& rc2def, ZONE_TYPE whichZone) const;
-    void drawSplitter(QPainter& painter);
-    void drawArrow(QPainter& painter, const QRect& rect, Arrow direction);
-    bool isInLeftTopZone(const QPoint& p) const;
-    bool isInRightBottomZone(const QPoint& p) const;
-    void gotoTopLeft();
-    void gotoRightBottom();
-
-    Qt::Orientation _orientation;
-    int _splitterSize = 4;
-    double _splitRatio = 0.5;
-    bool _isDraged = false;
-    bool _isFixed = false;
-    bool _draggable = true;
-    unsigned int _flags = SV_ENABLERDBLCLK | SV_ENABLELDBLCLK;
-    QPoint _dragStartPos;
-    double _dragStartRatio = 0.5;
-    bool _isLeftButtonDown = false;
-
-    // Click zones for collapse arrows
-    QRect _clickZone2TL;
-    QRect _clickZone2BR;
-
-    // Static registration flags (legacy Win32 compatibility — no-op in Qt)
-    static bool _isHorizontalRegistered;
-    static bool _isVerticalRegistered;
-    static bool _isHorizontalFixedRegistered;
-    static bool _isVerticalFixedRegistered;
-};
-
-// =============================================================================
+#include "Splitter.h"
 // SplitterContainer — two-pane container with splitter (lifted from SplitterContainer.h)
 // =============================================================================
 
@@ -145,6 +67,9 @@ signals:
 
 protected:
     void resizeEvent(QResizeEvent* event) override;
+
+    int splitterFixX(int s) const { return s>0 ? s : width() / 2; }
+    int splitterFixY(int s) const { return s>0 ? s : height() / 2; }
 
 private:
     void relayout();

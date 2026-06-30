@@ -18,6 +18,7 @@
 // Original: PowerEditor/src/WinControls/ToolBar/ToolBar.cpp
 
 #include "ToolBar.h"
+#include "NppDarkMode.h"
 #include <QApplication>
 #include <QMenu>
 #include <QVBoxLayout>
@@ -71,7 +72,7 @@ QPixmap makeMissingIconPixmap(const QSize& size) {
 }  // anonymous namespace
 
 void ToolBarIcons::init(const QVector<ToolBarButtonUnit>& buttonUnits, int /*arraySize*/,
-                        const QVector<DynamicCmdIcoBmp>& dynButtons)
+                        const QVector<DynamicIconCmd>& dynButtons)
 {
     _buttonUnits = buttonUnits;
     // Build message → icon mapping from dynamic buttons
@@ -122,7 +123,7 @@ void ToolBarIcons::create(const QSize& iconSize)
         QPainter gp(&grayPm);
         gp.setCompositionMode(QPainter::CompositionMode_Source);
         gp.drawPixmap(0, 0, srcPm);
-        gp.setCompositionMode(QPainter::CompositionMode_Luminosity);
+        gp.setCompositionMode(QPainter::CompositionMode_SourceOver);
         gp.fillRect(grayPm.rect(), Qt::darkGray);
         gp.setCompositionMode(QPainter::CompositionMode_Overlay);
         gp.fillRect(grayPm.rect(), Qt::white);
@@ -261,14 +262,14 @@ void Toolbar::initTheme(const QDomElement& toolIconsDocRoot)
     }
 }
 
-void Toolbar::initHideButtonsConf(NppXml::Document toolButtonsDocRoot,
+void Toolbar::initHideButtonsConf(void* toolButtonsDocRoot,
                                   const IconListButtonUnit* buttonUnitArray,
                                   int buttonCount)
 {
     // Parse the toolbar-buttons XML to restore persisted visibility state.
     // Translates Win32 NppXml::load/toolButtonsDocRoot → QDomElement.
     if (!toolButtonsDocRoot) return;
-    QDomElement toolButtons = toolButtonsDocRoot->documentElement();
+    QDomElement toolButtons = ((QDomDocument*)toolButtonsDocRoot)->documentElement();
     if (toolButtons.isNull()) return;
     toolButtons = NppXml::firstChildElement(toolButtons, "ToolbarButtons");
     if (toolButtons.isNull()) return;
@@ -278,7 +279,7 @@ void Toolbar::initHideButtonsConf(NppXml::Document toolButtonsDocRoot,
     if (!standardButtons.isNull()) {
         const QString& hideAll = NppXml::attribute(standardButtons, "hideAll");
         _toolbarStdButtonsConfArray = std::make_unique<bool[]>(
-            static_cast<size_t>(buttonUnitArray.size()));
+            static_cast<size_t>(buttonCount));
 
         if (hideAll == QStringLiteral("yes")) {
             for (int i = 0; i < buttonCount; ++i)
@@ -292,7 +293,7 @@ void Toolbar::initHideButtonsConf(NppXml::Document toolButtonsDocRoot,
                 int cmdID  = NppXml::intAttribute(btnElem, "id", -1);
                 int index  = NppXml::intAttribute(btnElem, "index", -1);
                 const QString& hide = NppXml::attribute(btnElem, "hide");
-                if (cmdID > -1 && index > -1 && index < buttonUnitArray.size()
+                if (cmdID > -1 && index > -1 && index < buttonCount
                     && buttonUnitArray[index]._cmdID == cmdID
                     && hide == QStringLiteral("yes")) {
                     _toolbarStdButtonsConfArray[index] = false;
@@ -330,7 +331,7 @@ bool Toolbar::init(QApplication* /*app*/, QWidget* parent, ToolBarStatusType typ
     _state = type;
     int dpi = DPIManagerV2::getDpiForWindow(parent);
 
-    int iconSize = DPIManagerV2::scale((_state == TB_LARGE || _state == TB_LARGE2) ? 32 : 16, this);
+    int iconSize = DPIManagerV2::scale((_state == ToolBarDisplayType::TB_LARGE || _state == ToolBarDisplayType::TB_LARGE2) ? 32 : 16, this);
 
     // Build dynamic-message array for init
     QVector<int> dynMessages;
@@ -413,7 +414,7 @@ void Toolbar::reset(bool create)
     }
 
     // Apply dark mode tooltip style
-    if (NppDarkMode::instance().isEnabled()) {
+    if (NppDarkMode::isEnabled_Static()) {
         setStyleSheet(QStringLiteral(
             "QToolBar { background: #2e2e2e; border: none; }"
             "QToolButton { background: transparent; }"
@@ -423,7 +424,7 @@ void Toolbar::reset(bool create)
     }
 
     // Determine icon size from state
-    int iconSz = DPIManagerV2::scale((_state == TB_LARGE || _state == TB_LARGE2) ? 32 : 16, this);
+    int iconSz = DPIManagerV2::scale((_state == ToolBarDisplayType::TB_LARGE || _state == ToolBarDisplayType::TB_LARGE2) ? 32 : 16, this);
     setIconSize(QSize(iconSz, iconSz));
     setMovable(true);
 
@@ -536,13 +537,13 @@ void Toolbar::updateIconLists()
 {
     // Switch active icon list based on current state and dark-mode setting.
     // Translates: Win32 ImageList_Draw + HIMAGELIST → QAction::setIcon()
-    if (_state == TB_STANDARD) {
+    if (_state == ToolBarDisplayType::TB_STANDARD) {
         // Standard Windows bitmaps — icons set from resource in create()
         return;
     }
 
-    bool dark = NppDarkMode::instance().isEnabled();
-    bool set2 = (_state == TB_LARGE2 || _state == TB_SMALL2);
+    bool dark = NppDarkMode::isEnabled_Static();
+    bool set2 = (_state == ToolBarDisplayType::TB_LARGE2 || _state == ToolBarDisplayType::TB_SMALL2);
 
     const QVector<QIcon>& defaultList = dark
         ? (set2 ? _toolBarIcons.getDefaultListSetDM2() : _toolBarIcons.getDefaultListDM())
@@ -583,14 +584,14 @@ int Toolbar::getHeight() const
     return hint.height();
 }
 
-void Toolbar::reduce()  { setState(TB_SMALL); }
-void Toolbar::enlarge() { setState(TB_LARGE); }
-void Toolbar::reduceToSet2()  { setState(TB_SMALL2); }
-void Toolbar::enlargeToSet2() { setState(TB_LARGE2); }
+void Toolbar::reduce()  { setState(ToolBarDisplayType::TB_SMALL); }
+void Toolbar::enlarge() { setState(ToolBarDisplayType::TB_LARGE); }
+void Toolbar::reduceToSet2()  { setState(ToolBarDisplayType::TB_SMALL2); }
+void Toolbar::enlargeToSet2() { setState(ToolBarDisplayType::TB_LARGE2); }
 
 void Toolbar::setToBmpIcons()
 {
-    setState(TB_STANDARD);
+    setState(ToolBarDisplayType::TB_STANDARD);
     reset(true);
 }
 
@@ -624,7 +625,7 @@ void Toolbar::setState(ToolBarStatusType state)
     emit toolBarStyleChanged(_state);
 }
 
-bool Toolbar::changeIcons(int whichLst, int iconIndex, const QString& iconLocation) const
+bool Toolbar::changeIcons(int whichLst, int iconIndex, const QString& iconLocation)
 {
     return _toolBarIcons.replaceIcon(whichLst, iconIndex, iconLocation);
 }
@@ -633,7 +634,7 @@ void Toolbar::registerDynBtn(int message, const toolbarIcons* iconHandles, const
 {
     if (message == 0) return;
     // Register a dynamic (plugin) button. Must be called before init().
-    DynamicCmdIcoBmp dyn;
+    DynamicIconCmd dyn;
     dyn._message = message;
     dyn._icon = iconHandles ? iconHandles->hToolbarIcon : QIcon();
     dyn._absentIcon = absentIcon;
@@ -644,7 +645,7 @@ void Toolbar::registerDynBtn(int message, const toolbarIcons* iconHandles, const
 void Toolbar::registerDynBtnDM(int message, const toolbarIconsWithDarkMode* iconHandles)
 {
     if (message == 0) return;
-    DynamicCmdIcoBmp dyn;
+    DynamicIconCmd dyn;
     dyn._message = message;
     dyn._icon = iconHandles ? iconHandles->hToolbarIcon : QIcon();
     dyn._iconDM = iconHandles ? iconHandles->hToolbarIconDarkMode : QIcon();
@@ -673,7 +674,7 @@ void Toolbar::addToRebar(ReBar* rebar)
 {
     if (_pRebar) return;
     _pRebar = rebar;
-    _reBarBandID = REBAR_BAR_TOOLBAR;
+    _reBarBandID = 0;  // 0
 
     if (rebar) {
         ReBarBandInfo band;
@@ -690,7 +691,7 @@ void Toolbar::addToRebar(ReBar* rebar)
 void Toolbar::resizeIconsDpi(int /*dpi*/)
 {
     // Rebuild icons at the new DPI scale.
-    int iconSz = DPIManagerV2::scale((_state == TB_LARGE || _state == TB_LARGE2) ? 32 : 16, this);
+    int iconSz = DPIManagerV2::scale((_state == ToolBarDisplayType::TB_LARGE || _state == ToolBarDisplayType::TB_LARGE2) ? 32 : 16, this);
     _toolBarIcons.resizeIcon(QSize(iconSz, iconSz));
     reset(true);
 }
@@ -710,7 +711,7 @@ void Toolbar::onChevronClicked()
 void Toolbar::refreshDarkMode()
 {
     // Apply dark/light mode stylesheet to toolbar and all child widgets.
-    if (NppDarkMode::instance().isEnabled()) {
+    if (NppDarkMode::isEnabled_Static()) {
         setStyleSheet(QStringLiteral(
             "QToolBar {"
             "  background-color: #2e2e2e;"
@@ -873,7 +874,7 @@ void ReBar::setGrayBackground(int /*id*/)
 
 int ReBar::getNewID()
 {
-    int idToUse = REBAR_BAR_EXTERNAL;
+    int idToUse = 1;  // 1
     for (int id : _usedIDs) {
         if (id < idToUse) continue;
         if (id == idToUse) ++idToUse;

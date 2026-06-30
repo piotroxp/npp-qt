@@ -212,7 +212,7 @@ Notepad_plus::Notepad_plus()
 
 	if (toolButtonsDocRoot)
 	{
-		_toolBar.initTheme(toolButtonsDocRoot);
+			_toolBar.initTheme(toolButtonsDocRoot ? toolButtonsDocRoot->documentElement() : QDomElement{});
 		_toolBar.initHideButtonsConf(toolButtonsDocRoot, toolBarIcons, sizeof(toolBarIcons) / sizeof(IconListButtonUnit));
 	}
 
@@ -774,12 +774,12 @@ qintptr Notepad_plus::init(QWidget* hwnd)
 	_pluginsManager.notify(&scnN);
 
 	// Toolbar init: Qt6 ToolBar uses its own internal icon setup; no REBAR
-	_toolBar.init(qApp, this, tbStatus, nullptr, 0);
+	_toolBar.init(qApp, this, tbStatus, QVector<ToolBarButtonUnit>(), nullptr, 0);
 	if (!willBeShown)
 		_toolBar.hide();
 
 	// Route toolbar button clicks to Qt signals — no more Win32 NMTOOLBARW
-	connect(&_toolBar, &ToolBar::buttonClicked, this, &Notepad_plus::onToolbarButtonClicked);
+	connect(&_toolBar, &Toolbar::buttonClicked, this, &Notepad_plus::onToolbarButtonClicked);
 
 	//--Init dialogs--//
 	_findReplaceDlg.init(hwnd, hwnd, &_pEditView);
@@ -7483,7 +7483,7 @@ void Notepad_plus::launchClipboardHistoryPanel()
 		NativeLangSpeaker *pNativeSpeaker = nppParams.getNativeLangSpeaker();
 		DockedWidgetData	data{};
 		_pClipboardHistoryPanel->setDockedData(data);
-		_pClipboardHistoryPanel->setText();
+		_pClipboardHistoryPanel->setText({});
 
 		// SendMessage(NPPM_) -> Qt: MODELESSDIALOG, MODELESSDIALOGREMOVE, reinterpret_cast<qintptr>(_pClipboardHistoryPanel->getHSelf()));
 		// define the default docking behaviour
@@ -7514,7 +7514,7 @@ void Notepad_plus::launchClipboardHistoryPanel()
 		_pClipboardHistoryPanel->setForegroundColor(fgColor);
 	}
 
-	_pClipboardHistoryPanel->setText();
+	_pClipboardHistoryPanel->setText({});
 }
 
 void Notepad_plus::launchDocumentListPanel(bool changeFromBtnCmd)
@@ -7708,7 +7708,7 @@ void Notepad_plus::launchFileBrowser(const vector<wstring> & folders, const wstr
 		_pFileBrowser->addRootFolder(QString::fromStdWString(folders[i]));
 	}
 
-	_pFileBrowser->setText();
+	_pFileBrowser->setText({});
 	_pFileBrowser->selectItemFromPath(QString::fromStdWString(selectedItemPath));
 
 	checkMenuItem(IDM_VIEW_FILEBROWSER, true);
