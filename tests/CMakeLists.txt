@@ -5,12 +5,13 @@ cmake_minimum_required(VERSION 3.16)
 # All test targets are built together; `make test` / ctest runs them.
 # =============================================================================
 
-# Require Qt Test component (supplied by the Qt6 package found in parent)
 find_package(Qt6 REQUIRED COMPONENTS Test)
-# Also need Xml for ToolBar.h (QDomDocument)
 find_package(Qt6 REQUIRED COMPONENTS Xml)
 
-# Collect test source files
+# Global fallback: run all Qt tests headless.
+# Individual tests can override via set_tests_properties() if needed.
+set(CTEST_ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 set(TEST_SOURCES
     TestUtf8_16.cpp
     TestNppDarkMode.cpp
@@ -22,21 +23,32 @@ set(TEST_SOURCES
     TestMain.cpp
 )
 
-# ---------------------------------------------------------------------------
-# Explicitly MOC WindowBase for the test library (AUTOMOC misses it).
-# ---------------------------------------------------------------------------
+# MOC WindowBase for the test library (AUTOMOC misses it).
 qt6_generate_moc(${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls/Window.h
                  ${CMAKE_CURRENT_BINARY_DIR}/moc_Window.cpp)
 
 # ---------------------------------------------------------------------------
-# Test helper library — contains pure-logic and widget-free source files
-# that tests need to link against.
-# Qt6::Xml is included for ToolBar.h (QDomDocument stubs).
+# npp-qt-test-lib — pure-logic sources only.
+# No Qt6::Widgets/Gui so tests run without XDG_RUNTIME_DIR.
 # ---------------------------------------------------------------------------
 add_library(npp-qt-test-lib STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/Utf8_16.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls/ReadDirectoryChanges.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls/ReadDirectoryChanges/ReadDirectoryChangesPrivate.cpp
+)
+target_link_libraries(npp-qt-test-lib PRIVATE Qt6::Core Qt6::Xml)
+target_include_directories(npp-qt-test-lib PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls/ReadDirectoryChanges
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/MISC
+)
+
+# ---------------------------------------------------------------------------
+# npp-qt-test-lib-gui — sources that need Qt6::Widgets/Gui.
+# This lib links Qt6::Widgets so the Qt GUI subsystem initializes.
+# Its tests run with XDG_RUNTIME_DIR set via ctest ENVIRONMENT.
+# ---------------------------------------------------------------------------
+add_library(npp-qt-test-lib-gui STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/NppDarkMode.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls/ImageListSet.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls/StaticDialog.cpp
@@ -45,25 +57,42 @@ add_library(npp-qt-test-lib STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls/CustomFileDialog.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/moc_Window.cpp
 )
-target_link_libraries(npp-qt-test-lib PRIVATE Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Xml Qt6::PrintSupport)
-target_include_directories(npp-qt-test-lib PRIVATE
+target_link_libraries(npp-qt-test-lib-gui PRIVATE
+    Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Xml Qt6::PrintSupport npp-qt-test-lib
+)
+target_include_directories(npp-qt-test-lib-gui PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls/ReadDirectoryChanges
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/MISC
 )
 
-# Convenience macro: add one test target
-function(add_npp_test NAME)
+# ---------------------------------------------------------------------------
+# Test macros
+# ---------------------------------------------------------------------------
+function(add_npp_test_pure NAME)
     add_executable(${NAME} EXCLUDE_FROM_ALL ${ARGN})
-    target_link_libraries(${NAME}
-        PRIVATE
-            Qt6::Core
-            Qt6::Widgets
-            Qt6::Gui
-            Qt6::Test
-            Qt6::Xml
-            npp-qt-test-lib
+    target_link_libraries(${NAME} PRIVATE Qt6::Core Qt6::Test Qt6::Xml npp-qt-test-lib)
+    target_include_directories(${NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls/ReadDirectoryChanges
+    )
+    target_compile_definitions(${NAME} PRIVATE
+        QT_DISABLE_DEPRECATED_BEFORE=0x060000 QCUSTOMBUILD_DEBUG=1
+    )
+    add_test(NAME ${NAME} COMMAND ${NAME})
+    # Disable Qt6::Test subprocess mode to prevent both the hang and the X display
+    # dependency. Pure tests are unit-style and don't need test isolation.
+    set_tests_properties(${NAME} PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_TEST_SUBPROCESS=no"
+    )
+endfunction()
+
+function(add_npp_test_gui NAME)
+    add_executable(${NAME} EXCLUDE_FROM_ALL ${ARGN})
+    target_link_libraries(${NAME} PRIVATE
+        Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Test Qt6::Xml npp-qt-test-lib-gui
     )
     target_include_directories(${NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../src
@@ -71,21 +100,25 @@ function(add_npp_test NAME)
         ${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls/ReadDirectoryChanges
     )
     target_compile_definitions(${NAME} PRIVATE
-        QT_DISABLE_DEPRECATED_BEFORE=0x060000
-        QCUSTOMBUILD_DEBUG=1
+        QT_DISABLE_DEPRECATED_BEFORE=0x060000 QCUSTOMBUILD_DEBUG=1
     )
     add_test(NAME ${NAME} COMMAND ${NAME})
+    set_tests_properties(${NAME} PROPERTIES
+        ENVIRONMENT "XDG_RUNTIME_DIR=/tmp/npp-test-runtime;QT_QPA_PLATFORM=offscreen;QT_TEST_SUBPROCESS=no"
+    )
 endfunction()
 
-# --- Unit tests (pure logic, no GUI) ---
+# Pure unit tests — no Qt6::Widgets dependency, no XDG_RUNTIME_DIR needed.
+# NOTE: Do NOT set QT_QPA_PLATFORM=offscreen for Qt6Test-based tests — it causes
+# Qt6Test's subprocess runner to hang on exit (known Qt6 bug, not our code).
+add_npp_test_pure(npp-test-utf8_16   TestUtf8_16.cpp)
+add_npp_test_pure(npp-test-dirwatch TestDirectoryWatcher.cpp)
 
-add_npp_test(npp-test-utf8_16   TestUtf8_16.cpp)
-add_npp_test(npp-test-darkmode  TestNppDarkMode.cpp)
-add_npp_test(npp-test-colour    TestColourPicker.cpp)
-add_npp_test(npp-test-lesdlgs  TestLesDlgs.cpp)
-add_npp_test(npp-test-filedlg  TestCustomFileDialog.cpp)
-add_npp_test(npp-test-dirwatch TestDirectoryWatcher.cpp)
-add_npp_test(npp-test-iconset  TestImageListSet.cpp)
+# GUI tests — Qt6::Widgets required; XDG_RUNTIME_DIR set at runtime via ctest
+add_npp_test_gui(npp-test-darkmode  TestNppDarkMode.cpp)
+add_npp_test_gui(npp-test-colour    TestColourPicker.cpp)
+add_npp_test_gui(npp-test-lesdlgs  TestLesDlgs.cpp)
+add_npp_test_gui(npp-test-filedlg  TestCustomFileDialog.cpp)
+add_npp_test_gui(npp-test-iconset  TestImageListSet.cpp)
 
-# Enable test reporting via CTest
 include(CTest)

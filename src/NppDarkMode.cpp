@@ -10,7 +10,6 @@
 #include "WinControls/ImageListSet.h"
 #include <string>
 
-#include <QApplication>
 #include <QStyleFactory>
 #include <QStyle>
 #include <QPalette>

@@ -5,7 +5,6 @@
 #include "ImageListSet.h"
 #include "NppDarkMode.h"
 
-#include <QApplication>
 #include <QPainter>
 #include <QPixmap>
 #include <QBitmap>

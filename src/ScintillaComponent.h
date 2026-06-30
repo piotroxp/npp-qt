@@ -366,6 +366,68 @@ public:
     void currentLinesUp() const;
     void currentLinesDown() const;
 
+    // --- EOL ---
+    QString getEolString() const;
+
+    // --- Scroll / navigation ---
+    void scrollPosToCenter(size_t pos);
+
+    // --- Line sorting / manipulation ---
+    void sortLines(size_t fromLine, size_t toLine, ISorter* pSort);
+    void removeDuplicateLines();
+    void hideLines();
+    bool hidelineMarkerClicked(size_t lineNumber);
+
+    // --- Hide/show lines ---
+    void hideMarkedLines(size_t searchStart, bool toEndOfDoc) const;
+    void showHiddenLines(size_t searchStart, bool toEndOfDoc, bool doDelete) const;
+
+    // --- NPC (non-printing characters) ---
+    void showNpc(bool willBeShown, bool isSearchResult = false);
+    void showCcUniEol(bool willBeShown, bool isSearchResult = false);
+    void setNpcAndCcUniEOL(long color = -1);
+
+    // --- Column mode ---
+    void beginOrEndSelect(bool isColumnMode);
+    void updateBeginEndSelectPosition(bool isInsert, size_t position, size_t length);
+    ColumnModeInfos getColumnModeSelectInfo();
+    void columnReplaceString(ColumnModeInfos& cmi, const char* str) const;
+    void columnReplaceNumeric(ColumnModeInfos& cmi, size_t initial, size_t incr,
+                             size_t repeat, int format, int lead) const;
+    void setMultiSelections(const ColumnModeInfos& cmi);
+    bool pasteToMultiSelection() const;
+
+    // --- Word selection ---
+    std::pair<size_t, size_t> getWordRange();
+    bool expandWordSelection();
+
+    // --- Selection info ---
+    std::pair<size_t, size_t> getSelectedCharsAndLinesCount(size_t maxSels) const;
+    size_t getUnicodeSelectedLength() const;
+    std::pair<size_t, size_t> getSelectionLinesRangeSel(intptr_t selNum) const;
+    bool getIndicatorRangeForPos(size_t indicatorNumber, size_t* from = nullptr,
+                                  size_t* to = nullptr, size_t* cur = nullptr);
+
+    // --- Folding expand overloads ---
+    void expandFull(size_t& line, bool doExpand, bool force, int visLevels, int level) const;
+    void marginClickExpand(size_t position, int modifiers);
+
+    // --- Margin display with DPI ---
+    void showMarginWithDpi(int whichMargin, bool visible, int dpi);
+    void showChangeHistoryMargin(bool visible, int dpi);
+
+    // --- Indentation ---
+    bool isPythonStyleIndentationForLang(LangType typeDoc) const;
+
+    // --- Clipboard ---
+    void markedTextToClipboard(int indiStyle, bool doAll = false);
+
+    // --- EOL conversion ---
+    void setEolModeAndConvert(int mode);
+
+    // --- Search/highlight helper ---
+    void searchAndHighlight(ScintillaComponent* pHighlightView, const QByteArray& textUtf8);
+
     // --- Line number width ---
 
     void updateLineNumberWidth();

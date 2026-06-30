@@ -2569,6 +2569,32 @@ bool NppParameters::writeProjectPanelsSettings() { return true; }
 
 
 
+// === CmdLineParamsDTO implementation ===
+CmdLineParamsDTO CmdLineParamsDTO::FromCmdLineParams(const CmdLineParams& params)
+{
+    CmdLineParamsDTO dto;
+    dto._isReadOnly = params._isReadOnly;
+    dto._isNoSession = params._isNoSession;
+    dto._isSessionFile = params._isSessionFile;
+    dto._isRecursive = params._isRecursive;
+    dto._openFoldersAsWorkspace = params._openFoldersAsWorkspace;
+    dto._monitorFiles = params._monitorFiles;
+    dto._line2go = params._line2go;
+    dto._column2go = params._column2go;
+    dto._pos2go = params._pos2go;
+    dto._langType = params._langType;
+
+    if (!params._udlName.empty()) {
+        wcsncpy(dto._udlName, params._udlName.c_str(), 259);
+        dto._udlName[259] = L'\0';
+    }
+    if (!params._pluginMessage.empty()) {
+        wcsncpy(dto._pluginMessage, params._pluginMessage.c_str(), 2047);
+        dto._pluginMessage[2047] = L'\0';
+    }
+    return dto;
+}
+
 // === MORE STUBS ===
 std::wstring NppParameters::writeStyles(LexerStylerArray&, StyleArray&) { return {}; }
 void NppParameters::addDefaultStyles(const NppXml::Element&) {}

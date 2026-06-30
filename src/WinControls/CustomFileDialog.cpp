@@ -5,8 +5,10 @@
 #include "CustomFileDialog.h"
 #include "NppDarkMode.h"
 
-#include <QApplication>
 #include <QSettings>
+#ifndef UNIT_TEST
+# include <QApplication>
+#endif
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QDir>
@@ -143,7 +145,11 @@ bool CustomFileDialog::getOpenTheCopyAfterSaveAsCopy() const
     // In Qt we check the Shift modifier via QApplication::keyboardModifiers().
     // This must be called immediately after the dialog is accepted, before
     // the event loop continues.
+#ifdef UNIT_TEST
+    return false;  // stub: no keyboard state in headless test
+#else
     return (QApplication::queryKeyboardModifiers() & Qt::ShiftModifier) != 0;
+#endif
 }
 
 bool CustomFileDialog::getCheckboxState() const

@@ -177,16 +177,28 @@ public:
     QWidget* getCaptionWnd() const { return _captionBar; }
 
     void setCaptionTop(bool isTop);
+    void setCaptionTop(BOOL isTopCaption);
     bool isCaptionTop() const { return _isTopCaption; }
 
     void setActive(bool active);
+    void SetActive(BOOL bState);
     bool isActive() const { return _isActive; }
 
     // setText(bool) — Qt6 equivalent of Win32 show/hide for docking containers
     void setText(bool shouldShow) { shouldShow ? QWidget::show() : QWidget::hide(); }
-    void setText(const QString& /*title*/) { /* stub: caption set via DockedWidgetData */ }
+    void setText(const QString& title);
 
     bool isFloating() const { return _isFloating; }
+    void setFloating(bool floating);
+
+    // Win32 compatibility
+    size_t getElementCnt() const { return static_cast<size_t>(_widgetData.size()); }
+    void setCaptionTop(BOOL isTopCaption);
+    void SetActive(BOOL bState);
+    BOOL startMovingFromTab();
+
+    // Font cleanup (mirrors Win32 destroyFonts)
+    void destroyFonts();
     void setFloating(bool floating);
 
     QSize minimumSizeHint() const override;
@@ -332,6 +344,17 @@ public slots:
     // resize() stub — Qt6 uses QWidget::resize; this provides Win32 compat signature
     void resize() { /* triggers internal relayout via resizeEvent */ update(); }
 
+    // Focus management
+    void onFocusChanged(QWidget* old, QWidget* now);
+    void focusClient();
+
+    // Container existence check
+    bool doesContExist(size_t iCont) const;
+
+    // Win32 compat
+    bool isInitialized() const { return _isInitialized; }
+    static bool isRegistered() { return _isRegistered; }
+
 signals:
     void dockInfoChanged();
 
@@ -341,6 +364,10 @@ private:
     int findEmptyContainer() const;
     void relayout();
     QWidget* findDockedWidgetByName(const QString& name);
+
+    // Static class registration flag (always true in Qt, mirrors Win32 RegisterClass)
+    static bool _isRegistered;
+    bool _isInitialized = false;
 
     QVector<DockingContainer*> _containers;
     QVector<DockingSplitter*> _splitters;

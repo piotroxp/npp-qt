@@ -25,8 +25,10 @@
 #include <QFont>
 #include <QCursor>
 
-// Static cursor cache
-QCursor URLCtrl::s_handCursor(Qt::PointingHandCursor);
+// Static cursor cache — lazy to avoid QCursor() ctor (which creates QPixmap)
+// being called at static-init time (before QGuiApplication exists).
+// Use a raw pointer; construct on first access via handCursor().
+QCursor* URLCtrl::s_handCursor = nullptr;
 bool URLCtrl::s_cursorInitialized = false;
 
 // Constructor

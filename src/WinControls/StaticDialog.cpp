@@ -19,9 +19,19 @@ inline unsigned int HIWORD(unsigned int x) { return (x >> 16) & 0xFFFF; }
 #include <QCheckBox>
 #include <QLabel>
 #include <QFileDialog>
-#include <QApplication>
-#include <QWindow>
-#include <QScreen>
+#ifdef UNIT_TEST
+// Stub: unit tests compile StaticDialog without Qt6::Widgets.
+// Provides minimal inline stubs so this translation unit links.
+# include <QWidget>
+# include <QPoint>
+# include <QRect>
+class QScreen;
+inline class QAppStub { public: static QScreen* primaryScreen() { return nullptr; } static QScreen* screenAt(const QPoint&) { return nullptr; } } qApp;
+#else
+# include <QApplication>
+# include <QWindow>
+# include <QScreen>
+#endif
 
 // =============================================================================
 // StaticDialog
@@ -101,8 +111,11 @@ bool StaticDialog::event(QEvent* event) {
 
 void StaticDialog::goToCenter() {
     QWidget* parent = parentWidget();
-    QScreen* screen = QApplication::screenAt(QCursor::pos());
+    QScreen* screen = nullptr;
+#ifndef UNIT_TEST
+    screen = QApplication::screenAt(QCursor::pos());
     if (!screen) screen = QApplication::primaryScreen();
+#endif
     if (!screen) return;
 
     QRect screenGeom = screen->geometry();
@@ -135,7 +148,10 @@ void StaticDialog::moveToCenter() {
 
 bool StaticDialog::handleDpiChange() {
     // Get current DPI and compare to saved
-    QScreen* screen = QApplication::primaryScreen();
+    QScreen* screen = nullptr;
+#ifndef UNIT_TEST
+    screen = QApplication::primaryScreen();
+#endif
     if (!screen) return false;
 
     int newDpi = screen->logicalDotsPerInch();

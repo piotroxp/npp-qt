@@ -3,11 +3,6 @@
 // Target: npp-qt/src/WinControls/ColourPicker.h + .cpp
 
 #include "ColourPicker.h"
-#include <QApplication>
-#include <QPainter>
-#include <QMouseEvent>
-#include <QColorDialog>
-#include <QVBoxLayout>
 #include <QDebug>
 
 // =============================================================================

@@ -232,6 +232,22 @@ int FindReplaceDlg::processAll(ProcessOperation op, const FindOption* opt, bool 
     return processAll(op, opt, isEntire);
 }
 
+int FindReplaceDlg::processAll(ProcessOperation op, const FindersInfo::FindOption* opt, bool isEntire, FindersInfo* findersInfo)
+{
+    if (!opt) return 0;
+    // Convert FindersInfo::FindOption to FindOption (limited field overlap)
+    FindOption converted;
+    converted._isRecursive = opt->_isRecursive;
+    converted._isInHiddenDir = opt->_isInHiddenDir;
+    converted._dotMatchesNewline = opt->_dotDotMatch;
+    converted._isMatchCase = opt->_isMatchCase;
+    converted._isWholeWord = opt->_wholeWord;
+    converted._str2Search = opt->_str2Search;
+    converted._directory = opt->_dirFilter.toStdWString();
+    converted._filters = L"*.*";  // FindersInfo doesn't carry filters; use wildcard
+    return processAll(op, &converted, isEntire, findersInfo);
+}
+
 int FindReplaceDlg::processRange(ProcessOperation op, const std::wstring& txt,
                                 const FindOption* opt, int colourStyleID, int /*extraArg*/,
                                 ScintillaComponent* view2Process)

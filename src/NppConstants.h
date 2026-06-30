@@ -408,6 +408,8 @@ enum changeHistoryState { CHG_HIST_DISABLED = 0, CHG_HIST_ENABLED = 1, CHG_HIST_
 
 // Open/Save dir setting
 enum class OpenSaveDirSetting { USER_DEFAULT_DIR = 0, USER_DEFINE_DIR = 1, ORIGINAL_DIR = 2 };
+// dir_last is the "remember last" directory option (maps to USER_DEFINE_DIR)
+inline constexpr OpenSaveDirSetting dir_last = OpenSaveDirSetting::USER_DEFINE_DIR;
 
 // Multi instance — defined inside NppGUI struct in Parameters.h (NppGUI::MultiInstSetting)
 inline constexpr int monoInst = 0;   // MultiInstSetting::MONO_INSTANCE

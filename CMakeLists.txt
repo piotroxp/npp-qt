@@ -99,8 +99,6 @@ set(WINCONTROLS_PANELS
     src/WinControls/DocumentMap.cpp
     src/WinControls/FunctionList.h
     src/WinControls/FunctionList.cpp
-    src/WinControls/FileBrowser.h
-    src/WinControls/FileBrowser.cpp
     src/WinControls/FindCharsInRange.h
     src/WinControls/FindCharsInRange.cpp
 )
@@ -113,7 +111,9 @@ set(WINCONTROLS_ADVANCED
     src/WinControls/Preference.cpp
     src/WinControls/Preference/preference_rc.h
     src/WinControls/ClipboardHistory.h
-    src/WinControls/ClipboardHistory.cpp
+    src/WinControls/ClipboardHistory/clipboardHistoryPanel.cpp
+    src/WinControls/FileBrowser.h
+    src/WinControls/FileBrowser/fileBrowser.cpp
     src/WinControls/ContextMenu.h
     src/WinControls/ContextMenu.cpp
     src/WinControls/ToolTip.h
@@ -265,6 +265,14 @@ set(MISC_PLUGINS
 )
 
 # =============================================================================
+# MISC — Process management (run external programs)
+# =============================================================================
+set(MISC_PROCESS
+    src/MISC/Process/Processus.h
+    src/MISC/Process/Processus.cpp
+)
+
+# =============================================================================
 # Top-level infrastructure files
 # =============================================================================
 set(INFRASTRUCTURE
@@ -348,6 +356,7 @@ set(SOURCES
     ${MISC_COMMON}
     ${MISC_PLUGINS}
     ${MISC_REGEXT}
+    ${MISC_PROCESS}
 
     # Top-level infrastructure (headers)
     ${INFRASTRUCTURE}

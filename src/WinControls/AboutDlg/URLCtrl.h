@@ -79,6 +79,6 @@ private:
     bool _clicking = false;
 
     // Cached hand cursor (shared)
-    static QCursor s_handCursor;
+    static QCursor* s_handCursor;  // lazy — null until first handCursor() call
     static bool s_cursorInitialized;
 };

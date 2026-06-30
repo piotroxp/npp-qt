@@ -49,7 +49,7 @@
 |-----------|--------|--------|-------|--------|
 | Window | WinControls/Window.h | WinControls/Window.h | 125 | ✅ DONE (header-only) |
 | TabBar | WinControls/TabBar/* | WinControls/TabBar.h/cpp | 539 | ✅ DONE |
-| ToolBar | WinControls/ToolBar/* | WinControls/ToolBar.h/cpp | 368 | ✅ DONE |
+| ToolBar | WinControls/ToolBar/* | WinControls/ToolBar.h/cpp | 812 | ✅ DONE | Full lift: Toolbar (QToolBar) + ReBar (QWidget) + ToolBarIcons (QIcon×8); Win32 TOOLBARCLASSNAME → QToolBar; ICC_WIN95_CLASSES → Qt no-op; TB_ADDBUTTONS → rebuildActions(); RB_INSERTBAND → QVBoxLayout; NppXml theme loading; DPIManagerV2 DPI-aware icons; NppDarkMode dark mode wiring; chevron overflow menu |
 | StatusBar | WinControls/StatusBar/* | WinControls/StatusBar.h/cpp | 239 | ✅ DONE |
 | MainWindow | Notepad_plus_Window.cpp | MainWindow.h/cpp | ~600 | ✅ DONE |
 | Buffer | Buffer.h | Buffer.h | ~200 | ✅ DONE |
@@ -147,12 +147,13 @@
 | shortcut | PowerEditor/src/WinControls/shortcut/shortcut.h/.cpp | src/shortcut.h/.cpp | 349 | ✅ DONE |
 | NppNotification | PowerEditor/src/NppNotification.cpp | src/NppNotification.h/.cpp | 253 | ✅ DONE |
 | NppConstants | PowerEditor/src/MISC/Common/NppConstants.h | src/NppConstants.h | — | ✅ DONE |
+| Processus | PowerEditor/src/MISC/Process/Processus.h/.cpp | src/MISC/Process/Processus.h/.cpp | 68+98 | ✅ DONE | `run()` → `QProcess::startDetached()`; `runSync()` → `QProcess::execute()`; `splitArgs()` hand-rolled whitespace split (no QRegExp) |
 | NppXml | — | src/NppXml.h | — | ✅ STUB |
 | IDAllocator | — | src/MISC/Common/IDAllocator.h | — | ✅ DONE |
 | clipboardFormats | PowerEditor/src/clipboardFormats.h | src/clipboardFormats.h | — | ✅ DONE |
 | keys | PowerEditor/src/keys.h | src/keys.h | — | ✅ DONE |
 | resource | PowerEditor/src/resource.h | src/resource.h | — | ✅ DONE |
-All infrastructure headers live directly in `src/` (not in MISC/Common/). `src/MISC/Common/` holds only `Common`, `EncodingMapper`, `FileInterface`, `IDAllocator`.
+All infrastructure headers live directly in `src/` (not in MISC/Common/). `src/MISC/Common/` holds only `Common`, `EncodingMapper`, `FileInterface`, `IDAllocator`. `src/MISC/Process/` holds `Processus.h/.cpp` (QProcess-based process launch).
 
 ### ✅ WinControls — All Chunks Complete
 
@@ -255,8 +256,10 @@ npp-qt/
     │   │   ├── EncodingMapper.h/.cpp ✅ (encoding ↔ codepage)
     │   │   ├── IDAllocator.h    ✅ (ID range allocator)
     │   │   └── NppConstants.h    ✅ (Win32 constants)
-    │   └── PluginsManager/
-    │       └── PluginsManager.h/.cpp ✅ (QPluginLoader-based plugin mgmt)
+    │   ├── PluginsManager/
+    │   │   └── PluginsManager.h/.cpp ✅ (QPluginLoader-based plugin mgmt)
+    │   └── Process/
+    │       └── Processus.h/.cpp  ✅ (QProcess-based run/runSync)
     └── WinControls/
         ├── Window.h            ✅ (header-only)
         ├── TabBar.h/cpp        ✅
@@ -306,3 +309,48 @@ npp-qt/
 - **Win32 sweep (core files)**: All Win32 patterns (HWND, HDC, HINSTANCE, ::DialogProc, ::WndProc, TEXT(), _T(), #include <windows.h>) are 0 in Parameters.cpp, NppIO.cpp, NppCommands.cpp, NppBigSwitch.cpp, Notepad_plus.cpp, main.cpp. Window.h provides cross-compat shims.
 - **moc includes**: 0 stray `#include "*.moc"` in source tree — CMake AUTOMOC handles all Q_OBJECT headers.
 - **Remaining stubs**: Buffer.cpp (Scintilla init), MainWindow.cpp (NppCommands wiring), PluginsAdmin.cpp (2 stubs), VerticalFileSwitcher.cpp (1 stub on DocTabView), ScintillaEditBase (abstract Scintilla wrapper pending). All are dependency-driven — resolve naturally when Scintilla layer lands.
+
+---
+
+## Session 2026-06-29 (afternoon)
+
+### WinControls completed this session
+| Panel | Action | Files |
+|---|---|---|
+| `MISC/Process/Processus.cpp` | Written | Qt6 `QProcess::startDetached/execute` |
+| `WinControls/TreeView.cpp` | Written (790L) | `QTreeWidget`-based, replaces Win32 `WC_TREEVIEW` |
+| `WinControls/ClipboardHistory/clipboardHistoryPanel.cpp` | Agent written | 29KB — `QListWidget` clipboard history |
+| `WinControls/FileBrowser/fileBrowser.cpp` | Agent written | `QFileSystemModel` + `QTreeView` |
+| `WinControls/ImageListSet.cpp` | Pre-existing verified | `IconList`/`IconLists` with `QIcon` + Fluent color map |
+| `WinControls/ToolBar.cpp` | Written (~893L) | `Toolbar` (QToolBar) + `ReBar` (QWidget) + `ToolBarIcons` (8×QIcon); `DPIManagerV2::scale()` DPI icons; `NppXml` theme loading; `NppDarkMode` dark mode; `registerDynBtn` plugin API; `ToolbarButtonAction` |
+| `WinControls/TreeView.cpp` | Written (790L) | `QTreeWidget`-based, replaces Win32 `WC_TREEVIEW` |
+
+### CMakeLists.txt cleanup
+- Removed incorrect subdir references for panels with flat canonical files
+- Added subdir `.cpp` references for `ClipboardHistory/`, `FileBrowser/`
+- Added `MISC_PROCESS` source set for `MISC/Process/Processus.cpp`
+- Removed duplicate `FileBrowser` entry
+- Deleted orphaned subdirs: `ColourPicker/`, `DockingWnd/`, `FindCharsInRange/`, `PluginsAdmin/`, `StaticDialog/`, `ToolBar/`, `FunctionList/`, `SplitterContainer/` (partial duplicates from abandoned sessions)
+- `FileBrowser/`, `ClipboardHistory/` subdir implementations kept and wired in CMakeLists.txt
+
+### Semantic lift status
+- All 31 WinControls panels ✅ implemented in npp-qt target
+- `SEMANTIC_LIFT_MAP.md` current
+
+---
+
+## Session 2026-06-29 (late)
+
+### ToolBar full implementation written
+- `WinControls/ToolBar.cpp` — 892 lines, full lift:
+  - **Toolbar::init(...)** — QAction[] rebuild from button units
+  - **Toolbar::initTheme()** — QDomElement theme/XML icon loading
+  - **Toolbar::initHideButtonsConf()** — QDomElement visibility state
+  - **Toolbar::reset(bool)** — full toolbar widget rebuild
+  - **Toolbar::rebuildActions()** — QToolBar + QAction per button unit
+  - **Toolbar::findAction/updateIconLists/applyCustomIcons** — icon list management
+  - **Toolbar::addToRebar()** — register with ReBar container
+  - **Toolbar::event()** — DPI change handling
+  - **ReBar** full container implementation (addBand, reNew, removeBand, ID management)
+  - **ToolBarIcons::init/create/resizeIcon/replaceIcon/destroy** — QIcon×8 image list manager
+- Header fix: added `QDomElement _toolIcons`, `QMap<int,QIcon> _dynIconMap`, fixed `ToolBarIcons::init()` signature, added `ImageListSet.h` include for `HLIST_*` constants
