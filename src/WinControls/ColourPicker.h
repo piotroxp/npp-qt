@@ -46,42 +46,10 @@ static const QColor colourItemsData[48] = {
 };
 
 // =============================================================================
-// ColourPopup — color grid popup dialog
-// =============================================================================
-
-class ColourPopup : public QDialog
-{
-    Q_OBJECT
-
-public:
-    explicit ColourPopup(const QColor& defaultColor, QWidget* parent = nullptr);
-    ~ColourPopup() override = default;
-
-    QColor selectedColor() const { return _colour; }
-
-signals:
-    void colorSelected(const QColor& color);
-
-protected:
-    bool eventFilter(QObject* watched, QEvent* event) override;
-    void paintEvent(QPaintEvent* event) override;
-    void mousePressEvent(QMouseEvent* event) override;
-
-private:
-    void selectColor(const QColor& color);
-    QColor colorAt(const QPoint& pt) const;
-    QRect colorRect(int index) const;
-    void showMoreColors();
-
-    QColor _colour;
-    int _selectedIndex = -1;
-    int _hoverIndex = -1;
-    bool _isMoreColorsShown = false;
-};
-
-// =============================================================================
 // ColourPicker — button-like color swatch control
+// ColourPopup (the colour grid dialog) is defined in ColourPicker/ColourPopup.h
 // =============================================================================
+#include "ColourPicker/ColourPopup.h"
 
 class ColourPicker : public Window
 {

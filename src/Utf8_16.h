@@ -183,6 +183,10 @@ private:
     size_t m_nLen = 0;
     // Utf8_16_Read needs its own Utf16_Iter (not shared with Utf8_Iter).
     Utf16_Iter m_myIter16;
+
+public:
+    // Access the internal UTF-16→UTF-8 converter (call read() + get() after convert()).
+    Utf16_Iter& utf16Iter() { return m_myIter16; }
 };
 
 class Utf8_16_Write : public Utf8_16 {

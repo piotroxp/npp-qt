@@ -24,7 +24,7 @@
 FindOption FindReplaceDlg::_options;
 FindOption* FindReplaceDlg::_env = &_options;  // Win32 compat: _env defaulted to _options
 
-FindReplaceDlg::FindReplaceDlg() : QWidget() {}
+FindReplaceDlg::FindReplaceDlg(QWidget* parent) : QWidget(parent) {}
 
 FindReplaceDlg::~FindReplaceDlg() = default;
 
@@ -32,6 +32,7 @@ void FindReplaceDlg::init(void* /*hInst*/, QWidget*& parent, ScintillaComponent*
 {
     if (!ppEditView) throw std::runtime_error("FindReplaceDlg::init: ppEditView is null.");
     _ppEditView = ppEditView;
+    _currentEditor = ppEditView ? *ppEditView : nullptr;
     setWindowTitle("Find / Replace");
     setMinimumWidth(400);
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
@@ -47,10 +48,10 @@ void FindReplaceDlg::setupFindTab()
     _findTab = new QWidget(this);
     QFormLayout* fl = new QFormLayout(_findTab);
     _findEdit = new QLineEdit(_findTab);
-    QCheckBox* wholeWordChk = new QCheckBox("Whole word", _findTab);
-    QCheckBox* matchCaseChk = new QCheckBox("Match case", _findTab);
-    QCheckBox* wrapChk = new QCheckBox("Wrap around", _findTab);
-    wrapChk->setChecked(true);
+    _wholeWordChk = new QCheckBox("Whole word", _findTab);
+    _matchCaseChk = new QCheckBox("Match case", _findTab);
+    _wrapChk = new QCheckBox("Wrap around", _findTab);
+    _wrapChk->setChecked(true);
     QHBoxLayout* btnRow = new QHBoxLayout;
     _findNextBtn = new QPushButton("Find Next", _findTab);
     QPushButton* countBtn = new QPushButton("Count All", _findTab);
@@ -61,9 +62,9 @@ void FindReplaceDlg::setupFindTab()
     btnRow->addWidget(findAllBtn);
     btnRow->addStretch();
     fl->addRow("Find:", _findEdit);
-    fl->addRow(wholeWordChk);
-    fl->addRow(matchCaseChk);
-    fl->addRow(wrapChk);
+    fl->addRow(_wholeWordChk);
+    fl->addRow(_matchCaseChk);
+    fl->addRow(_wrapChk);
     fl->addRow(btnRow);
     _tab->addTab(_findTab, "Find");
 }
@@ -107,6 +108,10 @@ void FindReplaceDlg::onFindNext()
     if (findText.isEmpty()) return;
     FindOption opt = _options;
     opt._str2Search = findText.toStdWString();
+    // Read checkbox states from the dialog
+    if (_wholeWordChk) opt._isWholeWord = _wholeWordChk->isChecked();
+    if (_matchCaseChk) opt._isMatchCase = _matchCaseChk->isChecked();
+    if (_wrapChk) opt._isWrapAround = _wrapChk->isChecked();
     FindStatus status;
     bool found = processFindNext(opt._str2Search.c_str(), &opt, &status);
     updateStatus(found ? "Found" : "Not found", status);
@@ -150,8 +155,8 @@ void FindReplaceDlg::onClose() { hide(); }
 
 bool FindReplaceDlg::processFindNext(const wchar_t* txt2find, const FindOption* options, FindStatus* oFindStatus)
 {
-    if (!_ppEditView || !*_ppEditView || !txt2find) return false;
-    ScintillaComponent* sci = *_ppEditView;
+    ScintillaComponent* sci = _currentEditor;
+    if (!sci || !txt2find) return false;
     // Build search flags
     int flags = 0;
     if (options) {
@@ -184,8 +189,8 @@ bool FindReplaceDlg::processFindNext(const wchar_t* txt2find, const FindOption* 
 
 bool FindReplaceDlg::processReplace(const wchar_t* txt2find, const wchar_t* txt2replace, const FindOption* options)
 {
-    if (!_ppEditView || !*_ppEditView) return false;
-    ScintillaComponent* sci = *_ppEditView;
+    ScintillaComponent* sci = _currentEditor;
+    if (!sci) return false;
     bool found = processFindNext(txt2find, options, nullptr);
     if (found) {
         QByteArray utf8 = QString::fromWCharArray(txt2replace).toUtf8();
@@ -197,8 +202,8 @@ bool FindReplaceDlg::processReplace(const wchar_t* txt2find, const wchar_t* txt2
 int FindReplaceDlg::markAll(const wchar_t* txt2find, int styleID)
 {
     Q_UNUSED(styleID);
-    if (!_ppEditView || !*_ppEditView || !txt2find) return 0;
-    ScintillaComponent* sci = *_ppEditView;
+    ScintillaComponent* sci = _currentEditor;
+    if (!sci || !txt2find) return 0;
     sci->send(SCI_SETTARGETSTART, 0);
     sci->send(SCI_SETTARGETEND, sci->send(SCI_GETLENGTH));
     QByteArray utf8 = QString::fromWCharArray(txt2find).toUtf8();
@@ -309,5 +314,7 @@ const std::wstring& FindReplaceDlg::getText2search() const
 
 void FindReplaceDlg::updateStatus(const QString& message, FindStatus status)
 {
-    emit updateStatus(message, status);
+    Q_UNUSED(status);
+    // Show status in the dialog's window title / find edit tooltip as a hint
+    if (_findEdit) _findEdit->setToolTip(message);
 }

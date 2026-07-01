@@ -206,6 +206,7 @@ struct QuoteParams;
 
 class Notepad_plus final : public MainWindow
 {
+    Q_OBJECT  // needed for qobject_cast<Notepad_plus*> in NppCommands
 friend class FileManager;
 
 public:
@@ -341,6 +342,7 @@ public:
 	QAction* findActionById(QWidget* menu, int cmdID) const;
 
 private:
+    friend class NppCommands;  // NppCommands needs to call private command/auto-comp methods
     QWidget* _pMainWindow = nullptr;
 	DockingManager _dockingManager;
 	std::vector<int> _internalFuncIDs;
@@ -458,8 +460,10 @@ private:
 		void onTrayIconDoubleClicked();
 		void onTrayIconRightClicked();
 		void onTrayIconMiddleClicked();
-		bool isPrelaunch() const { return false; }  // stub: prelaunch mode N/A on Linux
 		void onTrayMenuAction(QAction* action);
+
+	private:
+		bool isPrelaunch() const { return false; }  // stub: prelaunch mode N/A on Linux
 
 	intptr_t _zoomOriginalValue = 0;
 
@@ -526,6 +530,10 @@ private:
 
 	int otherFromView(int whichOne) {
 		return (whichOne == MAIN_VIEW?SUB_VIEW:MAIN_VIEW);
+	}
+
+	ScintillaEditView* getActiveView() {
+		return _pEditView;
 	}
 
 	bool canHideView(int whichOne);	//true if view can safely be hidden (no open docs etc)

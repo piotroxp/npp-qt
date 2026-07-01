@@ -22,6 +22,7 @@
 
 #include "Buffer.h"
 #include "ScintillaComponent/UserDefineDialog.h"
+#include "WinControls/ColourPicker.h"
 
 #include <QApplication>
 #include <QColorDialog>
@@ -76,6 +77,8 @@ static int qColorToSciRGB(const QColor& c)
 {
     return (c.red() << 0) | (c.green() << 8) | (c.blue() << 16);
 }
+
+static int qColorToSciRgb(const QColor& c) { return qColorToSciRGB(c); }
 
 // =============================================================================
 // ScintillaComponent — construction
@@ -152,6 +155,16 @@ ScintillaComponent::ScintillaComponent(QWidget* parent)
     // Connect our internal uiChanged signal to the updateUi slot
     connect(this, &ScintillaComponent::uiChanged,
             this, &ScintillaComponent::updateLineNumberWidth);
+
+    // Connect QsciScintilla's built-in signals for dirty state and cursor tracking.
+    // QsciScintilla emits textChanged() and cursorPositionChanged(int, int).
+    connect(this, &QsciScintilla::textChanged,
+            this, &ScintillaComponent::textChanged);
+
+    connect(this, &QsciScintilla::cursorPositionChanged,
+            this, [this](int line, int index) {
+                emit cursorPositionChanged(line, index);
+            });
 }
 
 ScintillaComponent::~ScintillaComponent()
@@ -324,18 +337,38 @@ void ScintillaComponent::setupMargins()
 
 void ScintillaComponent::setupFonts()
 {
-    // Default editor font: system monospace
-    const QString defaultFont = QStringLiteral("Courier New");
+    // Use a system monospace font for the editor.
+    // QFont("Courier New") falls back gracefully to whatever monospace is available.
+    const QString defaultFontFamily = QStringLiteral("Courier New");
     const int defaultFontSize = 10;
+    QFont monoFont(defaultFontFamily, defaultFontSize);
 
-    // Style 0 is the default style
-    send(SCI_STYLESETFONT, STYLE_DEFAULT, reinterpret_cast<sptr_t>("Courier New"));
+    // Set the Qt font on the Scintilla widget (affects line number margin, etc.)
+    setFont(monoFont);
+
+    // Set Scintilla's default style font and size via Scintilla commands.
+    // This ensures the lexer and all built-in styles use the monospace font.
+    send(SCI_STYLESETFONT, STYLE_DEFAULT,
+         reinterpret_cast<sptr_t>(defaultFontFamily.toUtf8().constData()));
     send(SCI_STYLESETSIZE, STYLE_DEFAULT, defaultFontSize);
     send(SCI_STYLESETFORE, STYLE_DEFAULT, qColorToSciRGB(Qt::black));
     send(SCI_STYLESETBACK, STYLE_DEFAULT, qColorToSciRGB(Qt::white));
 
-    // Apply to all styles via STYLE_DEFAULT
+    // Apply font to all styles
     send(SCI_STYLECLEARALL);
+
+    // Auto-indent: new lines follow the indentation of the previous line
+    setAutoIndent(true);
+
+    // Tab width: 4 spaces
+    setTabWidth(4);
+    setIndentationsUseTabs(false);
+
+    // Show tab and space characters off by default
+    setWhitespaceVisibility(QsciScintilla::WsInvisible);
+
+    // Plain text by default (no lexer) — replaced by setLexerLanguage() / styleChange()
+    setLexer(nullptr);
 }
 
 // =============================================================================
@@ -987,192 +1020,221 @@ void ScintillaComponent::defineDocType(int langType)
 
 void ScintillaComponent::styleChange()
 {
-    // Re-apply lexer language based on current buffer's language string
+    // Re-apply lexer based on current buffer's language.
+    // Uses the language name string to look up the LangType enum value,
+    // then calls createLexerForLanguage() to install the correct QsciLexer.
     if (_currentBuffer && !_currentBuffer->language().isEmpty()) {
-        // Map language name string to Scintilla lexer ID
-        // This is done via the language-to-lexer table
         QString lang = _currentBuffer->language().toLower();
-        // Default: null lexer (plain text)
-        int lexer = SCLEX_NULL;
+        // Map language string → LangType enum (order matches _langNameInfoArray)
+        LangType langType = LangType::L_TEXT;
 
-        if (lang == QStringLiteral("c") || lang == QStringLiteral("cpp") || lang == QStringLiteral("c++"))
-            lexer = SCLEX_CPP;
-        else if (lang == QStringLiteral("java"))
-            lexer = SCLEX_CPP; // Java
-        else if (lang == QStringLiteral("html") || lang == QStringLiteral("htm"))
-            lexer = SCLEX_HTML;
-        else if (lang == QStringLiteral("xml"))
-            lexer = SCLEX_XML;
-        else if (lang == QStringLiteral("python") || lang == QStringLiteral("py"))
-            lexer = SCLEX_PYTHON;
-        else if (lang == QStringLiteral("javascript") || lang == QStringLiteral("js") || lang == QStringLiteral("jscript"))
-            lexer = SCLEX_CPP; // Scintilla uses cpp lexer for JS
-        else if (lang == QStringLiteral("css"))
-            lexer = SCLEX_CSS;
-        else if (lang == QStringLiteral("sql"))
-            lexer = SCLEX_SQL;
-        else if (lang == QStringLiteral("php"))
-            lexer = SCLEX_HTML; // PHP is embedded HTML
-        else if (lang == QStringLiteral("json"))
-            lexer = SCLEX_JSON;
-        else if (lang == QStringLiteral("makefile") || lang == QStringLiteral("makefile"))
-            lexer = SCLEX_MAKEFILE;
-        else if (lang == QStringLiteral("bash") || lang == QStringLiteral("shell") || lang == QStringLiteral("sh"))
-            lexer = SCLEX_BASH;
-        else if (lang == QStringLiteral("powershell") || lang == QStringLiteral("ps1"))
-            lexer = SCLEX_POWERSHELL;
-        else if (lang == QStringLiteral("lua"))
-            lexer = SCLEX_LUA;
-        else if (lang == QStringLiteral("ruby") || lang == QStringLiteral("rb"))
-            lexer = SCLEX_RUBY;
-        else if (lang == QStringLiteral("perl") || lang == QStringLiteral("pl"))
-            lexer = SCLEX_PERL;
-        else if (lang == QStringLiteral("pascal") || lang == QStringLiteral("delphi"))
-            lexer = SCLEX_PASCAL;
-        else if (lang == QStringLiteral("ini") || lang == QStringLiteral("props") || lang == QStringLiteral("properties"))
-            lexer = SCLEX_PROPERTIES;
-        else if (lang == QStringLiteral("yaml") || lang == QStringLiteral("yml"))
-            lexer = SCLEX_YAML;
-        else if (lang == QStringLiteral("markdown") || lang == QStringLiteral("md"))
-            lexer = SCLEX_MARKDOWN;
-        else if (lang == QStringLiteral("latex") || lang == QStringLiteral("tex"))
-            lexer = SCLEX_TEX;
-        else if (lang == QStringLiteral("rust") || lang == QStringLiteral("rs"))
-            lexer = SCLEX_RUST;
-        else if (lang == QStringLiteral("go") || lang == QStringLiteral("golang"))
-            lexer = SCLEX_CPP; // Go uses cpp-like lexer
-        else if (lang == QStringLiteral("swift"))
-            lexer = SCLEX_CPP; // Swift uses cpp-like lexer
-        else if (lang == QStringLiteral("haskell") || lang == QStringLiteral("hs"))
-            lexer = SCLEX_HASKELL;
-        else if (lang == QStringLiteral("cmake"))
-            lexer = SCLEX_CMAKE;
-        else if (lang == QStringLiteral("r"))
-            lexer = SCLEX_R;
-        else if (lang == QStringLiteral("objective-c") || lang == QStringLiteral("objc") || lang == QStringLiteral("objectivec"))
-            lexer = npp_sci::SCLEX_OBJECTIVEC;
-        else if (lang == QStringLiteral("d"))
-            lexer = SCLEX_D;
-        else if (lang == QStringLiteral("diff") || lang == QStringLiteral("patch"))
-            lexer = SCLEX_DIFF;
-        else if (lang == QStringLiteral("batch") || lang == QStringLiteral("bat") || lang == QStringLiteral("cmd"))
-            lexer = SCLEX_BATCH;
-        else if (lang == QStringLiteral("nsis"))
-            lexer = SCLEX_NSIS;
-        else if (lang == QStringLiteral("tcl") || lang == QStringLiteral("tk"))
-            lexer = SCLEX_TCL;
-        else if (lang == QStringLiteral("matlab"))
-            lexer = SCLEX_MATLAB;
-        else if (lang == QStringLiteral("vhdl"))
-            lexer = SCLEX_VHDL;
-        else if (lang == QStringLiteral("verilog"))
-            lexer = SCLEX_VERILOG;
-        else if (lang == QStringLiteral("gui4cli"))
-            lexer = SCLEX_GUI4CLI;
-        else if (lang == QStringLiteral("asm") || lang == QStringLiteral("assembly") || lang == QStringLiteral("masm") || lang == QStringLiteral("nasm"))
-            lexer = SCLEX_ASM;
-        else if (lang == QStringLiteral("cobol"))
-            lexer = SCLEX_COBOL;
-        else if (lang == QStringLiteral("smalltalk"))
-            lexer = SCLEX_SMALLTALK;
-        else if (lang == QStringLiteral("autolt") || lang == QStringLiteral("au3"))
-            lexer = SCLEX_AU3;
-        else if (lang == QStringLiteral("caml") || lang == QStringLiteral("ocaml"))
-            lexer = SCLEX_CAML;
-        else if (lang == QStringLiteral("ada"))
-            lexer = SCLEX_ADA;
-        else if (lang == QStringLiteral("fortran") || lang == QStringLiteral("fortran77") || lang == QStringLiteral("f77"))
-            lexer = SCLEX_FORTRAN;
-        else if (lang == QStringLiteral("scheme") || lang == QStringLiteral("lisp"))
-            lexer = SCLEX_LISP;
-        else if (lang == QStringLiteral("erlang"))
-            lexer = SCLEX_ERLANG;
-        else if (lang == QStringLiteral("forth"))
-            lexer = SCLEX_FORTH;
-        else if (lang == QStringLiteral("escript"))
-            lexer = SCLEX_ESCRIPT;
-        else if (lang == QStringLiteral("rebol"))
-            lexer = SCLEX_REBOL;
-        else if (lang == QStringLiteral("registry"))
-            lexer = SCLEX_REGISTRY;
-        else if (lang == QStringLiteral("spice"))
-            lexer = SCLEX_SPICE;
-        else if (lang == QStringLiteral("txt2tags"))
-            lexer = SCLEX_TXT2TAGS;
-        else if (lang == QStringLiteral("visualprolog"))
-            lexer = SCLEX_VISUALPROLOG;
-        else if (lang == QStringLiteral("inno"))
-            lexer = npp_sci::SCLEX_INNO;
-        else if (lang == QStringLiteral("kix"))
-            lexer = SCLEX_KIX;
-        else if (lang == QStringLiteral("baan") || lang == QStringLiteral("baanc"))
-            lexer = SCLEX_BAAN;
-        else if (lang == QStringLiteral("srec"))
-            lexer = SCLEX_SREC;
-        else if (lang == QStringLiteral("ihex"))
-            lexer = SCLEX_IHEX;
-        else if (lang == QStringLiteral("tehex"))
-            lexer = SCLEX_TEHEX;
-        else if (lang == QStringLiteral("avsiynth") || lang == QStringLiteral("avs"))
-            lexer = SCLEX_AVS;
-        else if (lang == QStringLiteral("blitzbasic"))
-            lexer = SCLEX_BLITZBASIC;
-        else if (lang == QStringLiteral("purebasic"))
-            lexer = SCLEX_PUREBASIC;
-        else if (lang == QStringLiteral("freebasic"))
-            lexer = SCLEX_FREEBASIC;
-        else if (lang == QStringLiteral("csound"))
-            lexer = SCLEX_CSOUND;
-        else if (lang == QStringLiteral("oscript"))
-            lexer = SCLEX_OSCRIPT;
-        else if (lang == QStringLiteral("mmixal"))
-            lexer = SCLEX_MMIXAL;
-        else if (lang == QStringLiteral("nim") || lang == QStringLiteral("nimrod"))
-            lexer = SCLEX_NIMROD;
-        else if (lang == QStringLiteral("nncrontab"))
-            lexer = SCLEX_NNCRONTAB;
-        else if (lang == QStringLiteral("asn.1") || lang == QStringLiteral("asn1"))
-            lexer = SCLEX_ASN1;
-        else if (lang == QStringLiteral("gdscript") || lang == QStringLiteral("gd"))
-            lexer = SCLEX_GDSCRIPT;
-        else if (lang == QStringLiteral("hollywood"))
-            lexer = SCLEX_HOLLYWOOD;
-        else if (lang == QStringLiteral("toml"))
-            lexer = SCLEX_TOML;
-        else if (lang == QStringLiteral("sas"))
-            lexer = SCLEX_SAS;
-        else if (lang == QStringLiteral("mssql") || lang == QStringLiteral("tsql"))
-            lexer = SCLEX_MSSQL;
-        else if (lang == QStringLiteral("raku") || lang == QStringLiteral("perl6"))
-            lexer = SCLEX_PERL; // Raku uses perl-like lexer
-        else if (lang == QStringLiteral("errorlist"))
-            lexer = SCLEX_ERRORLIST;
-        else if (lang == QStringLiteral("json5"))
-            lexer = SCLEX_JSON;
-        else if (lang == QStringLiteral("coffeescript") || lang == QStringLiteral("coffee"))
-            lexer = SCLEX_COFFEESCRIPT;
-        else if (lang == QStringLiteral("typescript") || lang == QStringLiteral("ts"))
-            lexer = SCLEX_CPP; // TypeScript uses cpp-like lexer
-        else if (lang == QStringLiteral("jsp"))
-            lexer = SCLEX_HTML; // JSP is embedded HTML
-        else if (lang == QStringLiteral("vb") || lang == QStringLiteral("visualbasic"))
-            lexer = SCLEX_VB;
-        else if (lang == QStringLiteral("asp"))
-            lexer = SCLEX_HTML; // ASP is embedded HTML
-        else if (lang == QStringLiteral("nfo") || lang == QStringLiteral("asciiart") || lang == QStringLiteral("ascii"))
-            lexer = SCLEX_NULL; // ASCII art — no highlighting
+        if (lang == "c") langType = LangType::L_C;
+        else if (lang == "cpp" || lang == "c++") langType = LangType::L_CPP;
+        else if (lang == "java") langType = LangType::L_JAVA;
+        else if (lang == "html" || lang == "htm") langType = LangType::L_HTML;
+        else if (lang == "xml") langType = LangType::L_XML;
+        else if (lang == "python" || lang == "py") langType = LangType::L_PYTHON;
+        else if (lang == "javascript" || lang == "js" || lang == "jscript") langType = LangType::L_JAVASCRIPT;
+        else if (lang == "css") langType = LangType::L_CSS;
+        else if (lang == "sql") langType = LangType::L_SQL;
+        else if (lang == "php") langType = LangType::L_PHP;
+        else if (lang == "json") langType = LangType::L_JSON;
+        else if (lang == "makefile") langType = LangType::L_MAKEFILE;
+        else if (lang == "bash" || lang == "shell" || lang == "sh") langType = LangType::L_BASH;
+        else if (lang == "powershell" || lang == "ps1") langType = LangType::L_POWERSHELL;
+        else if (lang == "lua") langType = LangType::L_LUA;
+        else if (lang == "ruby" || lang == "rb") langType = LangType::L_RUBY;
+        else if (lang == "perl" || lang == "pl") langType = LangType::L_PERL;
+        else if (lang == "pascal" || lang == "delphi") langType = LangType::L_PASCAL;
+        else if (lang == "ini" || lang == "props" || lang == "properties") langType = LangType::L_INI;
+        else if (lang == "yaml" || lang == "yml") langType = LangType::L_YAML;
+        else if (lang == "markdown" || lang == "md") langType = LangType::L_MARKDOWN;
+        else if (lang == "latex" || lang == "tex") langType = LangType::L_LATEX;
+        else if (lang == "rust" || lang == "rs") langType = LangType::L_RUST;
+        else if (lang == "go" || lang == "golang") langType = LangType::L_GOLANG;
+        else if (lang == "swift") langType = LangType::L_SWIFT;
+        else if (lang == "haskell" || lang == "hs") langType = LangType::L_HASKELL;
+        else if (lang == "cmake") langType = LangType::L_CMAKE;
+        else if (lang == "r") langType = LangType::L_R;
+        else if (lang == "objective-c" || lang == "objc" || lang == "objectivec") langType = LangType::L_OBJC;
+        else if (lang == "d") langType = LangType::L_D;
+        else if (lang == "diff" || lang == "patch") langType = LangType::L_DIFF;
+        else if (lang == "batch" || lang == "bat" || lang == "cmd") langType = LangType::L_BATCH;
+        else if (lang == "nsis") langType = LangType::L_NSIS;
+        else if (lang == "tcl" || lang == "tk") langType = LangType::L_TCL;
+        else if (lang == "matlab") langType = LangType::L_MATLAB;
+        else if (lang == "vhdl") langType = LangType::L_VHDL;
+        else if (lang == "verilog") langType = LangType::L_VERILOG;
+        else if (lang == "asm" || lang == "assembly" || lang == "masm" || lang == "nasm") langType = LangType::L_ASM;
+        else if (lang == "cobol") langType = LangType::L_COBOL;
+        else if (lang == "ada") langType = LangType::L_ADA;
+        else if (lang == "fortran" || lang == "fortran77" || lang == "f77") langType = LangType::L_FORTRAN;
+        else if (lang == "scheme" || lang == "lisp") langType = LangType::L_SCHEME;
+        else if (lang == "erlang") langType = LangType::L_ERLANG;
+        else if (lang == "rebol") langType = LangType::L_REBOL;
+        else if (lang == "forth") langType = LangType::L_FORTH;
+        else if (lang == "nim" || lang == "nimrod") langType = LangType::L_NIM;
+        else if (lang == "toml") langType = LangType::L_TOML;
+        else if (lang == "typescript" || lang == "ts") langType = LangType::L_TYPESCRIPT;
+        else if (lang == "jsp") langType = LangType::L_JSP;
+        else if (lang == "vb" || lang == "visualbasic") langType = LangType::L_VB;
+        else if (lang == "asp") langType = LangType::L_ASP;
+        else if (lang == "gdscript" || lang == "gd") langType = LangType::L_GDSCRIPT;
+        else if (lang == "coffeescript" || lang == "coffee") langType = LangType::L_COFFEESCRIPT;
+        else if (lang == "json5") langType = LangType::L_JSON5;
+        else if (lang == "sas") langType = LangType::L_SAS;
+        else if (lang == "mssql" || lang == "tsql") langType = LangType::L_MSSQL;
+        else if (lang == "raku" || lang == "perl6") langType = LangType::L_RAKU;
+        else if (lang == "errorlist") langType = LangType::L_ERRORLIST;
+        else if (lang == "ascii" || lang == "asciiart" || lang == "nfo") langType = LangType::L_ASCII;
+        // else: stays L_TEXT (plain text)
 
-        send(SCI_SETLEXER, lexer);
+        // Create and install the lexer
+        QsciLexer* newLexer = createLexerForLanguage(static_cast<int>(langType));
+        if (newLexer) {
+            setLexer(newLexer);
+            _lexer = newLexer;
+        }
     }
 }
 
 void ScintillaComponent::setLexerLanguage(int langType)
 {
-    // langType maps to the LangType enum values in the Win32 source.
-    // We directly call setLexerLanguage using the lexer constant directly.
-    // The langType from Notepad++ is an enum value; we convert it here.
-    // For simplicity, this accepts the Scintilla lexer ID directly.
-    send(SCI_SETLEXER, static_cast<uptr_t>(langType));
+    // Create and install the appropriate QsciLexer for the language.
+    // langType maps to the LangType enum values.
+    // This replaces the raw SCI_SETLEXER approach with proper Qt/Qsci integration,
+    // enabling full syntax highlighting via QsciLexer subclasses.
+    QsciLexer* newLexer = createLexerForLanguage(langType);
+    if (newLexer) {
+        // Transfer ownership to this widget (QsciScintilla takes ownership)
+        setLexer(newLexer);
+        _lexer = newLexer;
+    }
+}
+
+// =============================================================================
+// createLexerForLanguage — factory for QsciLexer subclasses
+// =============================================================================
+
+QsciLexer* ScintillaComponent::createLexerForLanguage(int langType)
+{
+    // langType maps to LangType enum values (cast from int).
+    // Return the appropriate QsciLexer subclass, or nullptr for plain text.
+    switch (static_cast<LangType>(langType)) {
+        case LangType::L_C:
+        case LangType::L_CPP:
+        case LangType::L_JAVA:
+        case LangType::L_RC:
+        case LangType::L_CS:
+        case LangType::L_FLASH:
+        case LangType::L_JS_EMBEDDED:
+        case LangType::L_JAVASCRIPT:
+        case LangType::L_TYPESCRIPT:
+        case LangType::L_GOLANG:
+        case LangType::L_OBJC: {
+            // For C/C++ family languages use QsciLexerCPP.
+            // Note: Objective-C also uses the C++ lexer variant for now.
+            QsciLexerCPP* lex = new QsciLexerCPP(this);
+            // Set the default font (monospace)
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            // C++ keywords are set 0 by default; QsciLexerCPP has C++ keywords built-in
+            return lex;
+        }
+        case LangType::L_HTML:
+        case LangType::L_ASP:
+        case LangType::L_JSP:
+        case LangType::L_PHP:
+        case LangType::L_XML: {
+            QsciLexerHTML* lex = new QsciLexerHTML(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            // Set default HTML keywords (built into lexer)
+            return lex;
+        }
+        case LangType::L_JSON:
+        case LangType::L_JSON5:
+        case LangType::L_ERRORLIST:
+            return new QsciLexerJSON(this);
+        case LangType::L_CSS: {
+            QsciLexerCSS* lex = new QsciLexerCSS(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            return lex;
+        }
+        case LangType::L_PYTHON: {
+            QsciLexerPython* lex = new QsciLexerPython(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            // Set tab width for Python (PEP-8: 4 spaces)
+            setTabWidth(4);
+            setIndentationsUseTabs(false);
+            return lex;
+        }
+        case LangType::L_SQL: {
+            QsciLexerSQL* lex = new QsciLexerSQL(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            return lex;
+        }
+        case LangType::L_BASH:
+        case LangType::L_PERL:
+        case LangType::L_RAKU: {
+            QsciLexerBash* lex = new QsciLexerBash(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            return lex;
+        }
+        case LangType::L_RUBY: {
+            QsciLexerRuby* lex = new QsciLexerRuby(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            return lex;
+        }
+        case LangType::L_LUA: {
+            QsciLexerLua* lex = new QsciLexerLua(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            return lex;
+        }
+        case LangType::L_PASCAL: {
+            QsciLexerPascal* lex = new QsciLexerPascal(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            return lex;
+        }
+        case LangType::L_TEX:
+        case LangType::L_LATEX: {
+            QsciLexerTeX* lex = new QsciLexerTeX(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            return lex;
+        }
+        case LangType::L_MAKEFILE: {
+            QsciLexerMakefile* lex = new QsciLexerMakefile(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            return lex;
+        }
+        case LangType::L_YAML: {
+            QsciLexerYAML* lex = new QsciLexerYAML(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            return lex;
+        }
+        case LangType::L_MARKDOWN: {
+            QsciLexerMarkdown* lex = new QsciLexerMarkdown(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            return lex;
+        }
+        case LangType::L_DIFF: {
+            // Plain text for diff (abstract QsciLexer cannot be instantiated)
+            return nullptr;
+        }
+        case LangType::L_PROPS:
+        case LangType::L_INI: {
+            QsciLexerProperties* lex = new QsciLexerProperties(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            return lex;
+        }
+        case LangType::L_RUST: {
+            // Rust uses the same lexer as C++ for now
+            QsciLexerCPP* lex = new QsciLexerCPP(this);
+            lex->setFont(QFont(QStringLiteral("Courier New"), 10));
+            return lex;
+        }
+        default:
+            // Plain text: null lexer
+            return nullptr;
+    }
 }
 
 void ScintillaComponent::setKeywords(int keywordSet, const char* keywords)
@@ -1501,6 +1563,78 @@ void ScintillaComponent::setBorderEdge(bool show)
     }
 }
 
+void ScintillaComponent::removeDuplicateLines()
+{
+    // Remove duplicate lines using Scintilla search/target
+    // This is a simplified version of the full Notepad_plus implementation
+    execute(SCI_BEGINUNDOACTION);
+    auto selStart = execute(SCI_GETSELECTIONSTART);
+    auto selEnd = execute(SCI_GETSELECTIONEND);
+    bool entireDoc = (selEnd - selStart) == 0;
+
+    auto startLine = entireDoc ? 0 : execute(SCI_LINEFROMPOSITION, selStart);
+    auto endLine = entireDoc ? execute(SCI_GETLINECOUNT) - 1 : execute(SCI_LINEFROMPOSITION, selEnd);
+
+    for (auto i = startLine; i <= endLine; ++i) {
+        auto lineStart = execute(SCI_POSITIONFROMLINE, i);
+        auto lineEnd = execute(SCI_GETLINEENDPOSITION, i);
+        auto lineLen = lineEnd - lineStart;
+        if (lineLen <= 0)
+            continue;
+
+        // Get line text
+        QByteArray lineText(lineLen + 1, '\0');
+        SendScintilla(SCI_GETLINE, i, lineText.data());
+        lineText.truncate(lineLen);
+
+        // Search for this line in subsequent lines
+        for (auto j = i + 1; j <= endLine;) {
+            auto jStart = execute(SCI_POSITIONFROMLINE, j);
+            auto jEnd = execute(SCI_GETLINEENDPOSITION, j);
+            auto jLen = jEnd - jStart;
+            if (jLen != lineLen) {
+                ++j;
+                continue;
+            }
+            QByteArray jText(jLen + 1, '\0');
+            SendScintilla(SCI_GETLINE, j, jText.data());
+            jText.truncate(jLen);
+
+            if (lineText == jText) {
+                // Delete line j
+                execute(SCI_SETTARGETRANGE, jStart, jEnd + execute(SCI_LINELENGTH, j));
+                replaceTarget("", jStart, jEnd + execute(SCI_LINELENGTH, j));
+                --endLine;
+            } else {
+                ++j;
+            }
+        }
+    }
+    execute(SCI_ENDUNDOACTION);
+}
+
+void ScintillaComponent::removeEmptyLine(bool includeBlankLines)
+{
+    // Remove empty (or blank) lines in selection or entire document
+    // using regex substitution via Scintilla search/target
+    const char* pattern = includeBlankLines
+        ? "^[ \\t]*[\\r\\n]+"
+        : "^[\\r\\n]+";
+
+    execute(SCI_BEGINUNDOACTION);
+    auto selStart = execute(SCI_GETSELECTIONSTART);
+    auto selEnd = execute(SCI_GETSELECTIONEND);
+    bool entireDoc = (selEnd - selStart) == 0;
+
+    execute(SCI_SETSEARCHFLAGS, SCFIND_REGEXP | SCFIND_POSIX);
+    auto posFound = searchInTarget(QString::fromLatin1(pattern), 0, execute(SCI_GETLENGTH));
+    while (posFound >= 0) {
+        replaceTarget(QString(), posFound, execute(SCI_GETLENGTH));
+        posFound = searchInTarget(QString::fromLatin1(pattern), 0, execute(SCI_GETLENGTH));
+    }
+    execute(SCI_ENDUNDOACTION);
+}
+
 // =============================================================================
 // _langNameInfoArray — mirrors Win32 ScintillaEditView::_langNameInfoArray
 // Maps LangType enum values to language display names and Scintilla lexer IDs.
@@ -1700,3 +1834,91 @@ const LanguageNameInfo _langNameInfoArray[] = {
     // [95] L_EXTERNAL
     {"external", "External", "External", LangType::L_EXTERNAL, "null"},
 };
+
+void ScintillaComponent::currentLinesUp() const
+{
+    // Move selected lines up by one line
+    auto lineCount = execute(SCI_GETLINECOUNT);
+    if (lineCount <= 1)
+        return;
+    auto currentLine = execute(SCI_LINEFROMPOSITION, execute(SCI_GETCURRENTPOS));
+    if (currentLine == 0)
+        return;  // already at top
+
+    auto lineStart = execute(SCI_POSITIONFROMLINE, currentLine);
+    auto nextLineStart = execute(SCI_POSITIONFROMLINE, currentLine + 1);
+    auto lineEnd = execute(SCI_GETLINEENDPOSITION, currentLine);
+    auto nextLineEnd = execute(SCI_GETLINEENDPOSITION, currentLine + 1);
+
+    auto lineLen = lineEnd - lineStart;
+    auto nextLineLen = nextLineEnd - nextLineStart;
+
+    QByteArray currentLineText(lineLen + 1, '\0');
+    QByteArray nextLineText(nextLineLen + 1, '\0');
+    SendScintilla(SCI_GETLINE, currentLine, currentLineText.data());
+    SendScintilla(SCI_GETLINE, currentLine + 1, nextLineText.data());
+    currentLineText.truncate(lineLen);
+    nextLineText.truncate(nextLineLen);
+
+    execute(SCI_BEGINUNDOACTION);
+    // Delete current line
+    execute(SCI_SETTARGETRANGE, lineStart, nextLineEnd);
+    SendScintilla(SCI_REPLACETARGET, static_cast<long>(nextLineLen), nextLineText.data());
+    // Insert current line at new position
+    auto newPos = execute(SCI_POSITIONFROMLINE, currentLine);
+    SendScintilla(SCI_INSERTTEXT, newPos, currentLineText.data());
+    execute(SCI_ENDUNDOACTION);
+}
+
+void ScintillaComponent::currentLinesDown() const
+{
+    // Move selected lines down by one line
+    auto lineCount = execute(SCI_GETLINECOUNT);
+    if (lineCount <= 1)
+        return;
+    auto currentLine = execute(SCI_LINEFROMPOSITION, execute(SCI_GETCURRENTPOS));
+    if (currentLine >= lineCount - 1)
+        return;  // already at bottom
+
+    auto lineStart = execute(SCI_POSITIONFROMLINE, currentLine);
+    auto nextLineStart = execute(SCI_POSITIONFROMLINE, currentLine + 1);
+    auto lineEnd = execute(SCI_GETLINEENDPOSITION, currentLine);
+    auto nextLineEnd = execute(SCI_GETLINEENDPOSITION, currentLine + 1);
+
+    auto lineLen = lineEnd - lineStart;
+    auto nextLineLen = nextLineEnd - nextLineStart;
+
+    QByteArray currentLineText(lineLen + 1, '\0');
+    QByteArray nextLineText(nextLineLen + 1, '\0');
+    SendScintilla(SCI_GETLINE, currentLine, currentLineText.data());
+    SendScintilla(SCI_GETLINE, currentLine + 1, nextLineText.data());
+    currentLineText.truncate(lineLen);
+    nextLineText.truncate(nextLineLen);
+
+    execute(SCI_BEGINUNDOACTION);
+    // Delete next line
+    execute(SCI_SETTARGETRANGE, nextLineStart, nextLineEnd);
+    SendScintilla(SCI_REPLACETARGET, static_cast<long>(lineLen), currentLineText.data());
+    // Insert next line at new position
+    auto newPos = execute(SCI_GETLINEENDPOSITION, currentLine);
+    SendScintilla(SCI_INSERTTEXT, newPos + lineLen, nextLineText.data());
+    execute(SCI_ENDUNDOACTION);
+}
+
+std::pair<size_t, size_t> ScintillaComponent::getSelectionLinesRangeSel(intptr_t selNum) const
+{
+    if (selNum < 0)
+        return {0, 0};
+    auto startPos = execute(SCI_GETSELECTIONNSTART, static_cast<size_t>(selNum));
+    auto endPos = execute(SCI_GETSELECTIONNEND, static_cast<size_t>(selNum));
+    auto startLine = execute(SCI_LINEFROMPOSITION, startPos);
+    auto endLine = execute(SCI_LINEFROMPOSITION, endPos);
+    return {static_cast<size_t>(startLine), static_cast<size_t>(endLine)};
+}
+
+bool ScintillaComponent::pasteToMultiSelection()
+{
+    // Stub: just do regular paste
+    paste();
+    return true;
+}

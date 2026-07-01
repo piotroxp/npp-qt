@@ -16,7 +16,7 @@
 class Utf8_16_Read;
 
 // Document file status flags (Win32 DOC_* → Qt6 equivalents)
-enum DocFileStatus {
+enum class DocFileStatus {
 	DOC_REGULAR      = 0x01,
 	DOC_UNNAMED      = 0x02,
 	DOC_DELETED      = 0x04,
@@ -26,7 +26,7 @@ enum DocFileStatus {
 };
 
 // Buffer change notification masks
-enum BufferStatusInfo {
+enum class BufferStatusInfo {
 	BufferChangeNone       = 0x000,
 	BufferChangeLanguage   = 0x001,
 	BufferChangeDirty      = 0x002,
@@ -50,14 +50,14 @@ enum SavingStatus {
 	FullReadOnlySavingForbidden = 4
 };
 
-struct BufferViewInfo {
+struct BufferViewInfo2 {
 	BufferID _bufID = nullptr;
 	int _iView = 0;
 	BufferViewInfo() = delete;
-	BufferViewInfo(BufferID buf, int view) : _bufID(buf), _iView(view) {}
+	BufferViewInfo2(BufferID buf, int view) : _bufID(buf), _iView(view) {}
 };
 
-const wchar_t UNTITLED_STR[] = L"new ";
+// UNTITLED_STR defined in src/Buffer.h
 
 // File manager — manages all document buffers
 // Win32: FileManager with CreateFile/ReadFile/WriteFile

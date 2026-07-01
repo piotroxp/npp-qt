@@ -15,7 +15,7 @@
 
 // =============================================================================
 // Global state — mirrors Win32 globals
-// On Qt6 these delegate to NppDarkMode::NppDarkMode singleton
+// On Qt6 these delegate to NppDarkMode singleton
 // =============================================================================
 
 bool g_darkModeSupported = false;   // Win32: resolved uxtheme.dll ordinals
@@ -30,7 +30,7 @@ bool ShouldAppsUseDarkMode()
 {
     // Win32: _ShouldAppsUseDarkMode() from uxtheme ordinal 132
     // Qt6:   delegate to NppDarkMode singleton
-    return NppDarkMode::NppDarkMode::isEnabled_Static();
+    return NppDarkMode::isEnabled_Static();
 }
 
 bool AllowDarkModeForWindow(QWidget* widget, bool allow)
@@ -46,7 +46,7 @@ bool AllowDarkModeForWindow(QWidget* widget, bool allow)
 
     // If allowing dark mode for this specific widget, apply NppDarkMode palette
     if (allow) {
-        NppDarkMode::NppDarkMode::instance().applyToWidget(widget);
+        NppDarkMode::instance().applyToWidget(widget);
     }
     return g_darkModeSupported;
 }
@@ -75,9 +75,9 @@ void SetTitleBarThemeColor(QWidget* widget, bool dark)
     //   not by the application. We apply a dark palette to the widget itself.
     //   The window manager may or may not honour this for the actual title bar.
     if (dark) {
-        NppDarkMode::NppDarkMode::instance().setTitleBarDark(widget);
+        NppDarkMode::instance().setTitleBarDark(widget);
     } else {
-        NppDarkMode::NppDarkMode::instance().setTitleBarLight(widget);
+        NppDarkMode::instance().setTitleBarLight(widget);
     }
 }
 
@@ -95,7 +95,7 @@ void RefreshTitleBarThemeColor(QWidget* widget)
     // Qt6:
     //   On non-Windows there is no per-window dark mode permission.
     //   Use the global dark mode state from NppDarkMode.
-    bool dark = NppDarkMode::NppDarkMode::isEnabled_Static() && !IsHighContrast();
+    bool dark = NppDarkMode::isEnabled_Static() && !IsHighContrast();
     SetTitleBarThemeColor(widget, dark);
 }
 
@@ -131,7 +131,7 @@ void AllowDarkModeForApp(bool allow)
     //
     // Qt6:
     //   Delegate to NppDarkMode singleton — setEnabled drives the global palette.
-    NppDarkMode::NppDarkMode::instance().setEnabled(allow);
+    NppDarkMode::instance().setEnabled(allow);
 }
 
 void FlushMenuThemes()
@@ -153,7 +153,7 @@ void EnableDarkScrollBarForWindowAndChildren(QWidget* widget)
     // Win32: inserts hwnd into g_darkScrollBarWindows set
     // Qt6:  NppDarkMode static convenience method
     if (widget) {
-        NppDarkMode::NppDarkMode::enableDarkScrollBarForWindowAndChildren(widget);
+        NppDarkMode::enableDarkScrollBarForWindowAndChildren(widget);
     }
 }
 
@@ -195,7 +195,7 @@ void SetDarkMode(bool useDark, bool fixDarkScrollbar)
                 EnableDarkScrollBarForWindowAndChildren(topLevel);
             }
         }
-        g_darkModeEnabled = NppDarkMode::NppDarkMode::isEnabled_Static() && !IsHighContrast();
+        g_darkModeEnabled = NppDarkMode::isEnabled_Static() && !IsHighContrast();
     }
 }
 

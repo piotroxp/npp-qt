@@ -478,6 +478,18 @@ std::chrono::steady_clock::time_point g_nppStartTimePoint{};
 
 int main(int argc, char** argv)
 {
+    for (int i = 1; i < argc; ++i) {
+        QString arg(argv[i]);
+        if (arg == "--help" || arg == "-h") {
+            printf("Usage: npp-qt [options]\n  --help, -h       Show this help\n  --version, -V    Show version\n");
+            return 0;
+        }
+        if (arg == "--version" || arg == "-V") {
+            printf("npp-qt 1.0.0 (Qt6 port of Notepad++)\n");
+            return 0;
+        }
+    }
+
     g_nppStartTimePoint = std::chrono::steady_clock::now();
 
     qDebug() << "DBG main: START (QCoreApp exists:" << !!QCoreApplication::instance() << ")";

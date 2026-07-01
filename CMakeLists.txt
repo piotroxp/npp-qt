@@ -86,6 +86,9 @@ set(WINCONTROLS_DIALOGS
     src/WinControls/AnsiCharPanel/asciiListView.cpp
     src/WinControls/ColourPicker.h
     src/WinControls/ColourPicker.cpp
+    src/WinControls/ColourPicker/ColourPopupResource.h
+    src/WinControls/ColourPicker/ColourPopup.cpp
+    src/WinControls/ColourPicker/WordStyleDlgRes.h
     src/WinControls/WordStyleDlg.h
     src/WinControls/WordStyleDlg.cpp
     src/WinControls/RunMacroDlg.h
@@ -98,6 +101,8 @@ set(WINCONTROLS_DIALOGS
 set(WINCONTROLS_PANELS
     src/WinControls/DocumentMap.h
     src/WinControls/DocumentMap.cpp
+    src/WinControls/DocumentMap/documentMap_rc.h
+    src/WinControls/DocumentMap/documentSnapshot_rc.h
     src/WinControls/FunctionList.h
     src/WinControls/FunctionList.cpp
     src/WinControls/FindCharsInRange.h
@@ -113,8 +118,10 @@ set(WINCONTROLS_ADVANCED
     src/WinControls/Preference/preference_rc.h
     src/WinControls/ClipboardHistory.h
     src/WinControls/ClipboardHistory/clipboardHistoryPanel.cpp
+    src/WinControls/ClipboardHistory/clipboardHistoryPanel_rc.h
     src/WinControls/FileBrowser.h
     src/WinControls/FileBrowser/fileBrowser.cpp
+    src/WinControls/FileBrowser/fileBrowser_rc.h
     src/WinControls/ContextMenu.h
     src/WinControls/ContextMenu.cpp
     src/WinControls/ToolTip.h
@@ -161,6 +168,7 @@ set(WINCONTROLS_UTILS
     src/WinControls/ReadDirectoryChanges.cpp
     src/WinControls/ReadDirectoryChanges/ReadDirectoryChangesPrivate.h
     src/WinControls/ReadDirectoryChanges/ReadDirectoryChangesPrivate.cpp
+    src/WinControls/ReadDirectoryChanges/targetver.h
     src/WinControls/ReadDirectoryChanges/ThreadSafeQueue.h
     src/WinControls/CustomFileDialog.h
     src/WinControls/CustomFileDialog.cpp

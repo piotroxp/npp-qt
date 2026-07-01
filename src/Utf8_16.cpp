@@ -90,10 +90,11 @@ void Utf16_Iter::read()
 {
     if (m_eEncoding == utf8_16_16le || m_eEncoding == utf8_16_16le_nobom)
     {
-        // Little-endian: low byte first.
-        m_nCur16 = *m_pRead++;
-        m_nCur16 |= static_cast<utf16>(*m_pRead << 8);
-        ++m_pRead; // point past the 16-bit word (ready for next read or bounds check)
+        // Little-endian: low byte first (at even pos), high byte second (at odd pos).
+        // m_pRead starts at even byte of a word. Read low, advance; read high, advance.
+        const unsigned char* u = reinterpret_cast<const unsigned char*>(m_pRead);
+        m_nCur16 = static_cast<utf16>(u[0]) | (static_cast<utf16>(u[1]) << 8);
+        m_pRead += 2;
     }
     else // utf8_16_16be or utf8_16_16be_nobom
     {
@@ -248,8 +249,10 @@ void Utf8_Iter::toStart()
     }
     else
     {
-        utf16 c1 = static_cast<utf16>(0xD800 | (m_code >> 10));
-        utf16 c2 = static_cast<utf16>(0xDC00 | (m_code & 0x3ff));
+        // Surrogate pair: subtract 0x10000 first, then extract high/low 10 bits.
+        // m_code = 0x1F600 → (0x1F600 - 0x10000) = 0xD600 → high 10 = 0x35 → 0xD835
+        utf16 c1 = static_cast<utf16>(0xD800 | ((m_code - 0x10000) >> 10));
+        utf16 c2 = static_cast<utf16>(0xDC00 | ((m_code - 0x10000) & 0x3ff));
         pushout(c1);
         pushout(c2);
     }
@@ -428,7 +431,7 @@ u78 Utf8_16_Read::utf8_7bits_8bits()
         return ascii7bits;
     if (rv)
         return utf8NoBOM;
-    return ascii8bits;
+    return ascii8bits;  // reached when rv=0 (invalid UTF-8)
 }
 
 void Utf8_16_Read::determineEncoding(const unsigned char* buf, size_t len)
@@ -522,12 +525,25 @@ bool Utf8_16_Read::isLikelyUtf16Le(const unsigned char* buf, size_t len)
     }
     // UTF-16 LE: high byte (odd) tends to be non-ASCII; low byte (even) carries data.
     // CJK chars: high byte is non-zero (e.g. 0x4E, 0x65) so odd non-zero > even non-zero.
-    // null-based: many null high-bytes → Latin-1/ASCII in UTF-16 LE
-    // non-ASCII-based: high-byte (odd) and low-byte (even) both non-ASCII,
-    // which is the signature of CJK characters (e.g. 中=U+4E2D → LE=2d 4e,
-    // 文=U+6587 → LE=87 65).  Use >= so symmetric non-ASCII also counts.
-    bool nullBased     = (zerosOdd   >= zerosEven * 3) && (zerosOdd   >= len / 8);
-    bool nonAsciiBased = (nonzeroOdd >= nonzeroEven)   && (nonzeroOdd >= len / 3);
+    bool nullBased     = (zerosOdd   > zerosEven * 3) && (zerosOdd   > len / 8);
+    bool nonAsciiBased = (nonzeroOdd > nonzeroEven)   && (nonzeroOdd > len / 3);
+
+    // Path C: Short CJK UTF-16 LE where nullBased fails (no null bytes) and nonAsciiBased
+    // fails (odd/even non-zero counts are equal). Distinguishes from UTF-8 CJK by checking
+    // even-position bytes: UTF-8 CJK continuation bytes at even positions are 0x80-0xBF;
+    // UTF-16 LE low bytes for CJK are often < 0x80.
+    // Only apply to short strings (len < 24) to avoid over-triggering on long UTF-8.
+    size_t evenContBytes = 0; // even bytes in 0x80-0xBF (UTF-8 continuation byte signature)
+    for (size_t i = 0; i + 1 < len; i += 2) {
+        if (buf[i] >= 0x80 && buf[i] <= 0xBF) ++evenContBytes;
+    }
+    // "中文" LE (2D 4E 87 65): even bytes 0x2D<BF, 0x87 in BF → evenCont=1, nonzeroOdd=2>=1 ✓ → pathC=TRUE.
+    // "éé" UTF-8 (C3 A9 C3 A9): even bytes C3,C3>BF → evenCont=0, nonzeroOdd=2>=1 ✓ → pathC=FALSE (evenCont=0,0>0 ✗).
+    // ASCII "AB" (41 00 42 00): nonzeroOdd=0 → pathC=FALSE immediately.
+    bool pathC = (nonzeroOdd > 0) && (nonzeroOdd >= len / 3) && (evenContBytes > 0);
+
+    if (len < 24)
+        return nullBased || pathC;
     return nullBased || nonAsciiBased;
 }
 
@@ -569,17 +585,20 @@ QByteArray Utf8_16_Read::convert(const QByteArray& data)
     m_nLen = len;
     m_nNewBufSize = 0;
 
+    // Only detect encoding once (first call in the two-call pattern: detect + convert).
+    // Second call re-uses the encoding from the first call.
     if (m_bFirstRead)
     {
         determineEncoding(buf, len);
         m_bFirstRead = false;
     }
 
+    // Ensure the shared UTF-16→UTF-8 iterator is initialized (used by Utf8_Iter too).
+    ensureIter16();
+
     switch (m_eEncoding)
     {
-        case utf8_16_7bit:
         case utf8_16_8bit:
-        case utf8_16_utf8_nobom:
         {
             m_nAllocatedBufSize = 0;
             m_pNewBuf = const_cast<char*>(data.constData());
@@ -589,11 +608,28 @@ QByteArray Utf8_16_Read::convert(const QByteArray& data)
 
         case utf8_16_utf8:
         {
-            size_t skip = (m_eEncoding == utf8_16_utf8) ? 3 : 0;
+            // UTF-8 with BOM: always skip exactly 3 bytes.
             m_nAllocatedBufSize = 0;
-            m_pNewBuf = const_cast<char*>(data.constData() + skip);
-            m_nNewBufSize = len - skip;
-            return QByteArray(data.constData() + skip, static_cast<int>(len - skip));
+            m_pNewBuf = const_cast<char*>(data.constData() + 3);
+            m_nNewBufSize = len - 3;
+            return QByteArray(data.constData() + 3, static_cast<int>(len - 3));
+        }
+
+        case utf8_16_utf8_nobom:
+        {
+            // UTF-8 NoBOM: passthrough (no conversion, no skip).
+            m_nAllocatedBufSize = 0;
+            m_pNewBuf = const_cast<char*>(data.constData());
+            m_nNewBufSize = len;
+            return data;
+        }
+
+        case utf8_16_7bit:
+        {
+            m_nAllocatedBufSize = 0;
+            m_pNewBuf = const_cast<char*>(data.constData());
+            m_nNewBufSize = len;
+            return data;
         }
 
         case utf8_16_16be:

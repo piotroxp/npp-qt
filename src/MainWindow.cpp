@@ -4,8 +4,12 @@
 
 #include "MainWindow.h"
 #include "Buffer.h"
+#include "ScintillaComponent.h"
+#include "FindReplaceDlg.h"
+#include "NppSciCompat.h"
 
 #include <QDir>
+#include <Qsci/qsciscintilla.h>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QInputDialog>
@@ -46,35 +50,42 @@ void MainWindow::setupUi()
     setWindowTitle("Notepad++ (Qt)");
     resize(1200, 800);
 
-    _pTabBar = new TabBarPlus(this);
-    setCentralWidget(_pTabBar);
-
     createActions();
     createMenus();
     createToolBars();
     createStatusBar();
-    createTabBar();
-    createDocumentPane();
+    createDocumentPane();   // creates _pDocTabBar with Scintilla editors
     createPanels();
 
-    connect(_pTabBar, &TabBarPlus::currentChanged, this, &MainWindow::onTabChanged);
-    connect(_pTabBar, &TabBarPlus::tabDelete, this, &MainWindow::closeFile);
+    // Initialize Find/Replace dialog (editor set lazily via setCurrentEditor())
+    _pFindReplaceDlg = new FindReplaceDlg();
+    _pFindReplaceDlg->setParent(this);
+    _pFindReplaceDlg->hide();
+
+    // _pDocTabBar (QTabWidget) is the central widget — holds Scintilla editor tabs
+    setCentralWidget(_pDocTabBar);
+
+    // Qt6: QTabWidget::currentChanged and tabCloseRequested are protected signals.
+    // Connect via the public QTabBar base class signals.
+    QTabBar* docTabBar = qobject_cast<QTabBar*>(_pDocTabBar);
+    connect(docTabBar, &QTabBar::currentChanged, this, &MainWindow::onTabChanged);
+    connect(docTabBar, &QTabBar::tabCloseRequested, this, [this](int i) { closeFile(i); });
 }
 
 void MainWindow::createActions()
 {
     // File actions
-    QAction* newAct = new QAction(QIcon::fromTheme("document-new"), tr("&New"), this);
-    newAct->setShortcut(QKeySequence::New);
-    connect(newAct, &QAction::triggered, this, &MainWindow::newFile);
+    _pActNew = new QAction(QIcon::fromTheme("document-new"), tr("&New"), this);
+    _pActNew->setShortcut(QKeySequence::New);
+    connect(_pActNew, &QAction::triggered, this, &MainWindow::newFile);
 
-    QAction* openAct = new QAction(QIcon::fromTheme("document-open"), tr("&Open..."), this);
-    openAct->setShortcut(QKeySequence::Open);
-    connect(openAct, &QAction::triggered, this, qOverload<>(&MainWindow::openFile));
+    _pActOpen = new QAction(QIcon::fromTheme("document-open"), tr("&Open..."), this);
+    _pActOpen->setShortcut(QKeySequence::Open);
+    connect(_pActOpen, &QAction::triggered, this, qOverload<>(&MainWindow::openFile));
 
-    QAction* saveAct = new QAction(QIcon::fromTheme("document-save"), tr("&Save"), this);
-    saveAct->setShortcut(QKeySequence::Save);
-    connect(saveAct, &QAction::triggered, this, &MainWindow::saveFile);
+    _pActSave = new QAction(QIcon::fromTheme("document-save"), tr("&Save"), this);
+    _pActSave->setShortcut(QKeySequence::Save);
+    connect(_pActSave, &QAction::triggered, this, &MainWindow::saveFile);
 
     QAction* saveAsAct = new QAction(QIcon::fromTheme("document-save-as"), tr("Save &As..."), this);
     saveAsAct->setShortcut(QKeySequence::SaveAs);
@@ -82,32 +93,32 @@ void MainWindow::createActions()
 
     QAction* closeAct = new QAction(tr("&Close"), this);
     closeAct->setShortcut(QKeySequence::Close);
-    connect(closeAct, &QAction::triggered, this, &MainWindow::closeFile);
+    connect(closeAct, &QAction::triggered, this, [this]() { closeFile(); });
 
     QAction* exitAct = new QAction(tr("E&xit"), this);
     exitAct->setShortcut(QKeySequence::Quit);
     connect(exitAct, &QAction::triggered, this, &MainWindow::exit);
 
     // Edit actions
-    QAction* undoAct = new QAction(QIcon::fromTheme("edit-undo"), tr("&Undo"), this);
-    undoAct->setShortcut(QKeySequence::Undo);
-    connect(undoAct, &QAction::triggered, this, &MainWindow::undo);
+    _pActUndo = new QAction(QIcon::fromTheme("edit-undo"), tr("&Undo"), this);
+    _pActUndo->setShortcut(QKeySequence::Undo);
+    connect(_pActUndo, &QAction::triggered, this, &MainWindow::undo);
 
-    QAction* redoAct = new QAction(QIcon::fromTheme("edit-redo"), tr("&Redo"), this);
-    redoAct->setShortcut(QKeySequence::Redo);
-    connect(redoAct, &QAction::triggered, this, &MainWindow::redo);
+    _pActRedo = new QAction(QIcon::fromTheme("edit-redo"), tr("&Redo"), this);
+    _pActRedo->setShortcut(QKeySequence::Redo);
+    connect(_pActRedo, &QAction::triggered, this, &MainWindow::redo);
 
-    QAction* cutAct = new QAction(QIcon::fromTheme("edit-cut"), tr("Cu&t"), this);
-    cutAct->setShortcut(QKeySequence::Cut);
-    connect(cutAct, &QAction::triggered, this, &MainWindow::cut);
+    _pActCut = new QAction(QIcon::fromTheme("edit-cut"), tr("Cu&t"), this);
+    _pActCut->setShortcut(QKeySequence::Cut);
+    connect(_pActCut, &QAction::triggered, this, &MainWindow::cut);
 
-    QAction* copyAct = new QAction(QIcon::fromTheme("edit-copy"), tr("&Copy"), this);
-    copyAct->setShortcut(QKeySequence::Copy);
-    connect(copyAct, &QAction::triggered, this, &MainWindow::copy);
+    _pActCopy = new QAction(QIcon::fromTheme("edit-copy"), tr("&Copy"), this);
+    _pActCopy->setShortcut(QKeySequence::Copy);
+    connect(_pActCopy, &QAction::triggered, this, &MainWindow::copy);
 
-    QAction* pasteAct = new QAction(QIcon::fromTheme("edit-paste"), tr("&Paste"), this);
-    pasteAct->setShortcut(QKeySequence::Paste);
-    connect(pasteAct, &QAction::triggered, this, &MainWindow::paste);
+    _pActPaste = new QAction(QIcon::fromTheme("edit-paste"), tr("&Paste"), this);
+    _pActPaste->setShortcut(QKeySequence::Paste);
+    connect(_pActPaste, &QAction::triggered, this, &MainWindow::paste);
 
     QAction* selectAllAct = new QAction(tr("Select &All"), this);
     selectAllAct->setShortcut(QKeySequence::SelectAll);
@@ -124,13 +135,13 @@ void MainWindow::createActions()
     connect(wordWrapAct, &QAction::triggered, this, &MainWindow::toggleWordWrap);
 
     // Search actions
-    QAction* findAct = new QAction(QIcon::fromTheme("edit-find"), tr("&Find..."), this);
-    findAct->setShortcut(QKeySequence::Find);
-    connect(findAct, &QAction::triggered, this, &MainWindow::find);
+    _pActFind = new QAction(QIcon::fromTheme("edit-find"), tr("&Find..."), this);
+    _pActFind->setShortcut(QKeySequence::Find);
+    connect(_pActFind, &QAction::triggered, this, &MainWindow::find);
 
-    QAction* replaceAct = new QAction(tr("&Replace..."), this);
-    replaceAct->setShortcut(QKeySequence::Replace);
-    connect(replaceAct, &QAction::triggered, this, &MainWindow::replace);
+    _pActReplace = new QAction(tr("&Replace..."), this);
+    _pActReplace->setShortcut(QKeySequence::Replace);
+    connect(_pActReplace, &QAction::triggered, this, &MainWindow::replace);
 }
 
 void MainWindow::createMenus()
@@ -144,7 +155,7 @@ void MainWindow::createMenus()
     fileMenu->addAction(tr("&Save"), this, &MainWindow::saveFile, QKeySequence::Save);
     fileMenu->addAction(tr("Save &As..."), this, &MainWindow::saveFileAs, QKeySequence::SaveAs);
     fileMenu->addSeparator();
-    fileMenu->addAction(tr("&Close"), this, &MainWindow::closeFile, QKeySequence::Close);
+    fileMenu->addAction(tr("&Close"), this, [this]() { closeFile(); }, QKeySequence::Close);
     fileMenu->addSeparator();
     fileMenu->addAction(tr("E&xit"), this, &MainWindow::exit, QKeySequence::Quit);
 
@@ -171,19 +182,26 @@ void MainWindow::createToolBars()
 {
     _pFileToolBar = addToolBar(tr("File"));
     _pFileToolBar->setObjectName("FileToolBar");
-    _pFileToolBar->addAction(tr("New"), this, &MainWindow::newFile);
-    _pFileToolBar->addAction(tr("Open"), this, [this]() { openFile(); });
-    _pFileToolBar->addAction(tr("Save"), this, &MainWindow::saveFile);
+    _pFileToolBar->setMovable(false);
+    _pFileToolBar->addAction(_pActNew);
+    _pFileToolBar->addAction(_pActOpen);
+    _pFileToolBar->addAction(_pActSave);
 
     _pEditToolBar = addToolBar(tr("Edit"));
     _pEditToolBar->setObjectName("EditToolBar");
-    _pEditToolBar->addAction(tr("Undo"), this, &MainWindow::undo);
-    _pEditToolBar->addAction(tr("Redo"), this, &MainWindow::redo);
+    _pEditToolBar->setMovable(false);
+    _pEditToolBar->addAction(_pActCut);
+    _pEditToolBar->addAction(_pActCopy);
+    _pEditToolBar->addAction(_pActPaste);
+    _pEditToolBar->addSeparator();
+    _pEditToolBar->addAction(_pActUndo);
+    _pEditToolBar->addAction(_pActRedo);
 
     _pSearchToolBar = addToolBar(tr("Search"));
     _pSearchToolBar->setObjectName("SearchToolBar");
-    _pSearchToolBar->addAction(tr("Find"), this, &MainWindow::find);
-    _pSearchToolBar->addAction(tr("Replace"), this, &MainWindow::replace);
+    _pSearchToolBar->setMovable(false);
+    _pSearchToolBar->addAction(_pActFind);
+    _pSearchToolBar->addAction(_pActReplace);
 }
 
 void MainWindow::createStatusBar()
@@ -208,8 +226,13 @@ void MainWindow::createStatusBar()
 
 void MainWindow::createTabBar()
 {
-    _pTabBar->init(this, false, false, 3);
-    connect(_pTabBar, &TabBarPlus::tabDelete, this, &MainWindow::closeFile);
+    // _pTabBar is created in setupUi() and used for the top-level tab bar.
+    // Document tabs are managed by _pDocTabBar (Scintilla editor tabs).
+    if (_pTabBar)
+    {
+        _pTabBar->init(this, false, false, 3);
+        connect(_pTabBar, &TabBarPlus::tabDelete, this, [this]() { closeFile(); });
+    }
 }
 
 void MainWindow::createDocumentPane()
@@ -217,6 +240,10 @@ void MainWindow::createDocumentPane()
     _pDocTabBar = new QTabWidget(this);
     _pDocTabBar->setTabsClosable(true);
     _pDocTabBar->setDocumentMode(true);
+    // Qt6: use QTabBar base class public signals
+    QTabBar* docTabBar = qobject_cast<QTabBar*>(_pDocTabBar);
+    connect(docTabBar, &QTabBar::currentChanged, this, &MainWindow::onTabChanged);
+    connect(docTabBar, &QTabBar::tabCloseRequested, this, [this](int i) { closeFile(i); });
 }
 
 void MainWindow::createPanels()
@@ -246,9 +273,22 @@ void MainWindow::createPanels()
 void MainWindow::newFile()
 {
     Buffer* buf = createNewBuffer();
-    int index = _pTabBar->insertAtEnd("Untitled");
-    _pTabBar->activateAt(index);
+    // Create a Scintilla editor widget for this document
+    ScintillaComponent* editor = new ScintillaComponent(this);
+    editor->init(this);
+    // Show line number gutter by default
+    editor->showMargin(SC_MARGE_LINENUMBER, true);
+    int index = _pDocTabBar->addTab(editor, "Untitled");
+    _pDocTabBar->setCurrentIndex(index);
+    _scintillaEditors.append(editor);
     _pCurrentBuffer = buf;
+
+    // Connect cursor movement to status bar update
+    connect(editor, &QsciScintilla::cursorPositionChanged, this, &MainWindow::updateStatusBar);
+    // Connect text modifications to status bar (length may change)
+    connect(editor, &QsciScintilla::textChanged, this, &MainWindow::updateStatusBar);
+
+    updateStatusBar();
 }
 
 void MainWindow::openFile()
@@ -277,9 +317,22 @@ void MainWindow::openFile(const QString& path)
     buf->setFilePath(path);
 
     QFileInfo fi(path);
-    int index = _pTabBar->insertAtEnd(fi.fileName());
-    _pTabBar->activateAt(index);
+    ScintillaComponent* editor = new ScintillaComponent(this);
+    editor->init(this);
+    // Show line number gutter by default
+    editor->showMargin(SC_MARGE_LINENUMBER, true);
+    editor->setText(content.toUtf8());
+    int index = _pDocTabBar->addTab(editor, fi.fileName());
+    _pDocTabBar->setCurrentIndex(index);
+    _scintillaEditors.append(editor);
     _pCurrentBuffer = buf;
+
+    // Connect cursor movement to status bar update
+    connect(editor, &QsciScintilla::cursorPositionChanged, this, &MainWindow::updateStatusBar);
+    // Connect text modifications to status bar (length may change)
+    connect(editor, &QsciScintilla::textChanged, this, &MainWindow::updateStatusBar);
+
+    updateStatusBar();
 }
 
 void MainWindow::saveFile()
@@ -289,10 +342,12 @@ void MainWindow::saveFile()
         saveFileAs();
         return;
     }
+    ScintillaComponent* editor = currentScintilla();
+    QString text = editor ? editor->text() : "";
     QFile file(_pCurrentBuffer->filePath());
     if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&file);
-        out << _pCurrentBuffer->content();
+        out << text;
         file.close();
         _pCurrentBuffer->setDirty(false);
     }
@@ -312,32 +367,72 @@ void MainWindow::saveFileAs()
 
 void MainWindow::closeFile()
 {
-    int index = _pTabBar->getCurrentTabIndex();
-    if (index >= 0) {
-        _pTabBar->deleteItemAt(index);
+    closeFile(_pDocTabBar ? _pDocTabBar->currentIndex() : -1);
+}
+
+void MainWindow::closeFile(int index)
+{
+    if (index < 0) index = _pDocTabBar ? _pDocTabBar->currentIndex() : -1;
+    if (index < 0 || !_pDocTabBar) return;
+
+    if (index < _scintillaEditors.size()) {
+        delete _scintillaEditors[index];
+        _scintillaEditors.remove(index);
     }
+    if (index < _buffers.size()) {
+        delete _buffers[index];
+        _buffers.remove(index);
+    }
+    _pDocTabBar->removeTab(index);
 }
 
 void MainWindow::exit() { close(); }
 
+void MainWindow::undo()
+{
+    if (auto* ed = currentScintilla()) ed->undo();
+}
 
-// TODO: pending NppCommands wiring
-void MainWindow::undo() {}
-// TODO: pending NppCommands wiring
-void MainWindow::redo() {}
-// TODO: pending NppCommands wiring
-void MainWindow::cut() {}
-// TODO: pending NppCommands wiring
-void MainWindow::copy() {}
-// TODO: pending NppCommands wiring
-void MainWindow::paste() {}
-// TODO: pending NppCommands wiring
-void MainWindow::selectAll() {}
+void MainWindow::redo()
+{
+    if (auto* ed = currentScintilla()) ed->redo();
+}
 
-// TODO: pending NppCommands wiring
-void MainWindow::find() {}
-// TODO: pending NppCommands wiring
-void MainWindow::replace() {}
+void MainWindow::cut()
+{
+    if (auto* ed = currentScintilla()) ed->cut();
+}
+
+void MainWindow::copy()
+{
+    if (auto* ed = currentScintilla()) ed->copy();
+}
+
+void MainWindow::paste()
+{
+    if (auto* ed = currentScintilla()) ed->paste();
+}
+
+void MainWindow::selectAll()
+{
+    if (auto* ed = currentScintilla()) ed->selectAll();
+}
+
+void MainWindow::find()
+{
+    if (_pFindReplaceDlg) {
+        _pFindReplaceDlg->setCurrentEditor(currentScintilla());
+        _pFindReplaceDlg->doDialog(FIND_DLG);
+    }
+}
+
+void MainWindow::replace()
+{
+    if (_pFindReplaceDlg) {
+        _pFindReplaceDlg->setCurrentEditor(currentScintilla());
+        _pFindReplaceDlg->doDialog(REPLACE_DLG);
+    }
+}
 
 void MainWindow::toggleFullScreen()
 {
@@ -350,7 +445,10 @@ void MainWindow::toggleFullScreen()
 }
 
 // TODO: pending NppCommands wiring
-void MainWindow::toggleWordWrap() {}
+void MainWindow::toggleWordWrap()
+{
+    if (auto* ed = currentScintilla()) ed->wrapText(!ed->isWrap());
+}
 
 // TODO: pending NppCommands wiring
 void MainWindow::zoomIn() { _currentZoomFactor += 10; }
@@ -361,25 +459,64 @@ void MainWindow::resetZoom() { _currentZoomFactor = 100; }
 
 void MainWindow::onTabChanged(int index)
 {
-    Q_UNUSED(index);
-    Buffer* buf = getBufferFromIndex(index);
-    if (buf) {
-        _pCurrentBuffer = buf;
-        updateStatusBar();
-    }
+    if (index >= 0 && index < _buffers.size())
+        _pCurrentBuffer = _buffers[index];
+    else
+        _pCurrentBuffer = nullptr;
+    // Sync current editor to FindReplaceDlg so search works on active tab
+    if (_pFindReplaceDlg)
+        _pFindReplaceDlg->setCurrentEditor(currentScintilla());
+    updateStatusBar();
     emit documentChanged(index);
-}
-
-void MainWindow::onTabCloseRequested(int index)
-{
-    _pTabBar->deleteItemAt(index);
 }
 
 void MainWindow::updateStatusBar()
 {
+    if (!_pStatusBar) return;
+    ScintillaComponent* ed = currentScintilla();
+    if (!ed) return;
+
+    // Use QsciScintilla's cursor position helpers (1-indexed line, 1-indexed column)
+    int line = 0, col = 0;
+    ed->getCursorPosition(&line, &col);
+    if (_pPositionLabel) _pPositionLabel->setText(QString("Ln %1, Col %2").arg(line + 1).arg(col + 1));
+
+    // Document length
+    if (_pLengthLabel) _pLengthLabel->setText(QString("Len %1").arg(ed->send(SCI_GETLENGTH)));
+
+    // Encoding
+    if (_pEncodingLabel) _pEncodingLabel->setText("UTF-8");
+
+    // EOL mode
+    int eolMode = ed->eolMode();
+    QString eolStr = (eolMode == npp_sci::SC_EOL_CRLF) ? "Windows (CRLF)"
+                      : (eolMode == npp_sci::SC_EOL_LF) ? "Unix (LF)"
+                      : (eolMode == npp_sci::SC_EOL_CR) ? "Mac (CR)" : "Windows (CRLF)";
+    if (_pEolLabel) _pEolLabel->setText(eolStr);
+
+    // Language
+    QString langStr = "Normal text";
     if (_pCurrentBuffer) {
-        // Update position, length, encoding, EOL, language
+        switch (_pCurrentBuffer->getLangType()) {
+            case LangType::L_CPP:     langStr = "C++"; break;
+            case LangType::L_JAVA:    langStr = "Java"; break;
+            case LangType::L_CS:      langStr = "C#"; break;
+            case LangType::L_HTML:    langStr = "HTML"; break;
+            case LangType::L_XML:     langStr = "XML"; break;
+            case LangType::L_PYTHON:  langStr = "Python"; break;
+            case LangType::L_JSON:    langStr = "JSON"; break;
+            case LangType::L_MAKEFILE:langStr = "Makefile"; break;
+            case LangType::L_INI:     langStr = "INI"; break;
+            case LangType::L_BATCH:   langStr = "Batch"; break;
+            case LangType::L_JAVASCRIPT: langStr = "JavaScript"; break;
+            case LangType::L_PHP:     langStr = "PHP"; break;
+            case LangType::L_SQL:     langStr = "SQL"; break;
+            case LangType::L_RC:      langStr = "Resource"; break;
+            case LangType::L_TEXT:    langStr = "Normal text"; break;
+            default:                  langStr = "Normal text"; break;
+        }
     }
+    if (_pLanguageLabel) _pLanguageLabel->setText(langStr);
 }
 
 void MainWindow::updateTabBar() {}
@@ -478,4 +615,12 @@ void MainWindow::dropEvent(QDropEvent* event)
 bool MainWindow::event(QEvent* event)
 {
     return QMainWindow::event(event);
+}
+
+ScintillaComponent* MainWindow::currentScintilla() const
+{
+    int idx = _pDocTabBar ? _pDocTabBar->currentIndex() : -1;
+    if (idx >= 0 && idx < _scintillaEditors.size())
+        return _scintillaEditors[idx];
+    return nullptr;
 }

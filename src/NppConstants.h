@@ -316,6 +316,7 @@ enum LangType {
     L_VISUALPROLOG = 84, L_TYPESCRIPT = 85, L_JSON5 = 86, L_MSSQL = 87,
     L_GDSCRIPT = 88,   L_HOLLYWOOD = 89, L_GOLANG = 90,  L_RAKU = 91,
     L_TOML = 92,       L_SAS = 93,     L_ERRORLIST = 94, L_EXTERNAL = 95,
+    L_MARKDOWN = 96,
 };
 
 // Windows version enum (from N++ Notepad_plus_msgs.h)

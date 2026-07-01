@@ -20,6 +20,7 @@
 #include <QStyleFactory>
 
 #include "WinControls/TabBar.h"
+#include "FindReplaceDlg.h"
 
 // Forward declarations
 class Buffer;
@@ -82,8 +83,8 @@ private slots:
     void saveFile();
     void saveFileAs();
     void closeFile();
+    void closeFile(int index);
     void exit();
-
     void undo();
     void redo();
     void cut();
@@ -100,7 +101,6 @@ private slots:
     void resetZoom();
 
     void onTabChanged(int index);
-    void onTabCloseRequested(int index);
 
     void updateStatusBar();
     void updateTabBar();
@@ -122,6 +122,7 @@ private:
 
     Buffer* createNewBuffer();
     Buffer* getBufferFromIndex(int index) const;
+    ScintillaComponent* currentScintilla() const;
 
     void applyDarkModeStyle();
     void applyLightModeStyle();
@@ -138,6 +139,18 @@ private:
     QToolBar* _pViewToolBar = nullptr;
     QToolBar* _pSearchToolBar = nullptr;
 
+    // Toolbar actions (owned by this class, created in createActions())
+    QAction* _pActNew = nullptr;
+    QAction* _pActOpen = nullptr;
+    QAction* _pActSave = nullptr;
+    QAction* _pActUndo = nullptr;
+    QAction* _pActRedo = nullptr;
+    QAction* _pActCut = nullptr;
+    QAction* _pActCopy = nullptr;
+    QAction* _pActPaste = nullptr;
+    QAction* _pActFind = nullptr;
+    QAction* _pActReplace = nullptr;
+
     QMenuBar* _pMenuBar = nullptr;
     QStatusBar* _pStatusBar = nullptr;
 
@@ -147,6 +160,8 @@ private:
     QDockWidget* _pProjectPanelDock = nullptr;
     QDockWidget* _pPluginsAdminDock = nullptr;
 
+    FindReplaceDlg* _pFindReplaceDlg = nullptr;
+
     QLabel* _pPositionLabel = nullptr;
     QLabel* _pLengthLabel = nullptr;
     QLabel* _pEncodingLabel = nullptr;
@@ -155,6 +170,8 @@ private:
 
     Buffer* _pCurrentBuffer = nullptr;
     QVector<Buffer*> _buffers;
+    // Scintilla editor widgets, one per document tab
+    QVector<ScintillaComponent*> _scintillaEditors;
 
     QSettings _settings;
 

@@ -10,11 +10,17 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QTabWidget>
-#include "ScintillaComponent.h"
-#include "Buffer.h"
-#include "DockingWnd.h"
+#include <QCheckBox>
+#include <QString>
+#include <vector>
+// Forward-declare to avoid QsciScintilla circular include dependency
+class ScintillaComponent;
+class Buffer;
+// DockingDlgInterface is defined in DockingWnd.h — include it for the canonical definition
+#include "WinControls/DockingWnd.h"
 #include <map>
 #include <string>
+#include "NppConstants.h"
 #include <vector>
 
 #define FIND_INVALID_REGULAR_EXPRESSION -2
@@ -68,7 +74,7 @@ class FindReplaceDlg : public QWidget
 {
     Q_OBJECT
 public:
-    FindReplaceDlg();
+    explicit FindReplaceDlg(QWidget* parent = nullptr);
     ~FindReplaceDlg() override;
 
     // getHSelf() returns the widget handle (mirrors Win32 getHSelf())
@@ -99,6 +105,9 @@ public:
     void setSearchText(const wchar_t* txt2find);
     void setFindInFilesDirFilter(const wchar_t* dir, const wchar_t* filters);
     void enableFindInFilesControls(bool, bool);
+    // Set the current Scintilla editor — called when active tab changes
+    void setCurrentEditor(ScintillaComponent* editor) { _currentEditor = editor; }
+    ScintillaComponent* currentEditor() const { return _currentEditor; }
     void saveFindHistory();
 
     // Results
@@ -130,8 +139,8 @@ public:
     void display(bool show) { setVisible(show); }
 
     // Qt-port stubs for Finder (search results panel) access
-    DockingDlgInterface* getMainFinder() { return nullptr; }
-    std::vector<DockingDlgInterface*> getFindersOfFinder() { return {}; }
+    QWidget* getMainFinder() { return nullptr; }
+    std::vector<QWidget*> getFindersOfFinder() { return {}; }
 
 signals:
     void searchCompleted(int count);
@@ -146,6 +155,7 @@ public slots:
 
 private:
     ScintillaComponent** _ppEditView = nullptr;
+    ScintillaComponent* _currentEditor = nullptr;
     DIALOG_TYPE _currentStatus = FIND_DLG;
     QTabWidget* _tab = nullptr;
     QLineEdit* _findEdit = nullptr;
@@ -157,6 +167,9 @@ private:
     QWidget* _replaceTab = nullptr;
     QWidget* _findInFilesTab = nullptr;
     QWidget* _markTab = nullptr;
+    QCheckBox* _wholeWordChk = nullptr;
+    QCheckBox* _matchCaseChk = nullptr;
+    QCheckBox* _wrapChk = nullptr;
 
     std::vector<FoundInfo> _foundInfos;
     bool _isRTL = false;

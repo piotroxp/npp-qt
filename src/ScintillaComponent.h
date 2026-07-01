@@ -26,14 +26,53 @@ class ScintillaComponent;
 #include <QByteArray>
 #include <QVector>
 #include <QColor>
+#include <QFont>
 #include <QApplication>
-#include "Buffer.h"
 #include <QScrollBar>
 #include <QEvent>
+#include "Buffer.h"
 #include "NppConstants.h"
+#include <Qsci/qsciapis.h>
+#include <Qsci/qscilexer.h>
+#include <Qsci/qscilexercpp.h>
+#include <Qsci/qscilexerhtml.h>
+#include <Qsci/qscilexerjson.h>
+#include <Qsci/qscilexercss.h>
+#include <Qsci/qscilexerpython.h>
+#include <Qsci/qscilexeroctave.h>
+#include <Qsci/qscilexerbash.h>
+#include <Qsci/qscilexerxml.h>
+#include <Qsci/qscilexeryaml.h>
+#include <Qsci/qscilexerlua.h>
+#include <Qsci/qscilexerpascal.h>
+#include <Qsci/qscilexersql.h>
+#include <Qsci/qscilexerproperties.h>
+#include <Qsci/qscilexerperl.h>
+#include <Qsci/qscilexerruby.h>
+#include <Qsci/qscilexertex.h>
+#include <Qsci/qscilexermarkdown.h>
+#include <Qsci/qscilexermakefile.h>
+#include <Qsci/qscilexerdiff.h>
+#include <Qsci/qscilexeroctave.h>
+#include <vector>
 // Forward declarations for Win32 interface types not yet fully lifted
 class ISorter;         // line-sorter interface (stubbed in npp-qt)
-struct ColumnModeInfos; // column-mode selection data (stubbed)
+// column-mode selection data (stubbed from Win32 original)
+struct ColumnModeInfo {
+    intptr_t _selLpos = 0;
+    intptr_t _selRpos = 0;
+    intptr_t _order = 0;
+    bool _isL2R = true;
+    intptr_t _nbVirtualAnchorSpc = 0;
+    intptr_t _nbVirtualCaretSpc = 0;
+    ColumnModeInfo() = default;
+    ColumnModeInfo(intptr_t lPos, intptr_t rPos, intptr_t order, bool isL2R = true,
+                  intptr_t vAnchorNbSpc = 0, intptr_t vCaretNbSpc = 0)
+        : _selLpos(lPos), _selRpos(rPos), _order(order), _isL2R(isL2R),
+          _nbVirtualAnchorSpc(vAnchorNbSpc), _nbVirtualCaretSpc(vCaretNbSpc) {}
+    bool isValid() const { return _selLpos < _selRpos; }
+};
+using ColumnModeInfos = std::vector<ColumnModeInfo>;
 
 // ScintillaEditBase provides the Qt6 platform layer for Scintilla.
 // Stub implementation lives in src/ScintillaEditBase.{h,cpp}; replace with
@@ -376,7 +415,9 @@ public:
     // --- Line sorting / manipulation ---
     void sortLines(size_t fromLine, size_t toLine, ISorter* pSort);
     void removeDuplicateLines();
-    void hideLines();
+    void convertSelectedTextToUpperCase() { execute(SCI_UPPERCASE); }
+    void convertSelectedTextToLowerCase() { execute(SCI_LOWERCASE); }
+    void removeEmptyLine(bool includeBlankLines);  // stub: uses regex to remove empty lines
     bool hidelineMarkerClicked(size_t lineNumber);
 
     // --- Hide/show lines ---
@@ -396,7 +437,7 @@ public:
     void columnReplaceNumeric(ColumnModeInfos& cmi, size_t initial, size_t incr,
                              size_t repeat, int format, int lead) const;
     void setMultiSelections(const ColumnModeInfos& cmi);
-    bool pasteToMultiSelection() const;
+    bool pasteToMultiSelection();
 
     // --- Word selection ---
     std::pair<size_t, size_t> getWordRange();
@@ -405,6 +446,9 @@ public:
     // --- Selection info ---
     size_t getUnicodeSelectedLength() const;
     std::pair<size_t, size_t> getSelectionLinesRangeSel(intptr_t selNum) const;
+    std::pair<size_t, size_t> getSelectionLinesRange() const {
+        return getSelectionLinesRangeSel(0);
+    }
     bool getIndicatorRangeForPos(size_t indicatorNumber, size_t* from = nullptr,
                                   size_t* to = nullptr, size_t* cur = nullptr);
 
@@ -454,7 +498,6 @@ public:
     void setCRLF() { send(SCI_SETEOLMODE, SC_EOL_CRLF); send(SCI_CONVERTEOLS, SC_EOL_CRLF); }
 
     // --- Selection info ---
-
     std::pair<size_t, size_t> getSelectedCharsAndLinesCount(size_t = 0) const;  // stub with optional maxSels param
 
     // --- Undo/Redo ---
@@ -557,6 +600,12 @@ signals:
     // Emitted on each SCN_UPDATEUI notification
     void uiChanged();
 
+    // Emitted when text content changes (used to mark buffer dirty)
+    void textChanged();
+
+    // Emitted when cursor moves (line, index) — used to update status bar
+    void cursorPositionChanged(int line, int index);
+
 protected:
     // Install event filter to handle custom messages that previously went through
     // the subclassed ScintillaProc (Win32) → now handled via Qt's event() system.
@@ -574,6 +623,10 @@ private:
     void setupMargins();
     void setupFonts();
     void setupMarkers();
+
+    // --- Lexer management ---
+    QsciLexer* _lexer = nullptr;  // owned by this widget (QsciScintilla takes ownership)
+    QsciLexer* createLexerForLanguage(int langType);
 
 public:
     // Apply global styles (folding, selection, caret, etc.)

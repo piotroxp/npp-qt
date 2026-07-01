@@ -5,6 +5,14 @@
 
 #pragma once
 
+// =============================================================================
+// CRITICAL: All includes must be at GLOBAL scope (outside namespace NppDarkMode).
+// Including Qt/system headers inside "namespace NppDarkMode { }" causes Qt symbols
+// to become NppDarkMode::QToolBar, NppDarkMode::QIcon, etc.,
+// which breaks class NppDarkMode : public QToolBar { } — circular inheritance.
+// Fix: includes above, open namespace after.
+// =============================================================================
+
 #include <QObject>
 #include <QWidget>
 #include <QColor>
@@ -26,60 +34,61 @@
 #include <QProgressBar>
 #include <QProxyStyle>
 #include <QAbstractItemView>
-#include "WinControls/ToolBar.h"  // ToolBarStatusType
+#include <QPaintDevice>
 
-// Needed for TbIconInfo members
-#include "NppConstants.h"
-#include "WinControls/ImageListSet.h"
-
-// Forward declarations
-class QPaintDevice;
-class QPalette;
+#include "WinControls/ToolBar.h"   // ToolBarStatusType, ToolBarIcons
+#include "NppConstants.h"          // QRgb, qRgba
+#include "WinControls/ImageListSet.h"  // FluentColor, IconList, DynamicIconCmd
 
 // =============================================================================
-// Colour palette — maps Win32 COLORREF → Qt QRgb
+// All types at GLOBAL scope (outside namespace).
+// The class NppDarkMode lives inside namespace NppDarkMode, but the data
+// structs and enums are at global scope so ::NppDarkModeColors etc. work.
 // =============================================================================
 
-namespace NppDarkMode
+struct NppDarkModeTbIconInfo
 {
-
-struct TbIconInfo;  // forward declaration (defined below)
-
-struct Colors
-{
-    QRgb background      = 0x303030;  // main background
-    QRgb softerBackground = 0x383838; // control background
-    QRgb hotBackground   = 0x454545;  // hover highlight
-    QRgb pureBackground  = 0x202020;  // dialog background
-    QRgb errorBackground = 0xB00000; // error/warning bg
-    QRgb text            = 0xE0E0E0;  // primary text
-    QRgb darkerText      = 0xC0C0C0;  // secondary text
-    QRgb disabledText    = 0x808080;  // disabled text
-    QRgb linkText        = 0xFFFF00;  // hyperlink text
-    QRgb edge            = 0x646464;  // borders
-    QRgb hotEdge         = 0x9B9B9B;  // hover border
-    QRgb disabledEdge    = 0x484848;  // disabled border
+    ToolBarStatusType _tbIconSet = ToolBarStatusType::TB_STANDARD;
+    FluentColor       _tbColor   = FluentColor::defaultColor;
+    QRgb              _tbCustomColor = qRgba(0, 0, 0, 0);
+    bool              _tbUseMono = false;
 };
 
-struct Options
+struct NppDarkModeColors
+{
+    QRgb background       = 0x303030;
+    QRgb softerBackground = 0x383838;
+    QRgb hotBackground    = 0x454545;
+    QRgb pureBackground   = 0x202020;
+    QRgb errorBackground  = 0xB00000;
+    QRgb text             = 0xE0E0E0;
+    QRgb darkerText       = 0xC0C0C0;
+    QRgb disabledText     = 0x808080;
+    QRgb linkText         = 0xFFFF00;
+    QRgb edge             = 0x646464;
+    QRgb hotEdge          = 0x9B9B9B;
+    QRgb disabledEdge     = 0x484848;
+};
+
+struct NppDarkModeOptions
 {
     bool enable = false;
     bool enablePlugin = false;
 };
 
-enum class ColorTone
+enum class NppDarkModeColorTone
 {
-    blackTone     = 0,
-    redTone       = 1,
-    greenTone     = 2,
-    blueTone      = 3,
-    purpleTone    = 4,
-    cyanTone      = 5,
-    oliveTone     = 6,
+    blackTone      = 0,
+    redTone        = 1,
+    greenTone      = 2,
+    blueTone       = 3,
+    purpleTone     = 4,
+    cyanTone       = 5,
+    oliveTone      = 6,
     customizedTone = 32
 };
 
-enum class ToolTipsType
+enum class NppDarkModeToolTipsType
 {
     tooltip,
     toolbar,
@@ -88,30 +97,25 @@ enum class ToolTipsType
     tabbar
 };
 
-enum class TreeViewStyle
+enum class NppDarkModeTreeViewStyle
 {
     classic = 0,
     light   = 1,
     dark    = 2
 };
 
-// Accent colour source
-enum class AccentSource
+enum class NppDarkModeAccentSource
 {
     systemDefault,
     custom
 };
 
-// Toolbar icon info struct — originally in Parameters.h, moved here to avoid
-// circular include (Parameters.h → NppDarkMode.h → Parameters.h).
-// Kept in NppDarkMode namespace so callers don't need an extra include.
-struct TbIconInfo
+// =============================================================================
+// namespace NppDarkMode — contains class + convenience wrappers
+// Types above are at global scope; namespace provides aliases + helpers
+// =============================================================================
+namespace NppDarkMode
 {
-    ToolBarStatusType _tbIconSet = ToolBarStatusType::TB_STANDARD;
-    FluentColor       _tbColor   = FluentColor::defaultColor;
-    QRgb              _tbCustomColor = qRgba(0, 0, 0, 0);
-    bool              _tbUseMono = false;
-};
 
 // =============================================================================
 // NppDarkMode — singleton palette + style controller
@@ -123,21 +127,31 @@ class NppDarkMode : public QObject
     Q_PROPERTY(bool enabled READ isEnabled NOTIFY darkModeChanged)
 
 public:
+
+    // Nested type aliases — allow NppDarkMode::TbIconInfo etc. from old nested layout
+    using TbIconInfo       = ::NppDarkModeTbIconInfo;
+    using Colors           = ::NppDarkModeColors;
+    using Options          = ::NppDarkModeOptions;
+    using ColorTone        = ::NppDarkModeColorTone;
+    using ToolTipsType     = ::NppDarkModeToolTipsType;
+    using TreeViewStyle    = ::NppDarkModeTreeViewStyle;
+    using AccentSource     = ::NppDarkModeAccentSource;
+
     // ── Enable / query ────────────────────────────────────────────────────
     bool isEnabled() const;
-    static bool isEnabled_Static() { return instance().isEnabled(); }  // static alias for callers using NppDarkMode::isEnabled()
+    static bool isEnabled_Static() { return instance().isEnabled(); }
     static QBrush getDlgBackgroundBrush() { return instance().pureBackgroundBrush(); }
     bool isWindowsModeEnabled();
     bool isEnabledForPlugins() const;
     void setEnabled(bool on);
     void setEnabledForPlugins(bool on);
     static int getTabIconSet(bool isDarkMode);
-    static QString getTabIcon();  // stub
-    static ::NppDarkMode::TbIconInfo getToolbarIconInfo();  // returns current toolbar icon configuration
+    static QString getTabIcon();
+    static NppDarkModeTbIconInfo getToolbarIconInfo();
 
     // ── Color palette ───────────────────────────────────────────────────────
-    Colors colors() const;
-    void setColors(const Colors& c);
+    NppDarkModeColors colors() const;
+    void setColors(const NppDarkModeColors& c);
 
     QRgb backgroundColor() const;
     QRgb ctrlBackgroundColor() const;
@@ -184,17 +198,17 @@ public:
     // ── Accent colour ──────────────────────────────────────────────────────
     QRgb accentColor() const;
     void setAccentColor(QRgb c);
-    void setAccentSource(AccentSource src);
+    void setAccentSource(NppDarkModeAccentSource src);
 
     // ── Tone ────────────────────────────────────────────────────────────────
-    void setTone(ColorTone tone);
-    ColorTone tone() const;
-    Colors defaultColors(ColorTone tone) const;
-    static Colors getDarkModeDefaultColors(ColorTone colorTone = ColorTone::blackTone);
+    void setTone(NppDarkModeColorTone tone);
+    NppDarkModeColorTone tone() const;
+    NppDarkModeColors defaultColors(NppDarkModeColorTone tone) const;
+    static NppDarkModeColors getDarkModeDefaultColors(NppDarkModeColorTone colorTone = NppDarkModeColorTone::blackTone);
 
     // ── Tree-view style ────────────────────────────────────────────────────
-    TreeViewStyle treeViewStyle() const;
-    void setTreeViewStyle(QWidget* treeView, TreeViewStyle style);
+    NppDarkModeTreeViewStyle treeViewStyle() const;
+    void setTreeViewStyle(QWidget* treeView, NppDarkModeTreeViewStyle style);
     void calculateTreeViewStyle(QRgb bgColor);
 
     // ── Qt palette integration ─────────────────────────────────────────────
@@ -241,10 +255,10 @@ private:
     void emitChanged();
 
     // ── Internal palette ──────────────────────────────────────────────────
-    Colors _colors;
-    ColorTone _tone = ColorTone::blackTone;
-    Options _options;
-    AccentSource _accentSource = AccentSource::systemDefault;
+    NppDarkModeColors _colors;
+    NppDarkModeColorTone _tone = NppDarkModeColorTone::blackTone;
+    NppDarkModeOptions _options;
+    NppDarkModeAccentSource _accentSource = NppDarkModeAccentSource::systemDefault;
     QRgb _accent = 0;
 
     // Pre-built brushes (lazy)
@@ -265,8 +279,8 @@ private:
     mutable QPen _penDarkerText;
     mutable bool _pensValid = false;
 
-    // Cached tree-view style (set by calculateTreeViewStyle)
-    mutable TreeViewStyle _treeViewStyle = TreeViewStyle::classic;
+    // Cached tree-view style
+    mutable NppDarkModeTreeViewStyle _treeViewStyle = NppDarkModeTreeViewStyle::classic;
 
 public:
     // Exposed via second public section so MOC-generated members stay isolated
@@ -276,86 +290,183 @@ public:
     static bool isExperimentalSupported();
     static void enableDarkScrollBarForWindowAndChildren(QWidget*);
     static void setDarkTitleBar(QWidget*);
-    static void setDarkTitleBar(QWidget* w, bool dark);  // bool overload for call sites using 0/false
+    static void setDarkTitleBar(QWidget* w, bool dark);
     static void autoSubclassWindowMenuBar(QWidget*);
     static void autoSubclassCtlColor(QWidget*);
     static QRgb getDarkerTextColor();
-    static void allowDarkModeForApp(bool on);             // stub: Windows app-level dark mode
-    static void autoThemeChildControls(QWidget* w);       // stub: apply dark theme to child controls
-    static QString getThemeName();                        // stub: return current theme name
+    static void allowDarkModeForApp(bool on);
+    static void autoThemeChildControls(QWidget* w);
+    static QString getThemeName();
 };
 
-// Namespace-scope inline wrappers for class static methods that exist.
-// Required because C++ name lookup: NppDarkMode::X looks in namespace NppDarkMode first,
-// finds class NppDarkMode, but does NOT search class static members.
-// ::NppDarkMode::NppDarkMode:: reaches the class from within the namespace.
-inline bool isEnabled_Static()              { return ::NppDarkMode::NppDarkMode::isEnabled_Static(); }
-inline bool isExperimentalSupported()       { return ::NppDarkMode::NppDarkMode::isExperimentalSupported(); }
-inline QBrush getDlgBackgroundBrush()       { return ::NppDarkMode::NppDarkMode::getDlgBackgroundBrush(); }
-inline int getTabIconSet(bool v)           { return ::NppDarkMode::NppDarkMode::getTabIconSet(v); }
-inline void setDarkTitleBar(QWidget* w)    { return ::NppDarkMode::NppDarkMode::setDarkTitleBar(w); }
-inline QString getTabIcon()                 { return ::NppDarkMode::NppDarkMode::getTabIcon(); }
-inline TbIconInfo getToolbarIconInfo() { return ::NppDarkMode::NppDarkMode::getToolbarIconInfo(); }
-inline QRgb getDarkerTextColor()           { return ::NppDarkMode::NppDarkMode::getDarkerTextColor(); }
-inline QString getThemeName()              { return ::NppDarkMode::NppDarkMode::getThemeName(); }
-inline void allowDarkModeForApp(bool v)    { ::NppDarkMode::NppDarkMode::allowDarkModeForApp(v); }
-inline void autoThemeChildControls(QWidget* w) { ::NppDarkMode::NppDarkMode::autoThemeChildControls(w); }
+// =============================================================================
+// Convenience type aliases (so existing code NppDarkMode::Colors still works)
+// These are INSIDE namespace so NppDarkMode::Colors = ::NppDarkModeColors
+// =============================================================================
 
-// Namespace-level delegate so code can use instance() without qualification.
-inline NppDarkMode& instance()
-{
-    return NppDarkMode::instance();
-}
+// ── Namespace-scope convenience wrappers (mirror class statics) ───────────
+inline void enableDarkScrollBarForWindowAndChildren(QWidget* w)
+    { NppDarkMode::enableDarkScrollBarForWindowAndChildren(w); }
 
-// Helper: return a QRgb as-is.  Callers in this codebase already use
+using Colors       = ::NppDarkModeColors;
+using Options      = ::NppDarkModeOptions;
+using ColorTone    = ::NppDarkModeColorTone;
+using ToolTipsType      = ::NppDarkModeToolTipsType;
+using TreeViewStyle     = ::NppDarkModeTreeViewStyle;
+using AccentSource      = ::NppDarkModeAccentSource;
+using TbIconInfo       = ::NppDarkModeTbIconInfo;
+
+// ── Namespace-scope inline wrappers for class static methods ─────────────────
+// Allow callers that already use NppDarkMode::isEnabled_Static() etc. to
+// continue without changes.
+inline bool isEnabled_Static()             { return ::NppDarkMode::isEnabled_Static(); }
+inline bool isExperimentalSupported()      { return ::NppDarkMode::isExperimentalSupported(); }
+inline QBrush getDlgBackgroundBrush()     { return ::NppDarkMode::getDlgBackgroundBrush(); }
+inline void setDarkTitleBar(QWidget* w)   { ::NppDarkMode::setDarkTitleBar(w); }
+inline QRgb getDarkerTextColor()          { return ::NppDarkMode::getDarkerTextColor(); }
+inline QString getThemeName()             { return ::NppDarkMode::getThemeName(); }
+inline void allowDarkModeForApp(bool v)   { ::NppDarkMode::allowDarkModeForApp(v); }
+inline int getTabIconSet(bool v)         { return ::NppDarkMode::getTabIconSet(v); }
+inline NppDarkModeTbIconInfo getToolbarIconInfo() { return ::NppDarkMode::getToolbarIconInfo(); }
+inline void autoThemeChildControls(QWidget* w) { ::NppDarkMode::autoThemeChildControls(w); }
+
+// Delegate to the singleton
+inline NppDarkMode& instance() { return ::NppDarkMode::instance(); }
+
+// Helper: return a QRgb as-is. Callers in this codebase already use
 // 0x00RRGGBB (fully-opaque ARGB) so no conversion is needed.
-constexpr inline QRgb hexRgb(unsigned int rgb)
-{
-    return rgb;
-}
+constexpr inline QRgb hexRgb(unsigned int rgb) { return rgb; }
 
 // ── Convenience colours for the default dark theme ──────────────────────────
-static constexpr QRgb k_darkBg        = 0x303030;
-static constexpr QRgb k_darkCtrlBg    = 0x383838;
-static constexpr QRgb k_darkHotBg      = 0x454545;
-static constexpr QRgb k_darkPureBg    = 0x202020;
-static constexpr QRgb k_darkErrorBg   = 0xB00000;
-static constexpr QRgb k_darkText      = 0xE0E0E0;
-static constexpr QRgb k_darkDarkerText = 0xC0C0C0;
-static constexpr QRgb k_darkDisabledText = 0x808080;
-static constexpr QRgb k_darkLink      = 0xFFFF00;
-static constexpr QRgb k_darkEdge      = 0x646464;
-static constexpr QRgb k_darkHotEdge    = 0x9B9B9B;
-static constexpr QRgb k_darkDisabledEdge = 0x484848;
+// inline so header + NppDarkMode.cpp can both define them (ODR-safe)
+inline static constexpr QRgb k_darkBg            = 0x303030;
+inline static constexpr QRgb k_darkCtrlBg        = 0x383838;
+inline static constexpr QRgb k_darkHotBg         = 0x454545;
+inline static constexpr QRgb k_darkPureBg        = 0x202020;
+inline static constexpr QRgb k_darkErrorBg       = 0xB00000;
+inline static constexpr QRgb k_darkText          = 0xE0E0E0;
+inline static constexpr QRgb k_darkDarkerText    = 0xC0C0C0;
+inline static constexpr QRgb k_darkDisabledText  = 0x808080;
+inline static constexpr QRgb k_darkLink          = 0xFFFF00;
+inline static constexpr QRgb k_darkEdge          = 0x646464;
+inline static constexpr QRgb k_darkHotEdge       = 0x9B9B9B;
+inline static constexpr QRgb k_darkDisabledEdge  = 0x484848;
 
+// ── Default color tables (mirrors NppDarkMode.cpp namespace-scope defs) ─────
+// Offset values for tone variants
+inline static constexpr int k_offsetEdge    = 0x1C1C1C;
+inline static constexpr int k_offsetRed     = 0x100000;
+inline static constexpr int k_offsetGreen  = 0x001000;
+inline static constexpr int k_offsetBlue   = 0x000020;
+inline static constexpr int k_offsetPurple = 0x100020;
+inline static constexpr int k_offsetCyan   = 0x001020;
+inline static constexpr int k_offsetOlive  = 0x101000;
+
+// k_colorsBlack — aggregate of k_dark* constants
+inline static constexpr NppDarkModeColors k_colorsBlack = {
+    k_darkBg, k_darkCtrlBg, k_darkHotBg, k_darkPureBg, k_darkErrorBg,
+    k_darkText, k_darkDarkerText, k_darkDisabledText, k_darkLink,
+    k_darkEdge, k_darkHotEdge, k_darkDisabledEdge
+};
+
+// Inline helpers for tone color tables (constexpr so usable as constant expressions)
+inline constexpr NppDarkModeColors makeRedColors() {
+    NppDarkModeColors c = k_colorsBlack;
+    c.background       += k_offsetRed;
+    c.softerBackground += k_offsetRed;
+    c.hotBackground    += k_offsetRed;
+    c.pureBackground   += k_offsetRed;
+    c.edge             += k_offsetEdge + k_offsetRed;
+    c.hotEdge          += k_offsetRed;
+    c.disabledEdge     += k_offsetRed;
+    return c;
+}
+inline constexpr NppDarkModeColors makeGreenColors() {
+    NppDarkModeColors c = k_colorsBlack;
+    c.background       += k_offsetGreen;
+    c.softerBackground += k_offsetGreen;
+    c.hotBackground    += k_offsetGreen;
+    c.pureBackground   += k_offsetGreen;
+    c.edge             += k_offsetEdge + k_offsetGreen;
+    c.hotEdge          += k_offsetGreen;
+    c.disabledEdge     += k_offsetGreen;
+    return c;
+}
+inline constexpr NppDarkModeColors makeBlueColors() {
+    NppDarkModeColors c = k_colorsBlack;
+    c.background       += k_offsetBlue;
+    c.softerBackground += k_offsetBlue;
+    c.hotBackground    += k_offsetBlue;
+    c.pureBackground   += k_offsetBlue;
+    c.edge             += k_offsetEdge + k_offsetBlue;
+    c.hotEdge          += k_offsetBlue;
+    c.disabledEdge     += k_offsetBlue;
+    return c;
+}
+inline constexpr NppDarkModeColors makePurpleColors() {
+    NppDarkModeColors c = k_colorsBlack;
+    c.background       += k_offsetPurple;
+    c.softerBackground += k_offsetPurple;
+    c.hotBackground    += k_offsetPurple;
+    c.pureBackground   += k_offsetPurple;
+    c.edge             += k_offsetEdge + k_offsetPurple;
+    c.hotEdge          += k_offsetPurple;
+    c.disabledEdge     += k_offsetPurple;
+    return c;
+}
+inline constexpr NppDarkModeColors makeCyanColors() {
+    NppDarkModeColors c = k_colorsBlack;
+    c.background       += k_offsetCyan;
+    c.softerBackground += k_offsetCyan;
+    c.hotBackground    += k_offsetCyan;
+    c.pureBackground   += k_offsetCyan;
+    c.edge             += k_offsetEdge + k_offsetCyan;
+    c.hotEdge          += k_offsetCyan;
+    c.disabledEdge     += k_offsetCyan;
+    return c;
+}
+inline constexpr NppDarkModeColors makeOliveColors() {
+    NppDarkModeColors c = k_colorsBlack;
+    c.background       += k_offsetOlive;
+    c.softerBackground += k_offsetOlive;
+    c.hotBackground    += k_offsetOlive;
+    c.pureBackground   += k_offsetOlive;
+    c.edge             += k_offsetEdge + k_offsetOlive;
+    c.hotEdge          += k_offsetOlive;
+    c.disabledEdge     += k_offsetOlive;
+    return c;
+}
+
+
+// =============================================================================
 // Dark scrollbar proxy style (must be in header for Q_OBJECT / moc)
+// =============================================================================
 class DarkScrollBarProxyStyle : public QProxyStyle
 {
     Q_OBJECT
 public:
     DarkScrollBarProxyStyle(QStyle* base);
 
-    // Qt6: QProxyStyle::styleHint returns int (was QStyle::StyleHint in Qt5)
     int styleHint(StyleHint hint, const QStyleOption* option = nullptr,
                   const QWidget* widget = nullptr,
                   QStyleHintReturn* returnData = nullptr) const override;
 
     // ── Static convenience shims (Win32 API names → instance calls) ──────────
-    static QBrush getBackgroundBrush()      { return instance().backgroundBrush(); }
-    static QBrush getCtrlBackgroundBrush()  { return instance().ctrlBackgroundBrush(); }
-    static QBrush getHotBackgroundBrush()   { return instance().hotBackgroundBrush(); }
-    static QBrush getPureBackgroundBrush()   { return instance().pureBackgroundBrush(); }
-    static QBrush getDlgBackgroundBrush()    { return instance().pureBackgroundBrush(); }  // dialog bg
-    static QBrush getEdgeBrush()            { return instance().edgeBrush(); }
-    static QPen   getEdgePen()              { return instance().edgePen(); }
-    static QPen   getHotEdgePen()           { return instance().hotEdgePen(); }
-    static QPen   getDarkerTextPen()        { return instance().darkerTextPen(); }
-    static QRgb   getTextColor()            { return instance().textColor(); }
-    static QRgb   getDarkerTextColor()      { return instance().darkerTextColor(); }
-    static QRgb   getBackgroundColor()      { return instance().backgroundColor(); }
-    static QRgb   getCtrlBackgroundColor()  { return instance().ctrlBackgroundColor(); }
-    static QRgb   getHotBackgroundColor()  { return instance().hotBackgroundColor(); }
-    static bool   isWindows11()             { return false; }  // no-op on non-Windows
+    static QBrush getBackgroundBrush()     { return NppDarkMode::instance().backgroundBrush(); }
+    static QBrush getCtrlBackgroundBrush() { return NppDarkMode::instance().ctrlBackgroundBrush(); }
+    static QBrush getHotBackgroundBrush()  { return NppDarkMode::instance().hotBackgroundBrush(); }
+    static QBrush getPureBackgroundBrush()  { return NppDarkMode::instance().pureBackgroundBrush(); }
+    static QBrush getDlgBackgroundBrush()   { return NppDarkMode::instance().pureBackgroundBrush(); }
+    static QBrush getEdgeBrush()           { return NppDarkMode::instance().edgeBrush(); }
+    static QPen   getEdgePen()             { return NppDarkMode::instance().edgePen(); }
+    static QPen   getHotEdgePen()          { return NppDarkMode::instance().hotEdgePen(); }
+    static QPen   getDarkerTextPen()       { return NppDarkMode::instance().darkerTextPen(); }
+    static QRgb   getTextColor()           { return NppDarkMode::instance().textColor(); }
+    static QRgb   getDarkerTextColor()     { return NppDarkMode::instance().darkerTextColor(); }
+    static QRgb   getBackgroundColor()     { return NppDarkMode::instance().backgroundColor(); }
+    static QRgb   getCtrlBackgroundColor() { return NppDarkMode::instance().ctrlBackgroundColor(); }
+    static QRgb   getHotBackgroundColor()   { return NppDarkMode::instance().hotBackgroundColor(); }
+    static bool   isWindows11()            { return false; }
 };
 
 } // namespace NppDarkMode

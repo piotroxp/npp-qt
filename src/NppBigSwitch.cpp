@@ -54,7 +54,7 @@
 #ifdef _WIN32
 #include <uxtheme.h> // for EnableThemeDialogTexture
 #include <windowsx.h> // for GET_X_VALUE, GET_Y_VALUE
-#endif
+#endif  // _WIN32
 // <format> requires GCC 13+ — removed for GCC 12 compatibility
 #include <atomic>
 #include "Notepad_plus_Window.h"
@@ -112,7 +112,7 @@ bool SetOSAppRestart()
 	wstring nppIssueLog;
 
 	wchar_t wszCmdLine[RESTART_MAX_CMD_LINE] = { 0 };
-	unsigned int cchCmdLine = static_cast<size_t>(sizeof(wszCmdLine);
+	unsigned int cchCmdLine = static_cast<size_t>(sizeof(wszCmdLine));
 	unsigned int dwPreviousFlags = 0;
 	HRESULT hr = ::GetApplicationRestartSettings(QCoreApplication::applicationPid(), wszCmdLine, &cchCmdLine, &dwPreviousFlags);
 	if (bUnregister)
@@ -266,7 +266,15 @@ int CharacterIs(wchar_t c, const wchar_t *any)
 
 qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wParam, qintptr lParam)
 {
-#ifdef _WIN32
+#ifndef _WIN32
+	// Qt/Linux: all message routing is handled via Qt's event system.
+	// This function is a Windows message pump shim only.
+	Q_UNUSED(hwnd);
+	Q_UNUSED(message);
+	Q_UNUSED(wParam);
+	Q_UNUSED(lParam);
+	return 0;
+#else
 	qintptr result = false;
 	NppParameters& nppParam = NppParameters::getInstance();
 
@@ -2033,6 +2041,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 		case 0 /* WM_NOTIFY -> QEvent */:
 		{
+#ifdef _WIN32
 			const auto lpnmhdr = reinterpret_cast<LPNMHDR>(lParam);
 			if (lpnmhdr->hwndFrom == _toolBar.getHSelf())
 			{
@@ -2204,12 +2213,16 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 									return CDRF_DODEFAULT;
 								}
 
+#ifdef _WIN32
 								{ QPainter p(lpnmcd->hdc); p.fillRect(lpnmcd->rc, NppDarkMode::instance().pureBackgroundBrush()); }
 								REBARBANDINFO rbBand{};
 								rbBand.cbSize = sizeof(REBARBANDINFO);
 								rbBand.fMask = RBBIM_STYLE | RBBIM_CHEVRONLOCATION | RBBIM_CHEVRONSTATE;
 								// RB_GETBANDINFO -> Qt rebar
-	REBARBANDINFO rbBand{}; rbBand.cbSize = sizeof(rbBand); // stub
+#else
+								REBARBANDINFO rbBand{};
+								rbBand.cbSize = sizeof(rbBand); // stub on Linux
+#endif
 
 								qintptr lr = CDRF_DODEFAULT;
 
@@ -2225,6 +2238,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 									const bool isHot = (rbBand.uChevronState & STATE_SYSTEM_HOTTRACKED) == STATE_SYSTEM_HOTTRACKED;
 									const bool isPressed = (rbBand.uChevronState & STATE_SYSTEM_PRESSED) == STATE_SYSTEM_PRESSED;
 
+#ifdef _WIN32
 									if (isHot)
 									{
 										{ QPainter p(lpnmcd->hdc); p.setPen(NppDarkMode::instance().hotEdgePen()); QBrush b(NppDarkMode::instance().hotBackgroundBrush()); p.fillRect(rbBand.rcChevronLocation, b); p.drawRoundedRect(rbBand.rcChevronLocation, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
@@ -2238,7 +2252,9 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 									constexpr auto dtFlags = DT_NOPREFIX | DT_CENTER | DT_TOP | DT_SINGLELINE | DT_NOCLIP;
 									// DrawText -> QPainter::drawText: lpnmcd->hdc, L"»", -1, &rbBand.rcChevronLocation, dtFlags);
+#endif
 
+#endif  // nested: line 2036
 									lr = CDRF_SKIPDEFAULT;
 								}
 
@@ -2865,7 +2881,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 		{
 			killAllChildren();
 			::PostQuitMessage(0);
-			this->gNppQWidget* = NULL;
+			MainWindow::gNppHWND = nullptr;
 			return true;
 		}
 
@@ -4324,14 +4340,6 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 	_pluginsManager.relayNppMessages(message, wParam, lParam);
 	return result;
-#else
-	// Qt/Linux: all message routing is handled via Qt's event system.
-	// This function is a Windows message pump shim only.
-	Q_UNUSED(hwnd);
-	Q_UNUSED(message);
-	Q_UNUSED(wParam);
-	Q_UNUSED(lParam);
-	return 0;
-#endif
+#endif  // _WIN32
 }
 

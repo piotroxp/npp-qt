@@ -8823,7 +8823,7 @@ void Notepad_plus::refreshInternalPanelIcons()
 	const auto mainFinder = _findReplaceDlg.getMainFinder();
 	if (mainFinder != nullptr)
 	{
-		refreshPanelIcon(qApp, mainFinder);
+		refreshPanelIcon(qApp, static_cast<DockingDlgInterface*>(mainFinder));
 
 		const auto& finders = _findReplaceDlg.getFindersOfFinder();
 		if (!finders.empty())
@@ -8832,7 +8832,7 @@ void Notepad_plus::refreshInternalPanelIcons()
 			{
 				if (finder != nullptr)
 				{
-					refreshPanelIcon(qApp, finder);
+					refreshPanelIcon(qApp, static_cast<DockingDlgInterface*>(finder));
 				}
 			}
 		}
@@ -9490,3 +9490,47 @@ void Notepad_plus::monitorFileOnChange(void*)
 {
     // Stub: file monitoring thread — no-op for Qt6 build
 }
+
+bool Notepad_plus::fileCloseAllButCurrent()
+{
+    // Stub: close all buffers except the current one
+    // Full implementation requires buffer management
+    return false;
+}
+
+bool Notepad_plus::fileCloseAllToLeft()
+{
+    // Stub: close all buffers to the left of the current tab
+    return false;
+}
+
+bool Notepad_plus::fileCloseAllToRight()
+{
+    // Stub: close all buffers to the right of the current tab
+    return false;
+}
+
+bool Notepad_plus::fileCloseAllUnchanged()
+{
+    // Stub: close all unchanged buffers
+    return false;
+}
+
+// Stub implementations for missing Notepad_plus methods
+bool Notepad_plus::fileReload() { return false; }
+bool Notepad_plus::fileSave(BufferID) { return false; }
+bool Notepad_plus::fileSaveAs(BufferID, bool) { return false; }
+bool Notepad_plus::fileSaveAll() { return false; }
+bool Notepad_plus::fileSaveSpecific(const std::wstring&) { return false; }
+bool Notepad_plus::fileRename(BufferID) { return false; }
+bool Notepad_plus::fileDelete(BufferID) { return false; }
+bool Notepad_plus::fileClose(BufferID, int) { return false; }
+bool Notepad_plus::fileCloseAll(bool, bool) { return false; }
+bool Notepad_plus::fileCloseAllGiven(const std::vector<BufferViewInfo>&) { return false; }
+bool Notepad_plus::fileSaveAllConfirm() { return false; }
+const wchar_t* Notepad_plus::fileSaveSession(size_t, wchar_t**, const wchar_t*, bool) { return nullptr; }
+const wchar_t* Notepad_plus::fileSaveSession(size_t, wchar_t**) { return nullptr; }
+
+// Additional stubs
+void Notepad_plus::fileNew() { /* stub */ }
+void Notepad_plus::fileOpen() { /* stub */ }

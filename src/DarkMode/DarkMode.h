@@ -9,16 +9,13 @@
 #include <QWidget>
 
 // =============================================================================
-// Forward declarations
+// Forward declarations — NppDarkMode class is defined in NppDarkMode.h
 // =============================================================================
-
-namespace NppDarkMode {
-    class NppDarkMode;
-}
+namespace NppDarkMode { class NppDarkMode; }
 
 // =============================================================================
 // Global dark mode state — mirrors Win32 g_darkModeSupported / g_darkModeEnabled
-// Delegated to NppDarkMode::NppDarkMode singleton on Qt6
+// Delegated to NppDarkMode singleton on Qt6
 // =============================================================================
 
 extern bool g_darkModeSupported;

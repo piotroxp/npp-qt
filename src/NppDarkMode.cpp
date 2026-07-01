@@ -2,7 +2,6 @@
 // Original: PowerEditor/src/NppDarkMode.cpp (4542 lines, adzm / GPLv3)
 // Target: npp-qt/src/NppDarkMode.cpp
 // Copyright (C) 2021 adzm / Adam D. Walling — GPLv3
-// Win32→Qt6: HBRUSH/HPEN → QBrush/QPen; HWND → QWidget*; SendMessage → signal/slot
 
 #include "NppDarkMode.h"
 #include "Preference.h"
@@ -30,119 +29,15 @@
 // windows.h removed
 #endif
 
-namespace NppDarkMode
-{
+// All implementation is inside NppDarkMode namespace (header is also inside)
+// This mirrors the header layout so moc sees Q_OBJECT in one pass.
 
-// =============================================================================
-// Default colour tables (from Win32 originals)
-// =============================================================================
-
-static constexpr int k_offsetEdge   = 0x1C1C1C;
-static constexpr int k_offsetRed   = 0x100000;
-static constexpr int k_offsetGreen = 0x001000;
-static constexpr int k_offsetBlue  = 0x000020;
-static constexpr int k_offsetPurple = 0x100020;
-static constexpr int k_offsetCyan  = 0x001020;
-static constexpr int k_offsetOlive = 0x101000;
-
-static constexpr Colors k_colorsBlack =
-{
-    k_darkBg,
-    k_darkCtrlBg,
-    k_darkHotBg,
-    k_darkPureBg,
-    k_darkErrorBg,
-    k_darkText,
-    k_darkDarkerText,
-    k_darkDisabledText,
-    k_darkLink,
-    k_darkEdge,
-    k_darkHotEdge,
-    k_darkDisabledEdge
-};
-
-static constexpr Colors makeRedColors()
-{
-    Colors c = k_colorsBlack;
-    c.background       += k_offsetRed;
-    c.softerBackground += k_offsetRed;
-    c.hotBackground    += k_offsetRed;
-    c.pureBackground   += k_offsetRed;
-    c.edge             += k_offsetEdge + k_offsetRed;
-    c.hotEdge          += k_offsetRed;
-    c.disabledEdge     += k_offsetRed;
-    return c;
-}
-
-static constexpr Colors makeGreenColors()
-{
-    Colors c = k_colorsBlack;
-    c.background       += k_offsetGreen;
-    c.softerBackground += k_offsetGreen;
-    c.hotBackground    += k_offsetGreen;
-    c.pureBackground   += k_offsetGreen;
-    c.edge             += k_offsetEdge + k_offsetGreen;
-    c.hotEdge          += k_offsetGreen;
-    c.disabledEdge     += k_offsetGreen;
-    return c;
-}
-
-static constexpr Colors makeBlueColors()
-{
-    Colors c = k_colorsBlack;
-    c.background       += k_offsetBlue;
-    c.softerBackground += k_offsetBlue;
-    c.hotBackground    += k_offsetBlue;
-    c.pureBackground   += k_offsetBlue;
-    c.edge             += k_offsetEdge + k_offsetBlue;
-    c.hotEdge          += k_offsetBlue;
-    c.disabledEdge     += k_offsetBlue;
-    return c;
-}
-
-static constexpr Colors makePurpleColors()
-{
-    Colors c = k_colorsBlack;
-    c.background       += k_offsetPurple;
-    c.softerBackground += k_offsetPurple;
-    c.hotBackground    += k_offsetPurple;
-    c.pureBackground   += k_offsetPurple;
-    c.edge             += k_offsetEdge + k_offsetPurple;
-    c.hotEdge          += k_offsetPurple;
-    c.disabledEdge     += k_offsetPurple;
-    return c;
-}
-
-static constexpr Colors makeCyanColors()
-{
-    Colors c = k_colorsBlack;
-    c.background       += k_offsetCyan;
-    c.softerBackground += k_offsetCyan;
-    c.hotBackground    += k_offsetCyan;
-    c.pureBackground   += k_offsetCyan;
-    c.edge             += k_offsetEdge + k_offsetCyan;
-    c.hotEdge          += k_offsetCyan;
-    c.disabledEdge     += k_offsetCyan;
-    return c;
-}
-
-static constexpr Colors makeOliveColors()
-{
-    Colors c = k_colorsBlack;
-    c.background       += k_offsetOlive;
-    c.softerBackground += k_offsetOlive;
-    c.hotBackground    += k_offsetOlive;
-    c.pureBackground   += k_offsetOlive;
-    c.edge             += k_offsetEdge + k_offsetOlive;
-    c.hotEdge          += k_offsetOlive;
-    c.disabledEdge     += k_offsetOlive;
-    return c;
-}
+namespace NppDarkMode {
 
 // Singleton instance
 static NppDarkMode* s_instance = nullptr;
 
-// DarkScrollBarProxyStyle implementation (class declared in NppDarkMode.h)
+// DarkScrollBarProxyStyle
 DarkScrollBarProxyStyle::DarkScrollBarProxyStyle(QStyle* base)
     : QProxyStyle(base)
 {}
@@ -156,9 +51,7 @@ int DarkScrollBarProxyStyle::styleHint(StyleHint hint, const QStyleOption* optio
     return QProxyStyle::styleHint(hint, option, widget, returnData);
 }
 
-// =============================================================================
-// NppDarkMode
-// =============================================================================
+// ── NppDarkMode singleton ──────────────────────────────────────────────────
 
 NppDarkMode::NppDarkMode()
 {
@@ -178,11 +71,9 @@ NppDarkMode& NppDarkMode::instance()
     return *s_instance;
 }
 
-// ── Windows-specific dark mode helpers (no-ops on Linux) ─────────────────────
-
 bool NppDarkMode::isExperimentalSupported()
 {
-    return false;  // Windows 10 dark mode explorer experimental flag — not applicable on Linux
+    return false;
 }
 
 QRgb NppDarkMode::getDarkerTextColor()
@@ -192,13 +83,11 @@ QRgb NppDarkMode::getDarkerTextColor()
 
 void NppDarkMode::enableDarkScrollBarForWindowAndChildren(QWidget* w)
 {
-    // Windows: EnableMenuShadow / dark scrollbar for taskbar.  No-op on Linux.
     if (w) {
         instance().setDarkScrollBar(w);
         instance().applyToChildWidgets(w);
     }
 }
-
 
 void NppDarkMode::autoSubclassWindowMenuBar(QWidget*)
 {
@@ -224,46 +113,36 @@ bool NppDarkMode::isEnabledForPlugins() const
 
 bool NppDarkMode::isWindowsModeEnabled()
 {
-    // Windows mode is a Windows-specific feature (uses Windows theme APIs)
-    // Stubbed to false on Linux
     return false;
 }
 
 void NppDarkMode::setDarkTitleBar(QWidget* w)
 {
-    // Win32 dark title bar theme — stubbed on Linux
     Q_UNUSED(w);
 }
 
 void NppDarkMode::setDarkTitleBar(QWidget* w, bool /*dark*/)
 {
-    // Win32: DwmSetWindowAttribute(DWMWA_USE_IMMERSIVE_DARK_MODE, ...)
-    // Stubbed on Linux; the window manager handles title bar colour
     Q_UNUSED(w);
 }
 
 void NppDarkMode::allowDarkModeForApp(bool /*on*/)
 {
-    // Win32: ShouldAppsUseDarkMode() registry /UxThemePolicy
-    // Stubbed on Linux
+    // Win32: ShouldAppsUseDarkMode() registry /UxThemePolicy — stubbed on Linux
 }
 
 void NppDarkMode::autoThemeChildControls(QWidget* /*w*/)
 {
-    // Win32: enumerate child windows and apply dark theme to each
-    // Stubbed on Linux; use applyToChildWidgets() instead
+    // Win32: enumerate child windows and apply dark theme — stubbed on Linux
 }
 
 QString NppDarkMode::getThemeName()
 {
-    // Win32: read active theme name from registry /theme file
-    // Stubbed: return empty string (uses default theme)
     return QString();
 }
 
 QString NppDarkMode::getTabIcon()
 {
-    // Win32 tab dark mode icons — stubbed
     return QString();
 }
 
@@ -282,24 +161,20 @@ void NppDarkMode::setEnabledForPlugins(bool on)
     _options.enablePlugin = on;
 }
 
-// ── Init ─────────────────────────────────────────────────────────────────────
-
 void NppDarkMode::initFromSettings()
 {
-    // In a full lift this would read from NppSettings / Preference
-    // For now use sensible defaults
     setEnabled(false);
     setEnabledForPlugins(false);
 }
 
-// ── Colour palette ───────────────────────────────────────────────────────────
+// ── Colour palette ─────────────────────────────────────────────────────────
 
-Colors NppDarkMode::colors() const
+NppDarkModeColors NppDarkMode::colors() const
 {
     return _colors;
 }
 
-void NppDarkMode::setColors(const Colors& c)
+void NppDarkMode::setColors(const NppDarkModeColors& c)
 {
     _colors = c;
     _brushesValid = false;
@@ -307,7 +182,7 @@ void NppDarkMode::setColors(const Colors& c)
     Q_EMIT colorsChanged();
 }
 
-QRgb NppDarkMode::backgroundColor()    const { return _colors.background; }
+QRgb NppDarkMode::backgroundColor()     const { return _colors.background; }
 QRgb NppDarkMode::ctrlBackgroundColor() const { return _colors.softerBackground; }
 QRgb NppDarkMode::hotBackgroundColor()  const { return _colors.hotBackground; }
 QRgb NppDarkMode::pureBackgroundColor() const { return _colors.pureBackground; }
@@ -322,23 +197,23 @@ QRgb NppDarkMode::disabledEdgeColor()   const { return _colors.disabledEdge; }
 
 void NppDarkMode::rebuildBrushes()
 {
-    _brushBg        = QBrush(QColor::fromRgb(_colors.background));
-    _brushCtrlBg    = QBrush(QColor::fromRgb(_colors.softerBackground));
-    _brushHotBg     = QBrush(QColor::fromRgb(_colors.hotBackground));
-    _brushPureBg    = QBrush(QColor::fromRgb(_colors.pureBackground));
-    _brushErrorBg   = QBrush(QColor::fromRgb(_colors.errorBackground));
-    _brushEdge      = QBrush(QColor::fromRgb(_colors.edge));
-    _brushHotEdge   = QBrush(QColor::fromRgb(_colors.hotEdge));
+    _brushBg          = QBrush(QColor::fromRgb(_colors.background));
+    _brushCtrlBg       = QBrush(QColor::fromRgb(_colors.softerBackground));
+    _brushHotBg        = QBrush(QColor::fromRgb(_colors.hotBackground));
+    _brushPureBg       = QBrush(QColor::fromRgb(_colors.pureBackground));
+    _brushErrorBg      = QBrush(QColor::fromRgb(_colors.errorBackground));
+    _brushEdge         = QBrush(QColor::fromRgb(_colors.edge));
+    _brushHotEdge      = QBrush(QColor::fromRgb(_colors.hotEdge));
     _brushDisabledEdge = QBrush(QColor::fromRgb(_colors.disabledEdge));
     _brushesValid = true;
 }
 
 void NppDarkMode::rebuildPens()
 {
-    _penEdge           = QPen(QColor::fromRgb(_colors.edge), 1);
-    _penHotEdge        = QPen(QColor::fromRgb(_colors.hotEdge), 1);
-    _penDisabledEdge   = QPen(QColor::fromRgb(_colors.disabledEdge), 1);
-    _penDarkerText     = QPen(QColor::fromRgb(_colors.darkerText), 1);
+    _penEdge         = QPen(QColor::fromRgb(_colors.edge), 1);
+    _penHotEdge      = QPen(QColor::fromRgb(_colors.hotEdge), 1);
+    _penDisabledEdge = QPen(QColor::fromRgb(_colors.disabledEdge), 1);
+    _penDarkerText  = QPen(QColor::fromRgb(_colors.darkerText), 1);
     _pensValid = true;
 }
 
@@ -349,7 +224,7 @@ void NppDarkMode::emitChanged()
     Q_EMIT colorsChanged();
 }
 
-// ── Brushes ──────────────────────────────────────────────────────────────────
+// ── Brushes ────────────────────────────────────────────────────────────────
 
 QBrush NppDarkMode::backgroundBrush() const
 {
@@ -399,7 +274,7 @@ QBrush NppDarkMode::disabledEdgeBrush() const
     return _brushDisabledEdge;
 }
 
-// ── Pens ──────────────────────────────────────────────────────────────────────
+// ── Pens ─────────────────────────────────────────────────────────────────
 
 QPen NppDarkMode::edgePen() const
 {
@@ -425,7 +300,7 @@ QPen NppDarkMode::darkerTextPen() const
     return _penDarkerText;
 }
 
-// ── Colour setters ────────────────────────────────────────────────────────────
+// ── Colour setters ────────────────────────────────────────────────────────
 
 void NppDarkMode::setBackgroundColor(QRgb c)
 {
@@ -511,31 +386,25 @@ void NppDarkMode::setDisabledEdgeColor(QRgb c)
     emitChanged();
 }
 
-// ── Accent colour ─────────────────────────────────────────────────────────────
+// ── Accent colour ─────────────────────────────────────────────────────────
 
 QRgb NppDarkMode::accentColor() const
 {
-    if (_accentSource == AccentSource::custom)
+    if (_accentSource == NppDarkModeAccentSource::custom)
         return _accent;
-#ifdef _WIN32
-    // Try to read Windows accent color (requires platform code)
-    // For cross-platform, default to blue accent
     return hexRgb(0x0078D7);
-#else
-    return hexRgb(0x0078D7);
-#endif
 }
 
 void NppDarkMode::setAccentColor(QRgb c)
 {
-    if (_accent == c && _accentSource == AccentSource::custom)
+    if (_accent == c && _accentSource == NppDarkModeAccentSource::custom)
         return;
     _accent = c;
-    _accentSource = AccentSource::custom;
+    _accentSource = NppDarkModeAccentSource::custom;
     Q_EMIT accentColorChanged(c);
 }
 
-void NppDarkMode::setAccentSource(AccentSource src)
+void NppDarkMode::setAccentSource(NppDarkModeAccentSource src)
 {
     if (_accentSource == src)
         return;
@@ -543,9 +412,9 @@ void NppDarkMode::setAccentSource(AccentSource src)
     Q_EMIT accentColorChanged(accentColor());
 }
 
-// ── Tone ─────────────────────────────────────────────────────────────────────
+// ── Tone ─────────────────────────────────────────────────────────────────
 
-void NppDarkMode::setTone(ColorTone tone)
+void NppDarkMode::setTone(NppDarkModeColorTone tone)
 {
     if (_tone == tone)
         return;
@@ -553,44 +422,41 @@ void NppDarkMode::setTone(ColorTone tone)
     setColors(defaultColors(tone));
 }
 
-ColorTone NppDarkMode::tone() const
+NppDarkModeColorTone NppDarkMode::tone() const
 {
     return _tone;
 }
 
-Colors NppDarkMode::getDarkModeDefaultColors(ColorTone colorTone)
+NppDarkModeColors NppDarkMode::getDarkModeDefaultColors(NppDarkModeColorTone colorTone)
 {
-    // Delegate to static default colors (instance-free stub for init)
     switch (colorTone) {
-        case ColorTone::redTone:    return {};
-        case ColorTone::greenTone:  return {};
-        case ColorTone::blueTone:   return {};
-        case ColorTone::purpleTone: return {};
-        case ColorTone::cyanTone:   return {};
-        case ColorTone::oliveTone:  return {};
-        case ColorTone::blackTone:
-        default:                    return {};
+        case NppDarkModeColorTone::redTone:    return {};
+        case NppDarkModeColorTone::greenTone:  return {};
+        case NppDarkModeColorTone::blueTone:   return {};
+        case NppDarkModeColorTone::purpleTone: return {};
+        case NppDarkModeColorTone::cyanTone:   return {};
+        case NppDarkModeColorTone::oliveTone:  return {};
+        case NppDarkModeColorTone::blackTone:
+        default:                               return {};
     }
 }
 
-Colors NppDarkMode::defaultColors(ColorTone tone) const
+NppDarkModeColors NppDarkMode::defaultColors(NppDarkModeColorTone tone) const
 {
-    switch (tone)
-    {
-        case ColorTone::redTone:      return makeRedColors();
-        case ColorTone::greenTone:    return makeGreenColors();
-        case ColorTone::blueTone:     return makeBlueColors();
-        case ColorTone::purpleTone:   return makePurpleColors();
-        case ColorTone::cyanTone:     return makeCyanColors();
-        case ColorTone::oliveTone:    return makeOliveColors();
-        case ColorTone::blackTone:
-        default:                      return k_colorsBlack;
+    switch (tone) {
+        case NppDarkModeColorTone::redTone:    return makeRedColors();
+        case NppDarkModeColorTone::greenTone:  return makeGreenColors();
+        case NppDarkModeColorTone::blueTone:   return makeBlueColors();
+        case NppDarkModeColorTone::purpleTone: return makePurpleColors();
+        case NppDarkModeColorTone::cyanTone:   return makeCyanColors();
+        case NppDarkModeColorTone::oliveTone:  return makeOliveColors();
+        case NppDarkModeColorTone::blackTone:
+        default:                               return k_colorsBlack;
     }
 }
 
-// ── Tree-view style ──────────────────────────────────────────────────────────
+// ── Tree-view style ──────────────────────────────────────────────────────
 
-// Perceived lightness: ITU-R BT.709 luminance coefficients
 static double perceivedLightness(QRgb c)
 {
     auto linearChannel = [](double v) -> double {
@@ -609,73 +475,57 @@ static double perceivedLightness(QRgb c)
 void NppDarkMode::calculateTreeViewStyle(QRgb bgColor)
 {
     double lightness = perceivedLightness(bgColor);
-    if (lightness < 50.0 - 2.0)
-    {
-        _treeViewStyle = TreeViewStyle::dark;
-        setTone(ColorTone::blackTone); // dark bg → dark theme
-    }
-    else if (lightness > 50.0 + 2.0)
-    {
-        _treeViewStyle = TreeViewStyle::light; // light bg → light theme
-    }
-    else
-    {
-        _treeViewStyle = TreeViewStyle::classic;
+    if (lightness < 50.0 - 2.0) {
+        _treeViewStyle = NppDarkModeTreeViewStyle::dark;
+        setTone(NppDarkModeColorTone::blackTone);
+    } else if (lightness > 50.0 + 2.0) {
+        _treeViewStyle = NppDarkModeTreeViewStyle::light;
+    } else {
+        _treeViewStyle = NppDarkModeTreeViewStyle::classic;
     }
 }
 
-TreeViewStyle NppDarkMode::treeViewStyle() const
+NppDarkModeTreeViewStyle NppDarkMode::treeViewStyle() const
 {
     return _treeViewStyle;
 }
 
-void NppDarkMode::setTreeViewStyle(QWidget* treeView, TreeViewStyle style)
+void NppDarkMode::setTreeViewStyle(QWidget* treeView, NppDarkModeTreeViewStyle style)
 {
     if (!treeView)
         return;
-    // In Qt, style is applied via the widget's palette.
-    // For "dark" style we use dark palette, for "light" the system palette.
-    if (style == TreeViewStyle::dark)
-    {
+    if (style == NppDarkModeTreeViewStyle::dark)
         setDarkScrollBar(treeView);
-    }
     else
-    {
         setLightScrollBar(treeView);
-    }
 }
 
-// ── Qt palette ────────────────────────────────────────────────────────────────
+// ── Qt palette ────────────────────────────────────────────────────────────
 
 QPalette NppDarkMode::palette() const
 {
     QPalette pal;
-
-    if (!_options.enable)
-    {
-        // Return empty palette so isValid() returns false for all roles
-        for (int role = 0; role < QPalette::NColorRoles; ++role)
-        {
-            QColor invalid;  // default-constructed = invalid
+    if (!_options.enable) {
+        for (int role = 0; role < QPalette::NColorRoles; ++role) {
+            QColor invalid;
             pal.setColor(static_cast<QPalette::ColorRole>(role), invalid);
         }
         return pal;
     }
-
-    pal.setColor(QPalette::Window,          QColor::fromRgb(_colors.background));
-    pal.setColor(QPalette::WindowText,      QColor::fromRgb(_colors.text));
-    pal.setColor(QPalette::Base,            QColor::fromRgb(_colors.pureBackground));
-    pal.setColor(QPalette::AlternateBase,   QColor::fromRgb(_colors.softerBackground));
-    pal.setColor(QPalette::ToolTipBase,     QColor::fromRgb(_colors.pureBackground));
-    pal.setColor(QPalette::ToolTipText,     QColor::fromRgb(_colors.text));
-    pal.setColor(QPalette::Text,            QColor::fromRgb(_colors.text));
-    pal.setColor(QPalette::Button,          QColor::fromRgb(_colors.softerBackground));
-    pal.setColor(QPalette::ButtonText,      QColor::fromRgb(_colors.text));
-    pal.setColor(QPalette::BrightText,      Qt::white);
-    pal.setColor(QPalette::Highlight,       QColor::fromRgb(_colors.hotBackground));
+    pal.setColor(QPalette::Window,         QColor::fromRgb(_colors.background));
+    pal.setColor(QPalette::WindowText,     QColor::fromRgb(_colors.text));
+    pal.setColor(QPalette::Base,           QColor::fromRgb(_colors.pureBackground));
+    pal.setColor(QPalette::AlternateBase,  QColor::fromRgb(_colors.softerBackground));
+    pal.setColor(QPalette::ToolTipBase,    QColor::fromRgb(_colors.pureBackground));
+    pal.setColor(QPalette::ToolTipText,    QColor::fromRgb(_colors.text));
+    pal.setColor(QPalette::Text,           QColor::fromRgb(_colors.text));
+    pal.setColor(QPalette::Button,         QColor::fromRgb(_colors.softerBackground));
+    pal.setColor(QPalette::ButtonText,     QColor::fromRgb(_colors.text));
+    pal.setColor(QPalette::BrightText,     Qt::white);
+    pal.setColor(QPalette::Highlight,      QColor::fromRgb(_colors.hotBackground));
     pal.setColor(QPalette::HighlightedText, QColor::fromRgb(_colors.text));
-    pal.setColor(QPalette::Link,           QColor::fromRgb(_colors.linkText));
-    pal.setColor(QPalette::LinkVisited,    QColor::fromRgb(_colors.darkerText));
+    pal.setColor(QPalette::Link,          QColor::fromRgb(_colors.linkText));
+    pal.setColor(QPalette::LinkVisited,   QColor::fromRgb(_colors.darkerText));
     pal.setColor(QPalette::Disabled, QPalette::WindowText,  QColor::fromRgb(_colors.disabledText));
     pal.setColor(QPalette::Disabled, QPalette::Text,        QColor::fromRgb(_colors.disabledText));
     pal.setColor(QPalette::Disabled, QPalette::ButtonText,  QColor::fromRgb(_colors.disabledText));
@@ -696,126 +546,102 @@ void NppDarkMode::applyToWidget(QWidget* w) const
 
 void NppDarkMode::applyToChildWidgets(QWidget* parent) const
 {
-    if (!parent || !_options.enable)
+    if (!parent)
         return;
-    parent->setPalette(palette());
-    for (QObject* child : parent->children())
-    {
-        if (auto* w = qobject_cast<QWidget*>(child))
-            w->setPalette(palette());
+    const auto children = parent->children();
+    for (QObject* child : children) {
+        QWidget* w = qobject_cast<QWidget*>(child);
+        if (w)
+            applyToWidget(w);
     }
 }
 
-// ── Control theming ───────────────────────────────────────────────────────────
+// ── Control theming ───────────────────────────────────────────────────────
 
 void NppDarkMode::subclassButton(QAbstractButton* btn)
 {
-    if (!btn || !_options.enable)
+    if (!btn)
         return;
-    btn->setPalette(palette());
+    btn->setStyle(new DarkScrollBarProxyStyle(btn->style()));
 }
 
 void NppDarkMode::subclassGroupBox(QGroupBox* gb)
 {
-    if (!gb || !_options.enable)
+    if (!gb)
         return;
-    gb->setPalette(palette());
+    gb->setStyle(new DarkScrollBarProxyStyle(gb->style()));
 }
 
 void NppDarkMode::subclassTabWidget(QTabWidget* tw)
 {
-    if (!tw || !_options.enable)
+    if (!tw)
         return;
-    tw->setPalette(palette());
-    // Tab bar background
-    if (tw->tabBar())
-        tw->tabBar()->setPalette(palette());
+    tw->setStyle(new DarkScrollBarProxyStyle(tw->style()));
 }
 
 void NppDarkMode::subclassComboBox(QComboBox* cb)
 {
-    if (!cb || !_options.enable)
+    if (!cb)
         return;
-    cb->setPalette(palette());
-}
-
-void NppDarkMode::subclassLineEdit(QLineEdit* le)
-{
-    if (!le || !_options.enable)
-        return;
-    le->setPalette(palette());
-}
-
-void NppDarkMode::subclassTextEdit(QTextEdit* te)
-{
-    if (!te || !_options.enable)
-        return;
-    te->setPalette(palette());
+    cb->setStyle(new DarkScrollBarProxyStyle(cb->style()));
 }
 
 void NppDarkMode::subclassListWidget(QListWidget* lw)
 {
-    if (!lw || !_options.enable)
+    if (!lw)
         return;
-    lw->setPalette(palette());
-    setDarkScrollBar(lw);
+    lw->setStyle(new DarkScrollBarProxyStyle(lw->style()));
 }
 
 void NppDarkMode::subclassTreeWidget(QTreeWidget* tw)
 {
-    if (!tw || !_options.enable)
+    if (!tw)
         return;
-    tw->setPalette(palette());
-    setDarkScrollBar(tw);
+    tw->setStyle(new DarkScrollBarProxyStyle(tw->style()));
+}
+
+void NppDarkMode::subclassLineEdit(QLineEdit* le)
+{
+    if (!le)
+        return;
+    le->setStyle(new DarkScrollBarProxyStyle(le->style()));
+}
+
+void NppDarkMode::subclassTextEdit(QTextEdit* te)
+{
+    if (!te)
+        return;
+    te->setStyle(new DarkScrollBarProxyStyle(te->style()));
 }
 
 void NppDarkMode::subclassTableWidget(QTableWidget* tw)
 {
-    if (!tw || !_options.enable)
+    if (!tw)
         return;
-    tw->setPalette(palette());
-    setDarkScrollBar(tw);
-    if (tw->horizontalHeader())
-        tw->horizontalHeader()->setPalette(palette());
-    if (tw->verticalHeader())
-        tw->verticalHeader()->setPalette(palette());
+    tw->setStyle(new DarkScrollBarProxyStyle(tw->style()));
 }
 
 void NppDarkMode::subclassProgressBar(QProgressBar* pb)
 {
-    if (!pb || !_options.enable)
+    if (!pb)
         return;
-    pb->setPalette(palette());
+    pb->setStyle(new DarkScrollBarProxyStyle(pb->style()));
 }
 
-// ── Scroll bar theming ────────────────────────────────────────────────────────
+// ── Scroll bar ───────────────────────────────────────────────────────────
 
 void NppDarkMode::setDarkScrollBar(QWidget* w)
 {
     if (!w)
         return;
-    if (auto* av = qobject_cast<QAbstractItemView*>(w))
-    {
-        av->setStyleSheet(
-            "QScrollBar:vertical { background: #2a2a2a; width: 14px; }"
-            "QScrollBar::handle:vertical { background: #4a4a4a; min-height: 20px; border-radius: 6px; }"
-            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }"
-            "QScrollBar:horizontal { background: #2a2a2a; height: 14px; }"
-            "QScrollBar::handle:horizontal { background: #4a4a4a; min-width: 20px; border-radius: 6px; }"
-            "QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }"
-        );
-    }
-    else
-    {
-        w->setStyleSheet(
-            "QScrollBar:vertical { background: #2a2a2a; width: 14px; }"
-            "QScrollBar::handle:vertical { background: #4a4a4a; min-height: 20px; border-radius: 6px; }"
-            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }"
-            "QScrollBar:horizontal { background: #2a2a2a; height: 14px; }"
-            "QScrollBar::handle:horizontal { background: #4a4a4a; min-width: 20px; border-radius: 6px; }"
-            "QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }"
-        );
-    }
+    w->setStyleSheet(
+        "QScrollBar:vertical { background: #2a2a2a; width: 14px; }"
+        "QScrollBar::handle:vertical { background: #4a4a4a; min-height: 20px; border-radius: 6px; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }"
+        "QScrollBar:horizontal { background: #2a2a2a; height: 14px; }"
+        "QScrollBar::handle:horizontal { background: #4a4a4a; min-width: 20px; border-radius: 6px; }"
+        "QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }"
+    );
 }
 
 void NppDarkMode::setLightScrollBar(QWidget* w)
@@ -825,12 +651,12 @@ void NppDarkMode::setLightScrollBar(QWidget* w)
     w->setStyleSheet(QString());
 }
 
-// ── Title bar ─────────────────────────────────────────────────────────────────
+// ── Title bar ────────────────────────────────────────────────────────────
 
 void NppDarkMode::setTitleBarDark(QWidget* w)
 {
     Q_UNUSED(w);
-    // On Linux/X11 this is a no-op; title bar colour is handled by the window manager
+    // On Linux/X11 title bar colour is handled by the window manager
 }
 
 void NppDarkMode::setTitleBarLight(QWidget* w)
@@ -838,19 +664,14 @@ void NppDarkMode::setTitleBarLight(QWidget* w)
     Q_UNUSED(w);
 }
 
-// Stub: returns 0 (no alt icon set) on Linux
 int NppDarkMode::getTabIconSet(bool /*isDarkMode*/)
 {
-    return 0;
+    return 0;  // No alternate icon set on Linux
 }
 
-// Returns toolbar icon set information based on current dark mode state.
-// On Linux we default to TB_STANDARD / default colour; real icon loading
-// would require platform resources.
-TbIconInfo NppDarkMode::getToolbarIconInfo()
+NppDarkModeTbIconInfo NppDarkMode::getToolbarIconInfo()
 {
-    TbIconInfo info;
-    // Use small icons in dark mode for better visibility
+    NppDarkModeTbIconInfo info;
     info._tbIconSet  = instance().isEnabled() ? ToolBarDisplayType::TB_SMALL : ToolBarDisplayType::TB_STANDARD;
     info._tbColor    = FluentColor::defaultColor;
     info._tbCustomColor = 0;
@@ -859,4 +680,3 @@ TbIconInfo NppDarkMode::getToolbarIconInfo()
 }
 
 } // namespace NppDarkMode
-
