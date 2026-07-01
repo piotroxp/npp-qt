@@ -18,6 +18,25 @@
 
 // npp-qt: Win32 removed
 #include <QCoreApplication>
+#include <cstdio>
+#include <cxxabi.h>
+#include <execinfo.h>
+#include <qlogging.h>
+
+static void qtMsgHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &msg)
+{
+    if (msg.contains("mkpath") || msg.contains("Empty or null")) {
+        fprintf(stderr, "QT_WARNING [%s:%d] %s\n", ctx.file ? ctx.file : "?", ctx.line, qUtf8Printable(msg));
+        // Print backtrace
+        void* buf[32];
+        int n = backtrace(buf, 32);
+        char** syms = backtrace_symbols(buf, n);
+        for (int i = 1; i < n && i < 16; ++i) { // skip this frame
+            fprintf(stderr, "  [%d] %s\n", i, syms[i]);
+        }
+        free(syms);
+    }
+}
 #include <QStandardPaths>
 #include <QDir>
 #include <QFile>
@@ -1079,6 +1098,7 @@ winVer NppParameters::getWindowsVersion()
 
 NppParameters::NppParameters()
 {
+    qInstallMessageHandler(qtMsgHandler);
 	// Get windows version
 	_winVersion = getWindowsVersion();
 
@@ -1096,6 +1116,7 @@ NppParameters::NppParameters()
 	std::wstring nppPathDir = fi_npPath.absolutePath().toStdWString();
 	nppPathDir.copy(nppPath, MAX_PATH);
 	_nppPath = nppPath;
+	fprintf(stderr, "DBG _nppPath init: '%ls'\n", _nppPath.c_str());
 
 	//Initialize current directory to startup directory
 	wchar_t curDir[MAX_PATH];
@@ -1279,8 +1300,10 @@ bool NppParameters::load()
 	else
 	{
 		_userPath = getSpecialFolderLocation(0x001A /* CSIDL_APPDATA */);
+		fprintf(stderr, "DBG _userPath after getSpecialFolder: '%ls'\n", _userPath.c_str());
 
 		pathAppend(_userPath, L"Notepad++");
+		fprintf(stderr, "DBG _userPath after pathAppend: '%ls'\n", _userPath.c_str());
 		if (!doesDirectoryExist(QString::fromStdWString(_userPath)))
 			QDir().mkpath(QString::fromStdWString(_userPath));
 
@@ -1301,6 +1324,8 @@ bool NppParameters::load()
 	_pluginConfDir = _pluginRootDir; // for plugin list home
 	pathAppend(_pluginConfDir, L"Config");
 
+	fprintf(stderr, "DBG nppPluginRootParent: '%ls', _pluginRootDir: '%ls'\n",
+	        nppPluginRootParent.c_str(), _pluginRootDir.c_str());
 	if (!doesDirectoryExist(QString::fromStdWString(nppPluginRootParent)))
 		QDir().mkpath(QString::fromStdWString(nppPluginRootParent));
 	if (!doesDirectoryExist(QString::fromStdWString(_pluginRootDir)))

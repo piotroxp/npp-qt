@@ -10,7 +10,7 @@ find_package(Qt6 REQUIRED COMPONENTS Xml)
 
 # Global fallback: run all Qt tests headless.
 # Individual tests can override via set_tests_properties() if needed.
-set(CTEST_ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+set(CTEST_ENVIRONMENT "QT_QPA_PLATFORM=offscreen;LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$ENV{LD_LIBRARY_PATH}")
 
 set(TEST_SOURCES
     TestUtf8_16.cpp
@@ -73,6 +73,7 @@ target_include_directories(npp-qt-test-lib-gui PRIVATE
 function(add_npp_test_pure NAME)
     add_executable(${NAME} EXCLUDE_FROM_ALL ${ARGN})
     target_link_libraries(${NAME} PRIVATE Qt6::Core Qt6::Test Qt6::Xml npp-qt-test-lib)
+    set_target_properties(${NAME} PROPERTIES BUILD_RPATH "/usr/lib/x86_64-linux-gnu")
     target_include_directories(${NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../src
         ${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls
@@ -85,7 +86,7 @@ function(add_npp_test_pure NAME)
     # Disable Qt6::Test subprocess mode to prevent both the hang and the X display
     # dependency. Pure tests are unit-style and don't need test isolation.
     set_tests_properties(${NAME} PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_TEST_SUBPROCESS=no"
+        ENVIRONMENT "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH};QT_QPA_PLATFORM=offscreen;QT_TEST_SUBPROCESS=no"
     )
 endfunction()
 
@@ -94,6 +95,7 @@ function(add_npp_test_gui NAME)
     target_link_libraries(${NAME} PRIVATE
         Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Test Qt6::Xml npp-qt-test-lib-gui
     )
+    set_target_properties(${NAME} PROPERTIES BUILD_RPATH "/usr/lib/x86_64-linux-gnu")
     target_include_directories(${NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../src
         ${CMAKE_CURRENT_SOURCE_DIR}/../src/WinControls
@@ -104,7 +106,7 @@ function(add_npp_test_gui NAME)
     )
     add_test(NAME ${NAME} COMMAND ${NAME})
     set_tests_properties(${NAME} PROPERTIES
-        ENVIRONMENT "XDG_RUNTIME_DIR=/tmp/npp-test-runtime;QT_QPA_PLATFORM=offscreen;QT_TEST_SUBPROCESS=no"
+        ENVIRONMENT "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH};XDG_RUNTIME_DIR=/tmp/npp-test-runtime;QT_QPA_PLATFORM=offscreen;QT_TEST_SUBPROCESS=no"
     )
 endfunction()
 

@@ -135,7 +135,9 @@ protected:
 protected:
     unsigned m_eEncoding = utf8_16_8bit;
     eState m_eState = eStart;
-    int m_code = 0;
+    // m_code needs at least 21 bits for 4-byte UTF-8 sequences; int is only
+    // 16 bits on some platforms, so use uint_least32_t to avoid overflow.
+    uint_least32_t m_code = 0;
     int m_count = 0;
     // Store the leading byte of a multi-byte sequence so toStart() can encode
     // it correctly (3-byte: shift by 12; 4-byte: shift by 18).

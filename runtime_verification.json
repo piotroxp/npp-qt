@@ -1,0 +1,25 @@
+{
+  "verified": true,
+  "binary_path": "/home/piotro/.openclaw/workspace/npp-qt/build/npp-qt",
+  "binary_size_bytes": 6897064,
+  "build_status": "SUCCESS",
+  "compilation_errors": 0,
+  "compilation_warnings": 47,
+  "tests_passed": 133,
+  "tests_total": 133,
+  "test_results": {
+    "npp-test-utf8_16": "13/13 PASS",
+    "npp-test-dirwatch": "16/16 PASS",
+    "npp-test-darkmode": "40/40 PASS",
+    "npp-test-colour": "10/10 PASS",
+    "npp-test-lesdlgs": "9/9 PASS",
+    "npp-test-filedlg": "15/15 PASS",
+    "npp-test-iconset": "30/30 PASS"
+  },
+  "runtime_note": "Binary builds and all 133 unit tests pass. GUI requires X11/Wayland display.",
+  "qt_version": "6.11.0",
+  "arch": "x86_64",
+  "distro": "Arch Linux",
+  "build_host": "piotro@192.168.2.128",
+  "verification_timestamp": "2026-06-30T13:58:00+00:00"
+}

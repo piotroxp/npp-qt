@@ -168,8 +168,11 @@ template <> inline /*static*/ wchar_t WcharMbcsConvertor::StringBuffer<wchar_t>:
 QString pathRemoveFileSpec(QString& path);
 QString pathAppend(QString& strDest, const QString& str2append);
 // Overload for std::wstring + const wchar_t* (Windows compatibility shim)
+// Adds a '/' separator if strDest doesn't already end with one.
 inline std::wstring& pathAppend(std::wstring& strDest, const wchar_t* str2append)
 {
+    if (!strDest.empty() && strDest.back() != L'/' && strDest.back() != L'\\')
+        strDest += L'/';
     strDest += str2append;
     return strDest;
 }
@@ -177,6 +180,8 @@ inline std::wstring& pathAppend(std::wstring& strDest, const wchar_t* str2append
 // Overload for std::wstring + std::wstring
 inline std::wstring& pathAppend(std::wstring& strDest, const std::wstring& str2append)
 {
+    if (!strDest.empty() && strDest.back() != L'/' && strDest.back() != L'\\')
+        strDest += L'/';
     strDest += str2append;
     return strDest;
 }

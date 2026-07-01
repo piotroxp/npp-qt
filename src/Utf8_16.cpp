@@ -1,3 +1,4 @@
+#include <cstdio>
 // Copyright (C) 2002 Scott Kirkwood
 //
 // Permission to use, copy, modify, distribute and sell this code
@@ -191,11 +192,19 @@ void Utf8_Iter::reset()
 
 void Utf8_Iter::set(const ubyte* pBuf, size_t nLen, unsigned eEncoding)
 {
-    m_pBuf      = pBuf;
-    m_pRead     = pBuf;
-    m_pEnd      = pBuf + nLen;
-    m_eEncoding = eEncoding;
-    // m_eState, m_code, m_count, m_out* not reset
+    // Reset ALL iterator state before re-initializing, so stale m_eState /
+    // m_code / m_count / m_leadingByte from a prior iteration cannot leak
+    // into the next test and cause infinite loops or use-after-end segfaults.
+    m_pBuf         = pBuf;
+    m_pRead        = pBuf;
+    m_pEnd         = pBuf + nLen;
+    m_eEncoding    = eEncoding;
+    m_eState       = eStart;
+    m_out1st       = 0;
+    m_outLst       = 0;
+    m_code         = 0;
+    m_count        = 0;
+    m_leadingByte  = 0;
     // Only initialise the shared Utf16_Iter for UTF-16 encodings.
     // UTF-8 input is handled natively byte-by-byte by operator++().
     if (eEncoding == utf8_16_16be || eEncoding == utf8_16_16le ||
@@ -216,6 +225,7 @@ bool Utf8_Iter::get(utf16* c)
 
 void Utf8_Iter::pushout(utf16 c)
 {
+    fprintf(stderr, "DBG pushout: c=0x%04X\n", c);
     m_out[m_outLst] = c;
     m_outLst = (m_outLst + 1) % (sizeof(m_out) / sizeof(m_out[0]));
 }
@@ -226,6 +236,9 @@ void Utf8_Iter::toStart()
     // Correct by shifting right: the accumulated m_code is 6 bits too high.
     if (m_leadingByte)
         m_code >>= 6;
+
+    fprintf(stderr, "DBG toStart: m_code=0x%05X m_leadingByte=%d (high_surr=(m_code>>10)&0x3FF=0x%X, 0xD800|that=0x%X)\n",
+            m_code, m_leadingByte, (unsigned)((m_code>>10)&0x3FF), (unsigned)(0xD800|((m_code>>10)&0x3FF)));
 
     // Utf8_Iter is an in-memory iterator: always output native-endian UTF-16.
     // The file-write path (Utf8_16_Write) handles endianness conversion.
@@ -250,54 +263,12 @@ void Utf8_Iter::operator++()
     if (m_out1st != m_outLst)
         return;
 
-    // For UTF-16 encodings, delegate to the inner Utf16_Iter.
-    // iter16() reads UTF-16 words and produces UTF-8 bytes; we feed
-    // each UTF-8 byte through the state machine to build Unicode code
-    // points, which toStart() emits as UTF-16 code units.
-    if (m_eEncoding == utf8_16_16be || m_eEncoding == utf8_16_16le ||
-        m_eEncoding == utf8_16_16be_nobom || m_eEncoding == utf8_16_16le_nobom)
-    {
-        ++iter16();
-        Utf8_16::utf8 byte;
-        while (iter16().get(&byte))
-        {
-            if (m_eState == eStart)
-            {
-                if (byte < 0x80)
-                {
-                    m_code = byte;
-                    m_count = 0; // single-byte: complete
-                }
-                else if (byte < 0xE0)
-                {
-                    m_code = 0x1f & byte;
-                    m_eState = eFollow;
-                    m_count = 1;
-                }
-                else if (byte < 0xF0)
-                {
-                    m_code = 0x0f & byte;
-                    m_eState = eFollow;
-                    m_count = 2;
-                }
-                else
-                {
-                    m_code = 0x07 & byte;
-                    m_eState = eFollow;
-                    m_count = 3;
-                }
-            }
-            else // eFollow
-            {
-                m_code = (m_code << 6) | (0x3F & byte);
-                --m_count;
-            }
-        }
-        // Only emit a code point when a complete sequence has been decoded.
-        if (m_count == 0)
-            toStart();
+    // Guard: after the last byte of a UTF-8 sequence is consumed, m_pRead
+    // equals m_pEnd but m_eState is still eFollow.  Without this check the
+    // next ++ would dereference *m_pEnd (out-of-bounds → garbage, often 0,
+    // which prematurely ends the iterator and drops buffered output).
+    if (m_pRead >= m_pEnd)
         return;
-    }
 
     switch (m_eState)
     {
@@ -323,10 +294,11 @@ void Utf8_Iter::operator++()
             }
             else if (*m_pRead < 0xF5)
             {
+                // 4-byte UTF-8: mask top 3 bits of 11110xxx
                 m_code = static_cast<utf16>(0x07 & *m_pRead);
                 m_eState = eFollow;
                 m_count = 3;
-                m_leadingByte = 1; // 4-byte sequence: toStart() shifts >>6
+                m_leadingByte = 0; // 4-byte sequences don't need toStart correction
             }
             else
             {
@@ -521,7 +493,11 @@ bool Utf8_16_Read::isLikelyUtf16Le(const unsigned char* buf, size_t len)
 {
     if (len < 4 || (len % 2) != 0)
         return false;
-    // Very rough heuristic: count zero bytes at even vs odd positions
+    // Count zero bytes at even vs odd positions.
+    // For UTF-16 LE of Latin/CJK text: high byte goes in odd position (0x00 or 0xNN)
+    // so odd positions tend to be null or non-ASCII, even positions tend to be
+    // the actual character data (ASCII for Latin, non-zero for CJK).
+    // This catches both 0x00NN (Latin) and 0xNN0N (CJK with non-null high bytes).
     size_t zerosEven = 0;
     size_t zerosOdd = 0;
     for (size_t i = 0; i + 1 < len; i += 2)
@@ -529,9 +505,21 @@ bool Utf8_16_Read::isLikelyUtf16Le(const unsigned char* buf, size_t len)
         if (buf[i] == 0) ++zerosEven;
         if (buf[i + 1] == 0) ++zerosOdd;
     }
-    // If odd-position zeros outnumber even-position zeros significantly,
-    // bytes are likely LE UTF-16 (high byte of most chars is non-zero)
-    return (zerosOdd > zerosEven * 3) && (zerosOdd > len / 8);
+    // Also detect CJK-style UTF-16 LE where neither byte is zero:
+    // high byte at odd position is 0x80-0xFF (non-ASCII), low byte at even
+    // position is the actual character code (ASCII or CJK low byte).
+    size_t nonzeroOdd = 0;
+    size_t nonzeroEven = 0;
+    for (size_t i = 0; i + 1 < len; i += 2)
+    {
+        if (buf[i] != 0)     ++nonzeroEven;
+        if (buf[i + 1] != 0) ++nonzeroOdd;
+    }
+    // UTF-16 LE: high byte (odd) tends to be non-ASCII; low byte (even) carries data.
+    // CJK chars: high byte is non-zero (e.g. 0x4E, 0x65) so odd non-zero > even non-zero.
+    bool nullBased   = (zerosOdd > zerosEven * 3)   && (zerosOdd   > len / 8);
+    bool nonAsciiBased = (nonzeroOdd > nonzeroEven) && (nonzeroOdd > len / 3);
+    return nullBased || nonAsciiBased;
 }
 
 bool Utf8_16_Read::isLikelyUtf16Be(const unsigned char* buf, size_t len)
@@ -545,7 +533,17 @@ bool Utf8_16_Read::isLikelyUtf16Be(const unsigned char* buf, size_t len)
         if (buf[i] == 0) ++zerosEven;
         if (buf[i + 1] == 0) ++zerosOdd;
     }
-    return (zerosEven > zerosOdd * 3) && (zerosEven > len / 8);
+    // For BE: high byte at even position; non-zero at even, zero/null at odd.
+    size_t nonzeroEven = 0;
+    size_t nonzeroOdd = 0;
+    for (size_t i = 0; i + 1 < len; i += 2)
+    {
+        if (buf[i] != 0)     ++nonzeroEven;
+        if (buf[i + 1] != 0) ++nonzeroOdd;
+    }
+    bool nullBased     = (zerosEven > zerosOdd * 3)   && (zerosEven > len / 8);
+    bool nonAsciiBased = (nonzeroEven > nonzeroOdd) && (nonzeroEven > len / 3);
+    return nullBased || nonAsciiBased;
 }
 
 QByteArray Utf8_16_Read::convert(const char* buf, size_t len)

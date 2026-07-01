@@ -20,6 +20,7 @@
 
 #include "NppSciCompat.h"
 #include "ScintillaComponent.h"  // SC_CP_UTF8 constant
+#include <QByteArray>
 #include <cstring>
 
 // Don't change the order
@@ -92,7 +93,7 @@ static bool isInListA(const char* token, const char* list)
                 word[j] = '\0';
                 j = 0;
 
-                if (qstrnicmp(token, word, std::strlen(word)) == 0)
+                if (QByteArray(token).compare(word, Qt::CaseInsensitive) == 0)
                     return true;
             }
         }

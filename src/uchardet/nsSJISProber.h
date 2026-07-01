@@ -35,59 +35,43 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsPkgInt_h__
-#define nsPkgInt_h__
-#include "nscore.h"
+// for S-JIS encoding, observe characteristic:
+// 1, kana character (or hankaku?) often have high frequency of appearance
+// 2, kana character often exist in group
+// 3, certain combination of kana is never used in japanese language
 
-typedef enum {
-  eIdxSft4bits  = 3,
-  eIdxSft8bits  = 2,
-  eIdxSft16bits = 1
-} nsIdxSft; 
+#ifndef nsSJISProber_h__
+#define nsSJISProber_h__
 
-typedef enum {
-  eSftMsk4bits  = 7,
-  eSftMsk8bits  = 3,
-  eSftMsk16bits = 1
-} nsSftMsk; 
+#include "nsCharSetProber.h"
+#include "nsCodingStateMachine.h"
+#include "JpCntx.h"
+#include "CharDistribution.h"
 
-typedef enum {
-  eBitSft4bits  = 2,
-  eBitSft8bits  = 3,
-  eBitSft16bits = 4
-} nsBitSft; 
+class nsSJISProber: public nsCharSetProber {
+public:
+  nsSJISProber(PRBool aIsPreferredLanguage)
+    :mIsPreferredLanguage(aIsPreferredLanguage)
+  {mCodingSM = new nsCodingStateMachine(&SJISSMModel);
+    Reset();}
+  virtual ~nsSJISProber(void){delete mCodingSM;}
+  nsProbingState HandleData(const char* aBuf, PRUint32 aLen);
+  const char* GetCharSetName() {return "Shift_JIS";}
+  nsProbingState GetState(void) {return mState;}
+  void      Reset(void);
+  float     GetConfidence(void);
+  void      SetOpion() {}
 
-typedef enum {
-  eUnitMsk4bits  = 0x0000000FL,
-  eUnitMsk8bits  = 0x000000FFL,
-  eUnitMsk16bits = 0x0000FFFFL
-} nsUnitMsk; 
+protected:
+  nsCodingStateMachine* mCodingSM;
+  nsProbingState mState;
 
-struct nsPkgInt {
-  nsIdxSft  idxsft;
-  nsSftMsk  sftmsk;
-  nsBitSft  bitsft;
-  nsUnitMsk unitmsk;
-  const PRUint32* const data;
-  nsPkgInt(nsIdxSft a,nsSftMsk b, nsBitSft c,nsUnitMsk d,const PRUint32* const  e)
-	  :idxsft(a), sftmsk(b), bitsft(c), unitmsk(d), data(e){}
-  nsPkgInt() : idxsft(eIdxSft4bits), sftmsk(eSftMsk4bits), bitsft(eBitSft4bits), unitmsk(eUnitMsk4bits), data(nullptr) {}
-  nsPkgInt(const nsPkgInt&) = default;
-  nsPkgInt& operator= (const nsPkgInt&) = default;
+  SJISContextAnalysis mContextAnalyser;
+  SJISDistributionAnalysis mDistributionAnalyser;
+
+  char mLastChar[2];
+  PRBool mIsPreferredLanguage;
 };
 
 
-#define PCK16BITS(a,b)            ((PRUint32)(((b) << 16) | (a)))
-
-#define PCK8BITS(a,b,c,d)         PCK16BITS( ((PRUint32)(((b) << 8) | (a))),  \
-                                             ((PRUint32)(((d) << 8) | (c))))
-
-#define PCK4BITS(a,b,c,d,e,f,g,h) PCK8BITS(  ((PRUint32)(((b) << 4) | (a))), \
-                                             ((PRUint32)(((d) << 4) | (c))), \
-                                             ((PRUint32)(((f) << 4) | (e))), \
-                                             ((PRUint32)(((h) << 4) | (g))) )
-
-#define GETFROMPCK(i, c) \
- (((((c).data)[(i)>>(c).idxsft])>>(((i)&(c).sftmsk)<<(c).bitsft))&(c).unitmsk)
-
-#endif /* nsPkgInt_h__ */
+#endif /* nsSJISProber_h__ */
