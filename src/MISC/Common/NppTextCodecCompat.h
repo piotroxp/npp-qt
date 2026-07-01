@@ -6,52 +6,12 @@
 #include <QByteArray>
 #include <cstring>
 
-// Map common MIB enum values to codec names
+// Map common MIB enum values and Windows code page IDs to codec names.
+// Covers all code pages from EncodingMapper's encoding table.
+// Qt6's QStringConverter uses IANA/ICU-style names (windows-*, ISO-*, IBM*, etc.).
 inline const char* mibToCodecName(int mib) {
     switch (mib) {
-        case 37:   return "IBM037";
-        case 201:  return "IBM273";
-        case 202:  return "IBM277";
-        case 208:  return "IBM870";
-        case 209:  return "IBM870";
-        case 225:  return "windows-1251";
-        case 226:  return "windows-1252";
-        case 850:  return "IBM850";
-        case 858:  return "IBM858";
-        case 936:  return "GB18030";
-        case 949:  return "EUC-KR";
-        case 950:  return "Big5";
-        case 367:  return "US-ASCII";
-        case 106:  return "UTF-8";
-        case 1013: return "UTF-16";
-        case 1014: return "UTF-16LE";
-        case 1015: return "UTF-16BE";
-        case 1017: return "UTF-32";
-        case 1018: return "UTF-32LE";
-        case 1019: return "UTF-32BE";
-        case 4:    return "ISO-8859-1";
-        case 5:    return "ISO-8859-2";
-        case 6:    return "ISO-8859-3";
-        case 7:    return "ISO-8859-4";
-        case 8:    return "ISO-8859-5";
-        case 9:    return "ISO-8859-6";
-        case 10:   return "ISO-8859-7";
-        case 11:   return "ISO-8859-8";
-        case 13:   return "ISO-8859-9";
-        case 14:   return "ISO-8859-10";
-        case 15:   return "ISO-8859-11";
-        case 16:   return "ISO-8859-13";
-        case 17:   return "ISO-8859-14";
-        case 18:   return "ISO-8859-15";
-        case 109:  return "ISO-8859-16";
-        case 20866: return "KOI8-R";
-        case 21866: return "KOI8-U";
-        case 28591: return "ISO-8859-1";
-        case 28592: return "ISO-8859-2";
-        case 28597: return "ISO-8859-7";
-        case 65000: return "UTF-7";
-        case 65001: return "UTF-8";
-        // windows-* MIBs (derived from source)
+        // === Windows code pages (Windows-125*) ===
         case 1250:  return "windows-1250";
         case 1251:  return "windows-1251";
         case 1252:  return "windows-1252";
@@ -61,6 +21,60 @@ inline const char* mibToCodecName(int mib) {
         case 1256:  return "windows-1256";
         case 1257:  return "windows-1257";
         case 1258:  return "windows-1258";
+        // === ISO-8859-* (Latin N) ===
+        case 28591: return "ISO-8859-1";
+        case 28592: return "ISO-8859-2";
+        case 28593: return "ISO-8859-3";
+        case 28594: return "ISO-8859-4";
+        case 28595: return "ISO-8859-5";
+        case 28596: return "ISO-8859-6";
+        case 28597: return "ISO-8859-7";
+        case 28598: return "ISO-8859-8";
+        case 28599: return "ISO-8859-9";
+        case 28603: return "ISO-8859-13";
+        case 28604: return "ISO-8859-14";
+        case 28605: return "ISO-8859-15";
+        // === DOS / OEM code pages ===
+        case 437:   return "CP437";
+        case 720:   return "CP720";
+        case 737:   return "CP737";
+        case 775:   return "CP775";
+        case 850:   return "CP850";
+        case 852:   return "CP852";
+        case 855:   return "CP855";
+        case 857:   return "CP857";
+        case 858:   return "CP858";
+        case 860:   return "CP860";
+        case 861:   return "CP861";
+        case 862:   return "CP862";
+        case 863:   return "CP863";
+        case 865:   return "CP865";
+        case 866:   return "CP866";
+        case 869:   return "CP869";
+        // === CJK code pages ===
+        case 950:   return "Big5";
+        case 936:   return "GB18030";
+        case 932:   return "Shift_JIS";
+        case 949:   return "windows-949";
+        case 51949: return "EUC-KR";
+        // === Other legacy ===
+        case 874:   return "windows-874";
+        case 10007: return "x-mac-cyrillic";
+        case 21866: return "KOI8-U";
+        case 20866: return "KOI8-R";
+        // === Standard MIB enums ===
+        case 37:   return "IBM037";
+        case 201:  return "IBM273";
+        case 202:  return "IBM277";
+        case 208:  return "IBM870";
+        case 209:  return "IBM870";
+        case 367:  return "US-ASCII";
+        case 65000: return "UTF-7";
+        case 65001: return "UTF-8";
+        case 106:  return "UTF-8";
+        case 1013: return "UTF-16";
+        case 1014: return "UTF-16LE";
+        case 1015: return "UTF-16BE";
         default:   return nullptr;
     }
 }

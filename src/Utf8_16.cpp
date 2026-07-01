@@ -313,9 +313,14 @@ void Utf8_Iter::operator++()
         case eFollow:
         {
             m_code = (m_code << 6) | static_cast<utf8>(0x3F & *m_pRead);
-            --m_count;
-            if (m_count == 0)
+            if (--m_count == 0) {
+                // Sequence complete.  2/3-byte: leading byte contributed 5/4 bits,
+                // accumulated code is 6 bits too high → right-shift once.
+                // 4-byte: leading byte contributed 3 bits, already correct (no shift).
+                if (m_leadingByte)
+                    m_code >>= 6;
                 toStart();
+            }
         }
         break;
     }
@@ -517,8 +522,12 @@ bool Utf8_16_Read::isLikelyUtf16Le(const unsigned char* buf, size_t len)
     }
     // UTF-16 LE: high byte (odd) tends to be non-ASCII; low byte (even) carries data.
     // CJK chars: high byte is non-zero (e.g. 0x4E, 0x65) so odd non-zero > even non-zero.
-    bool nullBased   = (zerosOdd > zerosEven * 3)   && (zerosOdd   > len / 8);
-    bool nonAsciiBased = (nonzeroOdd > nonzeroEven) && (nonzeroOdd > len / 3);
+    // null-based: many null high-bytes → Latin-1/ASCII in UTF-16 LE
+    // non-ASCII-based: high-byte (odd) and low-byte (even) both non-ASCII,
+    // which is the signature of CJK characters (e.g. 中=U+4E2D → LE=2d 4e,
+    // 文=U+6587 → LE=87 65).  Use >= so symmetric non-ASCII also counts.
+    bool nullBased     = (zerosOdd   >= zerosEven * 3) && (zerosOdd   >= len / 8);
+    bool nonAsciiBased = (nonzeroOdd >= nonzeroEven)   && (nonzeroOdd >= len / 3);
     return nullBased || nonAsciiBased;
 }
 

@@ -107,6 +107,28 @@ static const char* CONTEXTMENU_XML_CONTENT = R"xml(<?xml version="1.0" encoding=
     </ContextMenu>
 </NotepadPlus>)xml";
 
+// Stub XML content for default config/stylers/langs when model files are absent
+static const char* CONFIG_XML_CONTENT = R"xml(<?xml version="1.0" encoding="UTF-8"?>
+<NotepadPlus>
+    <Settings>
+        <Global fontSize="10" fontFace="Consolas" />
+    </Settings>
+</NotepadPlus>)xml";
+
+static const char* STYLERS_XML_CONTENT = R"xml(<?xml version="1.0" encoding="UTF-8"?>
+<NotepadPlus>
+    <LexerStyles>
+        <LexerType name="cpp" desc="C++">
+        </LexerType>
+    </LexerStyles>
+</NotepadPlus>)xml";
+
+static const char* LANGS_XML_CONTENT = R"xml(<?xml version="1.0" encoding="UTF-8"?>
+<NotepadPlus>
+    <Languages>
+    </Languages>
+</NotepadPlus>)xml";
+
 // Helper: convert QString to std::string safely
 static inline std::string qToStd(const QString& s) { return s.toStdString(); }
 
@@ -1105,26 +1127,15 @@ NppParameters::NppParameters()
 	// Get current system code page
 	_currentSystemCodepage = 65001 /* UTF-8 default */;
 
-	// Prepare for default path
-	wchar_t nppPath[MAX_PATH];
+	// Prepare for default path — use QString throughout to avoid
+	// wchar_t-size assumptions (2 bytes on Windows, 4 bytes on Linux).
 	QString appPath = QCoreApplication::applicationFilePath();
-	std::wstring nppPathStr = appPath.toStdWString();
-	nppPathStr.copy(nppPath, MAX_PATH);
-	nppPath[MAX_PATH-1] = 0;
-
-	QFileInfo fi_npPath(QString::fromWCharArray(nppPath));
-	std::wstring nppPathDir = fi_npPath.absolutePath().toStdWString();
-	nppPathDir.copy(nppPath, MAX_PATH);
-	_nppPath = nppPath;
+	QFileInfo fi_npPath(appPath);
+	_nppPath = fi_npPath.absolutePath().toStdWString();
 	fprintf(stderr, "DBG _nppPath init: '%ls'\n", _nppPath.c_str());
 
-	//Initialize current directory to startup directory
-	wchar_t curDir[MAX_PATH];
-	QString curDirStr = QDir::currentPath();
-	std::wstring curDirStr2 = curDirStr.toStdWString();
-	curDirStr2.copy(curDir, MAX_PATH);
-	curDir[MAX_PATH-1] = 0;
-	_currentDirectory = curDir;
+	// Initialize current directory to startup directory
+	_currentDirectory = QDir::currentPath().toStdWString();
 
 	_appdataNppDir.clear();
 	std::wstring notepadStylePath(_nppPath);
@@ -1275,11 +1286,9 @@ bool NppParameters::load()
 		if (_winVersion >= WV_VISTA)
 		{
 			std::wstring progPath = getSpecialFolderLocation(0x0026 /* CSIDL_PROGRAM_FILES */);
-			wchar_t nppDirLocation[MAX_PATH];
-			std::wcscpy(nppDirLocation, _nppPath.c_str());
-			QString nppDirStr = QString::fromWCharArray(nppDirLocation); int ls = nppDirStr.lastIndexOf(QDir::separator()); if(ls>0) nppDirStr.truncate(ls); // PathRemoveFileSpec
+			QString nppDirStr = QString::fromStdWString(_nppPath); int ls = nppDirStr.lastIndexOf(QDir::separator()); if(ls>0) nppDirStr.truncate(ls); // PathRemoveFileSpec
 
-			if  (progPath == nppDirLocation)
+			if (progPath == nppDirStr.toStdWString())
 				_isLocal = false;
 		}
 	}
@@ -1307,6 +1316,7 @@ bool NppParameters::load()
 		if (!doesDirectoryExist(QString::fromStdWString(_userPath)))
 			QDir().mkpath(QString::fromStdWString(_userPath));
 
+		nppPluginRootParent = _userPath;  // Qt6: plugin conf lives under user config dir
 		_appdataNppDir = _userPluginConfDir = _userPath;
 
 		pathAppend(_userPluginConfDir, L"plugins");
@@ -1415,7 +1425,10 @@ bool NppParameters::load()
 
 	if (doRecover)
 	{
-		// CopyFile replacedmodelLangsPath.c_str(), langs_xml_path.c_str(), false);
+		if (QFileInfo(QString::fromStdWString(modelLangsPath)).exists())
+			QFile::copy(QString::fromStdWString(modelLangsPath), QString::fromStdWString(langs_xml_path));
+		else
+			generateXmlFromScratch(langs_xml_path.c_str(), LANGS_XML_CONTENT);
 	}
 
 	_pXmlDoc._path = langs_xml_path;
@@ -1451,7 +1464,12 @@ bool NppParameters::load()
 	pathAppend(srcConfigPath, L"config.model.xml");
 
 	if (!QFileInfo(QString::fromStdWString(configPath)).exists())
-		// CopyFile replacedsrcConfigPath.c_str(), configPath.c_str(), false);
+	{
+		if (QFileInfo(QString::fromStdWString(srcConfigPath)).exists())
+			QFile::copy(QString::fromStdWString(srcConfigPath), QString::fromStdWString(configPath));
+		else
+			generateXmlFromScratch(configPath.c_str(), CONFIG_XML_CONTENT);
+	}
 
 	_xmlUserDoc._path = configPath;
 	_xmlUserDoc._doc = NppXml::NewDocument();
@@ -1477,7 +1495,10 @@ bool NppParameters::load()
 	{
 		std::wstring srcStylersPath(_nppPath);
 		pathAppend(srcStylersPath, L"stylers.model.xml");
-		// CopyFile replacedsrcStylersPath.c_str(), _stylerPath.c_str(), true);
+		if (QFileInfo(QString::fromStdWString(srcStylersPath)).exists())
+			QFile::copy(QString::fromStdWString(srcStylersPath), QString::fromStdWString(_stylerPath));
+		else
+			generateXmlFromScratch(_stylerPath.c_str(), STYLERS_XML_CONTENT);
 	}
 
 	if (_nppGUI._themeName.empty() || (!QFileInfo(QString::fromStdWString(_nppGUI._themeName)).exists()))
@@ -1627,7 +1648,7 @@ bool NppParameters::load()
 		pathAppend(srcShortcutsPath, SHORTCUTSXML_MODEL_FILENAME);
 		if (QFileInfo(QString::fromStdWString(srcShortcutsPath)).exists())
 		{
-			// CopyFile stub — no-op on Qt6
+			QFile::copy(QString::fromStdWString(srcShortcutsPath), QString::fromStdWString(_shortcutsPath));
 		}
 		else
 			generateXmlFromScratch(_shortcutsPath.c_str(), SHORTCUT_XML_CONTENT);
@@ -1665,7 +1686,7 @@ bool NppParameters::load()
 
 		if (QFileInfo(QString::fromStdWString(srcContextMenuPath)).exists())
 		{
-			// CopyFile stub — no-op on Qt6
+			QFile::copy(QString::fromStdWString(srcContextMenuPath), QString::fromStdWString(_contextMenuPath));
 		}
 		else
 			generateXmlFromScratch(_contextMenuPath.c_str(), CONTEXTMENU_XML_CONTENT);
@@ -2629,4 +2650,12 @@ bool NppParameters::getShortcutsFromXmlTree() { return true; }
 bool NppParameters::getMacrosFromXmlTree() { return true; }
 bool NppParameters::getUserCmdsFromXmlTree() { return true; }
 bool NppParameters::getScintKeysFromXmlTree() { return true; }
-void NppParameters::generateXmlFromScratch(const wchar_t*, const char*) {}
+void NppParameters::generateXmlFromScratch(const wchar_t* filePath, const char* xmlContent)
+{
+	QFile f(QString::fromWCharArray(filePath));
+	if (f.open(QIODevice::WriteOnly | QIODevice::Text))
+	{
+		f.write(xmlContent);
+		f.close();
+	}
+}

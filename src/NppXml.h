@@ -11,6 +11,7 @@
 #include <QtCore/QIODevice>
 #include <QtCore/QTextStream>
 #include <cstdio>   // std::fopen, std::fclose
+#include <string>   // std::string
 
 namespace NppXml {
 
@@ -186,6 +187,9 @@ inline void setAttribute(Element elem, const char* attrName, const char* value) 
 inline void setAttribute(Element elem, const char* attrName, const QString& value) {
     if (!elem.isNull()) elem.setAttribute(QLatin1String(attrName), value);
 }
+inline void setAttribute(Element elem, const char* attrName, const std::string& value) {
+    if (!elem.isNull()) elem.setAttribute(QLatin1String(attrName), QString::fromLatin1(value.c_str()));
+}
 inline void setAttribute(Element elem, const char* attrName, int value) {
     if (!elem.isNull()) elem.setAttribute(QLatin1String(attrName), value);
 }
@@ -248,6 +252,13 @@ inline const char* value(Node n) {
         s = n.nodeValue(); return s.toLatin1().constData();
     }
     return "";
+}
+
+// value() for Attribute — returns the attribute's string value
+inline const char* value(Attribute attr) {
+    static thread_local QString s;
+    if (attr.isNull()) return "";
+    s = attr.value(); return s.toLatin1().constData();
 }
 
 // ── Child element creation (write path) ──────────────────────────────────────

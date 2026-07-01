@@ -1293,14 +1293,6 @@ void expandEnv(QString& path2Expand)
     }
 }
 
-namespace DPIManagerV2 {
-int scaleFontForFactor(int pt, unsigned int textScaleFactor)
-{
-    static constexpr unsigned int defaultFactor = 100;
-    return pt * static_cast<int>(textScaleFactor) / static_cast<int>(defaultFactor);
-}
-} // namespace DPIManagerV2
-
 std::wstring GetLastErrorAsString(unsigned long errorCode)
 {
     if (errorCode == 0)

@@ -37,6 +37,8 @@
 #ifndef nsDummyCore_h__
 #define nsDummyCore_h__
 
+#include <cstdint>   // uintptr_t, intptr_t
+
 typedef bool PRBool;
 typedef int PRInt32;
 typedef unsigned int PRUint32;

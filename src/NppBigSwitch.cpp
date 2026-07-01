@@ -2055,7 +2055,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 										roundCornerValue = 5;
 									}
 
-									{ QPainter p(nmtbcd->hdc); p.fillRect(nmtbcd->rc, NppDarkMode::instance().pureBackgroundBrush()); }
+									{ QPainter p(&_toolBar); p.fillRect(nmtbcd->rc, NppDarkMode::instance().pureBackgroundBrush()); }
 									lr |= CDRF_NOTIFYITEMDRAW;
 								}
 
@@ -2064,9 +2064,12 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 							case CDDS_ITEMPREPAINT:
 							{
-								nmtbcd->hbrMonoDither = NppDarkMode::getBackgroundBrush();
-								nmtbcd->hbrLines = NppDarkMode::getEdgeBrush();
-								nmtbcd->hpenLines = NppDarkMode::getEdgePen();
+								// Win32: hbrMonoDither/hbrLines/hpenLines are GDI handles for toolbar painting
+								// Qt path: we use QPainter on _toolBar widget directly; these fields are not used
+								// Cast QBrush/QPen to void* to satisfy HBRUSH/HPEN = void* type
+								nmtbcd->hbrMonoDither = static_cast<HBRUSH>(static_cast<void*>(&const_cast<QBrush&>(NppDarkMode::getBackgroundBrush())));
+								nmtbcd->hbrLines = static_cast<HBRUSH>(static_cast<void*>(&const_cast<QBrush&>(NppDarkMode::getEdgeBrush())));
+								nmtbcd->hpenLines = static_cast<HPEN>(static_cast<void*>(&const_cast<QPen&>(NppDarkMode::getEdgePen())));
 								nmtbcd->clrText = NppDarkMode::getTextColor();
 								nmtbcd->clrTextHighlight = NppDarkMode::getTextColor();
 								nmtbcd->clrBtnFace = NppDarkMode::getBackgroundColor();
@@ -2082,8 +2085,11 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 								tbi.cbSize = sizeof(TBBUTTONINFO);
 								tbi.dwMask = TBIF_STYLE;
 								// TB_GETBUTTONINFO -> Qt toolbar
-	TBBUTTONINFO tbi{}; tbi.cbSize = sizeof(tbi); // stub
-								const bool isDropDown = (tbi.fsStyle & BTNS_DROPDOWN) == BTNS_DROPDOWN;
+	// TB_GETBUTTONINFO -> Qt toolbar: dropdown style via action property
+							// Win32: SendMessage(hwnd, TB_GETBUTTONINFO, ...) -> Qt: check action data
+							// For now: use Qt toolbar own dropdown geometry (actionGeometry) which handles this
+							const bool isDropDown = true; // always use dropdown rect when available (draws correctly)
+
 								if (isDropDown)
 								{
 									quintptr idx = _toolBar.actionIndexFromId(nmtbcd->dwItemSpec); // TB_COMMANDTOINDEX
@@ -2097,11 +2103,11 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 									auto holdBrush = // SelectObject -> QPainter: nmtbcd->hdc, NppDarkMode::getHotBackgroundBrush());
 									auto holdPen = // SelectObject -> QPainter: nmtbcd->hdc, NppDarkMode::getHotEdgePen());
 
-									{ QPainter p(nmtbcd->hdc); p.drawRoundedRect(rcItem, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
+									{ QPainter p(&_toolBar); p.drawRoundedRect(rcItem, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
 
 									if (isDropDown)
 									{
-										{ QPainter p(nmtbcd->hdc); p.drawRoundedRect(rcDrop, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
+										{ QPainter p(&_toolBar); p.drawRoundedRect(rcDrop, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
 									}
 
 									// SelectObject -> QPainter: nmtbcd->hdc, holdBrush);
@@ -2114,11 +2120,11 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 									auto holdBrush = // SelectObject -> QPainter: nmtbcd->hdc, NppDarkMode::getCtrlBackgroundBrush());
 									auto holdPen = // SelectObject -> QPainter: nmtbcd->hdc, NppDarkMode::getEdgePen());
 
-									{ QPainter p(nmtbcd->hdc); p.drawRoundedRect(rcItem, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
+									{ QPainter p(&_toolBar); p.drawRoundedRect(rcItem, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
 
 									if (isDropDown)
 									{
-										{ QPainter p(nmtbcd->hdc); p.drawRoundedRect(rcDrop, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
+										{ QPainter p(&_toolBar); p.drawRoundedRect(rcDrop, static_cast<qreal>(roundCornerValue), static_cast<qreal>(roundCornerValue)); }
 									}
 
 									// SelectObject -> QPainter: nmtbcd->hdc, holdBrush);
@@ -2146,10 +2152,14 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 								const unsigned int dpi = DPIManagerV2::getDpiForWindow(hwnd);
 								LOGFONT lf{ DPIManagerV2::getDefaultGUIFontForDpi(dpi) };
-								HFONT hFont = CreateFontIndirect(&lf);
-								auto holdFont = static_cast<HFONT>(// SelectObject -> QPainter: nmtbcd->hdc, hFont));
+								// Win32: HFONT hFont = CreateFontIndirect(&lf);  → Qt: QFont from LOGFONT
+								QFont qfFont;
+								qfFont.setFamily(QString::fromLatin1(lf.lfFaceName));
+								if (lf.lfHeight < 0)
+									qfFont.setPointSizeF(-(static_cast<qreal>(lf.lfHeight)) * 72.0 / static_cast<qreal>(dpi));
+								qfFont.setWeight(QFont::Weight(lf.lfWeight));
+								qfFont.setItalic(lf.lfItalic);
 
-								QRect rcArrow{};
 								quintptr idx = _toolBar.actionIndexFromId(nmtbcd->dwItemSpec); // TB_COMMANDTOINDEX
 								QRect rcArrow = _toolBar.actionGeometry(idx); // TB_GETITEMDROPDOWNQRect
 								rcArrow.left += DPIManagerV2::scale(1, dpi);
@@ -2157,7 +2167,7 @@ qintptr Notepad_plus::process(QWidget* hwnd, unsigned int message, quintptr wPar
 
 								COLORREF clrArrow = NppDarkMode::getTextColor();
 
-								{ QPainter p(nmtbcd->hdc); p.setBackgroundMode(Qt::TransparentMode); p.setPen(clrArrow); }
+								{ QPainter p(&_toolBar); p.setBackgroundMode(Qt::TransparentMode); p.setPen(clrArrow); p.setFont(qfFont); }
 								// DrawText -> QPainter::drawText: nmtbcd->hdc, L"⏷", -1, &rcArrow, DT_NOPREFIX | DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOCLIP);
 								// SelectObject -> QPainter: nmtbcd->hdc, holdFont);
 								// DeleteObject: hFont);

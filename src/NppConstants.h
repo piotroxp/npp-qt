@@ -3,6 +3,7 @@
 #pragma once
 
 #include <QtCore/Qt>
+#include <QtCore/QRect>
 #include <QtGui/qrgb.h>   // QRgb used by COLORREF typedef
 #include <QtCore/QString>
 #include <cstdarg>
@@ -953,4 +954,144 @@ inline constexpr int MODEVENTMASK_OFF = 0;
 // Win32 SM_* system metrics (for DPIManagerV2::getSystemMetricsForDpi)
 #ifndef SM_CXMINTRACK
 inline constexpr int SM_CXMINTRACK = 112;  // minimum window drag width (Windows default)
+#endif
+
+// Win32 compatibility stubs for Qt6 port (Linux/Non-Windows builds)
+// These map Win32 rect/notify structs to Qt equivalents
+
+// RECT — Win32 rectangle, mapped to QRect
+#ifndef RECT
+struct RECT {
+    long left;
+    long top;
+    long right;
+    long bottom;
+    long width()  const { return right - left; }
+    long height() const { return bottom - top; }
+    Q_DECL_CONSTEXPR operator QRect() const { return QRect(left, top, width(), height()); }
+    Q_DECL_CONSTEXPR QRect toQRect() const { return QRect(left, top, width(), height()); }
+};
+#endif
+#ifndef LPRECT
+using LPRECT = RECT*;
+#endif
+#ifndef LPCRECT
+using LPCRECT = const RECT*;
+#endif
+
+// NMHDR — Win32 WM_NOTIFY header structure
+#ifndef NMHDR
+struct NMHDR {
+    HWND  hwndFrom;
+    UINT  idFrom;
+    UINT  code;
+};
+#endif
+#ifndef LPNMHDR
+using LPNMHDR = NMHDR*;
+#endif
+
+// NMTBCUSTOMDRAW — Toolbar custom draw notify structure
+// Maps: Win32 HDC/HBRUSH/HPEN/COLORREF fields → Qt shims
+#ifndef NMCUSTOMDRAW
+struct NMCUSTOMDRAW {
+    NMHDR  nmcd;
+    DWORD  dwDrawStage;
+    HDC    hdc;
+    RECT   rc;
+    UINT   uItemState;
+    LPARAM lItemlParam;
+};
+#endif
+#ifndef LPNMCUSTOMDRAW
+using LPNMCUSTOMDRAW = NMCUSTOMDRAW*;
+#endif
+
+#ifndef NMTBCUSTOMDRAW
+struct NMTBCUSTOMDRAW {
+    NMCUSTOMDRAW nmcd;  // base: NMHDR + dwDrawStage + hdc + rc / uItemState / clrFace etc.
+    // Fields used by npp-qt:
+    HDC         hdc;              // device context (Qt shim: void* = unused on Qt painter path)
+    RECT        rc;              // bounding rectangle
+    UINT        uItemState;      // CDIS_* flags
+    quintptr    dwItemSpec;      // item id
+    HBRUSH      hbrMonoDither;   // mono dither brush (Qt shim)
+    HBRUSH      hbrLines;        // line brush (Qt shim)
+    HPEN        hpenLines;       // line pen (Qt shim)
+    COLORREF    clrText;         // text color (QRgb)
+    COLORREF    clrTextHighlight;// highlighted text color
+    COLORREF    clrBtnFace;      // button face color
+    COLORREF    clrBtnHighlight; // button highlight color
+    COLORREF    clrHighlightHotTrack; // hot-track highlight color
+    int         nStringBkMode;    // text background mode (TRANSPARENT/OPAQUE)
+    int         nHLStringBkMode; // hot-light text bg mode
+};
+#endif
+#ifndef LPNMTBCUSTOMDRAW
+using LPNMTBCUSTOMDRAW = NMTBCUSTOMDRAW*;
+#endif
+
+// NMTBCUSTOMDRAW — Toolbar custom draw notify structure
+// WM_NOTIFY codes used in toolbar custom draw
+#ifndef CDDS_PREPAINT
+inline constexpr int CDDS_PREPAINT       = 0x00000001;
+inline constexpr int CDDS_POSTPAINT      = 0x00000002;
+inline constexpr int CDDS_PREERASE        = 0x00000003;
+inline constexpr int CDDS_POSTERASE       = 0x00000004;
+inline constexpr int CDDS_ITEM           = 0x00010000;
+inline constexpr int CDDS_ITEMPREPAINT   = (CDDS_ITEM | CDDS_PREPAINT);
+inline constexpr int CDDS_ITEMPOSTPAINT  = (CDDS_ITEM | CDDS_POSTPAINT);
+inline constexpr int CDDS_ITEMPREERASE   = (CDDS_ITEM | CDDS_PREERASE);
+inline constexpr int CDDS_ITEMPOSTERASE  = (CDDS_ITEM | CDDS_POSTERASE);
+inline constexpr int CDDS_SUBITEM        = 0x00020000;
+#endif
+#ifndef CDIS_HOT
+inline constexpr int CDIS_HOT      = 0x00000001;
+inline constexpr int CDIS_SELECTED = 0x00000002;
+inline constexpr int CDIS_DISABLED  = 0x00000004;
+inline constexpr int CDIS_CHECKED   = 0x00000008;
+#endif
+#ifndef CDRF_DODEFAULT
+inline constexpr int CDRF_DODEFAULT       = 0x00000000;
+inline constexpr int CDRF_NEWFONT         = 0x00000002;
+inline constexpr int CDRF_NOTIFYITEMDRAW  = 0x00000020;
+inline constexpr int CDRF_NOTIFYPOSTPAINT = 0x00000010;
+#endif
+
+// NM_CUSTOMDRAW notification code
+#ifndef NM_CUSTOMDRAW
+inline constexpr int NM_CUSTOMDRAW = -12;
+#endif
+
+// TBBUTTONINFO for toolbar dropdown detection
+#ifndef TBBUTTONINFO
+struct TBBUTTONINFO {
+    UINT   cbSize;
+    DWORD  dwMask;
+    int    id;
+    int    iImage;
+    DWORD  fsStyle;
+    COLORREF clrKey;
+    COLORREF clrBack;
+    int    iSession;
+};
+#endif
+#ifndef TBIF_STYLE
+inline constexpr int TBIF_STYLE = 0x0008;
+#endif
+#ifndef BTNS_DROPDOWN
+inline constexpr int BTNS_DROPDOWN = 0x0080;
+#endif
+#ifndef TRANSPARENT
+inline constexpr int TRANSPARENT = 1;
+#endif
+#ifndef OPAQUE
+inline constexpr int OPAQUE = 2;
+#endif
+
+#ifndef TBCDRF_USECDCOLORS
+inline constexpr int TBCDRF_USECDCOLORS = 0x00000008; // Use custom colors (clrText, clrBtnFace etc.)
+#endif
+#ifndef TBCDRF_NOETC
+inline constexpr int TBCDRF_NOETC = 0x00000020;
 #endif

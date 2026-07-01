@@ -148,7 +148,7 @@
 | NppNotification | PowerEditor/src/NppNotification.cpp | src/NppNotification.h/.cpp | 253 | ✅ DONE |
 | NppConstants | PowerEditor/src/MISC/Common/NppConstants.h | src/NppConstants.h | — | ✅ DONE |
 | Processus | PowerEditor/src/MISC/Process/Processus.h/.cpp | src/MISC/Process/Processus.h/.cpp | 68+98 | ✅ DONE | `run()` → `QProcess::startDetached()`; `runSync()` → `QProcess::execute()`; `splitArgs()` hand-rolled whitespace split (no QRegExp) |
-| NppXml | — | src/NppXml.h | — | ✅ STUB |
+| NppXml | — | src/NppXml.h | ~310 | ✅ DONE (Qt DOM wrapper) | TinyXML2-compatible API over QDomDocument; replaces pugixml for all XML I/O in Parameters.cpp; pugixml source files present but excluded from CMakeLists.txt SOURCES; also used in ToolBar initTheme/initHideButtonsConf for XML theme loading
 | IDAllocator | — | src/MISC/Common/IDAllocator.h | — | ✅ DONE |
 | clipboardFormats | PowerEditor/src/clipboardFormats.h | src/clipboardFormats.h | — | ✅ DONE |
 | keys | PowerEditor/src/keys.h | src/keys.h | — | ✅ DONE |

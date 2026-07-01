@@ -298,6 +298,47 @@ set(THIRDPARTY_HEADERS
 )
 
 # =============================================================================
+# uchardet — Mozilla-derived universal charset detector (pure C++/NSPR stub)
+# =============================================================================
+set(UCHARDET_SOURCES
+    src/uchardet/uchardet.cpp
+    src/uchardet/nsUniversalDetector.cpp
+    src/uchardet/nsCharSetProber.cpp
+    src/uchardet/nsMBCSGroupProber.cpp
+    src/uchardet/nsSBCSGroupProber.cpp
+    src/uchardet/nsEscCharsetProber.cpp
+    src/uchardet/nsLatin1Prober.cpp
+    src/uchardet/nsSBCharSetProber.cpp
+    src/uchardet/nsBig5Prober.cpp
+    src/uchardet/nsEUCTWProber.cpp
+    src/uchardet/nsEUCKRProber.cpp
+    src/uchardet/nsEUCJPProber.cpp
+    src/uchardet/nsGB2312Prober.cpp
+    src/uchardet/nsHebrewProber.cpp
+    src/uchardet/nsSJISProber.cpp
+    src/uchardet/nsUTF8Prober.cpp
+    src/uchardet/nsEscSM.cpp
+    src/uchardet/nsMBCSSM.cpp
+    src/uchardet/nsPkgInt.h
+    src/uchardet/nsCodingStateMachine.h
+    src/uchardet/CharDistribution.cpp
+    src/uchardet/JpCntx.cpp
+    # Language model files (no .cpp/.h extension — included as data)
+    src/uchardet/LangBulgarianModel.cpp
+    src/uchardet/LangCyrillicModel.cpp
+    src/uchardet/LangGreekModel.cpp
+    src/uchardet/LangHebrewModel.cpp
+    src/uchardet/LangHungarianModel.cpp
+    src/uchardet/LangThaiModel.cpp
+    # Frequency tables (binary data included via #include)
+    src/uchardet/Big5Freq.tab
+    src/uchardet/EUCKRFreq.tab
+    src/uchardet/EUCTWFreq.tab
+    src/uchardet/GB2312Freq.tab
+    src/uchardet/JISFreq.tab
+)
+
+# =============================================================================
 # All sources — single authoritative list
 # =============================================================================
 set(SOURCES
@@ -409,6 +450,9 @@ set(SOURCES
 
     # Third-party header-only libraries
     ${THIRDPARTY_HEADERS}
+
+    # uchardet (Mozilla universal charset detector)
+    ${UCHARDET_SOURCES}
 )
 
 set(HEADERS

@@ -7,6 +7,8 @@
 #include "Window.h"
 #include "NppDarkMode.h"
 #include "NppSciCompat.h"
+#include "Parameters.h"
+#include "Buffer.h"
 #include <QApplication>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -364,10 +366,105 @@ void FunctionListPanel::removeAllEntries() {
     _treeView.removeAllItems();
 }
 
-bool FunctionListPanel::serialize(const QString& outputFilename) {
-    Q_UNUSED(outputFilename);
-    // JSON export would be implemented here
-    return false;
+// =============================================================================
+// serialize — Qt6 JSON lift of Win32 FunctionListPanel::serialize()
+// Mirrors: PowerEditor/src/WinControls/FunctionList/functionListPanel.cpp::serialize()
+// Uses QJsonDocument/QJsonObject/QJsonArray instead of nlohmann::json
+// =============================================================================
+
+bool FunctionListPanel::serialize(const QString& outputFilename)
+{
+    if (!_ppEditView || !*_ppEditView)
+        return false;
+
+    Buffer* currentBuf = (*_ppEditView)->getCurrentBuffer();
+    if (!currentBuf)
+        return false;
+
+    QString fileNameLabel = QString::fromWCharArray(currentBuf->getFileName());
+
+    QString fname2write;
+    if (outputFilename.isEmpty())
+    {
+        // Auto-generate: filename.result.json next to the source file
+        QString fullFilePath = QString::fromWCharArray(currentBuf->getFullPathName());
+        if (!NppParameters::getInstance().doFunctionListExport() || fullFilePath.isEmpty())
+            return false;
+
+        fname2write = fullFilePath;
+        fname2write += QStringLiteral(".result.json");
+    }
+    else
+    {
+        fname2write = outputFilename;
+    }
+
+    // Build JSON using Qt6 native APIs (mirrors nlohmann::json structure from source)
+    QJsonObject root;
+    QJsonArray nodes;
+    QJsonArray leaves;
+
+    const QString rootLabel = QStringLiteral("root");
+    const QString nodesLabel = QStringLiteral("nodes");
+    const QString leavesLabel = QStringLiteral("leaves");
+    const QString nameLabel = QStringLiteral("name");
+
+    root[rootLabel] = fileNameLabel;
+
+    for (const foundInfo& info : _foundFuncInfos)
+    {
+        QString leafName = QString::fromStdString(info._data);
+
+        if (!info._data2.empty())  // node (grouped by class/namespace)
+        {
+            QString nodeName = QString::fromStdString(info._data2);
+            bool isFound = false;
+
+            // Search existing nodes for this group
+            for (int i = 0; i < nodes.size(); ++i)
+            {
+                QJsonObject nodeObj = nodes[i].toObject();
+                if (nodeObj[nameLabel].toString() == nodeName)
+                {
+                    QJsonArray nodeLeaves = nodeObj[leavesLabel].toArray();
+                    nodeLeaves.append(leafName);
+                    nodeObj[leavesLabel] = nodeLeaves;
+                    nodes[i] = nodeObj;
+                    isFound = true;
+                    break;
+                }
+            }
+
+            if (!isFound)
+            {
+                // Create new node entry
+                QJsonObject newNode;
+                newNode[nameLabel] = nodeName;
+                QJsonArray newLeaves;
+                newLeaves.append(leafName);
+                newNode[leavesLabel] = newLeaves;
+                nodes.append(newNode);
+            }
+        }
+        else  // leaf (top-level function)
+        {
+            leaves.append(leafName);
+        }
+    }
+
+    root[nodesLabel] = nodes;
+    root[leavesLabel] = leaves;
+
+    // Write to file using QJsonDocument
+    QJsonDocument doc(root);
+    QFile file(fname2write);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+        return false;
+
+    file.write(doc.toJson(QJsonDocument::Indented));
+    file.close();
+
+    return true;
 }
 
 void FunctionListPanel::searchFuncAndSwitchView() {

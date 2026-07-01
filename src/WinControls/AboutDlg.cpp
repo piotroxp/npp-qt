@@ -401,8 +401,8 @@ void DebugInfoDlg::buildDebugInfoString() {
     // pugixml
     info += QStringLiteral("pugixml included: 1.14\n");
 
-    // JSON
-    info += QStringLiteral("nlohmann JSON included: 3.11.3\n");
+    // JSON — Qt6 native QJsonDocument/QJsonObject (no third-party JSON lib needed)
+    info += QStringLiteral("JSON: Qt6 QJsonDocument (built-in)\n");
 
     // Admin mode
     info += QStringLiteral("Admin mode: ") + (_isAdmin ? QStringLiteral("ON") : QStringLiteral("OFF")) + QStringLiteral("\n");
