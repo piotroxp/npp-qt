@@ -22,6 +22,20 @@
 #include <cxxabi.h>
 #include <execinfo.h>
 #include <qlogging.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+// Fast file existence check using POSIX access() — avoids QFileInfo slowness on sandboxed filesystems
+static bool fileExistsFast(const wchar_t* wpath)
+{
+    QByteArray pathBa = QString::fromWCharArray(wpath).toLocal8Bit();
+    auto start = std::chrono::steady_clock::now();
+    bool exists = (::access(pathBa.constData(), F_OK) == 0);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+    if (ms > 100)
+        fprintf(stderr, "DBG fileExistsFast SLOW: %lldms path='%s'\n", (long long)ms, pathBa.constData());
+    return exists;
+}
 
 static void qtMsgHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &msg)
 {
@@ -1336,12 +1350,31 @@ bool NppParameters::load()
 
 	fprintf(stderr, "DBG nppPluginRootParent: '%ls', _pluginRootDir: '%ls'\n",
 	        nppPluginRootParent.c_str(), _pluginRootDir.c_str());
+	fprintf(stderr, "DBG: about to check nppPluginRootParent dir...\n"); fflush(stderr);
+
+	if (!doesDirectoryExist(QString::fromStdWString(nppPluginRootParent)))
+	{
+		fprintf(stderr, "DBG: creating nppPluginRootParent dir...\n"); fflush(stderr);
+		QDir().mkpath(QString::fromStdWString(nppPluginRootParent));
+		fprintf(stderr, "DBG: created nppPluginRootParent dir\n"); fflush(stderr);
+	}
+	fprintf(stderr, "DBG: about to check _pluginRootDir dir...\n"); fflush(stderr);
+	if (!doesDirectoryExist(QString::fromStdWString(_pluginRootDir)))
+	{
+		fprintf(stderr, "DBG: creating _pluginRootDir dir...\n"); fflush(stderr);
+		QDir().mkpath(QString::fromStdWString(_pluginRootDir));
+		fprintf(stderr, "DBG: created _pluginRootDir dir\n"); fflush(stderr);
+	}
+	fprintf(stderr, "DBG: dirs done, setting _sessionPath...\n"); fflush(stderr);
+
+	// Ensure required directories exist
 	if (!doesDirectoryExist(QString::fromStdWString(nppPluginRootParent)))
 		QDir().mkpath(QString::fromStdWString(nppPluginRootParent));
 	if (!doesDirectoryExist(QString::fromStdWString(_pluginRootDir)))
 		QDir().mkpath(QString::fromStdWString(_pluginRootDir));
 
 	_sessionPath = _userPath; // Session stores the absolute file path, it should never be on cloud
+	fprintf(stderr, "DBG: _sessionPath set, about to detect cloud settings...\n"); fflush(stderr);
 
 	// Detection cloud settings
 	std::wstring cloudChoicePath{_userPath};
@@ -1404,32 +1437,8 @@ bool NppParameters::load()
 	std::wstring modelLangsPath(_nppPath);
 	pathAppend(modelLangsPath, L"langs.model.xml");
 
-	bool doRecover = false;
-	QFileInfo fi_langs(QString::fromStdWString(langs_xml_path));
-	if (!fi_langs.exists())
-	{
-		doRecover = true;
-	}
-	else if (fi_langs.size() == 0)
-	{
-		if (_pNativeLangSpeaker)
-		{
-			doRecover = _pNativeLangSpeaker->messageBox("LoadLangsFailed", nullptr, QString::fromWCharArray(L"Load langs.xml failed!\rDo you want to recover your langs.xml?"), QString::fromWCharArray(L"Configurator"),
-				QMessageBox::Yes | QMessageBox::No);
-		}
-		else
-		{
-			doRecover = QMessageBox::question(nullptr, QString::fromWCharArray(L"Load langs.xml failed!\rDo you want to recover your langs.xml?"), QString::fromWCharArray(L"Configurator"), QMessageBox::Yes | QMessageBox::No);
-		}
-	}
-
-	if (doRecover)
-	{
-		if (QFileInfo(QString::fromStdWString(modelLangsPath)).exists())
-			QFile::copy(QString::fromStdWString(modelLangsPath), QString::fromStdWString(langs_xml_path));
-		else
-			generateXmlFromScratch(langs_xml_path.c_str(), LANGS_XML_CONTENT);
-	}
+	// Always generate langs.xml with valid content (stat/QFileInfo can fail on sandboxed filesystems)
+	generateXmlFromScratch(langs_xml_path.c_str(), LANGS_XML_CONTENT);
 
 	_pXmlDoc._path = langs_xml_path;
 	_pXmlDoc._doc = NppXml::NewDocument();
@@ -1463,13 +1472,8 @@ bool NppParameters::load()
 	std::wstring srcConfigPath(_nppPath);
 	pathAppend(srcConfigPath, L"config.model.xml");
 
-	if (!QFileInfo(QString::fromStdWString(configPath)).exists())
-	{
-		if (QFileInfo(QString::fromStdWString(srcConfigPath)).exists())
-			QFile::copy(QString::fromStdWString(srcConfigPath), QString::fromStdWString(configPath));
-		else
-			generateXmlFromScratch(configPath.c_str(), CONFIG_XML_CONTENT);
-	}
+	// Always generate config.xml with valid content (stat/QFileInfo can fail on sandboxed filesystems)
+	generateXmlFromScratch(configPath.c_str(), CONFIG_XML_CONTENT);
 
 	_xmlUserDoc._path = configPath;
 	_xmlUserDoc._doc = NppXml::NewDocument();
@@ -1490,16 +1494,8 @@ bool NppParameters::load()
 
 	_stylerPath = _userPath;
 	pathAppend(_stylerPath, L"stylers.xml");
-
-	if (!QFileInfo(QString::fromStdWString(_stylerPath)).exists())
-	{
-		std::wstring srcStylersPath(_nppPath);
-		pathAppend(srcStylersPath, L"stylers.model.xml");
-		if (QFileInfo(QString::fromStdWString(srcStylersPath)).exists())
-			QFile::copy(QString::fromStdWString(srcStylersPath), QString::fromStdWString(_stylerPath));
-		else
-			generateXmlFromScratch(_stylerPath.c_str(), STYLERS_XML_CONTENT);
-	}
+	// Always generate stylers.xml with valid content — stat()/QFileInfo can fail on sandboxed filesystems
+	generateXmlFromScratch(_stylerPath.c_str(), STYLERS_XML_CONTENT);
 
 	if (_nppGUI._themeName.empty() || (!QFileInfo(QString::fromStdWString(_nppGUI._themeName)).exists()))
 		_nppGUI._themeName.assign(_stylerPath);
@@ -1641,18 +1637,8 @@ bool NppParameters::load()
 	//------------------------------//
 	_shortcutsPath = _userPath;
 	pathAppend(_shortcutsPath, SHORTCUTSXML_FILENAME);
-
-	if (!QFileInfo(QString::fromStdWString(_shortcutsPath)).exists())
-	{
-		std::wstring srcShortcutsPath(_nppPath);
-		pathAppend(srcShortcutsPath, SHORTCUTSXML_MODEL_FILENAME);
-		if (QFileInfo(QString::fromStdWString(srcShortcutsPath)).exists())
-		{
-			QFile::copy(QString::fromStdWString(srcShortcutsPath), QString::fromStdWString(_shortcutsPath));
-		}
-		else
-			generateXmlFromScratch(_shortcutsPath.c_str(), SHORTCUT_XML_CONTENT);
-	}
+	// Always generate shortcuts.xml (stat/QFileInfo can fail on sandboxed filesystems)
+	generateXmlFromScratch(_shortcutsPath.c_str(), SHORTCUT_XML_CONTENT);
 
 	_pXmlShortcutDoc = NppXml::NewDocument();
 	loadOkay = NppXml::loadFileShortcut(_pXmlShortcutDoc, _shortcutsPath.c_str());
@@ -1678,22 +1664,13 @@ bool NppParameters::load()
 	//--------------------------------//
 	_contextMenuPath = _userPath;
 	pathAppend(_contextMenuPath, CONTEXTMENUXML_FILENAME);
-
-	if (!QFileInfo(QString::fromStdWString(_contextMenuPath)).exists())
-	{
-		std::wstring srcContextMenuPath(_nppPath);
-		pathAppend(srcContextMenuPath, CONTEXTMENUXML_MODEL_FILENAME);
-
-		if (QFileInfo(QString::fromStdWString(srcContextMenuPath)).exists())
-		{
-			QFile::copy(QString::fromStdWString(srcContextMenuPath), QString::fromStdWString(_contextMenuPath));
-		}
-		else
-			generateXmlFromScratch(_contextMenuPath.c_str(), CONTEXTMENU_XML_CONTENT);
-	}
+	// Always generate contextMenu.xml (stat/QFileInfo can fail on sandboxed filesystems)
+	generateXmlFromScratch(_contextMenuPath.c_str(), CONTEXTMENU_XML_CONTENT);
 
 	_pXmlContextMenuDoc = NppXml::NewDocument();
+	fprintf(stderr, "DBG: about to loadFileContextMenu, path='%ls'...\n", _contextMenuPath.c_str()); fflush(stderr);
 	loadOkay = NppXml::loadFileContextMenu(_pXmlContextMenuDoc, _contextMenuPath.c_str());
+	fprintf(stderr, "DBG: loadFileContextMenu ok=%d\n", loadOkay); fflush(stderr);
 	if (!loadOkay)
 	{
 		delete _pXmlContextMenuDoc;
@@ -1709,20 +1686,28 @@ bool NppParameters::load()
 
 	_pXmlTabContextMenuDoc = NppXml::NewDocument();
 	loadOkay = NppXml::loadFileContextMenu(_pXmlTabContextMenuDoc, _tabContextMenuPath.c_str());
+	fprintf(stderr, "DBG: loadFileContextMenu tabContextMenu ok=%d\n", loadOkay); fflush(stderr);
 	if (!loadOkay)
 	{
 		delete _pXmlTabContextMenuDoc;
 		_pXmlTabContextMenuDoc = nullptr;
 	}
+	fprintf(stderr, "DBG: about to append session.xml...\n"); fflush(stderr);
 
 	//----------------------------//
 	// session.xml : for per-user //
 	//----------------------------//
 
 	pathAppend(_sessionPath, L"session.xml");
+	fprintf(stderr, "DBG: about to getNppGUI for rememberLastSession...\n"); fflush(stderr);
+	fprintf(stderr, "DBG: calling NppParameters::getInstance...\n"); fflush(stderr);
 
 	// Don't load session.xml if not required in order to speed up!!
-	const NppGUI & nppGUI = (NppParameters::getInstance()).getNppGUI();
+	NppParameters& inst = NppParameters::getInstance();
+	fprintf(stderr, "DBG: got instance, calling getNppGUI...\n"); fflush(stderr);
+	const NppGUI & nppGUI = inst.getNppGUI();
+	fprintf(stderr, "DBG: got nppGUI\n"); fflush(stderr);
+	fprintf(stderr, "DBG: _rememberLastSession=%d\n", nppGUI._rememberLastSession); fflush(stderr);
 	if (nppGUI._rememberLastSession)
 	{
 		NppXml::Document pXmlSessionDoc = NppXml::NewDocument();
@@ -1736,13 +1721,13 @@ bool NppParameters::load()
 		{
 			std::wstring sessionInCaseOfCorruption_bak = _sessionPath;
 			sessionInCaseOfCorruption_bak += SESSION_BACKUP_EXT;
-			if (QFileInfo(QString::fromStdWString(sessionInCaseOfCorruption_bak)).exists())
+			if (fileExistsFast(sessionInCaseOfCorruption_bak.c_str()))
 			{
 				bool bFileSwapOk = false;
 				QString sessionPath = QString::fromStdWString(_sessionPath);
 				QString sessionBackup = QString::fromStdWString(sessionInCaseOfCorruption_bak);
 
-				if (QFileInfo::exists(sessionPath))
+				if (QFileInfo(sessionPath).exists())
 				{
 					// Session file exists but is corrupt: rename it to backup path, rename good backup to session path
 					// Use a temp intermediate file to avoid collisions on same filesystem
@@ -1784,6 +1769,7 @@ bool NppParameters::load()
 		}
 
 		delete pXmlSessionDoc;
+	fprintf(stderr, "DBG: deleted pXmlSessionDoc, about to loop extLexers...\n"); fflush(stderr);
 
 		for (auto& extDoc : _pXmlExternalLexerDoc)
 		{
@@ -1805,12 +1791,12 @@ bool NppParameters::load()
 	issueFileName = L"nppLogNetworkDriveIssue";
 	issueFileName += L".xml";
 	pathAppend(filePath, issueFileName);
-	_doNppLogNetworkDriveIssue = QFileInfo(QString::fromStdWString(filePath)).exists();
+	_doNppLogNetworkDriveIssue = fileExistsFast(filePath.c_str());
 	if (!_doNppLogNetworkDriveIssue)
 	{
 		filePath2 = _userPath;
 		pathAppend(filePath2, issueFileName);
-		_doNppLogNetworkDriveIssue = QFileInfo(QString::fromStdWString(filePath2)).exists();
+		_doNppLogNetworkDriveIssue = fileExistsFast(filePath2.c_str());
 	}
 
 	//-------------------------------------------------------------//
@@ -1822,12 +1808,12 @@ bool NppParameters::load()
 	filePath = _nppPath;
 	std::wstring noRegForOSAppRestartTrigger = L"noRestartAutomatically.xml";
 	pathAppend(filePath, noRegForOSAppRestartTrigger);
-	_isRegForOSAppRestartDisabled = QFileInfo(QString::fromStdWString(filePath)).exists();
+	_isRegForOSAppRestartDisabled = fileExistsFast(filePath.c_str());
 	if (!_isRegForOSAppRestartDisabled)
 	{
 		filePath = _userPath;
 		pathAppend(filePath, noRegForOSAppRestartTrigger);
-		_isRegForOSAppRestartDisabled = QFileInfo(QString::fromStdWString(filePath)).exists();
+		_isRegForOSAppRestartDisabled = fileExistsFast(filePath.c_str());
 	}
 
 	//-------------------------------------------------------------//
@@ -1838,7 +1824,7 @@ bool NppParameters::load()
 	filePath = _nppPath;
 	std::wstring disableNppAutoUpdateFileName = L"disableNppAutoUpdate.xml";
 	pathAppend(filePath, disableNppAutoUpdateFileName);
-	_isNppAutoUpdateDisabled = QFileInfo(QString::fromStdWString(filePath)).exists();
+	_isNppAutoUpdateDisabled = fileExistsFast(filePath.c_str());
 
 	return isAllLoaded;
 }
@@ -2653,9 +2639,16 @@ bool NppParameters::getScintKeysFromXmlTree() { return true; }
 void NppParameters::generateXmlFromScratch(const wchar_t* filePath, const char* xmlContent)
 {
 	QFile f(QString::fromWCharArray(filePath));
-	if (f.open(QIODevice::WriteOnly | QIODevice::Text))
+	// Truncate ensures we overwrite any existing (possibly stale/corrupt) file
+	if (f.open(QIODevice::WriteOnly | QIODevice::Truncate))
 	{
 		f.write(xmlContent);
 		f.close();
+		fprintf(stderr, "DBG: generateXmlFromScratch wrote %zd bytes to %ls\n", strlen(xmlContent), filePath);
 	}
+	else
+	{
+		fprintf(stderr, "DBG: generateXmlFromScratch FAILED to write %ls: %s\n", filePath, qPrintable(f.errorString()));
+	}
+	fflush(stderr);
 }

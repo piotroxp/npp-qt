@@ -38,6 +38,7 @@ void MainWindow::init()
 {
     newFile();
     loadSession();
+    show();  // Qt6: show the main window (Win32 ::ShowWindow equivalent)
 }
 
 void MainWindow::setupUi()

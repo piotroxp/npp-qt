@@ -16,6 +16,7 @@
 
 // Qt6 port — Win32 API stubs removed; use Qt equivalents throughout.
 
+#include <iostream>
 #include <QCoreApplication>
 #include <QApplication>
 #include <QWidget>
@@ -479,7 +480,9 @@ int main(int argc, char** argv)
 {
     g_nppStartTimePoint = std::chrono::steady_clock::now();
 
+    qDebug() << "DBG main: START (QCoreApp exists:" << !!QCoreApplication::instance() << ")";
     QApplication app(argc, argv);
+    qDebug() << "DBG main: QApplication created";
 
     // Notepad++ UAC OPS — handled by launching this executable as a helper ///////////
     if (!app.arguments().isEmpty() && app.arguments().size() >= 2)
@@ -589,11 +592,17 @@ int main(int argc, char** argv)
         nppParameters.setStartWithLocFileName(cmdLineParams._localizationPath);
 
     nppParameters.load();
+    fprintf(stderr, "DBG main: load() called!\n"); fflush(stderr);
+    nppParameters.load();
+    fprintf(stderr, "DBG main: load() returned\n"); fflush(stderr);
 
     NppGUI& nppGui = nppParameters.getNppGUI();
+    qDebug() << "DBG main: got nppGui, about to init dark mode";
 
     // Initialize dark mode and DPI — use Qt singleton pattern
     ::NppDarkMode::NppDarkMode::instance().setEnabled(true);
+    fprintf(stderr, "DBG main: dark mode init done\n"); fflush(stderr);
+    qDebug() << "DBG main: dark mode init done";
     // DPIManagerV2 has no init() call; DPI is applied via QWidget scaling automatically
 
     bool doUpdateNpp = nppGui._autoUpdateOpt._doAutoUpdate != NppGUI::autoupdate_disabled;
@@ -720,7 +729,11 @@ int main(int argc, char** argv)
         }
     }
 
+    qDebug() << "DBG main: about to create Notepad_plus_Window";
+    fprintf(stderr, "DBG main: about to create Notepad_plus_Window\n"); fflush(stderr);
     auto upNotepadWindow = std::make_unique<Notepad_plus_Window>();
+    qDebug() << "DBG main: Notepad_plus_Window created";
+    fprintf(stderr, "DBG main: Notepad_plus_Window created\n"); fflush(stderr);
     Notepad_plus_Window& notepad_plus_plus = *upNotepadWindow.get();
 
     std::wstring updaterDir = nppParameters.getNppPath();
@@ -745,7 +758,9 @@ int main(int argc, char** argv)
 
     try
     {
+        fprintf(stderr, "DBG main: about to call notepad_plus_plus.init()\n"); fflush(stderr);
         notepad_plus_plus.init();
+        fprintf(stderr, "DBG main: notepad_plus_plus.init() returned!\n"); fflush(stderr);
         // allowPrivilegeMessages is a Win32-specific stub
         Q_UNUSED(ver);
         Q_UNUSED(quotFileName);
