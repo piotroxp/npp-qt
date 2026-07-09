@@ -56,19 +56,24 @@ Application::Application() : QObject(qApp) {
 }
 
 Application::~Application() {
-    if (_findReplaceDialog) delete _findReplaceDialog;
-    if (_gotoLineDialog) delete _gotoLineDialog;
-    if (_preferenceDialog) delete _preferenceDialog;
-    if (_aboutDialog) delete _aboutDialog;
-    if (_docMapPanel) delete _docMapPanel;
-    if (_funcListPanel) delete _funcListPanel;
-    if (_fileBrowserPanel) delete _fileBrowserPanel;
+    // Delete owned objects BEFORE _mainWindow.
+    // NOTE: panels and dialogs are parented to _mainWindow, so Qt will cascade-delete
+    // them when _mainWindow is destroyed. We must NOT delete them again here.
+    // Only delete objects that are NOT parented by Qt's ownership tree.
     if (_commandManager) delete _commandManager;
     if (_sessionManager) delete _sessionManager;
     if (_languageManager) delete _languageManager;
     if (_encodingDetector) delete _encodingDetector;
     if (_fileManager) delete _fileManager;
+
+    // Delete main window last — this triggers Qt's parent-child cascade delete
+    // for all dock widgets, panels, and dialogs that are children of MainWindow.
+    // After this, _findReplaceDialog, _docMapPanel, etc. are already deleted.
     delete _mainWindow;
+
+    // These are now nullptr after _mainWindow deletion — do NOT delete again:
+    // _findReplaceDialog, _gotoLineDialog, _preferenceDialog,
+    // _aboutDialog, _docMapPanel, _funcListPanel, _fileBrowserPanel
 }
 
 // ============================================================================
