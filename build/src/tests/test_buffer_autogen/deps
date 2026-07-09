@@ -1,4 +1,0 @@
-test_buffer_autogen/timestamp: \
-	/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/tests/CMakeLists.txt \
-	/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/tests/test_buffer.cpp \
-	/usr/bin/cmake

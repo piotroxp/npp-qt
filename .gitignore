@@ -17,3 +17,23 @@ Thumbs.db
 *_autogen/
 *.moc
 *.qrc.*
+
+# Agent artifacts
+.jaisiu/
+.openclaw/
+memory/
+__pycache__/
+
+# IDE
+.vscode/
+.idea/
+
+# Agent artifacts
+.jaisiu/
+.openclaw/
+memory/
+__pycache__/
+
+# IDE
+.vscode/
+.idea/

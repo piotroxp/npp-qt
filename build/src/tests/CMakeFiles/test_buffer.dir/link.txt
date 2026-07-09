@@ -1,1 +1,0 @@
-/usr/bin/c++ -g CMakeFiles/test_buffer.dir/test_buffer_autogen/mocs_compilation.cpp.o CMakeFiles/test_buffer.dir/test_buffer.cpp.o -o test_buffer  libtest_core.a 
