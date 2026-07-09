@@ -7,6 +7,7 @@
 #include "SessionManager.h"
 #include "EditorCommandManager.h"
 #include "MacroManager.h"
+#include "RecentFilesManager.h"
 #include "editor/ScintillaEditor.h"
 #include "editor/SyntaxHighlighter.h"
 #include "ui/MainWindow.h"
@@ -111,6 +112,7 @@ bool Application::initialize() {
         _sessionManager = new SessionManager();
         _commandManager = new EditorCommandManager();
         _macroManager = new MacroManager();
+    _recentFilesManager = &RecentFilesManager::instance();
         _commandManager->registerAll(this);
 
         qDebug() << "DEBUG: setupUI";
@@ -353,7 +355,10 @@ int Application::currentView() const {
 // File Operations
 // ============================================================================
 BufferID Application::openFile(const std::string& path, bool readOnly) {
-    return _fileManager->openFile(QString::fromStdString(path), readOnly);
+    BufferID id = _fileManager->openFile(QString::fromStdString(path), readOnly);
+    if (id && !path.empty())
+        RecentFilesManager::instance().addFile(QString::fromStdString(path));
+    return id;
 }
 
 BufferID Application::openFiles(const std::vector<std::string>& paths) {

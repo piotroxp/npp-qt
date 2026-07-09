@@ -24,6 +24,7 @@ class EncodingDetector;
 class LanguageManager;
 class SessionManager;
 class MacroManager;
+class RecentFilesManager;
 class EditorCommandManager;
 class MainWindow;
 class SyntaxHighlighter;
@@ -178,6 +179,7 @@ public:
     void executeCommand(int commandId);
     EditorCommandManager* commandManager() const { return _commandManager; }
     MacroManager* macroManager() const { return _macroManager; }
+    RecentFilesManager* recentFilesManager() const { return _recentFilesManager; }
 
     // Notifications / observers
     Observer<BufferNotification>& bufferObserver() { return _bufferObserver; }
@@ -317,6 +319,7 @@ private:
     // Core managers
     FileManager*            _fileManager = nullptr;
     MacroManager*           _macroManager = nullptr;
+    RecentFilesManager*      _recentFilesManager = nullptr;
     EncodingDetector*       _encodingDetector = nullptr;
     LanguageManager*        _languageManager = nullptr;
     SessionManager*         _sessionManager = nullptr;

@@ -1,4 +1,5 @@
 // MenuBar.cpp - Application menu bar implementation
+#include "../core/Application.h"
 // Copyright (C) 2026 Agent Army
 // GPL v3
 
@@ -7,6 +8,7 @@
 #include <QAction>
 #include <QKeySequence>
 #include <QStyle>
+#include "../core/RecentFilesManager.h"
 #include <QApplication>
 #include <QShortcut>
 
@@ -33,13 +35,23 @@ void MenuBar::buildMenus() {
     _fileMenu->addAction(openAction);
     
     _fileMenu->addSeparator();
-    
-    // Open Recent submenu
-    QMenu* openRecentMenu = _fileMenu->addMenu("Open Recent");
-    QAction* clearRecentAction = new QAction("Clear Recent Files", this);
-    clearRecentAction->setData("file.clearRecent");
-    openRecentMenu->addAction(clearRecentAction);
-    
+
+    // Recent Files submenu (populated from RecentFilesManager)
+    _recentFilesMenu = _fileMenu->addMenu("Recent Files");
+    RecentFilesManager::instance().populateMenu(_recentFilesMenu);
+    // Rebuild menu when files change
+    QObject::connect(&RecentFilesManager::instance(), &RecentFilesManager::menuNeedsRebuild,
+                     _recentFilesMenu, [this]() {
+        RecentFilesManager::instance().populateMenu(_recentFilesMenu);
+    });
+    // Open file when recent action triggered
+    QObject::connect(_recentFilesMenu, &QMenu::triggered,
+                     this, [](QAction* action) {
+        QString path = action->data().toString();
+        if (!path.isEmpty())
+            Application::instance().openFile(path.toStdString());
+    });
+
     _fileMenu->addSeparator();
     
     QAction* saveAction = new QAction("&Save", this);
@@ -313,7 +325,7 @@ void MenuBar::buildMenus() {
     }
     
     // Handle Open Recent submenu actions
-    for (QAction* action : openRecentMenu->actions()) {
+    for (QAction* action : _recentFilesMenu->actions()) {
         if (!action->data().isNull()) {
             connect(action, &QAction::triggered, this, [this, action]() {
                 QString cmd = action->data().toString();

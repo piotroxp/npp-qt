@@ -48,6 +48,7 @@ set(SOURCES
     src/core/LanguageManager.cpp
     src/core/SessionManager.cpp
     src/core/MacroManager.cpp
+    src/core/RecentFilesManager.cpp
     src/core/NppBigSwitch.cpp
     src/core/NppCommands.cpp
     src/core/Notepad_plus.cpp

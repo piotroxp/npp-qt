@@ -39,4 +39,5 @@ private:
     QMenu* _languageMenu = nullptr;
     QMenu* _settingsMenu = nullptr;
     QMenu* _helpMenu = nullptr;
+    QMenu* _recentFilesMenu = nullptr;
 };
