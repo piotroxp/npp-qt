@@ -1,0 +1,333 @@
+// StringHelper.cpp - String manipulation utilities implementation
+#include "StringHelper.h"
+#include "Constants.h"
+#include "Types.h"
+#include <codecvt>
+#include <locale>
+
+namespace StringHelper {
+
+// ============================================================================
+// Encoding conversion
+// ============================================================================
+std::wstring toWStr(const std::string& s) {
+    if (s.empty()) return {};
+    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> cv;
+    return cv.from_bytes(s);
+}
+
+std::string toUtf8(const std::wstring& s) {
+    if (s.empty()) return {};
+    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> cv;
+    return cv.to_bytes(s);
+}
+
+std::u16string toUtf16(const std::string& s) {
+    if (s.empty()) return {};
+    std::wstring w = toWStr(s);
+    return std::u16string(w.begin(), w.end());
+}
+
+std::string utf16ToUtf8(const std::u16string& s) {
+    if (s.empty()) return {};
+    std::wstring w(s.begin(), s.end());
+    return toUtf8(w);
+}
+
+// ============================================================================
+// Replace
+// ============================================================================
+std::string replaceAll(std::string s, std::string_view from, std::string_view to) {
+    if (from.empty()) return s;
+    size_t pos = 0;
+    while ((pos = s.find(from, pos)) != std::string::npos) {
+        s.replace(pos, from.size(), to);
+        pos += to.size();
+    }
+    return s;
+}
+
+std::wstring replaceAll(std::wstring s, std::wstring_view from, std::wstring_view to) {
+    if (from.empty()) return s;
+    size_t pos = 0;
+    while ((pos = s.find(from, pos)) != std::wstring::npos) {
+        s.replace(pos, from.size(), to);
+        pos += to.size();
+    }
+    return s;
+}
+
+std::string replaceAll(std::string s, const std::vector<std::pair<std::string, std::string>>& replacements) {
+    for (const auto& [from, to] : replacements) {
+        s = replaceAll(s, from, to);
+    }
+    return s;
+}
+
+// ============================================================================
+// Split / Join
+// ============================================================================
+std::vector<std::string> split(std::string_view s, std::string_view delimiter, bool skipEmpty) {
+    std::vector<std::string> result;
+    size_t start = 0;
+    while (start < s.size()) {
+        size_t pos = s.find(delimiter, start);
+        if (pos == std::string_view::npos) pos = s.size();
+        std::string_view part = s.substr(start, pos - start);
+        if (!skipEmpty || !part.empty()) result.emplace_back(part);
+        start = pos + delimiter.size();
+    }
+    return result;
+}
+
+std::vector<std::wstring> split(std::wstring_view s, std::wstring_view delimiter, bool skipEmpty) {
+    std::vector<std::wstring> result;
+    size_t start = 0;
+    while (start < s.size()) {
+        size_t pos = s.find(delimiter, start);
+        if (pos == std::wstring_view::npos) pos = s.size();
+        std::wstring_view part = s.substr(start, pos - start);
+        if (!skipEmpty || !part.empty()) result.emplace_back(part);
+        start = pos + delimiter.size();
+    }
+    return result;
+}
+
+std::string join(const std::vector<std::string>& parts, std::string_view separator) {
+    if (parts.empty()) return {};
+    std::string result = parts[0];
+    for (size_t i = 1; i < parts.size(); ++i) {
+        result += separator;
+        result += parts[i];
+    }
+    return result;
+}
+
+// ============================================================================
+// FileName / FileExt / FilePath (platform-agnostic)
+// ============================================================================
+std::string fileName(const std::string& path) {
+    size_t pos = path.find_last_of("/\\");
+    if (pos == std::string::npos) return path;
+    return path.substr(pos + 1);
+}
+
+std::wstring fileName(const std::wstring& path) {
+    size_t pos = path.find_last_of(L"/\\");
+    if (pos == std::wstring::npos) return path;
+    return path.substr(pos + 1);
+}
+
+std::string fileExt(const std::string& path) {
+    size_t pos = path.find_last_of('.');
+    if (pos == std::string::npos || pos == 0) return "";
+    return path.substr(pos + 1);
+}
+
+std::string filePath(const std::string& path) {
+    size_t pos = path.find_last_of("/\\");
+    if (pos == std::string::npos) return "";
+    return path.substr(0, pos);
+}
+
+std::string normalizePath(const std::string& path) {
+    std::string result = path;
+    std::replace(result.begin(), result.end(), '\\', '/');
+    // Collapse multiple slashes
+    size_t pos = 0;
+    while ((pos = result.find("//", pos)) != std::string::npos) {
+        result.erase(pos, 1);
+    }
+    return result;
+}
+
+// ============================================================================
+// Escaping
+// ============================================================================
+std::string escape(const std::string& s, const std::string& chars) {
+    std::string result;
+    result.reserve(s.size() * 2);
+    for (char c : s) {
+        if (chars.find(c) != std::string::npos) {
+            result += '\\';
+            result += c;
+        } else {
+            result += c;
+        }
+    }
+    return result;
+}
+
+std::string unescape(const std::string& s) {
+    std::string result;
+    result.reserve(s.size());
+    for (size_t i = 0; i < s.size(); ++i) {
+        if (s[i] == '\\' && i + 1 < s.size()) {
+            ++i;
+            result += s[i];
+        } else {
+            result += s[i];
+        }
+    }
+    return result;
+}
+
+std::string htmlEscape(const std::string& s) {
+    std::string result;
+    result.reserve(s.size() * 2);
+    for (char c : s) {
+        switch (c) {
+            case '<':  result += "&lt;"; break;
+            case '>':  result += "&gt;"; break;
+            case '&':  result += "&amp;"; break;
+            case '"':  result += "&quot;"; break;
+            case '\'': result += "&#39;"; break;
+            default:   result += c; break;
+        }
+    }
+    return result;
+}
+
+std::string regexEscape(const std::string& s) {
+    static const std::string special = R"(\.^$|?*+()[]{}%\ )";
+    std::string result;
+    result.reserve(s.size() * 2);
+    for (char c : s) {
+        if (special.find(c) != std::string::npos) result += '\\';
+        result += c;
+    }
+    return result;
+}
+
+// ============================================================================
+// Word wrap
+// ============================================================================
+std::vector<std::string> wordWrap(const std::string& text, size_t columnWidth) {
+    std::vector<std::string> lines;
+    if (columnWidth == 0) { lines.push_back(text); return lines; }
+    size_t start = 0;
+    while (start < text.size()) {
+        size_t end = start + columnWidth;
+        if (end >= text.size()) {
+            lines.emplace_back(text.substr(start));
+            break;
+        }
+        // Find last space before end
+        size_t lastSpace = text.rfind(' ', end);
+        if (lastSpace == std::string::npos || lastSpace <= start) {
+            lastSpace = text.find(' ', end);
+            if (lastSpace == std::string::npos) lastSpace = text.size();
+        }
+        lines.emplace_back(text.substr(start, lastSpace - start));
+        start = lastSpace + 1;
+    }
+    return lines;
+}
+
+// ============================================================================
+// Locale-aware comparison
+// ============================================================================
+bool equalsIgnoreCase(const std::string& a, const std::string& b) {
+    if (a.size() != b.size()) return false;
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (std::tolower(static_cast<unsigned char>(a[i])) !=
+            std::tolower(static_cast<unsigned char>(b[i])))
+            return false;
+    }
+    return true;
+}
+
+bool equalsIgnoreCase(const std::wstring& a, const std::wstring& b) {
+    if (a.size() != b.size()) return false;
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (std::towlower(a[i]) != std::towlower(b[i])) return false;
+    }
+    return true;
+}
+
+// ============================================================================
+// Tab/space conversion
+// ============================================================================
+std::string tabsToSpaces(const std::string& text, size_t tabWidth) {
+    std::string result;
+    result.reserve(text.size() * 2);
+    for (char c : text) {
+        if (c == '\t') {
+            result.append(tabWidth - (result.size() % tabWidth), ' ');
+        } else {
+            result += c;
+        }
+    }
+    return result;
+}
+
+std::string spacesToTabs(const std::string& text, size_t tabWidth) {
+    std::string result;
+    result.reserve(text.size());
+    size_t col = 0;
+    for (char c : text) {
+        if (c == ' ') {
+            size_t mod = col % tabWidth;
+            size_t nextTabStop = mod == 0 ? tabWidth : tabWidth - mod;
+            if (result.size() >= nextTabStop && result[result.size() - nextTabStop] == '\t') {
+                result[result.size() - nextTabStop] = '\t';
+            } else {
+                result += '\t';
+            }
+            ++col;
+        } else if (c == '\t') {
+            result += '\t';
+            col = (col / tabWidth + 1) * tabWidth;
+        } else if (c == '\n' || c == '\r') {
+            result += c;
+            col = 0;
+        } else {
+            result += c;
+            ++col;
+        }
+    }
+    return result;
+}
+
+std::string makeEolConsistent(std::string_view text, int eolMode) {
+    const char* eol = "\n";
+    if (eolMode == static_cast<int>(EolType::EOL_CRLF)) eol = "\r\n";
+    else if (eolMode == static_cast<int>(EolType::EOL_CR)) eol = "\r";
+    std::string result;
+    result.reserve(text.size());
+    for (size_t i = 0; i < text.size(); ++i) {
+        if (text[i] == '\r') {
+            if (i + 1 < text.size() && text[i + 1] == '\n') ++i;
+            result += eol;
+        } else if (text[i] == '\n') {
+            result += eol;
+        } else {
+            result += text[i];
+        }
+    }
+    return result;
+}
+
+// ============================================================================
+// Indentation
+// ============================================================================
+std::string indentLines(const std::string& text, size_t spaces, const std::string& chars) {
+    std::string indent(spaces, ' ');
+    std::string result;
+    std::istringstream iss(text);
+    std::string line;
+    bool first = true;
+    while (std::getline(iss, line)) {
+        if (!first) result += '\n';
+        first = false;
+        // Preserve existing indentation + add new
+        size_t pos = 0;
+        while (pos < line.size() && (line[pos] == ' ' || line[pos] == '\t')) ++pos;
+        result += line.substr(0, pos);
+        result += indent;
+        result += line.substr(pos);
+    }
+    return result;
+}
+
+} // namespace StringHelper

@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/test_encoding_detector.dir/test_encoding_detector_autogen/mocs_compilation.cpp.o CMakeFiles/test_encoding_detector.dir/test_encoding_detector.cpp.o -o test_encoding_detector  libtest_core.a 

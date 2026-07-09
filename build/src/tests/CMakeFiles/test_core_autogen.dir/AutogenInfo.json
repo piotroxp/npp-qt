@@ -1,0 +1,146 @@
+{
+	"BUILD_DIR" : "/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/build/src/tests/test_core_autogen",
+	"CMAKE_BINARY_DIR" : "/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/build",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/build/src/tests",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/tests",
+	"CMAKE_EXECUTABLE" : "/usr/bin/cmake",
+	"CMAKE_LIST_FILES" : 
+	[
+		"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/tests/CMakeLists.txt"
+	],
+	"CMAKE_SOURCE_DIR" : "/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt",
+	"DEP_FILE" : "/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/build/src/tests/test_core_autogen/deps",
+	"DEP_FILE_RULE_NAME" : "test_core_autogen/timestamp",
+	"HEADERS" : 
+	[
+		[
+			"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/common/FileHelper.h",
+			"MU",
+			"AAGGKE4ILT/moc_FileHelper.cpp",
+			null
+		],
+		[
+			"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/common/StringHelper.h",
+			"MU",
+			"AAGGKE4ILT/moc_StringHelper.cpp",
+			null
+		],
+		[
+			"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/common/Util.h",
+			"MU",
+			"AAGGKE4ILT/moc_Util.cpp",
+			null
+		],
+		[
+			"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/core/EncodingDetector.h",
+			"MU",
+			"MV7IEL3DTJ/moc_EncodingDetector.cpp",
+			null
+		],
+		[
+			"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/core/FileManager.h",
+			"MU",
+			"MV7IEL3DTJ/moc_FileManager.cpp",
+			null
+		],
+		[
+			"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/core/LanguageManager.h",
+			"MU",
+			"MV7IEL3DTJ/moc_LanguageManager.cpp",
+			null
+		]
+	],
+	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
+	"INCLUDE_DIR" : "/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/build/src/tests/test_core_autogen/include",
+	"MOC_COMPILATION_FILE" : "/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/build/src/tests/test_core_autogen/mocs_compilation.cpp",
+	"MOC_DEFINITIONS" : [],
+	"MOC_DEPEND_FILTERS" : 
+	[
+		[
+			"Q_PLUGIN_METADATA",
+			"[\n][ \t]*Q_PLUGIN_METADATA[ \t]*\\([^\\)]*FILE[ \t]*\"([^\"]+)\""
+		]
+	],
+	"MOC_INCLUDES" : 
+	[
+		"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src",
+		"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/common",
+		"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/core",
+		"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/editor",
+		"/usr/include/c++/13",
+		"/usr/include/x86_64-linux-gnu/c++/13",
+		"/usr/include/c++/13/backward",
+		"/usr/lib/gcc/x86_64-linux-gnu/13/include",
+		"/usr/local/include",
+		"/usr/include/x86_64-linux-gnu",
+		"/usr/include"
+	],
+	"MOC_MACRO_NAMES" : 
+	[
+		"Q_OBJECT",
+		"Q_GADGET",
+		"Q_GADGET_EXPORT",
+		"Q_NAMESPACE",
+		"Q_NAMESPACE_EXPORT"
+	],
+	"MOC_OPTIONS" : [],
+	"MOC_PATH_PREFIX" : false,
+	"MOC_PREDEFS_CMD" : 
+	[
+		"/usr/bin/c++",
+		"-std=gnu++20",
+		"-dM",
+		"-E",
+		"-c",
+		"/usr/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp"
+	],
+	"MOC_PREDEFS_FILE" : "/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/build/src/tests/test_core_autogen/moc_predefs.h",
+	"MOC_RELAXED_MODE" : false,
+	"MOC_SKIP" : [],
+	"MULTI_CONFIG" : false,
+	"PARALLEL" : 8,
+	"PARSE_CACHE_FILE" : "/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/build/src/tests/CMakeFiles/test_core_autogen.dir/ParseCache.txt",
+	"QT_MOC_EXECUTABLE" : "/usr/lib/qt6/libexec/moc",
+	"QT_UIC_EXECUTABLE" : "/usr/lib/qt6/libexec/uic",
+	"QT_VERSION_MAJOR" : 6,
+	"QT_VERSION_MINOR" : 4,
+	"SETTINGS_FILE" : "/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/build/src/tests/CMakeFiles/test_core_autogen.dir/AutogenUsed.txt",
+	"SOURCES" : 
+	[
+		[
+			"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/common/FileHelper.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/common/StringHelper.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/common/Util.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/core/EncodingDetector.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/core/FileManager.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/core/LanguageManager.cpp",
+			"MU",
+			null
+		]
+	],
+	"UIC_OPTIONS" : [],
+	"UIC_SEARCH_PATHS" : [],
+	"UIC_SKIP" : [],
+	"UIC_UI_FILES" : [],
+	"VERBOSITY" : 0
+}

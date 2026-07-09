@@ -1,0 +1,283 @@
+// Types.h - Common type definitions for Notepad--Qt
+// Copyright (C) 2026 Agent Army
+// GPL v3
+
+#pragma once
+
+#include <cstdint>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <optional>
+#include <variant>
+#include <filesystem>
+#include <chrono>
+
+// Forward declarations
+class Buffer;
+class ScintillaEditor;
+
+// ============================================================================
+// ID Types
+// ============================================================================
+using BufferID = Buffer*;
+#define BUFFER_INVALID nullptr
+
+using EditorID = ScintillaEditor*;
+#define EDITOR_INVALID nullptr
+
+using ViewID = int;
+#define VIEW_INVALID (-1)
+
+// ============================================================================
+// Buffer / Document Status
+// ============================================================================
+enum class DocFileStatus : uint8_t {
+    DOC_REGULAR       = 0x01,
+    DOC_UNNAMED       = 0x02,
+    DOC_DELETED       = 0x04,
+    DOC_MODIFIED      = 0x08,
+    DOC_NEEDRELOAD    = 0x10,
+    DOC_INACCESSIBLE  = 0x20
+};
+
+enum class BufferStatusInfo : uint32_t {
+    BufferChangeNone       = 0x000,
+    BufferChangeLanguage   = 0x001,
+    BufferChangeDirty      = 0x002,
+    BufferChangeFormat     = 0x004,
+    BufferChangeUnicode    = 0x008,
+    BufferChangeReadonly   = 0x010,
+    BufferChangeStatus     = 0x020,
+    BufferChangeTimestamp  = 0x040,
+    BufferChangeFilename   = 0x080,
+    BufferChangeRecentTag  = 0x100,
+    BufferChangeLexing     = 0x200
+};
+
+enum class SavingStatus : int {
+    SaveOK                       = 0,
+    SaveOpenFailed               = 1,
+    SaveWritingFailed            = 2,
+    NotEnoughRoom                = 3,
+    FullReadOnlySavingForbidden   = 4
+};
+
+// ============================================================================
+// Encoding Types
+// ============================================================================
+enum class EncodingType : int {
+    ANSI       = 0,
+    UTF_8      = 1,
+    UTF_8_BOM  = 2,
+    UTF_16_LE  = 3,
+    UTF_16_BE  = 4,
+    UTF_32_LE  = 5,
+    UTF_32_BE  = 6,
+    EBCDIC     = 7,
+    OEM        = 8  // DOS code page
+};
+
+enum class NewDocDefaultSettings : int {
+    defaultNewFile = 0,
+    defaultLF     = 1,
+    defaultCRLF   = 2,
+    defaultTabSettings = 3
+};
+
+// ============================================================================
+// EOL Types
+// ============================================================================
+enum class EolType : uint8_t {
+    EOL_NONE  = 0,
+    EOL_LF    = 1,   // Unix
+    EOL_CRLF  = 2,   // Windows
+    EOL_CR    = 3    // Old Mac
+};
+
+// ============================================================================
+// Language / Lexer Types
+// ============================================================================
+enum class LangType : int {
+    L_NOT_SET    = -1,
+    L_TEXT       = 0,
+    L_C          = 1,
+    L_CPP        = 2,
+    L_JAVA       = 3,
+    L_CS         = 4,
+    L_OBJC       = 5,
+    L_HTML       = 6,
+    L_XML        = 7,
+    L_XAML       = 8,
+    L_LUA        = 9,
+    L_PERL       = 10,
+    L_PHP        = 11,
+    L_RUBY       = 12,
+    L_PYTHON     = 13,
+    L_JS         = 14,
+    L_JSON       = 15,
+    L_CSS        = 16,
+    L_YAML       = 17,
+    L_MAKEFILE   = 18,
+    L_CSHARP     = 19,
+    L_MARKDOWN   = 20,
+    L_BATCH      = 21,
+    L_INI        = 22,
+    L_NFO        = 23,
+    L_USER       = 1000,  // User-defined languages start here
+    L_EXTERNAL   = 2000,
+    L_REGISTRY   = 3000
+};
+
+// ============================================================================
+// Window State
+// ============================================================================
+enum class WindowStatus : uint8_t {
+    WindowMainActive = 0x01,
+    WindowSubActive  = 0x02,
+    WindowBothActive = 0x03,
+    WindowUserActive = 0x04
+};
+
+enum class WindowMode : uint8_t {
+    Normal      = 0,
+    FullScreen  = 1,
+    PostIt      = 2,
+    DistractionFree = 3
+};
+
+// ============================================================================
+// Search / Find Types
+// ============================================================================
+enum class FindOption : uint32_t {
+    None            = 0,
+    WholeWord       = 1 << 0,
+    MatchCase       = 1 << 1,
+    WrapAround      = 1 << 2,
+    InSelection     = 1 << 3,
+    Incremental     = 1 << 4,
+    Hidden          = 1 << 5,
+    PreserveCase    = 1 << 6
+};
+
+inline FindOption operator|(FindOption a, FindOption b) {
+    return static_cast<FindOption>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+inline FindOption operator&(FindOption a, FindOption b) {
+    return static_cast<FindOption>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
+
+inline FindOption& operator|=(FindOption& a, FindOption b) {
+    a = a | b;
+    return a;
+}
+
+enum class FindTarget : uint8_t {
+    Normal       = 0,
+    Selection    = 1,
+    AllDocuments = 2
+};
+
+enum class SearchMode : uint8_t {
+    Normal       = 0,
+    Extended     = 1,
+    Regex        = 2
+};
+
+// ============================================================================
+// Clipboard Formats
+// ============================================================================
+enum class ClipboardFormat : uint32_t {
+    CF_TEXT       = 1,
+    CF_UNICODETEXT = 13,
+    CF_HDROP      = 15,
+    CF_LOCALE     = 16
+};
+
+// ============================================================================
+// Colour / Style Types
+// ============================================================================
+struct ColourRGB {
+    uint8_t r = 0, g = 0, b = 0;
+    constexpr ColourRGB() = default;
+    constexpr ColourRGB(uint8_t _r, uint8_t _g, uint8_t _b) : r(_r), g(_g), b(_b) {}
+    uint32_t toInt() const { return (r << 16) | (g << 8) | b; }
+};
+
+struct Style {
+    int             _styleID = 0;
+    std::string      _fgColour;
+    std::string      _bgColour;
+    std::string      _fontName;
+    int              _fontSize = 10;
+    bool             _bold = false;
+    bool             _italic = false;
+    bool             _underline = false;
+    bool             _strike = false;
+    int              _foreground = -1;
+    int              _background = -1;
+    int              _fontStyle = 0;  // SC_WEIGHT_NORMAL, SC_WEIGHT_BOLD etc.
+};
+
+// ============================================================================
+// File Types
+// ============================================================================
+enum class FileTransMode : uint8_t {
+    TransferClone = 0x01,
+    TransferMove  = 0x02
+};
+
+// ============================================================================
+// Tab / View Types
+// ============================================================================
+struct BufferViewInfo {
+    BufferID _bufID = nullptr;
+    int       _iView = 0;
+    BufferViewInfo() = default;
+    BufferViewInfo(BufferID buf, int view) : _bufID(buf), _iView(view) {}
+};
+
+// ============================================================================
+// Session Types
+// ============================================================================
+struct Session {
+    std::vector<BufferViewInfo> _buffers;
+    std::vector<std::wstring>    _recentFiles;
+    std::wstring                _activeView;
+    int                         _activeTab = 0;
+    std::wstring                _workingDir;
+};
+
+// ============================================================================
+// Recent Files
+// ============================================================================
+struct RecentFileInfo {
+    std::wstring  _fullPath;
+    std::chrono::system_clock::time_point _lastAccess;
+    bool          _inCurrentSession = false;
+};
+
+// ============================================================================
+// Recycle Bin (trash)
+// ============================================================================
+struct RecycleBin {
+    std::wstring _filePath;
+    std::wstring _originalPath;
+};
+
+// ============================================================================
+// Utility Macros
+// ============================================================================
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
+// ============================================================================
+// STL Hash specializations
+// ============================================================================
+namespace std {
+    template<> struct hash<std::wstring> {
+        size_t operator()(const std::wstring& s) const noexcept {
+            return std::hash<std::wstring_view>{}(std::wstring_view(s));
+        }
+    };
+}

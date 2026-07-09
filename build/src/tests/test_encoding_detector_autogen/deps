@@ -1,0 +1,4 @@
+test_encoding_detector_autogen/timestamp: \
+	/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/tests/CMakeLists.txt \
+	/home/node/.openclaw/workspace-employee-hannay/notepad-plus-plus-qt/src/tests/test_encoding_detector.cpp \
+	/usr/bin/cmake

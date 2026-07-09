@@ -1,0 +1,151 @@
+// LanguageManager.cpp
+// Copyright (C) 2026 Agent Army
+// GPL v3
+
+#include "LanguageManager.h"
+#include <algorithm>
+#include <cctype>
+
+LanguageManager::LanguageManager() { initDefaultMappings(); }
+LanguageManager::~LanguageManager() = default;
+
+void LanguageManager::initDefaultMappings() {
+    _langNames[LangType::L_C] = "C";
+    _langNames[LangType::L_CPP] = "C++";
+    _langNames[LangType::L_JAVA] = "Java";
+    _langNames[LangType::L_CS] = "C#";
+    _langNames[LangType::L_OBJC] = "Objective-C";
+    _langNames[LangType::L_HTML] = "HTML";
+    _langNames[LangType::L_XML] = "XML";
+    _langNames[LangType::L_PHP] = "PHP";
+    _langNames[LangType::L_PYTHON] = "Python";
+    _langNames[LangType::L_JS] = "JavaScript";
+    _langNames[LangType::L_JSON] = "JSON";
+    _langNames[LangType::L_CSS] = "CSS";
+    _langNames[LangType::L_YAML] = "YAML";
+    _langNames[LangType::L_MAKEFILE] = "Makefile";
+    _langNames[LangType::L_RUBY] = "Ruby";
+    _langNames[LangType::L_PERL] = "Perl";
+    _langNames[LangType::L_LUA] = "Lua";
+    _langNames[LangType::L_MARKDOWN] = "Markdown";
+    _langNames[LangType::L_BATCH] = "Batch";
+    _langNames[LangType::L_INI] = "INI";
+    _langNames[LangType::L_TEXT] = "Normal";
+
+    _extToLang[".c"] = LangType::L_C;
+    _extToLang[".cpp"] = LangType::L_CPP;
+    _extToLang[".h"] = LangType::L_CPP;
+    _extToLang[".hpp"] = LangType::L_CPP;
+    _extToLang[".java"] = LangType::L_JAVA;
+    _extToLang[".cs"] = LangType::L_CS;
+    _extToLang[".m"] = LangType::L_OBJC;
+    _extToLang[".html"] = LangType::L_HTML;
+    _extToLang[".htm"] = LangType::L_HTML;
+    _extToLang[".xml"] = LangType::L_XML;
+    _extToLang[".xaml"] = LangType::L_XAML;
+    _extToLang[".php"] = LangType::L_PHP;
+    _extToLang[".py"] = LangType::L_PYTHON;
+    _extToLang[".js"] = LangType::L_JS;
+    _extToLang[".json"] = LangType::L_JSON;
+    _extToLang[".css"] = LangType::L_CSS;
+    _extToLang[".yaml"] = LangType::L_YAML;
+    _extToLang[".yml"] = LangType::L_YAML;
+    _extToLang[".makefile"] = LangType::L_MAKEFILE;
+    _extToLang[".rb"] = LangType::L_RUBY;
+    _extToLang[".pl"] = LangType::L_PERL;
+    _extToLang[".lua"] = LangType::L_LUA;
+    _extToLang[".md"] = LangType::L_MARKDOWN;
+    _extToLang[".bat"] = LangType::L_BATCH;
+    _extToLang[".cmd"] = LangType::L_BATCH;
+    _extToLang[".ini"] = LangType::L_INI;
+}
+
+LangType LanguageManager::detectLanguage(const std::string& fileName, const std::string& firstLine) const {
+    size_t dot = fileName.rfind('.');
+    if (dot != std::string::npos) {
+        std::string ext = fileName.substr(dot);
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        auto it = _extToLang.find(ext);
+        if (it != _extToLang.end()) return it->second;
+    }
+    if (!firstLine.empty()) return detectLanguageFromContent(firstLine);
+    return LangType::L_TEXT;
+}
+
+LangType LanguageManager::detectLanguageFromContent(const std::string& content) const {
+    if (content.find("#!/bin/bash") == 0 || content.find("#!/bin/sh") == 0) return LangType::L_BATCH;
+    if (content.find("<?php") != std::string::npos) return LangType::L_PHP;
+    if (content.find("<html") != std::string::npos) return LangType::L_HTML;
+    if (content.find("{") != std::string::npos && content.find(":") != std::string::npos) return LangType::L_JSON;
+    return LangType::L_TEXT;
+}
+
+std::string LanguageManager::getLanguageName(LangType lang) const {
+    auto it = _langNames.find(lang);
+    return it != _langNames.end() ? it->second : "Normal";
+}
+
+std::string LanguageManager::getLanguageExtension(LangType lang) const {
+    switch (lang) {
+        case LangType::L_CPP: return ".cpp";
+        case LangType::L_JAVA: return ".java";
+        case LangType::L_PYTHON: return ".py";
+        case LangType::L_JS: return ".js";
+        case LangType::L_HTML: return ".html";
+        case LangType::L_CSS: return ".css";
+        case LangType::L_MARKDOWN: return ".md";
+        default: return ".txt";
+    }
+}
+
+std::string LanguageManager::getLexerName(LangType lang) const {
+    switch (lang) {
+        case LangType::L_CPP: return "cpp";
+        case LangType::L_JAVA: return "java";
+        case LangType::L_PYTHON: return "python";
+        case LangType::L_JS: return "javascript";
+        case LangType::L_HTML: return "html";
+        case LangType::L_CSS: return "css";
+        case LangType::L_JSON: return "json";
+        case LangType::L_XML: return "xml";
+        case LangType::L_MARKDOWN: return "markdown";
+        case LangType::L_YAML: return "yaml";
+        case LangType::L_RUBY: return "ruby";
+        case LangType::L_PERL: return "perl";
+        case LangType::L_PHP: return "php";
+        case LangType::L_LUA: return "lua";
+        case LangType::L_BATCH: return "batch";
+        case LangType::L_MAKEFILE: return "makefile";
+        case LangType::L_INI: return "ini";
+        default: return "text";
+    }
+}
+
+void LanguageManager::setLanguageForExtension(const std::string& ext, LangType lang) {
+    _extToLang[ext] = lang;
+}
+
+LangType LanguageManager::getLanguageForExtension(const std::string& ext) const {
+    auto it = _extToLang.find(ext);
+    return it != _extToLang.end() ? it->second : LangType::L_TEXT;
+}
+
+std::vector<LangType> LanguageManager::getAllLanguages() const {
+    std::vector<LangType> langs;
+    for (auto& [lang, _] : _langNames) langs.push_back(lang);
+    return langs;
+}
+
+std::vector<std::string> LanguageManager::getKeywords(LangType lang) const {
+    (void)lang;
+    return {};
+}
+
+bool LanguageManager::isCaseSensitive(LangType lang) const {
+    return lang != LangType::L_BATCH && lang != LangType::L_INI;
+}
+
+int LanguageManager::getIndentSize(LangType lang) const {
+    (void)lang;
+    return 4;
+}
