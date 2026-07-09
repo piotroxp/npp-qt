@@ -6,6 +6,8 @@
 
 #include <cstdint>
 #include <string>
+#include <QString>
+#include <QStringList>
 #include <vector>
 #include <unordered_map>
 #include <optional>
@@ -244,27 +246,27 @@ struct BufferViewInfo {
 // ============================================================================
 struct Session {
     std::vector<BufferViewInfo> _buffers;
-    std::vector<std::wstring>    _recentFiles;
-    std::wstring                _activeView;
-    int                         _activeTab = 0;
-    std::wstring                _workingDir;
+    QStringList _recentFiles;
+    QString _activeView;
+    int     _activeTab = 0;
+    QString _workingDir;
 };
 
 // ============================================================================
 // Recent Files
 // ============================================================================
 struct RecentFileInfo {
-    std::wstring  _fullPath;
+    QString _fullPath;
     std::chrono::system_clock::time_point _lastAccess;
-    bool          _inCurrentSession = false;
+    bool    _inCurrentSession = false;
 };
 
 // ============================================================================
 // Recycle Bin (trash)
 // ============================================================================
 struct RecycleBin {
-    std::wstring _filePath;
-    std::wstring _originalPath;
+    QString _filePath;
+    QString _originalPath;
 };
 
 // ============================================================================
@@ -276,9 +278,5 @@ struct RecycleBin {
 // STL Hash specializations
 // ============================================================================
 namespace std {
-    template<> struct hash<std::wstring> {
-        size_t operator()(const std::wstring& s) const noexcept {
-            return std::hash<std::wstring_view>{}(std::wstring_view(s));
-        }
-    };
+    // QString is already hashable via qHash()
 }

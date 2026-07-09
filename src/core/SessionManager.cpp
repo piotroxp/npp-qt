@@ -149,8 +149,8 @@ bool SessionManager::loadSession(const std::string& path) {
                     info._iView = StringHelper::toInt(extractAttribute(fileXml, "mainView"), 0);
                     // Store path as filePath in Buffer (we'll resolve to BufferID in Application)
                     // For session loading, we add the file to recent files for later opening
-                    std::wstring wpath(filePath.begin(), filePath.end());
-                    _current._recentFiles.push_back(wpath);
+                    QString path = QString::fromStdString(filePath);
+                    _current._recentFiles.push_back(path);
                 }
 
                 filePos = fileEnd + strlen("</File>");
@@ -186,11 +186,11 @@ bool SessionManager::loadSession(const std::string& path) {
                 std::string filePath = getFilePathFromElement(fileXml);
 
                 if (!filePath.empty()) {
-                    std::wstring wpath(filePath.begin(), filePath.end());
+                    QString path = QString::fromStdString(filePath);
                     // Check for duplicates
-                    auto it = std::find(_current._recentFiles.begin(), _current._recentFiles.end(), wpath);
+                    auto it = std::find(_current._recentFiles.begin(), _current._recentFiles.end(), path);
                     if (it == _current._recentFiles.end()) {
-                        _current._recentFiles.push_back(wpath);
+                        _current._recentFiles.push_back(path);
                     }
                 }
 
@@ -205,7 +205,7 @@ bool SessionManager::loadSession(const std::string& path) {
         std::string dir(workingDirContent);
         StringHelper::trim(dir);
         if (!dir.empty()) {
-            _current._workingDir = std::wstring(dir.begin(), dir.end());
+            _current._workingDir = QString::fromStdString(std::string(dir.begin(), dir.end()));
         }
     }
 
@@ -254,10 +254,9 @@ bool SessionManager::saveSession(const std::string& path) {
 
     // Save RecentFiles
     xml << "    <RecentFiles>\n";
-    for (const auto& wpath : _current._recentFiles) {
-        std::string path(wpath.begin(), wpath.end());
+    for (const QString& path : _current._recentFiles) {
         // Escape XML special characters
-        std::string escapedPath = path;
+        std::string escapedPath = path.toStdString();
         StringHelper::replaceAll(escapedPath, "&", "&amp;");
         StringHelper::replaceAll(escapedPath, "<", "&lt;");
         StringHelper::replaceAll(escapedPath, ">", "&gt;");
@@ -268,8 +267,8 @@ bool SessionManager::saveSession(const std::string& path) {
     xml << "    </RecentFiles>\n";
 
     // Save WorkingDirectory
-    if (!_current._workingDir.empty()) {
-        std::string workDir(_current._workingDir.begin(), _current._workingDir.end());
+    if (!_current._workingDir.isEmpty()) {
+        std::string workDir = _current._workingDir.toStdString();
         xml << "    <WorkingDir>" << workDir << "</WorkingDir>\n";
     }
 
@@ -294,15 +293,14 @@ std::string SessionManager::getActiveSession() const {
 // ============================================================================
 // Recent Files
 // ============================================================================
-void SessionManager::addRecentFile(const std::string& path) {
-    std::wstring wpath(path.begin(), path.end());
+void SessionManager::addRecentFile(const std::string& rawPath) {
+    QString path = QString::fromStdString(rawPath);
 
     // Remove if already exists (to move to front)
-    auto it = std::remove(_current._recentFiles.begin(), _current._recentFiles.end(), wpath);
-    _current._recentFiles.erase(it, _current._recentFiles.end());
+    _current._recentFiles.removeAll(path);
 
     // Add to front
-    _current._recentFiles.insert(_current._recentFiles.begin(), wpath);
+    _current._recentFiles.insert(_current._recentFiles.begin(), path);
 
     // Limit to max recent files
     int maxRecent = app().options().maxRecentFiles;
@@ -311,17 +309,16 @@ void SessionManager::addRecentFile(const std::string& path) {
     }
 }
 
-void SessionManager::removeRecentFile(const std::string& path) {
-    std::wstring wpath(path.begin(), path.end());
-    auto it = std::remove(_current._recentFiles.begin(), _current._recentFiles.end(), wpath);
-    _current._recentFiles.erase(it, _current._recentFiles.end());
+void SessionManager::removeRecentFile(const std::string& rawPath) {
+    QString path = QString::fromStdString(rawPath);
+    _current._recentFiles.removeAll(path);
 }
 
 std::vector<std::string> SessionManager::getRecentFiles() const {
     std::vector<std::string> result;
     result.reserve(_current._recentFiles.size());
-    for (const auto& wpath : _current._recentFiles) {
-        result.emplace_back(wpath.begin(), wpath.end());
+    for (const QString& path : _current._recentFiles) {
+        result.emplace_back(path.toStdString());
     }
     return result;
 }
@@ -334,12 +331,12 @@ void SessionManager::clearRecentFiles() {
 // Working Directory
 // ============================================================================
 void SessionManager::setWorkingDirectory(const std::string& dir) {
-    _current._workingDir = std::wstring(dir.begin(), dir.end());
+    _current._workingDir = QString::fromStdString(std::string(dir.begin(), dir.end()));
 }
 
 std::string SessionManager::getWorkingDirectory() const {
-    if (_current._workingDir.empty()) {
+    if (_current._workingDir.isEmpty()) {
         return "";
     }
-    return std::string(_current._workingDir.begin(), _current._workingDir.end());
+    return _current._workingDir.toStdString();
 }

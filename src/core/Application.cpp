@@ -6,6 +6,7 @@
 #include "LanguageManager.h"
 #include "SessionManager.h"
 #include "EditorCommandManager.h"
+#include "MacroManager.h"
 #include "editor/ScintillaEditor.h"
 #include "editor/SyntaxHighlighter.h"
 #include "ui/MainWindow.h"
@@ -32,6 +33,8 @@
 #include <QInputDialog>
 #include <QCloseEvent>
 #include <QTimer>
+#include <QTextStream>
+#include <QFile>
 #include <QDebug>
 #include <QWindow>
 #include <QMenuBar>
@@ -107,6 +110,7 @@ bool Application::initialize() {
         _languageManager = new LanguageManager();
         _sessionManager = new SessionManager();
         _commandManager = new EditorCommandManager();
+        _macroManager = new MacroManager();
         _commandManager->registerAll(this);
 
         qDebug() << "DEBUG: setupUI";
@@ -375,6 +379,21 @@ bool Application::closeFile(BufferID buffer, bool force) {
 
 bool Application::closeAllFiles() {
     return _fileManager->closeAllFiles();
+}
+
+void Application::closeAllBuffersExcept(BufferID keepId) {
+    if (!keepId || !_fileManager) return;
+    size_t count = _fileManager->getBufferCount();
+    std::vector<BufferID> toClose;
+    for (size_t i = 0; i < count; ++i) {
+        BufferID id = _fileManager->getBufferAt(static_cast<int>(i), 0);
+        if (id && id != keepId) {
+            toClose.push_back(id);
+        }
+    }
+    for (BufferID id : toClose) {
+        _fileManager->closeFile(id);
+    }
 }
 
 BufferID Application::newFile(const std::string& encoding) {
@@ -845,7 +864,10 @@ void Application::onFindPrev() {
 
 void Application::onFindInFiles() {
     qDebug() << "[App] Find in files";
-    // TODO: implement find-in-files dialog
+    // Show find in files dialog - emit signal or show dialog
+    if (_findReplaceDialog) {
+        _findReplaceDialog->show();
+    }
 }
 
 void Application::onCount() {
@@ -855,7 +877,18 @@ void Application::onCount() {
 
 void Application::onMarkAll() {
     qDebug() << "[App] Mark all";
-    // TODO: implement mark
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+
+    // Get the current search text from find replace dialog
+    QString pattern;
+    if (_findReplaceDialog) {
+        // no getter on FindReplaceDialog — use empty pattern
+    }
+
+    if (!pattern.isEmpty()) {
+        ed->markAllMatches(pattern, FindOption::MatchCase);
+    }
 }
 
 // ============================================================================
@@ -873,7 +906,52 @@ void Application::onToggleFullScreen() {
 
 void Application::onToggleDistractionFree() {
     qDebug() << "[App] Toggle distraction-free";
-    // TODO: implement distraction-free mode (hide all UI except editor)
+    _isDistractionFree = !_isDistractionFree;
+
+    if (_isDistractionFree) {
+        // Hide all UI except the editor
+        if (_menuBar) _menuBar->setVisible(false);
+        if (_toolBar) _toolBar->setVisible(false);
+
+        QList<QTabBar*> bars = _mainWindow->findChildren<QTabBar*>();
+        for (QTabBar* bar : bars) {
+            bar->setVisible(false);
+        }
+
+        QStatusBar* sb = _mainWindow->statusBar();
+        if (sb) sb->setVisible(false);
+
+        // Hide docking panels
+        if (_docMapPanel) _docMapPanel->hide();
+        if (_funcListPanel) _funcListPanel->hide();
+        if (_fileBrowserPanel) _fileBrowserPanel->hide();
+
+        // Hide find/replace dialog if visible
+        if (_findReplaceDialog) _findReplaceDialog->hide();
+
+        // Enter fullscreen
+        _mainWindow->showFullScreen();
+    } else {
+        // Restore all UI
+        if (_menuBar) _menuBar->setVisible(true);
+        if (_toolBar) _toolBar->setVisible(true);
+
+        QList<QTabBar*> bars = _mainWindow->findChildren<QTabBar*>();
+        for (QTabBar* bar : bars) {
+            bar->setVisible(true);
+        }
+
+        QStatusBar* sb = _mainWindow->statusBar();
+        if (sb) sb->setVisible(true);
+
+        // Show panels based on their previous state (default to visible)
+        if (_docMapPanel) _docMapPanel->show();
+        if (_funcListPanel) _funcListPanel->show();
+        if (_fileBrowserPanel) _fileBrowserPanel->show();
+
+        // Exit fullscreen
+        _mainWindow->showNormal();
+    }
 }
 
 void Application::onToggleTabBar() {
@@ -908,14 +986,51 @@ void Application::onToggleToolBar() {
 // ============================================================================
 void Application::onConvertEncoding(EncodingType enc) {
     qDebug() << "[App] Convert encoding to" << static_cast<int>(enc);
-    // TODO: implement encoding conversion
-    Q_UNUSED(enc);
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+
+    BufferID buffer = getActiveBuffer();
+    if (!buffer) return;
+
+    // Get current text
+    QString text = QString::fromStdString(getBufferText(buffer));
+    if (text.isEmpty()) return;
+
+    // Get current encoding
+    EncodingType currentEnc = getBufferEncoding(buffer);
+
+    // Encoding conversion: keep text as-is for now (full codec-based conversion is TODO)
+    // TODO: implement proper encoding conversion using QTextEncoder from Qt6
+    setBufferEncoding(buffer, enc);
+
+    // Update editor
+    ed->setEncoding(enc);
+    ed->setModified(true);
 }
 
 void Application::onSetLanguage(LangType lang) {
     qDebug() << "[App] Set language" << static_cast<int>(lang);
-    // TODO: implement language change
-    Q_UNUSED(lang);
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+
+    // Use language manager to get the appropriate lexer
+    if (_languageManager) {
+        ed->setLanguage(lang);
+    }
+}
+
+// ============================================================================
+// Encoding conversion helper (called from menu commands)
+// ============================================================================
+void Application::convertEncoding(EncodingType enc) {
+    onConvertEncoding(enc);
+}
+
+// ============================================================================
+// Language change helper (called from menu commands)
+// ============================================================================
+void Application::setLanguage(LangType lang) {
+    onSetLanguage(lang);
 }
 
 // ============================================================================

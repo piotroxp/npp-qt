@@ -47,6 +47,7 @@ set(SOURCES
     src/core/FileManager.cpp
     src/core/LanguageManager.cpp
     src/core/SessionManager.cpp
+    src/core/MacroManager.cpp
     src/core/NppBigSwitch.cpp
     src/core/NppCommands.cpp
     src/core/Notepad_plus.cpp
@@ -78,6 +79,7 @@ set(HEADERS
     src/core/FileManager.h
     src/core/LanguageManager.h
     src/core/SessionManager.h
+    src/core/MacroManager.h
     src/editor/ScintillaEditor.h
     src/editor/SyntaxHighlighter.h
     src/ui/MainWindow.h

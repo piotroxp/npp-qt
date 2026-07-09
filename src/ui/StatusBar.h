@@ -28,4 +28,5 @@ private:
     QLabel* _eolLabel = nullptr;
     QLabel* _langLabel = nullptr;
     QLabel* _typeLabel = nullptr;
+    QLabel* _selLabel = nullptr;
 };

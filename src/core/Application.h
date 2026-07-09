@@ -23,6 +23,7 @@ class FileManager;
 class EncodingDetector;
 class LanguageManager;
 class SessionManager;
+class MacroManager;
 class EditorCommandManager;
 class MainWindow;
 class SyntaxHighlighter;
@@ -176,6 +177,7 @@ public:
     void executeCommand(const std::string& cmd);
     void executeCommand(int commandId);
     EditorCommandManager* commandManager() const { return _commandManager; }
+    MacroManager* macroManager() const { return _macroManager; }
 
     // Notifications / observers
     Observer<BufferNotification>& bufferObserver() { return _bufferObserver; }
@@ -198,6 +200,13 @@ public:
 
     // File management
     FileManager* fileManager() const { return _fileManager; }
+    void closeAllBuffersExcept(BufferID keepId);
+
+    // Encoding conversion
+    void convertEncoding(EncodingType enc);
+
+    // Language
+    void setLanguage(LangType lang);
 
     // Theme
     void loadTheme(const std::string& themeName);
@@ -307,6 +316,7 @@ private:
 
     // Core managers
     FileManager*            _fileManager = nullptr;
+    MacroManager*           _macroManager = nullptr;
     EncodingDetector*       _encodingDetector = nullptr;
     LanguageManager*        _languageManager = nullptr;
     SessionManager*         _sessionManager = nullptr;

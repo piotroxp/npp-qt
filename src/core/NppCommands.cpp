@@ -125,7 +125,13 @@ void NppCommands::closeFile() {
 }
 
 void NppCommands::closeAll()  { if (m_app) m_app->closeAllFiles(); }
-void NppCommands::closeAllButCurrent() { /* TODO */ }
+
+void NppCommands::closeAllButCurrent() {
+    if (!m_app) return;
+    BufferID current = m_app->getActiveBuffer();
+    m_app->closeAllBuffersExcept(current);
+}
+
 void NppCommands::print()    { qDebug() << "[NppCommands] print()"; }
 
 // ============================================================================

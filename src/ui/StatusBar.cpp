@@ -48,6 +48,10 @@ void StatusBar::setMessage(const QString& msg) {
 }
 
 void StatusBar::setSelection(int start, int end) {
-    // Selection display not implemented in this minimal stub
-    (void)start; (void)end;
+    int selLength = end - start;
+    if (selLength > 0) {
+        _selLabel->setText(QString("Sel: %1").arg(selLength));
+    } else {
+        _selLabel->clear();
+    }
 }
