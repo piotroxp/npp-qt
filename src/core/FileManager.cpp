@@ -3,6 +3,8 @@
 // GPL v3
 
 #include "FileManager.h"
+#include "EncodingDetector.h"
+#include "LanguageManager.h"
 #include "../common/Util.h"
 #include <fstream>
 #include <filesystem>
@@ -107,16 +109,28 @@ BufferID FileManager::openFile(const std::string& path, bool readOnly) {
     buf._id = _nextBufferId++;
     buf._filePath = path;
     buf._readOnly = readOnly;
+
+    // Load content with auto-detected encoding
     std::string content;
-    if (loadFile(path, content, EncodingType::UTF_8)) {
+    EncodingType detectedEnc = EncodingDetector::detectFromPath(path);
+    buf._encoding = detectedEnc;
+    if (loadFile(path, content, detectedEnc)) {
         buf._text = content;
     }
+
+    // Detect language from file extension
+    std::string ext = getFileExtension(path);
+    buf._langType = LanguageManager::detect(ext);
+
     _buffers.push_back(buf);
+    _activeBuffer = buf._id;  // set active on open
     return buf._id;
 }
 
 BufferID FileManager::createNewFile() {
-    return createBuffer();
+    BufferID id = createBuffer();
+    _activeBuffer = id;  // set active on new
+    return id;
 }
 
 BufferID FileManager::duplicateBuffer(BufferID buffer) {

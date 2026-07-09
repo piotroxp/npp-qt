@@ -149,3 +149,8 @@ int LanguageManager::getIndentSize(LangType lang) const {
     (void)lang;
     return 4;
 }
+
+// Static convenience: detect language from file extension
+LangType LanguageManager::detect(const std::string& fileExtension) {
+    return instance().getLanguageForExtension(fileExtension);
+}

@@ -12,6 +12,12 @@
 
 class LanguageManager : public NonCopyable {
 public:
+    // Singleton access
+    static LanguageManager& instance() { static LanguageManager m; return m; }
+
+    // Static convenience: detect language from file extension (e.g. ".cpp")
+    static LangType detect(const std::string& fileExtension);
+
     LanguageManager();
     ~LanguageManager();
 

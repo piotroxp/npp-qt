@@ -12,6 +12,8 @@
 
 class EncodingDetector {
 public:
+    static EncodingDetector& instance() { static EncodingDetector e; return e; }
+public:
     EncodingDetector();
     ~EncodingDetector();
 
@@ -21,6 +23,9 @@ public:
 
     // Detect with hints
     EncodingType detectWithHints(const std::string& bytes, const std::string& fileName);
+
+    // Detect encoding from file path (reads file, returns encoding)
+    static EncodingType detectFromPath(const std::string& filePath);
 
     // Check for BOM
     EncodingType detectBOM(const std::string& bytes) const;

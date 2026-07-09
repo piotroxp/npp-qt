@@ -3,6 +3,7 @@
 // GPL v3
 
 #include "EncodingDetector.h"
+#include <fstream>
 #include <cstring>
 
 EncodingDetector::EncodingDetector() = default;
@@ -138,4 +139,15 @@ EncodingType EncodingDetector::detectSingleByteCharset(const std::string& bytes)
 EncodingType EncodingDetector::detectFromMetaCharset(const std::string& bytes) const {
     (void)bytes;
     return EncodingType::ANSI;
+}
+
+// Static convenience: detect encoding from file path
+EncodingType EncodingDetector::detectFromPath(const std::string& filePath) {
+    std::ifstream ifs(filePath, std::ios::binary | std::ios::ate);
+    if (!ifs) return EncodingType::ANSI;
+    auto size = ifs.tellg();
+    ifs.seekg(0, std::ios::beg);
+    std::string bytes(size, '\0');
+    if (!ifs.read(bytes.data(), size)) return EncodingType::ANSI;
+    return instance().detectWithHints(bytes, filePath);
 }
