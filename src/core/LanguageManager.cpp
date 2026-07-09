@@ -161,6 +161,76 @@ int LanguageManager::getIndentSize(LangType lang) const {
     return 4;
 }
 
+std::string LanguageManager::getCommentLine(LangType lang) const {
+    switch (lang) {
+        case LangType::L_PYTHON:
+        case LangType::L_BATCH:
+        case LangType::L_RUBY:
+        case LangType::L_PERL:
+            return "#";
+        case LangType::L_MAKEFILE:
+            return "#";
+        case LangType::L_LUA:
+            return "--";
+        case LangType::L_HTML:
+        case LangType::L_XML:
+        case LangType::L_CSS:
+            return "//";
+        default:
+            return "//";
+    }
+}
+
+std::string LanguageManager::getCommentStart(LangType lang) const {
+    switch (lang) {
+        case LangType::L_CPP:
+        case LangType::L_C:
+        case LangType::L_JAVA:
+        case LangType::L_CS:
+        case LangType::L_JS:
+        case LangType::L_JSON:
+            return "/*";
+        case LangType::L_PYTHON:
+        case LangType::L_RUBY:
+        case LangType::L_PERL:
+        case LangType::L_LUA:
+        case LangType::L_BATCH:
+            return "";  // Single line only
+        case LangType::L_HTML:
+        case LangType::L_XML:
+        case LangType::L_PHP:
+        case LangType::L_CSS:
+            return "<!--";
+        default:
+            return "/*";
+    }
+}
+
+std::string LanguageManager::getCommentEnd(LangType lang) const {
+    switch (lang) {
+        case LangType::L_CPP:
+        case LangType::L_C:
+        case LangType::L_JAVA:
+        case LangType::L_CS:
+        case LangType::L_JS:
+        case LangType::L_JSON:
+            return "*/";
+        case LangType::L_PYTHON:
+        case LangType::L_RUBY:
+        case LangType::L_PERL:
+        case LangType::L_LUA:
+        case LangType::L_BATCH:
+            return "";  // Single line only
+        case LangType::L_HTML:
+        case LangType::L_XML:
+        case LangType::L_PHP:
+        case LangType::L_CSS:
+            return "-->";
+        default:
+            return "*/";
+    }
+}
+
 // Static convenience: detect language from file extension
 LangType LanguageManager::detect(const std::string& fileExtension) {
     return instance().getLanguageForExtension(fileExtension);

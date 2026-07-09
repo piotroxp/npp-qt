@@ -1,5 +1,6 @@
-// FileManager.h - File I/O and file watching
+// FileManager.h - File I/O and buffer management
 // Copyright (C) 2026 Agent Army
+// Copyright (C) 2021 Don HO <don.h@free.fr>
 // GPL v3
 
 #pragma once
@@ -10,78 +11,154 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <QObject>
+#include <QString>
+#include <QFileSystemWatcher>
+#include <QDateTime>
 
+// Forward declaration - FileNotification is defined in Application.h
 struct FileNotification;
 
-class Buffer {
-public:
-    BufferID _id = nullptr;
-    std::string _filePath;
-    std::string _text;
-    EncodingType _encoding = EncodingType::UTF_8;
-    EolType _eolType = EolType::EOL_LF;
-    LangType _langType = LangType::L_TEXT;
-    bool _modified = false;
-    bool _readOnly = false;
-    DocFileStatus _status = DocFileStatus::DOC_REGULAR;
+// Forward declarations
+class Buffer;
+class ScintillaEditor;
+class EncodingDetector;
 
-    Buffer() = default;
-};
+// ============================================================================
+// File Notification (for file watcher observer)
+// ============================================================================
+// FileNotification is defined in Application.h
 
-class FileManager : public NonCopyable {
+// ============================================================================
+// FileManager - Manages all buffers and file I/O
+// ============================================================================
+class FileManager : public QObject, public NonCopyable {
+    Q_OBJECT
+
 public:
+    // Singleton access
+    static FileManager& instance() { static FileManager fm; return fm; }
+
     FileManager();
-    ~FileManager();
+    ~FileManager() override;
 
-    bool loadFile(const std::string& path, std::string& outContent, EncodingType encoding);
-    bool saveFile(const std::string& path, const std::string& content, EncodingType encoding, EolType eol);
-    bool deleteFile(const std::string& path);
-    bool moveFile(const std::string& src, const std::string& dst);
+    // ========================================================================
+    // File I/O
+    // ========================================================================
 
-    bool watchFile(const std::string& path);
-    void unwatchFile(const std::string& path);
+    bool loadFile(const QString& path, QString& outContent, EncodingType encoding);
+    bool saveFile(const QString& path, const QString& content, EncodingType encoding, EolType eol);
+    bool deleteFile(const QString& path);
+    bool moveFile(const QString& src, const QString& dst);
+    bool createEmptyFile(const QString& path);
+
+    // ========================================================================
+    // File watching
+    // ========================================================================
+
+    bool watchFile(const QString& path);
+    void unwatchFile(const QString& path);
     void unwatchAll();
+    bool isWatched(const QString& path) const;
+    QStringList getWatchedFiles() const;
 
-    bool isWatched(const std::string& path) const;
-    std::vector<std::string> getWatchedFiles() const;
+    // ========================================================================
+    // File utilities
+    // ========================================================================
 
-    std::string getFileExtension(const std::string& path) const;
-    std::string getFileName(const std::string& path) const;
-    std::string getFileDirectory(const std::string& path) const;
-
-    bool fileExists(const std::string& path) const;
-    bool isDirectory(const std::string& path) const;
-    long long getFileSize(const std::string& path) const;
+    QString getFileExtension(const QString& path) const;
+    QString getFileName(const QString& path) const;
+    QString getFileDirectory(const QString& path) const;
+    bool fileExists(const QString& path) const;
+    bool isDirectory(const QString& path) const;
+    int64_t getFileSize(const QString& path) const;
 
     Observer<FileNotification>& fileWatcherObserver() { return _fileWatcherObserver; }
 
+    // ========================================================================
     // Buffer management
-    BufferID createBuffer();
+    // ========================================================================
+
+    // Create/manage buffers
+    BufferID createBuffer(const QString& fileName = QString(), bool isLargeFile = false);
     Buffer* bufferFromId(BufferID id) const;
-    BufferID openFile(const std::string& path, bool readOnly);
+    BufferID openFile(const QString& path, bool readOnly = false);
     BufferID createNewFile();
     BufferID duplicateBuffer(BufferID buffer);
-    std::optional<std::string> getFileName(BufferID buffer) const;
+
+    // Buffer accessors
+    QString getFileName(BufferID buffer) const;
     BufferID getActiveBuffer() const;
     BufferID getBufferAt(int index, int view = 0) const;
     size_t getBufferCount() const;
+    int getBufferIndexByID(BufferID id) const;
+    Buffer* getBufferByIndex(size_t index) const;
+    size_t getNbDirtyBuffers() const;
+
+    // Buffer operations
     void setActiveBuffer(BufferID buffer);
     bool isBufferModified(BufferID buffer) const;
-    std::string getBufferText(BufferID buffer) const;
-    bool setBufferText(BufferID buffer, const std::string& text);
+    QString getBufferText(BufferID buffer) const;
+    bool setBufferText(BufferID buffer, const QString& text);
     EncodingType getEncoding(BufferID buffer) const;
     bool setEncoding(BufferID buffer, EncodingType enc);
-    std::string getBufferPath(BufferID buffer) const;
-    bool setBufferPath(BufferID buffer, const std::string& path);
-    bool saveFile(BufferID buffer, const std::string& path);
+    QString getBufferPath(BufferID buffer) const;
+    bool setBufferPath(BufferID buffer, const QString& path);
+    bool saveFile(BufferID buffer, const QString& path = QString());
     bool saveAllFiles();
     bool closeFile(BufferID buffer);
     bool closeAllFiles();
 
+    // Buffer references (for multi-view support)
+    void addBufferReference(BufferID buffer, ScintillaEditor* editor);
+    void closeBuffer(BufferID buffer, const ScintillaEditor* identifier);
+
+    // Document length query
+    size_t documentLength(BufferID buffer) const;
+
+    // Untitled buffer numbering
+    size_t nextUntitledNewNumber() const;
+
+    // ========================================================================
+    // File system change detection
+    // ========================================================================
+
+    void checkFilesystemChanges(bool checkOnlyCurrentBuffer = false);
+
+    // ========================================================================
+    // Notification handling (called by Buffer)
+    // ========================================================================
+
+    void notifyBufferChanged(Buffer* buffer, int mask);
+
+    // ========================================================================
+    // Encoding detection settings
+    // ========================================================================
+
+    void enableAutoDetectEncoding() { _autoDetectEncoding = true; }
+    void disableAutoDetectEncoding() { _autoDetectEncoding = false; }
+    bool isAutoDetectEncodingEnabled() const { return _autoDetectEncoding; }
+
+signals:
+    void bufferChanged(BufferID buffer, int changeMask);
+    void bufferCreated(BufferID buffer);
+    void bufferClosed(BufferID buffer);
+    void fileSystemChanged(const QString& path);
+
 private:
-    std::unordered_map<std::string, int> _watchDescriptors;
+    // Internal helpers
+    bool loadFileIntoBuffer(BufferID id, const QString& path);
+    EncodingType detectEncoding(const QByteArray& data) const;
+    LangType detectLanguage(const QByteArray& data, const QString& fileName) const;
+    QString resolveFullPath(const QString& path) const;
+    bool ensureDirectoryExists(const QString& dirPath);
+
+    // Member variables
+    std::unordered_map<QString, int> _watchDescriptors;
     Observer<FileNotification> _fileWatcherObserver;
-    std::vector<Buffer> _buffers;
+    std::vector<Buffer*> _buffers;
+    QFileSystemWatcher* _fileWatcher = nullptr;
     BufferID _nextBufferId = reinterpret_cast<BufferID>(1);
     BufferID _activeBuffer = BUFFER_INVALID;
+    bool _autoDetectEncoding = true;
 };

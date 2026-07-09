@@ -60,7 +60,7 @@ struct CommandLineArgs {
     bool newInstance = false;
     bool showHelp = false;
     std::string sessionToLoad;
-    std::string profile;  // e.g., "dark", "light"
+    std::string profile;  // e.g. "dark", "light"
 };
 
 CommandLineArgs parseArgs(int argc, char* argv[]) {
@@ -120,7 +120,9 @@ int main(int argc, char* argv[]) {
     auto startTime = steady_clock::now();
 
     setupExceptionHandler();
+    fprintf(stderr, "DEBUG: main() start\n"); fflush(stderr);
     CommandLineArgs args = parseArgs(argc, argv);
+    fprintf(stderr, "DEBUG: after parseArgs\n"); fflush(stderr);
 
     if (args.showHelp) {
         printHelp(argv[0]);
@@ -136,8 +138,8 @@ int main(int argc, char* argv[]) {
     // Qt styles
     QApplication::setStyle(QStyleFactory::create("Fusion"));
 
-    // Create Qt application
     NotepadApp app(argc, argv);
+    fprintf(stderr, "DEBUG: after NotepadApp ctor\n"); fflush(stderr);
 
     // Set up signal handlers
     std::signal(SIGINT, signalHandler);
@@ -145,6 +147,7 @@ int main(int argc, char* argv[]) {
 
     // Initialize application
     auto& application = Application::instance();
+    fprintf(stderr, "DEBUG: after Application::instance()\n"); fflush(stderr);
     if (!args.configDir.empty()) {
         application.setConfigDirectory(args.configDir);
     }
@@ -161,11 +164,13 @@ int main(int argc, char* argv[]) {
     }
 
     // Initialize
+    fprintf(stderr, "DEBUG: before initialize()\n"); fflush(stderr);
     if (!application.initialize()) {
         QMessageBox::critical(nullptr, "Startup Error",
             "Failed to initialize application.\n" + application.lastError());
         return 1;
     }
+    fprintf(stderr, "DEBUG: initialize() succeeded\n"); fflush(stderr);
 
     // Open files from command line
     for (const auto& filePath : args.files) {
@@ -179,9 +184,12 @@ int main(int argc, char* argv[]) {
 
     // Show main window
     application.showMainWindow();
+    fprintf(stderr, "DEBUG: after showMainWindow()\n"); fflush(stderr);
 
     // Main event loop
+    fprintf(stderr, "DEBUG: entering app.exec()\n"); fflush(stderr);
     int result = app.exec();
+    fprintf(stderr, "DEBUG: app.exec() returned\n"); fflush(stderr);
 
     // Cleanup
     application.shutdown();

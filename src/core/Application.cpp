@@ -1,6 +1,7 @@
 // Application.cpp - Main application controller implementation
 #include "Application.h"
 #include "FileManager.h"
+#include "Buffer.h"
 #include "EncodingDetector.h"
 #include "LanguageManager.h"
 #include "SessionManager.h"
@@ -77,8 +78,10 @@ bool Application::initialize() {
     std::lock_guard<std::mutex> lock(_mutex);
 
     try {
+        qDebug() << "DEBUG: entering initialize()";
         logInfo("Initializing Notepad--Qt " + std::string(APP_VERSION));
 
+        qDebug() << "DEBUG: setupDirectories";
         // Setup directories
         if (!setupDirectories()) {
             _lastError = "Failed to create application directories";
@@ -86,11 +89,13 @@ bool Application::initialize() {
             return false;
         }
 
+        qDebug() << "DEBUG: loadConfig";
         // Load configuration
         if (!loadConfig()) {
             logWarning("No config file found, using defaults");
         }
 
+        qDebug() << "DEBUG: creating managers";
         // Initialize core managers
         _fileManager = new FileManager();
         _encodingDetector = new EncodingDetector();
@@ -99,10 +104,12 @@ bool Application::initialize() {
         _commandManager = new EditorCommandManager();
         _commandManager->registerAll(this);
 
+        qDebug() << "DEBUG: setupUI";
         // Setup UI
         setupUI();
         setupConnections();
 
+        qDebug() << "DEBUG: init complete";
         _state = AppState::Ready;
         logInfo("Initialization complete");
         return true;
@@ -337,7 +344,7 @@ int Application::currentView() const {
 // File Operations
 // ============================================================================
 BufferID Application::openFile(const std::string& path, bool readOnly) {
-    return _fileManager->openFile(path, readOnly);
+    return _fileManager->openFile(QString::fromStdString(path), readOnly);
 }
 
 BufferID Application::openFiles(const std::vector<std::string>& paths) {
@@ -349,7 +356,7 @@ BufferID Application::openFiles(const std::vector<std::string>& paths) {
 }
 
 bool Application::saveFile(BufferID buffer, const std::string& path) {
-    return _fileManager->saveFile(buffer, path);
+    return _fileManager->saveFile(buffer, path.empty() ? QString() : QString::fromStdString(path));
 }
 
 bool Application::saveAllFiles() {
@@ -374,7 +381,9 @@ BufferID Application::duplicateBuffer(BufferID buffer) {
 }
 
 std::optional<std::string> Application::getFileName(BufferID buffer) const {
-    return _fileManager->getFileName(buffer);
+    QString name = _fileManager->getFileName(buffer);
+    if (name.isEmpty()) return std::nullopt;
+    return name.toStdString();
 }
 
 // ============================================================================
@@ -403,11 +412,11 @@ bool Application::isBufferModified(BufferID buffer) const {
 }
 
 std::string Application::getBufferText(BufferID buffer) const {
-    return _fileManager->getBufferText(buffer);
+    return _fileManager->getBufferText(buffer).toStdString();
 }
 
 bool Application::setBufferText(BufferID buffer, const std::string& text) {
-    return _fileManager->setBufferText(buffer, text);
+    return _fileManager->setBufferText(buffer, QString::fromStdString(text));
 }
 
 EncodingType Application::getBufferEncoding(BufferID buffer) const {
@@ -528,7 +537,7 @@ ScintillaEditor* Application::getActiveEditor() const {
 bool Application::syncEditorToBuffer(ScintillaEditor* editor, BufferID buffer) {
     if (!editor || !buffer) return false;
     QString text = editor->text();
-    return _fileManager->setBufferText(buffer, text.toStdString());
+    return _fileManager->setBufferText(buffer, text);
 }
 
 void Application::setActiveEditor(ScintillaEditor* editor) {
@@ -682,7 +691,7 @@ void Application::onSaveFile() {
         // Sync editor text to buffer before saving
         ScintillaEditor* ed = getActiveEditor();
         if (ed) {
-            std::string text = ed->text().toStdString();
+            QString text = ed->text();
             _fileManager->setBufferText(buf, text);
         }
         saveFile(buf);
@@ -701,7 +710,7 @@ void Application::onSaveFileAs() {
             // Sync editor text to buffer before saving
             ScintillaEditor* ed = getActiveEditor();
             if (ed) {
-                std::string text = ed->text().toStdString();
+                QString text = ed->text();
                 _fileManager->setBufferText(buf, text);
             }
             saveFile(buf, filePath.toStdString());

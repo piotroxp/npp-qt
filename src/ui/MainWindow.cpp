@@ -905,10 +905,10 @@ void MainWindow::onTabCloseRequested(int index) {
             app().setActiveEditor(editor);
             app().setActiveBuffer(closingBuffer);
             if (closingBuffer != BUFFER_INVALID) app().syncEditorToBuffer(editor, closingBuffer);
-            std::string path = app().fileManager()->getBufferPath(closingBuffer);
-            if (!path.empty()) app().saveFile(closingBuffer, path);
+            QString path = app().fileManager()->getBufferPath(closingBuffer);
+            if (!path.isEmpty()) app().saveFile(closingBuffer, path.toStdString());
             // If no path (new file), fall through to save-as
-            if (path.empty() || app().saveFile(closingBuffer, path)) {
+            if (path.isEmpty() || app().saveFile(closingBuffer, path.toStdString())) {
                 // saved
             }
         } else if (btn == QMessageBox::Cancel) {

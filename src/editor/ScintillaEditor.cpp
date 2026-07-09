@@ -12,7 +12,7 @@
 
 ScintillaEditor::ScintillaEditor(QWidget* parent)
     : QFrame(parent)
-    , _editor(new QsciScintilla(this))
+    , _editor(new QsciScintilla())
     , _highlighter(nullptr)  // QsciScintilla handles highlighting via lexers, not QSyntaxHighlighter
 {
     QVBoxLayout* layout = new QVBoxLayout(this);

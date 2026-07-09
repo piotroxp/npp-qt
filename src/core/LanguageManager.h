@@ -42,6 +42,11 @@ public:
     bool isCaseSensitive(LangType lang) const;
     int getIndentSize(LangType lang) const;
 
+    // Comment symbol helpers (for Buffer integration)
+    std::string getCommentLine(LangType lang) const;
+    std::string getCommentStart(LangType lang) const;
+    std::string getCommentEnd(LangType lang) const;
+
 private:
     void initDefaultMappings();
     std::unordered_map<std::string, LangType> _extToLang;

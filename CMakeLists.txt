@@ -40,6 +40,7 @@ endif()
 # Source files
 set(SOURCES
     src/main.cpp
+    src/core/Buffer.cpp
     src/core/Application.cpp
     src/core/EditorCommandManager.cpp
     src/core/EncodingDetector.cpp
@@ -66,6 +67,7 @@ set(SOURCES
 )
 
 set(HEADERS
+    src/core/Buffer.h
     src/core/Application.h
     src/core/EditorCommandManager.h
     src/core/EncodingDetector.h
@@ -112,6 +114,14 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${QSCINTILLA_INCLUDE_DIRS})
+
+# Post-build copy to /workspace/
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+        $<TARGET_FILE:${PROJECT_NAME}>
+        /workspace/NotepadMinusMinusQt
+    COMMENT "Copying binary to /workspace/"
+)
 
 # Installation
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
