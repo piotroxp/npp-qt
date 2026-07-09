@@ -47,6 +47,9 @@ set(SOURCES
     src/core/FileManager.cpp
     src/core/LanguageManager.cpp
     src/core/SessionManager.cpp
+    src/core/NppBigSwitch.cpp
+    src/core/NppCommands.cpp
+    src/core/Notepad_plus.cpp
     src/editor/ScintillaEditor.cpp
     src/editor/SyntaxHighlighter.cpp
     src/ui/MainWindow.cpp
@@ -54,6 +57,7 @@ set(SOURCES
     src/ui/StatusBar.cpp
     src/ui/ToolBar.cpp
     src/ui/MenuBar.cpp
+    src/ui/WinControls.cpp
     src/dialogs/FindReplaceDialog.cpp
     src/dialogs/GoToLineDialog.cpp
     src/dialogs/PreferenceDialog.cpp
