@@ -122,16 +122,88 @@ void ScintillaEditor::clearMarkerLine() { }
 void ScintillaEditor::findNext(const QString& text, FindOption options) {
     bool cs = (options & FindOption::MatchCase) != FindOption::None;
     bool wo = (options & FindOption::WholeWord) != FindOption::None;
-    _editor->findFirst(text, false, cs, wo, true);
+    bool re = (options & FindOption::Regex) != FindOption::None;
+    bool forward = true;
+    bool showMessages = false;
+    _editor->findFirst(text, re, cs, wo, true /*wrap*/, true /*forward*/,
+                       -1, -1, true /*show*/, false /*posix*/, false /*cxx11*/);
 }
 void ScintillaEditor::findPrevious(const QString& text, FindOption options) {
     bool cs = (options & FindOption::MatchCase) != FindOption::None;
     bool wo = (options & FindOption::WholeWord) != FindOption::None;
-    _editor->findFirst(text, false, cs, wo, false);
+    bool re = (options & FindOption::Regex) != FindOption::None;
+    bool forward = false;
+    bool showMessages = false;
+    _editor->findFirst(text, re, cs, wo,
+                       true /*wrap*/, false /*backward*/,
+                       -1, -1, true /*show*/, false, false);
 }
-int ScintillaEditor::countMatches(const QString&, FindOption) { return 0; }
-void ScintillaEditor::replaceAll(const QString&, const QString&, FindOption) { }
-void ScintillaEditor::replace(const QString&) { }
+int ScintillaEditor::countMatches(const QString& text, FindOption options) {
+    if (text.isEmpty()) return 0;
+    bool cs = (options & FindOption::MatchCase) != FindOption::None;
+    bool wo = (options & FindOption::WholeWord) != FindOption::None;
+    bool re = (options & FindOption::Regex) != FindOption::None;
+    int count = 0;
+    int line = 0, col = 0;
+    // Search the whole document; findFirst returns false when no more matches
+    bool found = _editor->findFirst(text, re, cs, wo, true, true, -1, -1, false, false, false);
+    while (found) {
+        ++count;
+        // Get current position and search from next position
+        _editor->getCursorPosition(&line, &col);
+        found = _editor->findFirst(text, re, cs, wo, true, true, -1, -1, false, false, false);
+    }
+    return count;
+}
+void ScintillaEditor::replaceAll(const QString& find, const QString& rep, FindOption options) {
+    if (find.isEmpty()) return;
+    int count = 0;
+    bool cs = (options & FindOption::MatchCase) != FindOption::None;
+    bool wo = (options & FindOption::WholeWord) != FindOption::None;
+    bool re = (options & FindOption::Regex) != FindOption::None;
+    bool found = _editor->findFirst(find, re, cs, wo, true, true, -1, -1, false, false, false);
+    while (found) {
+        _editor->replace(rep);
+        ++count;
+        found = _editor->findFirst(find, re, cs, wo, true, true, -1, -1, false, false, false);
+    }
+    emit replaceAllDone(count);
+}
+void ScintillaEditor::replace(const QString& replacement) {
+    _editor->replace(replacement);
+}
+
+int ScintillaEditor::markAllMatches(const QString& text, FindOption options) {
+    if (text.isEmpty()) return 0;
+    // Configure indicator 1: box style with yellow background
+    _editor->indicatorDefine(QsciScintilla::BoxIndicator, 1);
+    _editor->setIndicatorForegroundColor(QColor("#FFFF00"), 1);
+    
+    // Clear all existing highlights
+    _editor->clearIndicatorRange(0, 0, _editor->lines(), 0, 1);
+    int count = 0;
+    int startLine = 0, startIdx = 0;
+    bool cs = (options & FindOption::MatchCase) != FindOption::None;
+    bool wo = (options & FindOption::WholeWord) != FindOption::None;
+    bool re = (options & FindOption::Regex) != FindOption::None;
+    bool found = _editor->findFirst(text, re, cs, wo, true, true, 0, 0, false, false, false);
+    while (found) {
+        int sl = 0, si = 0, el = 0, ei = 0;
+        _editor->getSelection(&sl, &si, &el, &ei);
+        if (sl >= 0 && (sl < el || (sl == el && si < ei))) {
+            _editor->fillIndicatorRange(sl, si, el, ei - si, 1);
+            ++count;
+        }
+        found = _editor->findNext();
+        int cl = 0, ci = 0;
+        _editor->getCursorPosition(&cl, &ci);
+        // Guard: if we've wrapped back to start, stop
+        if (cl < startLine || (cl == startLine && ci <= startIdx)) break;
+        if (count > 100000) break;  // sanity limit
+    }
+    return count;
+}
+
 
 void ScintillaEditor::setAnnotationsEnabled(bool) { }
 void ScintillaEditor::addAnnotation(int, const QString&) { }

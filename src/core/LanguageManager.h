@@ -10,6 +10,8 @@
 #include <vector>
 #include <unordered_map>
 
+class QsciLexer;  // forward declaration
+
 class LanguageManager : public NonCopyable {
 public:
     // Singleton access
@@ -17,6 +19,9 @@ public:
 
     // Static convenience: detect language from file extension (e.g. ".cpp")
     static LangType detect(const std::string& fileExtension);
+
+    // Create a QsciLexer for a given language (caller owns the lexer)
+    static QsciLexer* createLexer(LangType lang);
 
     LanguageManager();
     ~LanguageManager();

@@ -3,6 +3,17 @@
 // GPL v3
 
 #include "LanguageManager.h"
+#include <Qsci/qscilexercpp.h>
+#include <Qsci/qscilexerjava.h>
+#include <Qsci/qscilexercsharp.h>
+#include <Qsci/qscilexerhtml.h>
+#include <Qsci/qscilexercss.h>
+#include <Qsci/qscilexerjavascript.h>
+#include <Qsci/qscilexerjson.h>
+#include <Qsci/qscilexermarkdown.h>
+#include <Qsci/qscilexermakefile.h>
+#include <Qsci/qscilexerlua.h>
+#include <Qsci/qscilexerbatch.h>
 #include <algorithm>
 #include <cctype>
 
@@ -153,4 +164,24 @@ int LanguageManager::getIndentSize(LangType lang) const {
 // Static convenience: detect language from file extension
 LangType LanguageManager::detect(const std::string& fileExtension) {
     return instance().getLanguageForExtension(fileExtension);
+}
+
+
+// Create a QsciLexer for the given language (nullptr for L_TEXT/unknown)
+QsciLexer* LanguageManager::createLexer(LangType lang) {
+    switch (lang) {
+        case LangType::L_CPP:
+        case LangType::L_C:      return new QsciLexerCPP;
+        case LangType::L_JAVA:   return new QsciLexerJava;
+        case LangType::L_CS:     return new QsciLexerCSharp;
+        case LangType::L_HTML:   return new QsciLexerHTML;
+        case LangType::L_CSS:    return new QsciLexerCSS;
+        case LangType::L_JS:     return new QsciLexerJavaScript;
+        case LangType::L_JSON:   return new QsciLexerJSON;
+        case LangType::L_MARKDOWN: return new QsciLexerMarkdown;
+        case LangType::L_MAKEFILE: return new QsciLexerMakefile;
+        case LangType::L_LUA:    return new QsciLexerLua;
+        case LangType::L_BATCH:  return new QsciLexerBatch;
+        default: return nullptr;
+    }
 }

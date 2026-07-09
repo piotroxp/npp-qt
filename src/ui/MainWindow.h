@@ -34,7 +34,7 @@ public:
     ~MainWindow() override;
 
     void addEditorTab(ScintillaEditor* editor, const QString& title);
-    void removeEditorTab(int index);
+    void removeEditorTab(int index, BufferID closingBuffer = BUFFER_INVALID);
     void setTabText(int index, const QString& title);
     void setTabModified(int index, bool modified);
 
@@ -115,6 +115,7 @@ private:
     void updateRecentFilesMenu();
 
     QTabWidget* _tabWidget = nullptr;
+    BufferID bufferAtTabIndex(int tabIndex) const;
     TabBar* _tabBar = nullptr;
     MenuBar* _menuBar = nullptr;
     ToolBar* _toolBar = nullptr;

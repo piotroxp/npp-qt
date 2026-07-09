@@ -157,7 +157,8 @@ enum class FindOption : uint32_t {
     InSelection     = 1 << 3,
     Incremental     = 1 << 4,
     Hidden          = 1 << 5,
-    PreserveCase    = 1 << 6
+    PreserveCase    = 1 << 6,
+    Regex           = 1 << 7
 };
 
 inline FindOption operator|(FindOption a, FindOption b) {

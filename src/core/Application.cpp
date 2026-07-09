@@ -253,6 +253,11 @@ void Application::setupConnections() {
                 this, [this](const QString&, const QString&, FindOption) {
             onFindNext();  // advance to next match after replace
         });
+        // Keep dialog's editor in sync with the active editor
+        connect(this, &Application::activeEditorChanged, _findReplaceDialog,
+                [this](ScintillaEditor* ed) {
+                    if (_findReplaceDialog) _findReplaceDialog->setEditor(ed);
+                });
     }
 
     // Theme changes
@@ -517,7 +522,20 @@ ScintillaEditor* Application::getEditor(int viewId) const {
 }
 
 ScintillaEditor* Application::getActiveEditor() const {
-    return getEditor(_activeViewId);
+    return _activeEditor;
+}
+
+bool Application::syncEditorToBuffer(ScintillaEditor* editor, BufferID buffer) {
+    if (!editor || !buffer) return false;
+    QString text = editor->text();
+    return _fileManager->setBufferText(buffer, text.toStdString());
+}
+
+void Application::setActiveEditor(ScintillaEditor* editor) {
+    _activeEditor = editor;
+    if (editor) {
+        emit activeEditorChanged(editor);
+    }
 }
 
 // ============================================================================
@@ -660,7 +678,13 @@ void Application::onOpenFile() {
 void Application::onSaveFile() {
     qDebug() << "[App] Save file";
     BufferID buf = getActiveBuffer();
-    if (buf != EDITOR_INVALID) {
+    if (buf) {
+        // Sync editor text to buffer before saving
+        ScintillaEditor* ed = getActiveEditor();
+        if (ed) {
+            std::string text = ed->text().toStdString();
+            _fileManager->setBufferText(buf, text);
+        }
         saveFile(buf);
     }
 }
@@ -673,7 +697,15 @@ void Application::onSaveFileAs() {
     );
     if (!filePath.isEmpty()) {
         BufferID buf = getActiveBuffer();
-        if (buf) saveFile(buf, filePath.toStdString());
+        if (buf) {
+            // Sync editor text to buffer before saving
+            ScintillaEditor* ed = getActiveEditor();
+            if (ed) {
+                std::string text = ed->text().toStdString();
+                _fileManager->setBufferText(buf, text);
+            }
+            saveFile(buf, filePath.toStdString());
+        }
     }
 }
 

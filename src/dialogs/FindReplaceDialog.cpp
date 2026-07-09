@@ -88,43 +88,57 @@ void FindReplaceDialog::setSearchText(const QString& text) {
     _findCombo->setEditText(text);
 }
 
-FindOption currentOptions() {
-    return FindOption::None;
+FindOption FindReplaceDialog::currentOptions() const {
+    FindOption opts = FindOption::None;
+    if (_matchCaseCheck->isChecked()) opts |= FindOption::MatchCase;
+    if (_wholeWordCheck->isChecked()) opts |= FindOption::WholeWord;
+    if (_wrapCheck->isChecked()) opts |= FindOption::WrapAround;
+    if (_regexCheck->isChecked()) opts |= FindOption::Regex;
+    return opts;
 }
 
 void FindReplaceDialog::onFindNext() {
     QString text = _findCombo->currentText();
     if (text.isEmpty()) return;
+    _lastSearchText = text;
+    _lastSearchOptions = currentOptions();
     if (_editor) {
-        FindOption opts = FindOption::None;
-        if (_matchCaseCheck->isChecked()) opts |= FindOption::MatchCase;
-        if (_wholeWordCheck->isChecked()) opts |= FindOption::WholeWord;
-        if (_wrapCheck->isChecked()) opts |= FindOption::WrapAround;
-        _editor->findNext(text, opts);
+        _editor->findNext(text, currentOptions());
     }
     emit findNextRequested(text, currentOptions());
 }
 
 void FindReplaceDialog::onReplace() {
-    if (_editor) {
-        QString rep = _replaceCombo->currentText();
-        _editor->replace(rep);
-    }
+    if (!_editor) return;
+    // replace() in ScintillaEditor replaces selection with replacement text
+    _editor->replace(_replaceCombo->currentText());
 }
 
 void FindReplaceDialog::onReplaceAll() {
-    if (_editor) {
-        QString find = _findCombo->currentText();
-        QString rep = _replaceCombo->currentText();
-        FindOption opts = FindOption::None;
-        if (_matchCaseCheck->isChecked()) opts |= FindOption::MatchCase;
-        if (_wholeWordCheck->isChecked()) opts |= FindOption::WholeWord;
-        if (_wrapCheck->isChecked()) opts |= FindOption::WrapAround;
-        _editor->replaceAll(find, rep, opts);
-    }
+    if (!_editor) return;
+    // Wire up the count signal
+    connect(_editor, &ScintillaEditor::replaceAllDone, _statusLabel,
+            [this](int count) {
+                _statusLabel->setText(QString("Replaced %1 occurrences.").arg(count));
+            },
+            Qt::UniqueConnection);
+    _editor->replaceAll(
+        _findCombo->currentText(),
+        _replaceCombo->currentText(),
+        currentOptions()
+    );
 }
 
 void FindReplaceDialog::findNext() { onFindNext(); }
-void FindReplaceDialog::findPrevious() { }
+
+void FindReplaceDialog::findPrevious() {
+    QString text = _findCombo->currentText();
+    _lastSearchText = text;
+    _lastSearchOptions = currentOptions();
+    if (_editor) {
+        _editor->findPrevious(text, currentOptions());
+    }
+}
+
 void FindReplaceDialog::replace() { onReplace(); }
 void FindReplaceDialog::replaceAll() { onReplaceAll(); }

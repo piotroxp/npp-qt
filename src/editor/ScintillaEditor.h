@@ -89,6 +89,7 @@ public:
     int countMatches(const QString& text, FindOption options);
     void replaceAll(const QString& find, const QString& replace, FindOption options);
     void replace(const QString& replacement);
+    int markAllMatches(const QString& text, FindOption options);
 
     void setAnnotationsEnabled(bool enabled);
     void addAnnotation(int line, const QString& text);
@@ -113,6 +114,7 @@ signals:
     void modificationChanged(bool modified);
     void selectionChanged();
     void updateUI();
+    void replaceAllDone(int count);
 
 private:
     QsciScintilla* _editor;

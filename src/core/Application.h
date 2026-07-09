@@ -169,6 +169,8 @@ public:
     // Editors
     ScintillaEditor* getEditor(int viewId = -1) const;
     ScintillaEditor* getActiveEditor() const;
+    bool syncEditorToBuffer(ScintillaEditor* editor, BufferID buffer);
+    void setActiveEditor(ScintillaEditor* editor);
 
     // Command system
     void executeCommand(const std::string& cmd);
@@ -274,6 +276,7 @@ signals:
     void fileSaved(const std::string& path);
     void themeChanged(const std::string& themeName);
     void commandExecuted(int commandId);
+    void activeEditorChanged(ScintillaEditor* editor);
 
 protected:
     Application();
@@ -327,6 +330,7 @@ private:
     // Views
     std::vector<QWidget*>    _viewContainers;
     int                       _activeViewId = 0;
+    ScintillaEditor*          _activeEditor = nullptr;
 
     // Clipboard
     std::vector<std::string> _clipboardHistory;

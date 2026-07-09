@@ -28,6 +28,8 @@ public:
     void replace();
     void replaceAll();
     void setSearchText(const QString& text);
+    QString lastSearchText() const { return _lastSearchText; }
+    FindOption lastSearchOptions() const { return _lastSearchOptions; }
 
 signals:
     void findNextRequested(const QString& text, FindOption options);
@@ -42,6 +44,7 @@ private:
     void setupUi();
     void readSettings();
     void writeSettings();
+    FindOption currentOptions() const;
 
     ScintillaEditor* _editor = nullptr;
     QComboBox* _findCombo = nullptr;
@@ -54,6 +57,8 @@ private:
     QPushButton* _replaceBtn = nullptr;
     QPushButton* _replaceAllBtn = nullptr;
     QPushButton* _closeBtn = nullptr;
+    QString _lastSearchText;
+    FindOption _lastSearchOptions = FindOption::None;
     QLabel* _statusLabel = nullptr;
     int _matchCount = 0;
 };

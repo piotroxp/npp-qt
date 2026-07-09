@@ -9,9 +9,12 @@
 #include "MenuBar.h"
 #include "../editor/ScintillaEditor.h"
 #include "../core/Application.h"
+#include "../core/FileManager.h"
+#include "../core/LanguageManager.h"
 #include "../dialogs/FindReplaceDialog.h"
 #include "../dialogs/GoToLineDialog.h"
 #include "../dialogs/PreferenceDialog.h"
+#include <Qsci/qsciscintilla.h>
 #include <QTabWidget>
 #include <QVBoxLayout>
 #include <QFileDialog>
@@ -378,14 +381,24 @@ void MainWindow::dispatchCommand(const QString& cmd) {
         // Find in files dialog
         onFind();
     } else if (cmd == "search.count") {
-        // Count matches
-        if (auto* editor = currentEditor()) {
-            // TODO: implement count
+        if (auto* dlg = app().findReplaceDialog()) {
+            QString text = dlg->lastSearchText();
+            if (!text.isEmpty()) {
+                if (auto* editor = currentEditor()) {
+                    int count = editor->countMatches(text, dlg->lastSearchOptions());
+                    _statusBarWidget->setEncoding(QString("Found %1 matches").arg(count));
+                }
+            }
         }
     } else if (cmd == "search.markAll") {
-        // Mark all matches
-        if (auto* editor = currentEditor()) {
-            // TODO: implement mark
+        if (auto* dlg = app().findReplaceDialog()) {
+            QString text = dlg->lastSearchText();
+            if (!text.isEmpty()) {
+                if (auto* editor = currentEditor()) {
+                    int count = editor->markAllMatches(text, dlg->lastSearchOptions());
+                    _statusBarWidget->setEncoding(QString("Marked %1 matches").arg(count));
+                }
+            }
         }
     }
     // View commands
@@ -415,9 +428,33 @@ void MainWindow::dispatchCommand(const QString& cmd) {
     }
     // Language commands
     else if (cmd.startsWith("language.")) {
-        QString lang = cmd.mid(9);
-        // TODO: set language on current buffer
-        Q_UNUSED(lang);
+        QString langName = cmd.mid(9);
+        langName = langName.replace('_', ' ');
+        BufferID buf = app().getActiveBuffer();
+        ScintillaEditor* ed = app().getActiveEditor();
+        LangType lang = LangType::L_TEXT;
+        if (langName == "C++") lang = LangType::L_CPP;
+        else if (langName == "C") lang = LangType::L_C;
+        else if (langName == "Java") lang = LangType::L_JAVA;
+        else if (langName == "C#") lang = LangType::L_CS;
+        else if (langName == "HTML") lang = LangType::L_HTML;
+        else if (langName == "XML") lang = LangType::L_XML;
+        else if (langName == "PHP") lang = LangType::L_PHP;
+        else if (langName == "Python") lang = LangType::L_PYTHON;
+        else if (langName == "JavaScript") lang = LangType::L_JS;
+        else if (langName == "JSON") lang = LangType::L_JSON;
+        else if (langName == "CSS") lang = LangType::L_CSS;
+        else if (langName == "YAML") lang = LangType::L_YAML;
+        else if (langName == "Ruby") lang = LangType::L_RUBY;
+        else if (langName == "Perl") lang = LangType::L_PERL;
+        else if (langName == "Lua") lang = LangType::L_LUA;
+        else if (langName == "Markdown") lang = LangType::L_MARKDOWN;
+        else if (langName == "Makefile") lang = LangType::L_MAKEFILE;
+        if (ed) {
+            ed->setLanguage(lang);
+            QsciLexer* lexer = LanguageManager::createLexer(lang);
+            if (lexer) ed->qsciEditor()->setLexer(lexer);
+        }
     }
     // Settings commands
     else if (cmd == "settings.preferences") {
@@ -452,11 +489,21 @@ void MainWindow::addEditorTab(ScintillaEditor* editor, const QString& title) {
     updateTabBar();
 }
 
-void MainWindow::removeEditorTab(int index) {
-    if (index >= 0 && index < _tabWidget->count()) {
-        _tabWidget->removeTab(index);
-        updateTabBar();
+void MainWindow::removeEditorTab(int index, BufferID closingBuffer) {
+    if (index < 0 || index >= _tabWidget->count()) return;
+    if (closingBuffer != BUFFER_INVALID) _bufferToTab.remove(closingBuffer);
+    _tabWidget->removeTab(index);
+    // Rebuild map: tab indices shift down after removal
+    QMap<BufferID, int> newMap;
+    for (int i = 0; i < _tabWidget->count(); ++i) {
+        if (auto* editor = editorAt(i)) {
+            if (BufferID buf = bufferAtTabIndex(i); buf != BUFFER_INVALID) {
+                newMap[buf] = i;
+            }
+        }
     }
+    _bufferToTab = newMap;
+    updateTabBar();
 }
 
 void MainWindow::setTabText(int index, const QString& title) {
@@ -483,8 +530,17 @@ ScintillaEditor* MainWindow::editorAt(int index) const {
     return qobject_cast<ScintillaEditor*>(_tabWidget->widget(index));
 }
 
-int MainWindow::editorCount() const { 
-    return _tabWidget->count(); 
+int MainWindow::editorCount() const {
+    return _tabWidget->count();
+}
+
+BufferID MainWindow::bufferAtTabIndex(int tabIndex) const {
+    if (tabIndex < 0 || tabIndex >= _tabWidget->count()) return BUFFER_INVALID;
+    // Find the buffer whose tab index matches
+    for (auto it = _bufferToTab.constBegin(); it != _bufferToTab.constEnd(); ++it) {
+        if (it.value() == tabIndex) return it.key();
+    }
+    return BUFFER_INVALID;
 }
 
 void MainWindow::updateTabBar() { 
@@ -553,12 +609,17 @@ void MainWindow::onSaveFile() {
 
 void MainWindow::onSaveFileAs() {
     BufferID buffer = app().getActiveBuffer();
+    ScintillaEditor* ed = app().getActiveEditor();
     if (!buffer) return;
-    
+    // Sync editor text into buffer before save-as
+    if (ed) app().syncEditorToBuffer(ed, buffer);
+
     QString file = QFileDialog::getSaveFileName(this, "Save File As", _lastOpenedDirectory);
     if (!file.isEmpty()) {
         _lastOpenedDirectory = QFileInfo(file).absolutePath();
-        app().saveFile(buffer, file.toStdString());
+        if (app().saveFile(buffer, file.toStdString())) {
+            if (ed) setTabModified(_tabWidget->currentIndex(), ed->isModified());
+        }
         app().addToRecentFiles(file.toStdString());
         updateRecentFilesMenu();
         updateTitleBar();
@@ -626,17 +687,27 @@ void MainWindow::onGoto() {
 }
 
 void MainWindow::onFindNext() {
-    // Use last search text to find next
-    if (auto* editor = currentEditor()) {
-        // TODO: get last search from find dialog
-        // editor->findNext(lastSearch, options);
+    if (auto* dlg = app().findReplaceDialog()) {
+        QString text = dlg->lastSearchText();
+        if (!text.isEmpty()) {
+            if (auto* editor = currentEditor()) {
+                editor->findNext(text, dlg->lastSearchOptions());
+            }
+        } else {
+            // No last search — open the dialog
+            onFind();
+        }
     }
 }
 
 void MainWindow::onFindPrevious() {
-    if (auto* editor = currentEditor()) {
-        // TODO: get last search from find dialog
-        // editor->findPrevious(lastSearch, options);
+    if (auto* dlg = app().findReplaceDialog()) {
+        QString text = dlg->lastSearchText();
+        if (!text.isEmpty()) {
+            if (auto* editor = currentEditor()) {
+                editor->findPrevious(text, dlg->lastSearchOptions());
+            }
+        }
     }
 }
 
@@ -745,19 +816,25 @@ void MainWindow::onBufferOpened(BufferID buffer) {
     updateTabBar();
     updateTitleBar();
     updateStatusBar();
+
+    // Register this editor as the active one
+    app().setActiveEditor(editor);
 }
 
 void MainWindow::onBufferActivated(BufferID buffer) {
     if (!buffer) return;
-    
-    // Find tab for this buffer
+
+    // Find tab for this buffer and switch to it
     if (_bufferToTab.contains(buffer)) {
         int index = _bufferToTab[buffer];
         if (index != _tabWidget->currentIndex()) {
             _tabWidget->setCurrentIndex(index);
         }
+        // Also update active editor
+        ScintillaEditor* ed = editorAt(index);
+        if (ed) app().setActiveEditor(ed);
     }
-    
+
     updateTitleBar();
     updateStatusBar();
 }
@@ -765,8 +842,7 @@ void MainWindow::onBufferActivated(BufferID buffer) {
 void MainWindow::onBufferClosed(BufferID buffer) {
     if (_bufferToTab.contains(buffer)) {
         int index = _bufferToTab[buffer];
-        removeEditorTab(index);
-        _bufferToTab.remove(buffer);
+        removeEditorTab(index, buffer);  // removeEditorTab rebuilds the map
     }
 }
 
@@ -778,10 +854,16 @@ void MainWindow::onBufferModified(BufferID buffer, bool modified) {
 }
 
 void MainWindow::onBufferChanged() {
-    // Mark buffer as modified
     BufferID buffer = app().getActiveBuffer();
-    if (buffer) {
-        // Trigger save prompt when closing modified buffer
+    ScintillaEditor* ed = app().getActiveEditor();
+    if (buffer && ed) {
+        // Sync editor text into the buffer immediately so save is always fresh
+        app().syncEditorToBuffer(ed, buffer);
+        // Update tab modified indicator
+        if (_bufferToTab.contains(buffer)) {
+            int index = _bufferToTab[buffer];
+            setTabModified(index, ed->isModified());
+        }
     }
     updateStatusBar();
 }
@@ -796,38 +878,47 @@ void MainWindow::onThemeChanged(const QString& theme) {
 // Tab events
 void MainWindow::onTabChanged(int index) {
     if (index >= 0) {
-        app().setActiveBuffer(app().getBufferAt(index));
+        BufferID buffer = bufferAtTabIndex(index);
+        if (buffer) app().setActiveBuffer(buffer);
+        ScintillaEditor* ed = editorAt(index);
+        if (ed) app().setActiveEditor(ed);
     }
     updateStatusBar();
     updateTitleBar();
 }
 
 void MainWindow::onTabCloseRequested(int index) {
-    if (index >= 0) {
-        auto* editor = editorAt(index);
-        if (editor && editor->isModified()) {
-            QString title = _tabWidget->tabText(index);
-            QMessageBox::StandardButton btn = QMessageBox::question(this, "Save Changes",
-                QString("Do you want to save changes to %1?").arg(title),
-                QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
-            
-            if (btn == QMessageBox::Save) {
-                onSaveFile();
-            } else if (btn == QMessageBox::Cancel) {
-                return;
+    if (index < 0 || index >= _tabWidget->count()) return;
+
+    BufferID closingBuffer = bufferAtTabIndex(index);
+    ScintillaEditor* editor = editorAt(index);
+
+    // Save prompt if modified
+    if (editor && editor->isModified()) {
+        QString title = _tabWidget->tabText(index);
+        QMessageBox::StandardButton btn = QMessageBox::question(this, "Save Changes",
+            QString("Do you want to save changes to %1?").arg(title),
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+
+        if (btn == QMessageBox::Save) {
+            // Sync and save: switch to this tab, then save
+            app().setActiveEditor(editor);
+            app().setActiveBuffer(closingBuffer);
+            if (closingBuffer != BUFFER_INVALID) app().syncEditorToBuffer(editor, closingBuffer);
+            std::string path = app().fileManager()->getBufferPath(closingBuffer);
+            if (!path.empty()) app().saveFile(closingBuffer, path);
+            // If no path (new file), fall through to save-as
+            if (path.empty() || app().saveFile(closingBuffer, path)) {
+                // saved
             }
+        } else if (btn == QMessageBox::Cancel) {
+            return;
         }
-        
-        // Find buffer for this tab and close it
-        for (auto it = _bufferToTab.constBegin(); it != _bufferToTab.constEnd(); ++it) {
-            if (it.value() == index) {
-                app().closeFile(it.key());
-                break;
-            }
-        }
-        
-        removeEditorTab(index);
     }
+
+    // Close buffer and remove tab (removeEditorTab handles the map)
+    if (closingBuffer != BUFFER_INVALID) app().closeFile(closingBuffer);
+    removeEditorTab(index, closingBuffer);
 }
 
 // Drag and drop
