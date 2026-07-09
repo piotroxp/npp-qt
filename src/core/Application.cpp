@@ -255,6 +255,13 @@ void Application::setupConnections() {
         });
     }
 
+    // Theme changes
+    connect(this, &Application::themeChanged, _mainWindow,
+            [this](const std::string& name) {
+                auto mw = static_cast<MainWindow*>(_mainWindow);
+                mw->onThemeChanged(QString::fromStdString(name));
+            });
+
     // Command execution
     connect(this, &Application::commandExecuted, this, [this](int cmdId) {
         _commandManager->execute(cmdId);
