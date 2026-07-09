@@ -26,7 +26,7 @@ QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 namespace {
 struct qt_meta_stringdata_Application_t {
-    uint offsetsAndSizes[120];
+    uint offsetsAndSizes[126];
     char stringdata0[12];
     char stringdata1[13];
     char stringdata2[1];
@@ -41,52 +41,55 @@ struct qt_meta_stringdata_Application_t {
     char stringdata11[10];
     char stringdata12[16];
     char stringdata13[10];
-    char stringdata14[16];
-    char stringdata15[14];
-    char stringdata16[4];
-    char stringdata17[17];
-    char stringdata18[12];
-    char stringdata19[25];
-    char stringdata20[15];
-    char stringdata21[10];
-    char stringdata22[11];
-    char stringdata23[11];
-    char stringdata24[13];
-    char stringdata25[10];
-    char stringdata26[12];
-    char stringdata27[11];
-    char stringdata28[7];
-    char stringdata29[19];
-    char stringdata30[7];
+    char stringdata14[15];
+    char stringdata15[18];
+    char stringdata16[15];
+    char stringdata17[16];
+    char stringdata18[14];
+    char stringdata19[4];
+    char stringdata20[17];
+    char stringdata21[12];
+    char stringdata22[25];
+    char stringdata23[15];
+    char stringdata24[10];
+    char stringdata25[11];
+    char stringdata26[11];
+    char stringdata27[13];
+    char stringdata28[10];
+    char stringdata29[12];
+    char stringdata30[11];
     char stringdata31[7];
-    char stringdata32[6];
+    char stringdata32[19];
     char stringdata33[7];
-    char stringdata34[8];
-    char stringdata35[9];
-    char stringdata36[12];
-    char stringdata37[7];
-    char stringdata38[10];
-    char stringdata39[11];
-    char stringdata40[11];
-    char stringdata41[11];
-    char stringdata42[14];
-    char stringdata43[8];
-    char stringdata44[10];
-    char stringdata45[19];
-    char stringdata46[24];
-    char stringdata47[15];
-    char stringdata48[18];
-    char stringdata49[16];
-    char stringdata50[18];
-    char stringdata51[13];
-    char stringdata52[4];
-    char stringdata53[14];
-    char stringdata54[9];
-    char stringdata55[5];
-    char stringdata56[18];
-    char stringdata57[21];
-    char stringdata58[21];
-    char stringdata59[12];
+    char stringdata34[7];
+    char stringdata35[6];
+    char stringdata36[7];
+    char stringdata37[8];
+    char stringdata38[9];
+    char stringdata39[12];
+    char stringdata40[7];
+    char stringdata41[10];
+    char stringdata42[11];
+    char stringdata43[11];
+    char stringdata44[11];
+    char stringdata45[14];
+    char stringdata46[8];
+    char stringdata47[10];
+    char stringdata48[19];
+    char stringdata49[24];
+    char stringdata50[15];
+    char stringdata51[18];
+    char stringdata52[16];
+    char stringdata53[18];
+    char stringdata54[13];
+    char stringdata55[4];
+    char stringdata56[14];
+    char stringdata57[9];
+    char stringdata58[5];
+    char stringdata59[18];
+    char stringdata60[21];
+    char stringdata61[21];
+    char stringdata62[12];
 };
 #define QT_MOC_LITERAL(ofs, len) \
     uint(sizeof(qt_meta_stringdata_Application_t::offsetsAndSizes) + ofs), len 
@@ -106,52 +109,55 @@ Q_CONSTINIT static const qt_meta_stringdata_Application_t qt_meta_stringdata_App
         QT_MOC_LITERAL(111, 9),  // "themeName"
         QT_MOC_LITERAL(121, 15),  // "commandExecuted"
         QT_MOC_LITERAL(137, 9),  // "commandId"
-        QT_MOC_LITERAL(147, 15),  // "onBufferChanged"
-        QT_MOC_LITERAL(163, 13),  // "onMenuCommand"
-        QT_MOC_LITERAL(177, 3),  // "cmd"
-        QT_MOC_LITERAL(181, 16),  // "onToolBarCommand"
-        QT_MOC_LITERAL(198, 11),  // "onFileSaved"
-        QT_MOC_LITERAL(210, 24),  // "onFileModifiedExternally"
-        QT_MOC_LITERAL(235, 14),  // "onThemeChanged"
-        QT_MOC_LITERAL(250, 9),  // "onNewFile"
-        QT_MOC_LITERAL(260, 10),  // "onOpenFile"
-        QT_MOC_LITERAL(271, 10),  // "onSaveFile"
-        QT_MOC_LITERAL(282, 12),  // "onSaveFileAs"
-        QT_MOC_LITERAL(295, 9),  // "onSaveAll"
-        QT_MOC_LITERAL(305, 11),  // "onCloseFile"
-        QT_MOC_LITERAL(317, 10),  // "onCloseAll"
-        QT_MOC_LITERAL(328, 6),  // "onExit"
-        QT_MOC_LITERAL(335, 18),  // "onClearRecentFiles"
-        QT_MOC_LITERAL(354, 6),  // "onUndo"
-        QT_MOC_LITERAL(361, 6),  // "onRedo"
-        QT_MOC_LITERAL(368, 5),  // "onCut"
-        QT_MOC_LITERAL(374, 6),  // "onCopy"
-        QT_MOC_LITERAL(381, 7),  // "onPaste"
-        QT_MOC_LITERAL(389, 8),  // "onDelete"
-        QT_MOC_LITERAL(398, 11),  // "onSelectAll"
-        QT_MOC_LITERAL(410, 6),  // "onFind"
-        QT_MOC_LITERAL(417, 9),  // "onReplace"
-        QT_MOC_LITERAL(427, 10),  // "onGotoLine"
-        QT_MOC_LITERAL(438, 10),  // "onFindNext"
-        QT_MOC_LITERAL(449, 10),  // "onFindPrev"
-        QT_MOC_LITERAL(460, 13),  // "onFindInFiles"
-        QT_MOC_LITERAL(474, 7),  // "onCount"
-        QT_MOC_LITERAL(482, 9),  // "onMarkAll"
-        QT_MOC_LITERAL(492, 18),  // "onToggleFullScreen"
-        QT_MOC_LITERAL(511, 23),  // "onToggleDistractionFree"
-        QT_MOC_LITERAL(535, 14),  // "onToggleTabBar"
-        QT_MOC_LITERAL(550, 17),  // "onToggleStatusBar"
-        QT_MOC_LITERAL(568, 15),  // "onToggleToolBar"
-        QT_MOC_LITERAL(584, 17),  // "onConvertEncoding"
-        QT_MOC_LITERAL(602, 12),  // "EncodingType"
-        QT_MOC_LITERAL(615, 3),  // "enc"
-        QT_MOC_LITERAL(619, 13),  // "onSetLanguage"
-        QT_MOC_LITERAL(633, 8),  // "LangType"
-        QT_MOC_LITERAL(642, 4),  // "lang"
-        QT_MOC_LITERAL(647, 17),  // "onShowPreferences"
-        QT_MOC_LITERAL(665, 20),  // "onShowShortcutMapper"
-        QT_MOC_LITERAL(686, 20),  // "onShowCommandPalette"
-        QT_MOC_LITERAL(707, 11)   // "onShowAbout"
+        QT_MOC_LITERAL(147, 14),  // "onBufferOpened"
+        QT_MOC_LITERAL(162, 17),  // "onBufferActivated"
+        QT_MOC_LITERAL(180, 14),  // "onBufferClosed"
+        QT_MOC_LITERAL(195, 15),  // "onBufferChanged"
+        QT_MOC_LITERAL(211, 13),  // "onMenuCommand"
+        QT_MOC_LITERAL(225, 3),  // "cmd"
+        QT_MOC_LITERAL(229, 16),  // "onToolBarCommand"
+        QT_MOC_LITERAL(246, 11),  // "onFileSaved"
+        QT_MOC_LITERAL(258, 24),  // "onFileModifiedExternally"
+        QT_MOC_LITERAL(283, 14),  // "onThemeChanged"
+        QT_MOC_LITERAL(298, 9),  // "onNewFile"
+        QT_MOC_LITERAL(308, 10),  // "onOpenFile"
+        QT_MOC_LITERAL(319, 10),  // "onSaveFile"
+        QT_MOC_LITERAL(330, 12),  // "onSaveFileAs"
+        QT_MOC_LITERAL(343, 9),  // "onSaveAll"
+        QT_MOC_LITERAL(353, 11),  // "onCloseFile"
+        QT_MOC_LITERAL(365, 10),  // "onCloseAll"
+        QT_MOC_LITERAL(376, 6),  // "onExit"
+        QT_MOC_LITERAL(383, 18),  // "onClearRecentFiles"
+        QT_MOC_LITERAL(402, 6),  // "onUndo"
+        QT_MOC_LITERAL(409, 6),  // "onRedo"
+        QT_MOC_LITERAL(416, 5),  // "onCut"
+        QT_MOC_LITERAL(422, 6),  // "onCopy"
+        QT_MOC_LITERAL(429, 7),  // "onPaste"
+        QT_MOC_LITERAL(437, 8),  // "onDelete"
+        QT_MOC_LITERAL(446, 11),  // "onSelectAll"
+        QT_MOC_LITERAL(458, 6),  // "onFind"
+        QT_MOC_LITERAL(465, 9),  // "onReplace"
+        QT_MOC_LITERAL(475, 10),  // "onGotoLine"
+        QT_MOC_LITERAL(486, 10),  // "onFindNext"
+        QT_MOC_LITERAL(497, 10),  // "onFindPrev"
+        QT_MOC_LITERAL(508, 13),  // "onFindInFiles"
+        QT_MOC_LITERAL(522, 7),  // "onCount"
+        QT_MOC_LITERAL(530, 9),  // "onMarkAll"
+        QT_MOC_LITERAL(540, 18),  // "onToggleFullScreen"
+        QT_MOC_LITERAL(559, 23),  // "onToggleDistractionFree"
+        QT_MOC_LITERAL(583, 14),  // "onToggleTabBar"
+        QT_MOC_LITERAL(598, 17),  // "onToggleStatusBar"
+        QT_MOC_LITERAL(616, 15),  // "onToggleToolBar"
+        QT_MOC_LITERAL(632, 17),  // "onConvertEncoding"
+        QT_MOC_LITERAL(650, 12),  // "EncodingType"
+        QT_MOC_LITERAL(663, 3),  // "enc"
+        QT_MOC_LITERAL(667, 13),  // "onSetLanguage"
+        QT_MOC_LITERAL(681, 8),  // "LangType"
+        QT_MOC_LITERAL(690, 4),  // "lang"
+        QT_MOC_LITERAL(695, 17),  // "onShowPreferences"
+        QT_MOC_LITERAL(713, 20),  // "onShowShortcutMapper"
+        QT_MOC_LITERAL(734, 20),  // "onShowCommandPalette"
+        QT_MOC_LITERAL(755, 11)   // "onShowAbout"
     },
     "Application",
     "bufferOpened",
@@ -167,6 +173,9 @@ Q_CONSTINIT static const qt_meta_stringdata_Application_t qt_meta_stringdata_App
     "themeName",
     "commandExecuted",
     "commandId",
+    "onBufferOpened",
+    "onBufferActivated",
+    "onBufferClosed",
     "onBufferChanged",
     "onMenuCommand",
     "cmd",
@@ -223,7 +232,7 @@ Q_CONSTINIT static const uint qt_meta_data_Application[] = {
       10,       // revision
        0,       // classname
        0,    0, // classinfo
-      47,   14, // methods
+      50,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -231,55 +240,58 @@ Q_CONSTINIT static const uint qt_meta_data_Application[] = {
        6,       // signalCount
 
  // signals: name, argc, parameters, tag, flags, initial metatype offsets
-       1,    1,  296,    2, 0x06,    1 /* Public */,
-       5,    1,  299,    2, 0x06,    3 /* Public */,
-       6,    1,  302,    2, 0x06,    5 /* Public */,
-       7,    1,  305,    2, 0x06,    7 /* Public */,
-      10,    1,  308,    2, 0x06,    9 /* Public */,
-      12,    1,  311,    2, 0x06,   11 /* Public */,
+       1,    1,  314,    2, 0x06,    1 /* Public */,
+       5,    1,  317,    2, 0x06,    3 /* Public */,
+       6,    1,  320,    2, 0x06,    5 /* Public */,
+       7,    1,  323,    2, 0x06,    7 /* Public */,
+      10,    1,  326,    2, 0x06,    9 /* Public */,
+      12,    1,  329,    2, 0x06,   11 /* Public */,
 
  // slots: name, argc, parameters, tag, flags, initial metatype offsets
-      14,    1,  314,    2, 0x0a,   13 /* Public */,
-      15,    1,  317,    2, 0x0a,   15 /* Public */,
-      17,    1,  320,    2, 0x0a,   17 /* Public */,
-      18,    1,  323,    2, 0x0a,   19 /* Public */,
-      19,    1,  326,    2, 0x0a,   21 /* Public */,
-      20,    1,  329,    2, 0x0a,   23 /* Public */,
-      21,    0,  332,    2, 0x0a,   25 /* Public */,
-      22,    0,  333,    2, 0x0a,   26 /* Public */,
-      23,    0,  334,    2, 0x0a,   27 /* Public */,
-      24,    0,  335,    2, 0x0a,   28 /* Public */,
-      25,    0,  336,    2, 0x0a,   29 /* Public */,
-      26,    0,  337,    2, 0x0a,   30 /* Public */,
-      27,    0,  338,    2, 0x0a,   31 /* Public */,
-      28,    0,  339,    2, 0x0a,   32 /* Public */,
-      29,    0,  340,    2, 0x0a,   33 /* Public */,
-      30,    0,  341,    2, 0x0a,   34 /* Public */,
-      31,    0,  342,    2, 0x0a,   35 /* Public */,
-      32,    0,  343,    2, 0x0a,   36 /* Public */,
-      33,    0,  344,    2, 0x0a,   37 /* Public */,
-      34,    0,  345,    2, 0x0a,   38 /* Public */,
-      35,    0,  346,    2, 0x0a,   39 /* Public */,
-      36,    0,  347,    2, 0x0a,   40 /* Public */,
-      37,    0,  348,    2, 0x0a,   41 /* Public */,
-      38,    0,  349,    2, 0x0a,   42 /* Public */,
-      39,    0,  350,    2, 0x0a,   43 /* Public */,
-      40,    0,  351,    2, 0x0a,   44 /* Public */,
-      41,    0,  352,    2, 0x0a,   45 /* Public */,
-      42,    0,  353,    2, 0x0a,   46 /* Public */,
-      43,    0,  354,    2, 0x0a,   47 /* Public */,
-      44,    0,  355,    2, 0x0a,   48 /* Public */,
-      45,    0,  356,    2, 0x0a,   49 /* Public */,
-      46,    0,  357,    2, 0x0a,   50 /* Public */,
-      47,    0,  358,    2, 0x0a,   51 /* Public */,
-      48,    0,  359,    2, 0x0a,   52 /* Public */,
-      49,    0,  360,    2, 0x0a,   53 /* Public */,
-      50,    1,  361,    2, 0x0a,   54 /* Public */,
-      53,    1,  364,    2, 0x0a,   56 /* Public */,
-      56,    0,  367,    2, 0x0a,   58 /* Public */,
-      57,    0,  368,    2, 0x0a,   59 /* Public */,
-      58,    0,  369,    2, 0x0a,   60 /* Public */,
-      59,    0,  370,    2, 0x0a,   61 /* Public */,
+      14,    1,  332,    2, 0x0a,   13 /* Public */,
+      15,    1,  335,    2, 0x0a,   15 /* Public */,
+      16,    1,  338,    2, 0x0a,   17 /* Public */,
+      17,    1,  341,    2, 0x0a,   19 /* Public */,
+      18,    1,  344,    2, 0x0a,   21 /* Public */,
+      20,    1,  347,    2, 0x0a,   23 /* Public */,
+      21,    1,  350,    2, 0x0a,   25 /* Public */,
+      22,    1,  353,    2, 0x0a,   27 /* Public */,
+      23,    1,  356,    2, 0x0a,   29 /* Public */,
+      24,    0,  359,    2, 0x0a,   31 /* Public */,
+      25,    0,  360,    2, 0x0a,   32 /* Public */,
+      26,    0,  361,    2, 0x0a,   33 /* Public */,
+      27,    0,  362,    2, 0x0a,   34 /* Public */,
+      28,    0,  363,    2, 0x0a,   35 /* Public */,
+      29,    0,  364,    2, 0x0a,   36 /* Public */,
+      30,    0,  365,    2, 0x0a,   37 /* Public */,
+      31,    0,  366,    2, 0x0a,   38 /* Public */,
+      32,    0,  367,    2, 0x0a,   39 /* Public */,
+      33,    0,  368,    2, 0x0a,   40 /* Public */,
+      34,    0,  369,    2, 0x0a,   41 /* Public */,
+      35,    0,  370,    2, 0x0a,   42 /* Public */,
+      36,    0,  371,    2, 0x0a,   43 /* Public */,
+      37,    0,  372,    2, 0x0a,   44 /* Public */,
+      38,    0,  373,    2, 0x0a,   45 /* Public */,
+      39,    0,  374,    2, 0x0a,   46 /* Public */,
+      40,    0,  375,    2, 0x0a,   47 /* Public */,
+      41,    0,  376,    2, 0x0a,   48 /* Public */,
+      42,    0,  377,    2, 0x0a,   49 /* Public */,
+      43,    0,  378,    2, 0x0a,   50 /* Public */,
+      44,    0,  379,    2, 0x0a,   51 /* Public */,
+      45,    0,  380,    2, 0x0a,   52 /* Public */,
+      46,    0,  381,    2, 0x0a,   53 /* Public */,
+      47,    0,  382,    2, 0x0a,   54 /* Public */,
+      48,    0,  383,    2, 0x0a,   55 /* Public */,
+      49,    0,  384,    2, 0x0a,   56 /* Public */,
+      50,    0,  385,    2, 0x0a,   57 /* Public */,
+      51,    0,  386,    2, 0x0a,   58 /* Public */,
+      52,    0,  387,    2, 0x0a,   59 /* Public */,
+      53,    1,  388,    2, 0x0a,   60 /* Public */,
+      56,    1,  391,    2, 0x0a,   62 /* Public */,
+      59,    0,  394,    2, 0x0a,   64 /* Public */,
+      60,    0,  395,    2, 0x0a,   65 /* Public */,
+      61,    0,  396,    2, 0x0a,   66 /* Public */,
+      62,    0,  397,    2, 0x0a,   67 /* Public */,
 
  // signals: parameters
     QMetaType::Void, 0x80000000 | 3,    4,
@@ -291,8 +303,11 @@ Q_CONSTINIT static const uint qt_meta_data_Application[] = {
 
  // slots: parameters
     QMetaType::Void, 0x80000000 | 3,    4,
-    QMetaType::Void, QMetaType::QString,   16,
-    QMetaType::Void, QMetaType::QString,   16,
+    QMetaType::Void, 0x80000000 | 3,    4,
+    QMetaType::Void, 0x80000000 | 3,    4,
+    QMetaType::Void, 0x80000000 | 3,    4,
+    QMetaType::Void, QMetaType::QString,   19,
+    QMetaType::Void, QMetaType::QString,   19,
     QMetaType::Void, 0x80000000 | 8,    9,
     QMetaType::Void, 0x80000000 | 8,    9,
     QMetaType::Void, 0x80000000 | 8,   11,
@@ -325,8 +340,8 @@ Q_CONSTINIT static const uint qt_meta_data_Application[] = {
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void, 0x80000000 | 51,   52,
     QMetaType::Void, 0x80000000 | 54,   55,
+    QMetaType::Void, 0x80000000 | 57,   58,
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
@@ -362,6 +377,15 @@ Q_CONSTINIT const QMetaObject Application::staticMetaObject = { {
         // method 'commandExecuted'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         QtPrivate::TypeAndForceComplete<int, std::false_type>,
+        // method 'onBufferOpened'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        QtPrivate::TypeAndForceComplete<BufferID, std::false_type>,
+        // method 'onBufferActivated'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        QtPrivate::TypeAndForceComplete<BufferID, std::false_type>,
+        // method 'onBufferClosed'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        QtPrivate::TypeAndForceComplete<BufferID, std::false_type>,
         // method 'onBufferChanged'
         QtPrivate::TypeAndForceComplete<void, std::false_type>,
         QtPrivate::TypeAndForceComplete<BufferID, std::false_type>,
@@ -468,47 +492,50 @@ void Application::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id,
         case 3: _t->fileSaved((*reinterpret_cast< std::add_pointer_t<std::string>>(_a[1]))); break;
         case 4: _t->themeChanged((*reinterpret_cast< std::add_pointer_t<std::string>>(_a[1]))); break;
         case 5: _t->commandExecuted((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 6: _t->onBufferChanged((*reinterpret_cast< std::add_pointer_t<BufferID>>(_a[1]))); break;
-        case 7: _t->onMenuCommand((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
-        case 8: _t->onToolBarCommand((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
-        case 9: _t->onFileSaved((*reinterpret_cast< std::add_pointer_t<std::string>>(_a[1]))); break;
-        case 10: _t->onFileModifiedExternally((*reinterpret_cast< std::add_pointer_t<std::string>>(_a[1]))); break;
-        case 11: _t->onThemeChanged((*reinterpret_cast< std::add_pointer_t<std::string>>(_a[1]))); break;
-        case 12: _t->onNewFile(); break;
-        case 13: _t->onOpenFile(); break;
-        case 14: _t->onSaveFile(); break;
-        case 15: _t->onSaveFileAs(); break;
-        case 16: _t->onSaveAll(); break;
-        case 17: _t->onCloseFile(); break;
-        case 18: _t->onCloseAll(); break;
-        case 19: _t->onExit(); break;
-        case 20: _t->onClearRecentFiles(); break;
-        case 21: _t->onUndo(); break;
-        case 22: _t->onRedo(); break;
-        case 23: _t->onCut(); break;
-        case 24: _t->onCopy(); break;
-        case 25: _t->onPaste(); break;
-        case 26: _t->onDelete(); break;
-        case 27: _t->onSelectAll(); break;
-        case 28: _t->onFind(); break;
-        case 29: _t->onReplace(); break;
-        case 30: _t->onGotoLine(); break;
-        case 31: _t->onFindNext(); break;
-        case 32: _t->onFindPrev(); break;
-        case 33: _t->onFindInFiles(); break;
-        case 34: _t->onCount(); break;
-        case 35: _t->onMarkAll(); break;
-        case 36: _t->onToggleFullScreen(); break;
-        case 37: _t->onToggleDistractionFree(); break;
-        case 38: _t->onToggleTabBar(); break;
-        case 39: _t->onToggleStatusBar(); break;
-        case 40: _t->onToggleToolBar(); break;
-        case 41: _t->onConvertEncoding((*reinterpret_cast< std::add_pointer_t<EncodingType>>(_a[1]))); break;
-        case 42: _t->onSetLanguage((*reinterpret_cast< std::add_pointer_t<LangType>>(_a[1]))); break;
-        case 43: _t->onShowPreferences(); break;
-        case 44: _t->onShowShortcutMapper(); break;
-        case 45: _t->onShowCommandPalette(); break;
-        case 46: _t->onShowAbout(); break;
+        case 6: _t->onBufferOpened((*reinterpret_cast< std::add_pointer_t<BufferID>>(_a[1]))); break;
+        case 7: _t->onBufferActivated((*reinterpret_cast< std::add_pointer_t<BufferID>>(_a[1]))); break;
+        case 8: _t->onBufferClosed((*reinterpret_cast< std::add_pointer_t<BufferID>>(_a[1]))); break;
+        case 9: _t->onBufferChanged((*reinterpret_cast< std::add_pointer_t<BufferID>>(_a[1]))); break;
+        case 10: _t->onMenuCommand((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
+        case 11: _t->onToolBarCommand((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
+        case 12: _t->onFileSaved((*reinterpret_cast< std::add_pointer_t<std::string>>(_a[1]))); break;
+        case 13: _t->onFileModifiedExternally((*reinterpret_cast< std::add_pointer_t<std::string>>(_a[1]))); break;
+        case 14: _t->onThemeChanged((*reinterpret_cast< std::add_pointer_t<std::string>>(_a[1]))); break;
+        case 15: _t->onNewFile(); break;
+        case 16: _t->onOpenFile(); break;
+        case 17: _t->onSaveFile(); break;
+        case 18: _t->onSaveFileAs(); break;
+        case 19: _t->onSaveAll(); break;
+        case 20: _t->onCloseFile(); break;
+        case 21: _t->onCloseAll(); break;
+        case 22: _t->onExit(); break;
+        case 23: _t->onClearRecentFiles(); break;
+        case 24: _t->onUndo(); break;
+        case 25: _t->onRedo(); break;
+        case 26: _t->onCut(); break;
+        case 27: _t->onCopy(); break;
+        case 28: _t->onPaste(); break;
+        case 29: _t->onDelete(); break;
+        case 30: _t->onSelectAll(); break;
+        case 31: _t->onFind(); break;
+        case 32: _t->onReplace(); break;
+        case 33: _t->onGotoLine(); break;
+        case 34: _t->onFindNext(); break;
+        case 35: _t->onFindPrev(); break;
+        case 36: _t->onFindInFiles(); break;
+        case 37: _t->onCount(); break;
+        case 38: _t->onMarkAll(); break;
+        case 39: _t->onToggleFullScreen(); break;
+        case 40: _t->onToggleDistractionFree(); break;
+        case 41: _t->onToggleTabBar(); break;
+        case 42: _t->onToggleStatusBar(); break;
+        case 43: _t->onToggleToolBar(); break;
+        case 44: _t->onConvertEncoding((*reinterpret_cast< std::add_pointer_t<EncodingType>>(_a[1]))); break;
+        case 45: _t->onSetLanguage((*reinterpret_cast< std::add_pointer_t<LangType>>(_a[1]))); break;
+        case 46: _t->onShowPreferences(); break;
+        case 47: _t->onShowShortcutMapper(); break;
+        case 48: _t->onShowCommandPalette(); break;
+        case 49: _t->onShowAbout(); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
@@ -579,13 +606,13 @@ int Application::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 47)
+        if (_id < 50)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 47;
+        _id -= 50;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 47)
+        if (_id < 50)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 47;
+        _id -= 50;
     }
     return _id;
 }

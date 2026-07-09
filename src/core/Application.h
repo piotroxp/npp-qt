@@ -206,6 +206,9 @@ public:
     std::vector<std::string> getClipboardHistory() const;
 
 public slots:
+    void onBufferOpened(BufferID buffer);
+    void onBufferActivated(BufferID buffer);
+    void onBufferClosed(BufferID buffer);
     void onBufferChanged(BufferID buffer);
     void onMenuCommand(const QString& cmd);
     void onToolBarCommand(const QString& cmd);

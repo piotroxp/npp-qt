@@ -223,10 +223,37 @@ void Application::setupDockingPanels() {
 }
 
 void Application::setupConnections() {
-    // Buffer signals
+    // Menu/ToolBar commands → command dispatch
+    connect(_menuBar, &MenuBar::menuCommand, this, &Application::onMenuCommand);
+    connect(_toolBar, &ToolBar::toolBarCommand, this, &Application::onToolBarCommand);
+
+    // Buffer lifecycle signals
+    connect(this, &Application::bufferOpened, this, &Application::onBufferOpened);
+    connect(this, &Application::bufferActivated, this, &Application::onBufferActivated);
+    connect(this, &Application::bufferClosed, this, &Application::onBufferClosed);
     connect(this, &Application::bufferOpened, this, [this](BufferID) { updateUI(); });
     connect(this, &Application::bufferActivated, this, [this](BufferID) { updateUI(); });
     connect(this, &Application::fileSaved, this, &Application::onFileSaved);
+
+    // File browser → open file
+    if (_fileBrowserPanel) {
+        connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
+                this, [this](const QString& path) {
+            openFile(path.toStdString());
+        });
+    }
+
+    // Find/Replace dialog
+    if (_findReplaceDialog) {
+        connect(_findReplaceDialog, &FindReplaceDialog::findNextRequested,
+                this, [this](const QString&, FindOption) {
+            onFindNext();
+        });
+        connect(_findReplaceDialog, &FindReplaceDialog::replaceRequested,
+                this, [this](const QString&, const QString&, FindOption) {
+            onFindNext();  // advance to next match after replace
+        });
+    }
 
     // Command execution
     connect(this, &Application::commandExecuted, this, [this](int cmdId) {
@@ -569,6 +596,25 @@ void Application::setConfigDirectory(const std::string& dir) { _options.configDi
 void Application::setPluginDirectory(const std::string& dir) { _options.pluginDir = dir; }
 void Application::setThemeProfile(const std::string& profile) { _options.themeProfile = profile; }
 
+// ============================================================================
+// Buffer lifecycle slots — connected to Application's own signals
+// ============================================================================
+void Application::onBufferOpened(BufferID buffer) {
+    qDebug() << "[App] Buffer opened:" << buffer;
+    // MainWindow listens to bufferOpened and creates the tab
+}
+
+void Application::onBufferActivated(BufferID buffer) {
+    qDebug() << "[App] Buffer activated:" << buffer;
+    updateUI();
+}
+
+void Application::onBufferClosed(BufferID buffer) {
+    qDebug() << "[App] Buffer closed:" << buffer;
+    // Nothing to do here — MainWindow removes the tab
+    Q_UNUSED(buffer);
+}
+
 void Application::onMenuCommand(const QString& cmd) {
     executeCommand(cmd.toStdString());
 }
@@ -582,8 +628,11 @@ void Application::onToolBarCommand(const QString& cmd) {
 // ============================================================================
 void Application::onNewFile() {
     qDebug() << "[App] New file";
-    // Emit bufferOpened with 0 as placeholder; MainWindow handles buffer creation
-    emit bufferOpened(nullptr);
+    BufferID buf = newFile();
+    if (buf) {
+        emit bufferOpened(buf);
+        emit bufferActivated(buf);
+    }
 }
 
 void Application::onOpenFile() {
@@ -593,7 +642,11 @@ void Application::onOpenFile() {
         "All Files (*);;Text Files (*.txt);;C/C++ (*.cpp *.h);;Python (*.py);;JavaScript (*.js)"
     );
     if (!filePath.isEmpty()) {
-        openFile(filePath.toStdString());
+        BufferID buf = openFile(filePath.toStdString());
+        if (buf) {
+            emit bufferOpened(buf);
+            emit bufferActivated(buf);
+        }
     }
 }
 
