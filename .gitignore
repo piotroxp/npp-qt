@@ -1,0 +1,19 @@
+# Build artifacts
+npp-qt-build/
+build/
+npp-qt-tests-build/
+src/tests/*.o
+src/tests/*.a
+*.o
+*.a
+*.exe
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Qt
+*.autogen/
+*_autogen/
+*.moc
+*.qrc.*
