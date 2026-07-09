@@ -213,6 +213,57 @@ public slots:
     void onFileModifiedExternally(const std::string& path);
     void onThemeChanged(const std::string& themeName);
 
+    // File commands
+    void onNewFile();
+    void onOpenFile();
+    void onSaveFile();
+    void onSaveFileAs();
+    void onSaveAll();
+    void onCloseFile();
+    void onCloseAll();
+    void onExit();
+    void onClearRecentFiles();
+
+    // Edit commands
+    void onUndo();
+    void onRedo();
+    void onCut();
+    void onCopy();
+    void onPaste();
+    void onDelete();
+    void onSelectAll();
+    void onFind();
+    void onReplace();
+    void onGotoLine();
+
+    // Search commands
+    void onFindNext();
+    void onFindPrev();
+    void onFindInFiles();
+    void onCount();
+    void onMarkAll();
+
+    // View commands
+    void onToggleFullScreen();
+    void onToggleDistractionFree();
+    void onToggleTabBar();
+    void onToggleStatusBar();
+    void onToggleToolBar();
+
+    // Encoding commands
+    void onConvertEncoding(EncodingType enc);
+
+    // Language commands
+    void onSetLanguage(LangType lang);
+
+    // Settings commands
+    void onShowPreferences();
+    void onShowShortcutMapper();
+    void onShowCommandPalette();
+
+    // Help commands
+    void onShowAbout();
+
 signals:
     void bufferOpened(BufferID buffer);
     void bufferClosed(BufferID buffer);

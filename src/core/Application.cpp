@@ -30,6 +30,9 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QCloseEvent>
+#include <QTimer>
+#include <QDebug>
+#include <QWindow>
 #include <QMenuBar>
 #include <QToolBar>
 #include <QStatusBar>
@@ -94,6 +97,7 @@ bool Application::initialize() {
         _languageManager = new LanguageManager();
         _sessionManager = new SessionManager();
         _commandManager = new EditorCommandManager();
+        _commandManager->registerAll(this);
 
         // Setup UI
         setupUI();
@@ -571,4 +575,271 @@ void Application::onMenuCommand(const QString& cmd) {
 
 void Application::onToolBarCommand(const QString& cmd) {
     executeCommand(cmd.toStdString());
+}
+
+// ============================================================================
+// File command slots
+// ============================================================================
+void Application::onNewFile() {
+    qDebug() << "[App] New file";
+    // Emit bufferOpened with 0 as placeholder; MainWindow handles buffer creation
+    emit bufferOpened(nullptr);
+}
+
+void Application::onOpenFile() {
+    qDebug() << "[App] Open file";
+    QString filePath = QFileDialog::getOpenFileName(
+        nullptr, "Open File", QString(),
+        "All Files (*);;Text Files (*.txt);;C/C++ (*.cpp *.h);;Python (*.py);;JavaScript (*.js)"
+    );
+    if (!filePath.isEmpty()) {
+        openFile(filePath.toStdString());
+    }
+}
+
+void Application::onSaveFile() {
+    qDebug() << "[App] Save file";
+    BufferID buf = getActiveBuffer();
+    if (buf != EDITOR_INVALID) {
+        saveFile(buf);
+    }
+}
+
+void Application::onSaveFileAs() {
+    qDebug() << "[App] Save file as";
+    QString filePath = QFileDialog::getSaveFileName(
+        nullptr, "Save File As", QString(),
+        "All Files (*);;Text Files (*.txt);;C/C++ (*.cpp *.h)"
+    );
+    if (!filePath.isEmpty()) {
+        BufferID buf = getActiveBuffer();
+        if (buf) saveFile(buf, filePath.toStdString());
+    }
+}
+
+void Application::onSaveAll() {
+    qDebug() << "[App] Save all";
+    int count = getBufferCount();
+    for (int i = 0; i < count; ++i) {
+        BufferID id = getBufferAt(i);
+        if (id) saveFile(id);
+    }
+}
+
+void Application::onCloseFile() {
+    qDebug() << "[App] Close file";
+    BufferID buf = getActiveBuffer();
+    if (buf != EDITOR_INVALID) {
+        closeFile(buf);
+    }
+}
+
+void Application::onCloseAll() {
+    qDebug() << "[App] Close all files";
+    int count = getBufferCount();
+    for (int i = count - 1; i >= 0; --i) {
+        BufferID id = getBufferAt(i);
+        if (id) closeFile(id);
+    }
+}
+
+void Application::onExit() {
+    qDebug() << "[App] Exit";
+    shutdown();
+    QCoreApplication::quit();
+}
+
+void Application::onClearRecentFiles() {
+    qDebug() << "[App] Clear recent files";
+    if (_sessionManager) {
+        _sessionManager->clearRecentFiles();
+    }
+}
+
+// ============================================================================
+// Edit command slots
+// ============================================================================
+void Application::onUndo() {
+    qDebug() << "[App] Undo";
+    ScintillaEditor* ed = getActiveEditor();
+    if (ed) ed->undo();
+}
+
+void Application::onRedo() {
+    qDebug() << "[App] Redo";
+    ScintillaEditor* ed = getActiveEditor();
+    if (ed) ed->redo();
+}
+
+void Application::onCut() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (ed) ed->cut();
+}
+
+void Application::onCopy() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (ed) ed->copy();
+}
+
+void Application::onPaste() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (ed) ed->paste();
+}
+
+void Application::onDelete() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (ed) ed->deleteSelection();
+}
+
+void Application::onSelectAll() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (ed) ed->selectAll();
+}
+
+void Application::onFind() {
+    qDebug() << "[App] Find";
+    if (!_findReplaceDialog) {
+        _findReplaceDialog = new FindReplaceDialog(_mainWindow);
+    }
+    _findReplaceDialog->show();
+}
+
+void Application::onReplace() {
+    qDebug() << "[App] Replace";
+    if (!_findReplaceDialog) {
+        _findReplaceDialog = new FindReplaceDialog(_mainWindow);
+    }
+    _findReplaceDialog->show();
+}
+
+void Application::onGotoLine() {
+    qDebug() << "[App] Go to line";
+    if (!_gotoLineDialog) {
+        _gotoLineDialog = new GoToLineDialog(_mainWindow);
+    }
+    _gotoLineDialog->show();
+}
+
+// ============================================================================
+// Search command slots
+// ============================================================================
+void Application::onFindNext() {
+    qDebug() << "[App] Find next";
+    if (_findReplaceDialog) {
+        _findReplaceDialog->findNext();
+    }
+}
+
+void Application::onFindPrev() {
+    qDebug() << "[App] Find previous";
+    if (_findReplaceDialog) {
+        _findReplaceDialog->findPrevious();
+    }
+}
+
+void Application::onFindInFiles() {
+    qDebug() << "[App] Find in files";
+    // TODO: implement find-in-files dialog
+}
+
+void Application::onCount() {
+    qDebug() << "[App] Count occurrences";
+    // TODO: implement count
+}
+
+void Application::onMarkAll() {
+    qDebug() << "[App] Mark all";
+    // TODO: implement mark
+}
+
+// ============================================================================
+// View command slots
+// ============================================================================
+void Application::onToggleFullScreen() {
+    qDebug() << "[App] Toggle full screen";
+    QWidget* w = _mainWindow;
+    if (w->windowState() & Qt::WindowFullScreen) {
+        w->setWindowState(w->windowState() & ~Qt::WindowFullScreen);
+    } else {
+        w->setWindowState(w->windowState() | Qt::WindowFullScreen);
+    }
+}
+
+void Application::onToggleDistractionFree() {
+    qDebug() << "[App] Toggle distraction-free";
+    // TODO: implement distraction-free mode (hide all UI except editor)
+}
+
+void Application::onToggleTabBar() {
+    qDebug() << "[App] Toggle tab bar";
+    if (_mainWindow) {
+        // Find and toggle the tab bar visibility
+        QList<QTabBar*> bars = _mainWindow->findChildren<QTabBar*>();
+        for (QTabBar* bar : bars) {
+            bar->setVisible(!bar->isVisible());
+        }
+    }
+}
+
+void Application::onToggleStatusBar() {
+    if (_mainWindow) {
+        QStatusBar* sb = _mainWindow->statusBar();
+        if (sb) sb->setVisible(!sb->isVisible());
+    }
+}
+
+void Application::onToggleToolBar() {
+    if (_mainWindow) {
+        QList<QToolBar*> bars = _mainWindow->findChildren<QToolBar*>();
+        for (QToolBar* bar : bars) {
+            bar->setVisible(!bar->isVisible());
+        }
+    }
+}
+
+// ============================================================================
+// Encoding command slots
+// ============================================================================
+void Application::onConvertEncoding(EncodingType enc) {
+    qDebug() << "[App] Convert encoding to" << static_cast<int>(enc);
+    // TODO: implement encoding conversion
+    Q_UNUSED(enc);
+}
+
+void Application::onSetLanguage(LangType lang) {
+    qDebug() << "[App] Set language" << static_cast<int>(lang);
+    // TODO: implement language change
+    Q_UNUSED(lang);
+}
+
+// ============================================================================
+// Settings command slots
+// ============================================================================
+void Application::onShowPreferences() {
+    qDebug() << "[App] Show preferences";
+    if (!_preferenceDialog) {
+        _preferenceDialog = new PreferenceDialog(_mainWindow);
+    }
+    _preferenceDialog->show();
+}
+
+void Application::onShowShortcutMapper() {
+    qDebug() << "[App] Show shortcut mapper";
+    // TODO: implement shortcut mapper
+}
+
+void Application::onShowCommandPalette() {
+    qDebug() << "[App] Show command palette";
+    // TODO: implement command palette
+}
+
+// ============================================================================
+// Help command slots
+// ============================================================================
+void Application::onShowAbout() {
+    qDebug() << "[App] Show about";
+    if (!_aboutDialog) {
+        _aboutDialog = new AboutDialog(_mainWindow);
+    }
+    _aboutDialog->show();
 }

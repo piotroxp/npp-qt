@@ -597,4 +597,17 @@ CMakeFiles/NotepadMinusMinusQt.dir/src/core/Application.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qinputdialog.h \
  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qlineedit.h \
  /usr/include/x86_64-linux-gnu/qt6/QtGui/QCloseEvent \
- /usr/include/x86_64-linux-gnu/qt6/QtGui/qevent.h
+ /usr/include/x86_64-linux-gnu/qt6/QtGui/qevent.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QTimer \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qtimer.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qbasictimer.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QDebug \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qdebug.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtGui/QWindow \
+ /usr/include/x86_64-linux-gnu/qt6/QtGui/qwindow.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QEvent \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qcoreevent.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QMargins \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qmargins.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtGui/qsurface.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtGui/qsurfaceformat.h
