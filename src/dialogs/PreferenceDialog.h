@@ -15,6 +15,9 @@
 #include <QComboBox>
 #include <QLineEdit>
 #include <QGroupBox>
+#include <QListWidget>
+#include <QTableWidget>
+#include <QRadioButton>
 
 class PreferenceDialog : public QDialog {
     Q_OBJECT
@@ -60,6 +63,36 @@ private:
     QCheckBox* _chkShowTabbar = nullptr;
     QCheckBox* _chkShowStatusbar = nullptr;
     QCheckBox* _chkShowMenubar = nullptr;
+
+    // File Associations page widgets
+    QListWidget* _extensionList = nullptr;
+    QLineEdit* _extensionEdit = nullptr;
+
+    // Shortcut Mapper page widgets
+    QListWidget* _shortcutCategoryList = nullptr;
+    QTableWidget* _shortcutTable = nullptr;
+
+    // Margins page widgets
+    QCheckBox* _chkShowLineNumbers = nullptr;
+    QSpinBox* _spinLineNumberWidth = nullptr;
+    QPushButton* _lineNumberBgBtn = nullptr;
+    QCheckBox* _chkShowSymbolMargin = nullptr;
+    QCheckBox* _chkShowFolderMargin = nullptr;
+    QCheckBox* _chkEnableFolding = nullptr;
+    QComboBox* _cmbFoldStyle = nullptr;
+    QCheckBox* _chkHighlightCurrentLine = nullptr;
+    QPushButton* _currentLineColorBtn = nullptr;
+
+    // Backup/Auto-Save page widgets
+    QRadioButton* _radioBackupNone = nullptr;
+    QRadioButton* _radioBackupSimple = nullptr;
+    QRadioButton* _radioBackupVerbose = nullptr;
+    QLineEdit* _backupPathEdit = nullptr;
+    QPushButton* _backupPathBtn = nullptr;
+    QCheckBox* _chkAutoSave = nullptr;
+    QSpinBox* _spinAutoSaveInterval = nullptr;
+    QComboBox* _cmbAutoSaveMode = nullptr;
+    QCheckBox* _chkAutoSaveInBackg = nullptr;
 
     QTreeWidget* _categoryTree = nullptr;
     QStackedWidget* _pageStack = nullptr;

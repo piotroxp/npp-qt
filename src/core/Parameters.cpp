@@ -8,7 +8,9 @@
 #include "LanguageManager.h"
 #include "common/FileHelper.h"
 #include "common/StringHelper.h"
+#include "common/Types.h"
 #include <QCoreApplication>
+#include <QFontDatabase>
 #include <QStandardPaths>
 #include <QDir>
 #include <QFile>
@@ -343,14 +345,14 @@ void NppParameters::loadShortcutsFromXml(const QString& path) {
     QXmlStreamReader xml(&file);
     while (!xml.atEnd()) {
         xml.readNext();
-        if (xml.isStartElement() && xml.name() == "Shortcut") {
+        if (xml.isStartElement() && xml.name().toString() == QStringLiteral("Shortcut")) {
             Shortcut sc;
             sc.name = xml.attributes().value("name").toString().toStdString();
-            sc.id = xml.attributes().value("id").toInt();
-            sc.ctrl = xml.attributes().value("ctrl").toInt();
-            sc.alt = xml.attributes().value("alt").toInt();
-            sc.shift = xml.attributes().value("shift").toInt();
-            sc.key = xml.attributes().value("key").toInt();
+            sc.id = xml.attributes().value("id").toString().toInt();
+            sc.ctrl = xml.attributes().value("ctrl").toString().toInt();
+            sc.alt = xml.attributes().value("alt").toString().toInt();
+            sc.shift = xml.attributes().value("shift").toString().toInt();
+            sc.key = xml.attributes().value("key").toString().toInt();
             _shortcuts.push_back(sc);
         }
     }
@@ -378,7 +380,7 @@ void NppParameters::loadThemes() {
         QXmlStreamReader xml(&file);
         while (!xml.atEnd()) {
             xml.readNext();
-            if (xml.isStartElement() && xml.name() == "LexerType") {
+            if (xml.isStartElement() && xml.name().toString() == QStringLiteral("LexerType")) {
                 NppStyle style;
                 style.name = xml.attributes().value("name").toString();
                 style.fgColor = xml.attributes().value("fgColor").toInt(nullptr, 16);
@@ -485,6 +487,38 @@ void NppParameters::saveFindHistory() {
 
 void NppParameters::saveRecentFiles() {
     _settings->setValue("RecentFiles/List", getRecentFiles());
+}
+
+// ============================================================================
+// Encoding conversion (Qt6-compatible)
+// ============================================================================
+QString NppParameters::convertEncoding(const QString& text, int fromSciCp, int toSciCp) {
+    if (text.isEmpty()) return text;
+    if (fromSciCp == toSciCp) return text;
+
+    // QScintilla uses UTF-8 internally in Qt6, so text is already in UTF-8.
+    // For simple cases (ASCII, Latin-1 ↔ UTF-8), handle directly.
+    if (fromSciCp == 65001 || toSciCp == 65001) {
+        // UTF-8 is a no-op (text is already in memory as UTF-8)
+        return text;
+    }
+    if (fromSciCp == 0 && toSciCp == 65001) {
+        // Latin-1 → UTF-8
+        return QString::fromLatin1(text.toLatin1());
+    }
+    if (fromSciCp == 65001 && toSciCp == 0) {
+        // UTF-8 → Latin-1 (lossy)
+        return QString::fromLatin1(text.toUtf8());
+    }
+    // For other codepages, return as-is
+    return text;
+}
+
+// ============================================================================
+// Font list
+// ============================================================================
+QStringList NppParameters::getFontList() const {
+    return QFontDatabase::families();
 }
 
 void NppParameters::saveShortcuts() {

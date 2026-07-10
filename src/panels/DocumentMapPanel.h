@@ -8,11 +8,27 @@
 #include <QWidget>
 #include <QRubberBand>
 #include <QScrollBar>
-#include <QLayout>
-#include <QSlider>
+#include <QPainter>
+#include <QTimer>
+#include <QMouseEvent>
+#include <Qsci/qsciscintilla.h>
 
 class ScintillaEditor;
-class QsciScintilla;
+class QsciLexer;
+
+// MapTextView: a read-only QsciScintilla used as the minimap canvas.
+// Declared here (not in the .cpp) so Qt's MOC can process Q_OBJECT.
+class MapTextView : public QsciScintilla {
+    Q_OBJECT
+public:
+    explicit MapTextView(QWidget* parent = nullptr);
+
+signals:
+    void clicked(const QPoint& pos);
+
+protected:
+    void mousePressEvent(QMouseEvent* event) override;
+};
 
 class DocumentMapPanel : public QDockWidget {
     Q_OBJECT
@@ -23,21 +39,27 @@ public:
     void setEditor(ScintillaEditor* editor);
     ScintillaEditor* editor() const { return _editor; }
 
-private slots:
-    void onMainEditorScroll();
-    void onMiniMapClicked(int sliderValue);
-    void syncScrollFromMiniMap();
+    // Called when the active buffer changes externally (e.g., tab switch)
+    void onBufferChanged();
+
+public slots:
+    void syncFromEditor();
+    void syncToEditor(int sliderValue);
+    void scheduleMinimapUpdate();
 
 private:
     void setupMiniMap();
     void updateViewZone();
-    void syncScrollToMiniMap();
+    void renderMinimap();
+    int computeEditorFirstVisibleLine() const;
+    void applyEditorFirstVisibleLine(int line);
 
     ScintillaEditor* _editor = nullptr;
     QWidget* _content = nullptr;
-    QsciScintilla* _mapEditor = nullptr;
+    MapTextView* _mapEditor = nullptr;
     QRubberBand* _viewZone = nullptr;
     QScrollBar* _scrollBar = nullptr;
+    QTimer* _updateTimer = nullptr;
     bool _syncing = false;
-    double _zoomFactor = 0.1;  // 10% width for minimap
+    int _lastKnownFirstLine = -1;
 };

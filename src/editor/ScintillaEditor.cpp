@@ -30,6 +30,14 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     _editor->setCaretLineVisible(true);
     _editor->setBraceMatching(QsciScintilla::SloppyBraceMatch);
 
+    // Pre-configure indicators for match highlighting.
+    // Indicator 0: for current-selection highlight (yellow)
+    _editor->indicatorDefine(QsciScintilla::FullBoxIndicator, 0);
+    _editor->setIndicatorForegroundColor(QColor("#FFFF00"), 0);
+    // Indicator 1: for "mark all" highlights (light yellow/amber)
+    _editor->indicatorDefine(QsciScintilla::BoxIndicator, 1);
+    _editor->setIndicatorForegroundColor(QColor("#FFFF00"), 1);
+
     connect(_editor, &QsciScintilla::textChanged, this, &ScintillaEditor::textChanged);
     connect(_editor, &QsciScintilla::cursorPositionChanged, [this](int line, int col) {
         emit cursorPositionChanged(line, col);
@@ -38,7 +46,16 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     connect(_editor, &QsciScintilla::selectionChanged, this, &ScintillaEditor::selectionChanged);
 }
 
-ScintillaEditor::~ScintillaEditor() = default;
+ScintillaEditor::~ScintillaEditor() {
+    // Explicitly delete _editor before the ScintillaEditBase/QFrame destructor runs.
+    // This ensures Scintilla's internal heap allocations are freed while the
+    // QApplication event loop is still alive.  Without this, ScintillaEditBase
+    // may be destroyed *after* QApplication exits its event loop, causing
+    // "free(): invalid size" when the CRT tries to free Scintilla's malloc'd
+    // memory after the heap is already torn down.
+    delete _editor;
+    _editor = nullptr;
+}
 
 void ScintillaEditor::setText(const QString& text) { _editor->setText(text); }
 QString ScintillaEditor::text() const { return _editor->text(); }
@@ -100,16 +117,51 @@ void ScintillaEditor::setTabWidth(int w) { _editor->setTabWidth(w); }
 int ScintillaEditor::tabWidth() const { return _editor->tabWidth(); }
 void ScintillaEditor::setUseTabs(bool u) { _editor->setIndentationsUseTabs(u); }
 bool ScintillaEditor::useTabs() const { return _editor->indentationsUseTabs(); }
-void ScintillaEditor::setIndent(int) { }
-int ScintillaEditor::indent() const { return 0; }
+void ScintillaEditor::setIndent(int indentLevel) {
+    int line = 0, col = 0;
+    _editor->getCursorPosition(&line, &col);
+    _editor->setIndentation(line, indentLevel);
+}
+int ScintillaEditor::indent() const {
+    int line = 0, col = 0;
+    _editor->getCursorPosition(&line, &col);
+    return _editor->indentation(line);
+}
 
 void ScintillaEditor::setLineNumberingEnabled(bool enabled) {
     _editor->setMarginWidth(0, enabled ? "00000" : "0");
 }
 bool ScintillaEditor::isLineNumberingEnabled() const { return _editor->marginWidth(0) != 0; }
 
-void ScintillaEditor::setWhitespaceVisibility(bool) { }
-void ScintillaEditor::setEolVisibility(bool) { }
+void ScintillaEditor::setWhitespaceVisibility(bool visible) {
+    _editor->setWhitespaceVisibility(visible
+        ? QsciScintilla::WsVisible
+        : QsciScintilla::WsInvisible);
+}
+void ScintillaEditor::setEolVisibility(bool) {
+    // EOL character visibility in Scintilla requires SCI_SETVIEWWS.
+    // Qsci does not expose this directly; EOL visibility is controlled
+    // by the document's EOL mode set via setEolType(). No-op here.
+}
+
+void ScintillaEditor::setCaretLineVisibility(bool visible) {
+    _editor->setCaretLineVisible(visible);
+}
+bool ScintillaEditor::isCaretLineVisible() const {
+    return _editor->SendScintilla(QsciScintilla::SCI_GETCARETLINEVISIBLE) != 0;
+}
+void ScintillaEditor::setCaretWidth(int pixels) {
+    _editor->setCaretWidth(pixels);
+}
+int ScintillaEditor::caretWidth() const {
+    return _editor->SendScintilla(QsciScintilla::SCI_GETCARETWIDTH);
+}
+void ScintillaEditor::setCaretForegroundColor(const QColor& color) {
+    _editor->setCaretForegroundColor(color);
+}
+void ScintillaEditor::setCaretLineBackgroundColor(const QColor& color) {
+    _editor->setCaretLineBackgroundColor(color);
+}
 
 void ScintillaEditor::setWrapMode(bool wrap) {
     _editor->setWrapMode(wrap ? QsciScintilla::WrapWord : QsciScintilla::WrapNone);
@@ -120,73 +172,168 @@ void ScintillaEditor::setMarkerLine(int line) { _editor->setMarkerBackgroundColo
 void ScintillaEditor::clearMarkerLine() { }
 
 void ScintillaEditor::findNext(const QString& text, FindOption options) {
-    bool cs = (options & FindOption::MatchCase) != FindOption::None;
-    bool wo = (options & FindOption::WholeWord) != FindOption::None;
-    bool re = (options & FindOption::Regex) != FindOption::None;
-    bool forward = true;
-    bool showMessages = false;
-    _editor->findFirst(text, re, cs, wo, true /*wrap*/, true /*forward*/,
-                       -1, -1, true /*show*/, false /*posix*/, false /*cxx11*/);
+    findNext(text, options, true);
 }
+
 void ScintillaEditor::findPrevious(const QString& text, FindOption options) {
+    findNext(text, options, false);
+}
+
+void ScintillaEditor::findNext(const QString& text, FindOption options, bool forward) {
+    if (text.isEmpty()) return;
     bool cs = (options & FindOption::MatchCase) != FindOption::None;
     bool wo = (options & FindOption::WholeWord) != FindOption::None;
     bool re = (options & FindOption::Regex) != FindOption::None;
-    bool forward = false;
-    bool showMessages = false;
-    _editor->findFirst(text, re, cs, wo,
-                       true /*wrap*/, false /*backward*/,
-                       -1, -1, true /*show*/, false, false);
+
+    // Save cursor so we can detect wrapping
+    int origLine = 0, origCol = 0;
+    _editor->getCursorPosition(&origLine, &origCol);
+
+    bool found = _editor->findFirst(text, re, cs, wo, true /*wrap*/,
+                                    forward /*forward*/, -1, -1,
+                                    true /*show*/, false /*posix*/, false /*cxx11*/);
+
+    if (found) {
+        int newLine = 0, newCol = 0;
+        _editor->getCursorPosition(&newLine, &newCol);
+        Q_UNUSED(origLine);
+        Q_UNUSED(origCol);
+        Q_UNUSED(newLine);
+        Q_UNUSED(newCol);
+    }
 }
+
 int ScintillaEditor::countMatches(const QString& text, FindOption options) {
     if (text.isEmpty()) return 0;
     bool cs = (options & FindOption::MatchCase) != FindOption::None;
     bool wo = (options & FindOption::WholeWord) != FindOption::None;
     bool re = (options & FindOption::Regex) != FindOption::None;
+
     int count = 0;
-    int line = 0, col = 0;
-    // Search the whole document; findFirst returns false when no more matches
-    bool found = _editor->findFirst(text, re, cs, wo, true, true, -1, -1, false, false, false);
+    int startLine = 0, startCol = 0;
+
+    // Save cursor position
+    _editor->getCursorPosition(&startLine, &startCol);
+
+    // Search from the beginning of the document
+    bool found = _editor->findFirst(text, re, cs, wo, true /*wrap*/,
+                                    true /*forward*/, -1, -1,
+                                    false /*no-show*/, false, false);
     while (found) {
         ++count;
-        // Get current position and search from next position
-        _editor->getCursorPosition(&line, &col);
         found = _editor->findFirst(text, re, cs, wo, true, true, -1, -1, false, false, false);
+        if (count > 100000) break;  // Sanity limit
     }
+
+    // Restore cursor
+    _editor->setCursorPosition(startLine, startCol);
+
     return count;
 }
-void ScintillaEditor::replaceAll(const QString& find, const QString& rep, FindOption options) {
-    if (find.isEmpty()) return;
-    int count = 0;
+
+int ScintillaEditor::replaceAll(const QString& find, const QString& rep, FindOption options) {
+    if (find.isEmpty()) return 0;
+
     bool cs = (options & FindOption::MatchCase) != FindOption::None;
     bool wo = (options & FindOption::WholeWord) != FindOption::None;
     bool re = (options & FindOption::Regex) != FindOption::None;
-    bool found = _editor->findFirst(find, re, cs, wo, true, true, -1, -1, false, false, false);
-    while (found) {
-        _editor->replace(rep);
-        ++count;
-        found = _editor->findFirst(find, re, cs, wo, true, true, -1, -1, false, false, false);
+    bool isRegex = re;
+
+    if (isRegex) {
+        // Use the SCI_TARGET approach for regex with backreference support.
+        // This mirrors NPP's processRange → replaceTargetRegExMode pattern.
+        int docLength = _editor->length();
+
+        // Build search flags
+        int flags = 0;
+        if (cs) flags |= 0x04;        // SCFIND_MATCHCASE
+        if (wo) flags |= 0x02;        // SCFIND_WHOLEWORD
+        if (re) {
+            flags |= 0x00200000;       // SCFIND_REGEXP
+            flags |= 0x00020000;       // SCFIND_REGEXP_SKIPCRLFASONE
+        }
+
+        _editor->SendScintilla(QsciScintilla::SCI_SETSEARCHFLAGS, flags);
+        _editor->SendScintilla(QsciScintilla::SCI_BEGINUNDOACTION);
+
+        int replacedCount = 0;
+        int targetStart = 0;
+        int targetEnd = docLength;
+        QByteArray findBa = find.toUtf8();
+        QByteArray repBa = rep.toUtf8();
+
+        while (targetStart < docLength) {
+            _editor->SendScintilla(QsciScintilla::SCI_SETTARGETSTART, targetStart);
+            _editor->SendScintilla(QsciScintilla::SCI_SETTARGETEND, targetEnd);
+
+            int foundPos = _editor->SendScintilla(
+                QsciScintilla::SCI_SEARCHINTARGET,
+                findBa.size(), findBa.constData());
+
+            if (foundPos < 0) break;
+
+            int foundEnd = _editor->SendScintilla(QsciScintilla::SCI_GETTARGETEND);
+            Q_UNUSED(foundEnd);
+
+            // SCI_REPLACETARGETRE expands backreferences (\1, \2, ...) in the
+            // replacement string using matched groups from the target.
+            int newLen = _editor->SendScintilla(
+                QsciScintilla::SCI_REPLACETARGETRE,
+                repBa.size(), repBa.constData());
+            Q_UNUSED(newLen);
+
+            ++replacedCount;
+
+            // Advance past the replaced text
+            targetStart = foundPos + newLen;
+        }
+
+        _editor->SendScintilla(QsciScintilla::SCI_ENDUNDOACTION);
+        emit replaceAllDone(replacedCount);
+        return replacedCount;
+    } else {
+        // Plain text replace-all: use findFirst loop
+        int count = 0;
+        bool found = _editor->findFirst(find, false, cs, wo, true, true,
+                                        -1, -1, false, false, false);
+        while (found) {
+            _editor->replace(rep);
+            ++count;
+            found = _editor->findFirst(find, false, cs, wo, true, true,
+                                       -1, -1, false, false, false);
+        }
+        emit replaceAllDone(count);
+        return count;
     }
-    emit replaceAllDone(count);
 }
+
 void ScintillaEditor::replace(const QString& replacement) {
     _editor->replace(replacement);
 }
 
 int ScintillaEditor::markAllMatches(const QString& text, FindOption options) {
     if (text.isEmpty()) return 0;
-    // Configure indicator 1: box style with yellow background
+
+    // Ensure indicator 1 is configured
     _editor->indicatorDefine(QsciScintilla::BoxIndicator, 1);
     _editor->setIndicatorForegroundColor(QColor("#FFFF00"), 1);
-    
-    // Clear all existing highlights
-    _editor->clearIndicatorRange(0, 0, _editor->lines(), 0, 1);
+
+    // Clear all existing indicator-1 highlights from entire document
+    QsciScintilla* sci = _editor;
+    sci->clearIndicatorRange(0, 0, sci->lines(), 0, 1);
+
     int count = 0;
-    int startLine = 0, startIdx = 0;
+    int startLine = 0, startCol = 0;
+    _editor->getCursorPosition(&startLine, &startCol);
+
     bool cs = (options & FindOption::MatchCase) != FindOption::None;
     bool wo = (options & FindOption::WholeWord) != FindOption::None;
     bool re = (options & FindOption::Regex) != FindOption::None;
-    bool found = _editor->findFirst(text, re, cs, wo, true, true, 0, 0, false, false, false);
+
+    // Start search from beginning (pos 0)
+    bool found = _editor->findFirst(text, re, cs, wo, true /*wrap*/,
+                                    true /*forward*/, -1, -1,
+                                    false /*no-show*/, false, false);
     while (found) {
         int sl = 0, si = 0, el = 0, ei = 0;
         _editor->getSelection(&sl, &si, &el, &ei);
@@ -194,16 +341,44 @@ int ScintillaEditor::markAllMatches(const QString& text, FindOption options) {
             _editor->fillIndicatorRange(sl, si, el, ei - si, 1);
             ++count;
         }
-        found = _editor->findNext();
+
+        // Advance to next match
+        found = _editor->findFirst(text, re, cs, wo, true, true, -1, -1,
+                                   false, false, false);
+
+        // Guard: if we've wrapped back to or before our start, stop
         int cl = 0, ci = 0;
         _editor->getCursorPosition(&cl, &ci);
-        // Guard: if we've wrapped back to start, stop
-        if (cl < startLine || (cl == startLine && ci <= startIdx)) break;
-        if (count > 100000) break;  // sanity limit
+        if (cl < startLine || (cl == startLine && ci <= startCol)) {
+            if (count > 0) break;  // We got at least one wrap
+        }
+        if (count > 100000) break;  // Sanity limit
     }
+
+    // Restore cursor
+    _editor->setCursorPosition(startLine, startCol);
+
     return count;
 }
 
+void ScintillaEditor::clearSelection() {
+    int line = 0, col = 0;
+    _editor->getCursorPosition(&line, &col);
+    _editor->setSelection(line, col, line, col);
+}
+
+void ScintillaEditor::ensureLineVisible(int line) {
+    _editor->ensureLineVisible(line);
+}
+
+void ScintillaEditor::getCursorPosition(int* line, int* col) const {
+    _editor->getCursorPosition(line, col);
+}
+
+void ScintillaEditor::clearIndicatorRange(int startLine, int startCol,
+                                          int endLine, int endCol, int indicator) {
+    _editor->clearIndicatorRange(startLine, startCol, endLine, endCol, indicator);
+}
 
 void ScintillaEditor::setAnnotationsEnabled(bool) { }
 void ScintillaEditor::addAnnotation(int, const QString&) { }

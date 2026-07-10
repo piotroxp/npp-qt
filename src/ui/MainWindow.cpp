@@ -26,6 +26,9 @@
 #include <QAction>
 #include <QKeySequence>
 #include <QStyle>
+#include <Qsci/qscilexercustom.h>
+#include "../panels/DocumentMapPanel.h"
+#include <QApplication>
 
 MainWindow::MainWindow()
     : QMainWindow(nullptr)
@@ -460,9 +463,9 @@ void MainWindow::dispatchCommand(const QString& cmd) {
     else if (cmd == "settings.preferences") {
         onPreferences();
     } else if (cmd == "settings.shortcutMapper") {
-        app().onShowShortcutMapper();
+        onShortcutMapper();
     } else if (cmd == "settings.commandPalette") {
-        app().onShowCommandPalette();
+        onCommandPalette();
     }
     // Help commands
     else if (cmd == "help.about") {
@@ -583,14 +586,22 @@ void MainWindow::onNewFile() {
 }
 
 void MainWindow::onOpenFile() {
+    qDebug() << "[onOpenFile] START";
     QString file = QFileDialog::getOpenFileName(this, "Open File", _lastOpenedDirectory);
+    qDebug() << "[onOpenFile] file selected:" << file;
     if (!file.isEmpty()) {
         _lastOpenedDirectory = QFileInfo(file).absolutePath();
+        qDebug() << "[onOpenFile] calling openFile";
         BufferID buffer = app().openFile(file.toStdString());
+        qDebug() << "[onOpenFile] openFile returned:" << buffer;
         if (buffer) {
+            qDebug() << "[onOpenFile] emitting bufferOpened";
             emit app().bufferOpened(buffer);
+            qDebug() << "[onOpenFile] adding to recent";
             app().addToRecentFiles(file.toStdString());
+            qDebug() << "[onOpenFile] updating menu";
             updateRecentFilesMenu();
+            qDebug() << "[onOpenFile] DONE";
         }
     }
 }
@@ -782,16 +793,28 @@ void MainWindow::onAbout() {
         "<p>Copyright (C) 2026 Agent Army</p>");
 }
 
+void MainWindow::onShortcutMapper() {
+    app().onShowShortcutMapper();
+}
+
+void MainWindow::onCommandPalette() {
+    app().onShowCommandPalette();
+}
+
 // Buffer notifications
 void MainWindow::onBufferOpened(BufferID buffer) {
     if (!buffer) return;
-    
+    qDebug() << "[onBufferOpened] buffer:" << buffer;
+
     // Create editor for this buffer
     auto* editor = new ScintillaEditor(_tabWidget);
-    
+    qDebug() << "[onBufferOpened] editor created:" << editor;
+
     // Load text
     std::string text = app().getBufferText(buffer);
+    qDebug() << "[onBufferOpened] text loaded, length:" << text.size();
     editor->setPlainText(QString::fromUtf8(text.c_str()));
+    qDebug() << "[onBufferOpened] text set in editor";
     
     // Get file name
     QString title = "Untitled";
@@ -813,6 +836,11 @@ void MainWindow::onBufferOpened(BufferID buffer) {
         onBufferModified(buffer, modified);
     });
     
+    // Wire DocumentMap to the first editor (initial setup)
+    if (app().documentMapPanel() && !app().getActiveEditor()) {
+        app().documentMapPanel()->setEditor(editor);
+    }
+
     updateTabBar();
     updateTitleBar();
     updateStatusBar();
@@ -887,7 +915,6 @@ void MainWindow::onThemeChanged(const QString& theme) {
     // Reload current theme resource
     app().loadTheme(theme.toStdString());
 }
-
 // Tab events
 void MainWindow::onTabChanged(int index) {
     if (index >= 0) {
@@ -895,6 +922,12 @@ void MainWindow::onTabChanged(int index) {
         if (buffer) app().setActiveBuffer(buffer);
         ScintillaEditor* ed = editorAt(index);
         if (ed) app().setActiveEditor(ed);
+
+        // Wire DocumentMap to the newly active editor
+        if (app().documentMapPanel()) {
+            app().documentMapPanel()->setEditor(ed);
+            app().documentMapPanel()->onBufferChanged();
+        }
     }
     updateStatusBar();
     updateTitleBar();

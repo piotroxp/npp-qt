@@ -21,6 +21,7 @@ public:
     void setFileType(const QString& type);
     void setMessage(const QString& msg);
     void setSelection(int start, int end);
+    void clearMessage();
 
 private:
     QLabel* _posLabel = nullptr;
@@ -29,4 +30,5 @@ private:
     QLabel* _langLabel = nullptr;
     QLabel* _typeLabel = nullptr;
     QLabel* _selLabel = nullptr;
+    QLabel* _msgLabel = nullptr;
 };

@@ -11,6 +11,8 @@
 #include <QPushButton>
 #include <QComboBox>
 #include <QGroupBox>
+#include <QButtonGroup>
+#include <QHideEvent>
 #include "../common/Types.h"
 
 class ScintillaEditor;
@@ -31,20 +33,29 @@ public:
     QString lastSearchText() const { return _lastSearchText; }
     FindOption lastSearchOptions() const { return _lastSearchOptions; }
 
+protected:
+    void hideEvent(QHideEvent* event) override;
+
 signals:
     void findNextRequested(const QString& text, FindOption options);
     void replaceRequested(const QString& find, const QString& replace, FindOption options);
+    void countRequested(const QString& text, FindOption options);
 
 private slots:
     void onFindNext();
     void onReplace();
     void onReplaceAll();
+    void onCount();
+    void onSearchTextChanged(const QString& text);
+    void onDirectionChanged(int directionId);
 
 private:
     void setupUi();
     void readSettings();
     void writeSettings();
     FindOption currentOptions() const;
+    void updateHighlight();
+    void clearHighlight();
 
     ScintillaEditor* _editor = nullptr;
     QComboBox* _findCombo = nullptr;
@@ -56,9 +67,12 @@ private:
     QPushButton* _findNextBtn = nullptr;
     QPushButton* _replaceBtn = nullptr;
     QPushButton* _replaceAllBtn = nullptr;
+    QPushButton* _countBtn = nullptr;
     QPushButton* _closeBtn = nullptr;
+    QButtonGroup* _directionGroup = nullptr;
+    QLabel* _statusLabel = nullptr;
     QString _lastSearchText;
     FindOption _lastSearchOptions = FindOption::None;
-    QLabel* _statusLabel = nullptr;
-    int _matchCount = 0;
+    bool _searchForward = true;
+    QString _prevHighlightTerm;
 };

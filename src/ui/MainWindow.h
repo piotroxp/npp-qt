@@ -113,6 +113,8 @@ private:
     void setupConnections();
     void dispatchCommand(const QString& cmd);
     void updateRecentFilesMenu();
+    void onShortcutMapper();
+    void onCommandPalette();
 
     QTabWidget* _tabWidget = nullptr;
     BufferID bufferAtTabIndex(int tabIndex) const;

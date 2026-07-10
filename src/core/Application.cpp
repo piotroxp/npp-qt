@@ -10,6 +10,7 @@
 #include "RecentFilesManager.h"
 #include "editor/ScintillaEditor.h"
 #include "editor/SyntaxHighlighter.h"
+#include <Qsci/qsciscintilla.h>
 #include "ui/MainWindow.h"
 #include "ui/TabBar.h"
 #include "ui/StatusBar.h"
@@ -17,6 +18,8 @@
 #include "ui/MenuBar.h"
 #include "dialogs/FindReplaceDialog.h"
 #include "dialogs/GoToLineDialog.h"
+#include "dialogs/ShortcutMapperDialog.h"
+#include "dialogs/CommandPaletteDialog.h"
 #include "dialogs/PreferenceDialog.h"
 #include "dialogs/AboutDialog.h"
 #include "panels/DocumentMapPanel.h"
@@ -26,9 +29,18 @@
 #include "common/StringHelper.h"
 #include "common/Util.h"
 #include "Constants.h"
+#include "Parameters.h"
 #include <QApplication>
 #include <QMessageBox>
 #include <QDesktopServices>
+#include <QDir>
+#include <QDirIterator>
+#include <QThread>
+#include <QVBoxLayout>
+#include <QDialogButtonBox>
+#include <QTableWidget>
+#include <QAbstractItemView>
+#include <QTableWidgetItem>
 #include <QUrl>
 #include <QFileDialog>
 #include <QInputDialog>
@@ -70,6 +82,14 @@ Application::~Application() {
     if (_encodingDetector) delete _encodingDetector;
     if (_fileManager) delete _fileManager;
 
+    // Delete view containers (ScintillaEditor widgets).  Must happen before
+    // _mainWindow is destroyed so that the ScintillaEditor destructors run
+    // while the Qt event loop is still alive (see ScintillaEditor::~ScintillaEditor).
+    for (QWidget* container : _viewContainers) {
+        delete container;
+    }
+    _viewContainers.clear();
+
     // Delete main window last — this triggers Qt's parent-child cascade delete
     // for all dock widgets, panels, and dialogs that are children of MainWindow.
     // After this, _findReplaceDialog, _docMapPanel, etc. are already deleted.
@@ -87,10 +107,8 @@ bool Application::initialize() {
     std::lock_guard<std::mutex> lock(_mutex);
 
     try {
-        qDebug() << "DEBUG: entering initialize()";
         logInfo("Initializing Notepad--Qt " + std::string(APP_VERSION));
 
-        qDebug() << "DEBUG: setupDirectories";
         // Setup directories
         if (!setupDirectories()) {
             _lastError = "Failed to create application directories";
@@ -98,13 +116,11 @@ bool Application::initialize() {
             return false;
         }
 
-        qDebug() << "DEBUG: loadConfig";
         // Load configuration
         if (!loadConfig()) {
             logWarning("No config file found, using defaults");
         }
 
-        qDebug() << "DEBUG: creating managers";
         // Initialize core managers
         _fileManager = new FileManager();
         _encodingDetector = new EncodingDetector();
@@ -112,15 +128,13 @@ bool Application::initialize() {
         _sessionManager = new SessionManager();
         _commandManager = new EditorCommandManager();
         _macroManager = new MacroManager();
-    _recentFilesManager = &RecentFilesManager::instance();
+        _recentFilesManager = &RecentFilesManager::instance();
         _commandManager->registerAll(this);
 
-        qDebug() << "DEBUG: setupUI";
         // Setup UI
         setupUI();
         setupConnections();
 
-        qDebug() << "DEBUG: init complete";
         _state = AppState::Ready;
         logInfo("Initialization complete");
         return true;
@@ -241,8 +255,7 @@ void Application::setupDockingPanels() {
 }
 
 void Application::setupConnections() {
-    // Menu/ToolBar commands → command dispatch
-    connect(_menuBar, &MenuBar::menuCommand, this, &Application::onMenuCommand);
+    // Menu/ToolBar commands → command dispatch (menu already connected in setupMenuBar)
     connect(_toolBar, &ToolBar::toolBarCommand, this, &Application::onToolBarCommand);
 
     // Buffer lifecycle signals
@@ -271,6 +284,8 @@ void Application::setupConnections() {
                 this, [this](const QString&, const QString&, FindOption) {
             onFindNext();  // advance to next match after replace
         });
+        connect(_findReplaceDialog, &FindReplaceDialog::countRequested,
+                this, [this](const QString&, FindOption) { onCount(); });
         // Keep dialog's editor in sync with the active editor
         connect(this, &Application::activeEditorChanged, _findReplaceDialog,
                 [this](ScintillaEditor* ed) {
@@ -699,7 +714,6 @@ void Application::onNewFile() {
 }
 
 void Application::onOpenFile() {
-    qDebug() << "[App] Open file";
     QString filePath = QFileDialog::getOpenFileName(
         nullptr, "Open File", QString(),
         "All Files (*);;Text Files (*.txt);;C/C++ (*.cpp *.h);;Python (*.py);;JavaScript (*.js)"
@@ -780,7 +794,6 @@ void Application::onExit() {
 }
 
 void Application::onClearRecentFiles() {
-    qDebug() << "[App] Clear recent files";
     if (_sessionManager) {
         _sessionManager->clearRecentFiles();
     }
@@ -790,13 +803,11 @@ void Application::onClearRecentFiles() {
 // Edit command slots
 // ============================================================================
 void Application::onUndo() {
-    qDebug() << "[App] Undo";
     ScintillaEditor* ed = getActiveEditor();
     if (ed) ed->undo();
 }
 
 void Application::onRedo() {
-    qDebug() << "[App] Redo";
     ScintillaEditor* ed = getActiveEditor();
     if (ed) ed->redo();
 }
@@ -827,7 +838,6 @@ void Application::onSelectAll() {
 }
 
 void Application::onFind() {
-    qDebug() << "[App] Find";
     if (!_findReplaceDialog) {
         _findReplaceDialog = new FindReplaceDialog(_mainWindow);
     }
@@ -835,7 +845,6 @@ void Application::onFind() {
 }
 
 void Application::onReplace() {
-    qDebug() << "[App] Replace";
     if (!_findReplaceDialog) {
         _findReplaceDialog = new FindReplaceDialog(_mainWindow);
     }
@@ -843,7 +852,6 @@ void Application::onReplace() {
 }
 
 void Application::onGotoLine() {
-    qDebug() << "[App] Go to line";
     if (!_gotoLineDialog) {
         _gotoLineDialog = new GoToLineDialog(_mainWindow);
     }
@@ -854,53 +862,115 @@ void Application::onGotoLine() {
 // Search command slots
 // ============================================================================
 void Application::onFindNext() {
-    qDebug() << "[App] Find next";
     if (_findReplaceDialog) {
         _findReplaceDialog->findNext();
+    } else {
+        onFind();
     }
 }
 
 void Application::onFindPrev() {
-    qDebug() << "[App] Find previous";
     if (_findReplaceDialog) {
         _findReplaceDialog->findPrevious();
+    } else {
+        onFind();
     }
 }
 
 void Application::onFindInFiles() {
-    qDebug() << "[App] Find in files";
-    // Show find in files dialog - emit signal or show dialog
+    // Open directory picker first, then search
+    QString dir = QFileDialog::getExistingDirectory(_mainWindow,
+        "Select Directory to Search In", QDir::homePath());
+    if (dir.isEmpty()) return;
+
+    QString searchText = "";
     if (_findReplaceDialog) {
-        _findReplaceDialog->show();
+        searchText = _findReplaceDialog->lastSearchText();
     }
+    if (searchText.isEmpty()) {
+        searchText = QInputDialog::getText(_mainWindow, "Find in Files",
+            "Search text:");
+    }
+    if (searchText.isEmpty()) return;
+
+    // Search in background using QThread
+    auto* thread = new QThread;
+    auto* worker = new FindInFilesWorker(dir, searchText);
+    worker->moveToThread(thread);
+
+    QObject::connect(thread, &QThread::started, worker, &FindInFilesWorker::run);
+    QObject::connect(worker, &FindInFilesWorker::resultsReady, this,
+        [this](const QList<FindResult>& results) {
+            showFindInFilesResults(results);
+        }, Qt::QueuedConnection);
+    QObject::connect(worker, &FindInFilesWorker::finished, thread, &QThread::quit);
+    QObject::connect(thread, &QThread::finished, worker, &QObject::deleteLater);
+    QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
+
+    setStatusBarText(("Searching in " + dir + "...").toStdString());
 }
 
 void Application::onCount() {
-    qDebug() << "[App] Count occurrences";
-    // TODO: implement count
-}
-
-void Application::onMarkAll() {
-    qDebug() << "[App] Mark all";
     ScintillaEditor* ed = getActiveEditor();
     if (!ed) return;
 
-    // Get the current search text from find replace dialog
     QString pattern;
     if (_findReplaceDialog) {
-        // no getter on FindReplaceDialog — use empty pattern
+        pattern = _findReplaceDialog->lastSearchText();
     }
 
-    if (!pattern.isEmpty()) {
-        ed->markAllMatches(pattern, FindOption::MatchCase);
+    if (pattern.isEmpty()) {
+        setStatusBarText("Count: no search term");
+        return;
     }
+
+    FindOption opts = _findReplaceDialog ? _findReplaceDialog->lastSearchOptions() : FindOption::None;
+    int count = ed->countMatches(pattern, opts);
+
+    QString msg = QString("Found %1 occurrence%2 of \"%3\"")
+                      .arg(count)
+                      .arg(count == 1 ? "" : "s")
+                      .arg(pattern);
+    setStatusBarText(msg.toStdString());
+    if (_findReplaceDialog) {
+        _findReplaceDialog->setMatchCount(count);
+    }
+}
+
+void Application::onMarkAll() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+
+    QString pattern = ed->selectedText();
+    if (pattern.isEmpty() && _findReplaceDialog) {
+        pattern = _findReplaceDialog->lastSearchText();
+    }
+
+    if (pattern.isEmpty()) {
+        setStatusBarText("Mark All: no text selected or search term entered");
+        return;
+    }
+
+    FindOption opts = FindOption::None;
+    if (_findReplaceDialog) {
+        opts = _findReplaceDialog->lastSearchOptions();
+    }
+
+    ed->clearSelection();
+    int count = ed->markAllMatches(pattern, opts);
+
+    QString msg = QString("Marked %1 occurrence%2 of \"%3\"")
+                      .arg(count)
+                      .arg(count == 1 ? "" : "s")
+                      .arg(pattern);
+    setStatusBarText(msg.toStdString());
 }
 
 // ============================================================================
 // View command slots
 // ============================================================================
 void Application::onToggleFullScreen() {
-    qDebug() << "[App] Toggle full screen";
     QWidget* w = _mainWindow;
     if (w->windowState() & Qt::WindowFullScreen) {
         w->setWindowState(w->windowState() & ~Qt::WindowFullScreen);
@@ -960,9 +1030,7 @@ void Application::onToggleDistractionFree() {
 }
 
 void Application::onToggleTabBar() {
-    qDebug() << "[App] Toggle tab bar";
     if (_mainWindow) {
-        // Find and toggle the tab bar visibility
         QList<QTabBar*> bars = _mainWindow->findChildren<QTabBar*>();
         for (QTabBar* bar : bars) {
             bar->setVisible(!bar->isVisible());
@@ -990,31 +1058,56 @@ void Application::onToggleToolBar() {
 // Encoding command slots
 // ============================================================================
 void Application::onConvertEncoding(EncodingType enc) {
-    qDebug() << "[App] Convert encoding to" << static_cast<int>(enc);
     ScintillaEditor* ed = getActiveEditor();
     if (!ed) return;
 
     BufferID buffer = getActiveBuffer();
     if (!buffer) return;
 
-    // Get current text
     QString text = QString::fromStdString(getBufferText(buffer));
     if (text.isEmpty()) return;
 
-    // Get current encoding
+    // Map EncodingType → Scintilla codepage → QTextCodec MIB
+    auto encToMib = [](EncodingType e) -> int {
+        switch (e) {
+            case EncodingType::ANSI:       return 4;     // Latin-1
+            case EncodingType::UTF_8:
+            case EncodingType::UTF_8_BOM:  return 106;    // UTF-8
+            case EncodingType::UTF_16_LE: return 1000;   // UTF-16LE
+            case EncodingType::UTF_16_BE: return 1001;   // UTF-16BE
+            case EncodingType::OEM:        return 4;      // OEM (Latin-1 as fallback)
+            default:                       return 4;
+        }
+    };
+
     EncodingType currentEnc = getBufferEncoding(buffer);
+    int fromMib = encToMib(currentEnc);
+    int toMib   = encToMib(enc);
 
-    // Encoding conversion: keep text as-is for now (full codec-based conversion is TODO)
-    // TODO: implement proper encoding conversion using QTextEncoder from Qt6
+    if (fromMib != toMib) {
+        text = NppParameters::getInstance().convertEncoding(text, fromMib, toMib);
+    }
+
+    // Apply the new encoding to buffer and editor
     setBufferEncoding(buffer, enc);
-
-    // Update editor
     ed->setEncoding(enc);
+    ed->setText(text);
     ed->setModified(true);
+
+    // Update status bar with the new encoding name
+    const char* encName = "ANSI";
+    switch (enc) {
+        case EncodingType::UTF_8:      encName = "UTF-8"; break;
+        case EncodingType::UTF_8_BOM:  encName = "UTF-8-BOM"; break;
+        case EncodingType::UTF_16_LE: encName = "UTF-16 LE"; break;
+        case EncodingType::UTF_16_BE: encName = "UTF-16 BE"; break;
+        case EncodingType::OEM:       encName = "OEM"; break;
+        default:                      encName = "ANSI"; break;
+    }
+    setStatusBarEncoding(encName);
 }
 
 void Application::onSetLanguage(LangType lang) {
-    qDebug() << "[App] Set language" << static_cast<int>(lang);
     ScintillaEditor* ed = getActiveEditor();
     if (!ed) return;
 
@@ -1042,30 +1135,176 @@ void Application::setLanguage(LangType lang) {
 // Settings command slots
 // ============================================================================
 void Application::onShowPreferences() {
-    qDebug() << "[App] Show preferences";
     if (!_preferenceDialog) {
         _preferenceDialog = new PreferenceDialog(_mainWindow);
     }
     _preferenceDialog->show();
+    _preferenceDialog->raise();
+    _preferenceDialog->activateWindow();
 }
 
 void Application::onShowShortcutMapper() {
-    qDebug() << "[App] Show shortcut mapper";
-    // TODO: implement shortcut mapper
+    ShortcutMapperDialog dlg(_mainWindow);
+    dlg.exec();
 }
 
 void Application::onShowCommandPalette() {
-    qDebug() << "[App] Show command palette";
-    // TODO: implement command palette
+    static CommandPaletteDialog* dlg = nullptr;
+    if (!dlg) dlg = new CommandPaletteDialog(_mainWindow);
+    // Center on main window
+    if (_mainWindow) {
+        QPoint center = _mainWindow->mapToGlobal(_mainWindow->rect().center());
+        dlg->move(center.x() - dlg->width() / 2, center.y() - 100);
+    }
+    dlg->show();
+    dlg->activateWindow();
 }
 
 // ============================================================================
 // Help command slots
 // ============================================================================
 void Application::onShowAbout() {
-    qDebug() << "[App] Show about";
     if (!_aboutDialog) {
         _aboutDialog = new AboutDialog(_mainWindow);
     }
     _aboutDialog->show();
 }
+
+// ============================================================================
+// Find in Files — helper structs and workers
+// ============================================================================
+struct FindResult {
+    QString filePath;
+    int lineNumber;
+    QString lineContent;
+    int column;
+};
+
+class FindInFilesWorker : public QObject {
+    Q_OBJECT
+public:
+    FindInFilesWorker(const QString& dir, const QString& text, QObject* parent = nullptr)
+        : QObject(parent), _dir(dir), _text(text) {}
+
+public slots:
+    void run() {
+        QList<FindResult> results;
+        searchDirectory(QDir(_dir), _text, results, 0);
+        emit resultsReady(results);
+        emit finished();
+    }
+
+signals:
+    void resultsReady(const QList<FindResult>& results);
+    void finished();
+
+private:
+    void searchDirectory(const QDir& dir, const QString& text,
+                         QList<FindResult>& results, int depth) {
+        if (depth > 10) return;  // max recursion depth
+
+        QFileInfoList entries = dir.entryInfoList(
+            QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot,
+            QDir::Name);
+
+        for (const QFileInfo& fi : entries) {
+            if (results.size() > 10000) break;  // limit results
+
+            if (fi.isDir()) {
+                searchDirectory(QDir(fi.absoluteFilePath()), text, results, depth + 1);
+            } else {
+                // Only search text-like files
+                QString ext = fi.suffix().toLower();
+                static QStringList skipExts = {"exe","dll","so","dylib","o","obj",
+                    "png","jpg","jpeg","gif","ico","bmp","svg","ttf","otf","woff",
+                    "mp3","wav","mp4","avi","mkv","zip","tar","gz","rar","pdf"};
+                if (skipExts.contains(ext)) continue;
+
+                QFile file(fi.absoluteFilePath());
+                if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) continue;
+
+                int lineNum = 0;
+                QTextStream in(&file);
+                while (!in.atEnd()) {
+                    ++lineNum;
+                    QString line = in.readLine();
+                    if (line.contains(text, Qt::CaseInsensitive)) {
+                        FindResult r;
+                        r.filePath = fi.absoluteFilePath();
+                        r.lineNumber = lineNum;
+                        r.lineContent = line.trimmed();
+                        r.column = line.indexOf(text, 0, Qt::CaseInsensitive);
+                        results.append(r);
+                        if (results.size() > 10000) break;
+                    }
+                }
+                file.close();
+            }
+        }
+    }
+
+    QString _dir;
+    QString _text;
+};
+
+void Application::showFindInFilesResults(const QList<FindResult>& results) {
+    QString msg;
+    if (results.isEmpty()) {
+        msg = "No matches found.";
+    } else {
+        msg = QString("Found %1 match%2:").arg(results.size()).arg(results.size() == 1 ? "" : "es");
+        for (const FindResult& r : results) {
+            // Build a results panel or show in find dialog
+            // For now, show first 20 in status
+            static int shown = 0;
+            shown = (shown + 1) % 1000;  // cycle to avoid spam
+        }
+    }
+    setStatusBarText(msg.toStdString());
+
+    // Show results in a dialog
+    if (results.isEmpty()) {
+        QMessageBox::information(_mainWindow, "Find in Files", msg);
+        return;
+    }
+
+    // Build simple results dialog
+    auto* dlg = new QDialog(_mainWindow);
+    dlg->setWindowTitle(QString("Find in Files — %1 results").arg(results.size()));
+    dlg->resize(700, 400);
+    QVBoxLayout* lay = new QVBoxLayout(dlg);
+    QTableWidget* table = new QTableWidget(dlg);
+    table->setColumnCount(3);
+    table->setHorizontalHeaderLabels({"File", "Line", "Content"});
+    table->horizontalHeader()->setStretchLastSection(true);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->setRowCount(qMin(results.size(), 500));
+    for (int i = 0; i < table->rowCount(); ++i) {
+        const FindResult& r = results[i];
+        table->setItem(i, 0, new QTableWidgetItem(r.filePath));
+        table->setItem(i, 1, new QTableWidgetItem(QString::number(r.lineNumber)));
+        table->setItem(i, 2, new QTableWidgetItem(r.lineContent));
+    }
+    table->resizeColumnsToContents();
+    lay->addWidget(table);
+
+    QDialogButtonBox* box = new QDialogButtonBox(QDialogButtonBox::Close, dlg);
+    lay->addWidget(box);
+    connect(box, &QDialogButtonBox::accepted, dlg, &QDialog::accept);
+    connect(box, &QDialogButtonBox::rejected, dlg, &QDialog::reject);
+
+    // Double-click to open file at line
+    connect(table, &QTableWidget::cellDoubleClicked, this,
+        [this, table, results](int row, int) {
+            if (row >= results.size()) return;
+            const FindResult& r = results[row];
+            openFile(r.filePath.toStdString());
+            ScintillaEditor* ed = getActiveEditor();
+            if (ed) ed->gotoLine(r.lineNumber - 1, r.column);
+        });
+
+    dlg->show();
+}
+
+#include "Application.moc"

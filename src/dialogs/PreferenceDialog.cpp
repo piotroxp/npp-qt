@@ -13,6 +13,10 @@
 #include <QGroupBox>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QListWidget>
+#include <QTableWidget>
+#include <QFileDialog>
+#include <QRadioButton>
 
 PreferenceDialog::PreferenceDialog(QWidget* parent)
     : QDialog(parent)

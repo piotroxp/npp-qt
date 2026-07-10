@@ -8,6 +8,8 @@
 #include "common/Types.h"
 #include <QObject>
 #include <QSettings>
+#include <QtGui/QFontDatabase>
+#include <QStringList>
 #include <QString>
 #include <QStringList>
 #include <memory>
@@ -114,6 +116,13 @@ public:
     // N++ compatibility: app paths
     QString getNppHomePath() const { return _nppHomePath; }
     void setNppHomePath(const QString& path) { _nppHomePath = path; }
+
+    // Encoding conversion (QTextCodec wrapper)
+    QString convertEncoding(const QString& text, int fromSciCp, int toSciCp);
+    static int scintillaCpToMib(int sciCp);
+
+    // Font list
+    QStringList getFontList() const;
 
 signals:
     void settingsChanged();

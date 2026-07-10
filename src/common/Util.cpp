@@ -19,6 +19,9 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <string.h>
+#include <QByteArray>
+#include <QCryptographicHash>
+#include <QFile>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
@@ -314,15 +317,15 @@ int64_t getTotalPhysicalMemory() {
 // Hashing (simplified - for production would use proper crypto library)
 // ============================================================================
 std::string md5String(const std::string& input) {
-    // Simple placeholder - use a proper MD5 implementation
-    (void)input;
-    return "md5_not_implemented";
+    QByteArray data(input.c_str(), static_cast<int>(input.size()));
+    QByteArray hash = QCryptographicHash::hash(data, QCryptographicHash::Md5);
+    return hash.toHex().constData();
 }
 
 std::string sha256String(const std::string& input) {
-    // Simple placeholder - use a proper SHA-256 implementation
-    (void)input;
-    return "sha256_not_implemented";
+    QByteArray data(input.c_str(), static_cast<int>(input.size()));
+    QByteArray hash = QCryptographicHash::hash(data, QCryptographicHash::Sha256);
+    return hash.toHex().constData();
 }
 
 std::string fileMD5(const std::string& path) {

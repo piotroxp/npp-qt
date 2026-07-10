@@ -4,6 +4,7 @@
 
 #include "StatusBar.h"
 #include <QLabel>
+#include <QTimer>
 
 StatusBar::StatusBar(QWidget* parent) : QStatusBar(parent) {
     _posLabel = new QLabel("Ln 1, Col 1", this);
@@ -11,7 +12,12 @@ StatusBar::StatusBar(QWidget* parent) : QStatusBar(parent) {
     _eolLabel = new QLabel("Unix (LF)", this);
     _langLabel = new QLabel("Normal", this);
     _typeLabel = new QLabel("Plain Text", this);
+    _msgLabel = new QLabel(this);
+    _msgLabel->setStyleSheet("QLabel { color: palette(highlight); font-weight: bold; }");
+    _msgLabel->setMinimumWidth(200);
+    _msgLabel->setVisible(false);
 
+    addWidget(_msgLabel, 2);
     addPermanentWidget(_posLabel, 1);
     addPermanentWidget(_encLabel, 1);
     addPermanentWidget(_eolLabel, 1);
@@ -44,7 +50,25 @@ void StatusBar::setFileType(const QString& type) {
 }
 
 void StatusBar::setMessage(const QString& msg) {
-    showMessage(msg, 3000);
+    _msgLabel->setText(msg);
+    _msgLabel->setVisible(!msg.isEmpty());
+    if (!msg.isEmpty()) {
+        // Auto-clear after 5 seconds using a one-shot timer
+        QTimer* timer = new QTimer(this);
+        timer->setSingleShot(true);
+        timer->setProperty("label", QVariant::fromValue<void*>(_msgLabel));
+        connect(timer, &QTimer::timeout, this, [this, timer]() {
+            _msgLabel->clear();
+            _msgLabel->setVisible(false);
+            timer->deleteLater();
+        });
+        timer->start(5000);
+    }
+}
+
+void StatusBar::clearMessage() {
+    _msgLabel->clear();
+    _msgLabel->setVisible(false);
 }
 
 void StatusBar::setSelection(int start, int end) {

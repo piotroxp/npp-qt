@@ -8,10 +8,10 @@
 #include <QString>
 #include <QColor>
 #include <vector>
+#include <Qsci/qsciscintilla.h>
 #include "../common/Types.h"
 #include "common/NonCopyable.h"
 
-class QsciScintilla;
 class SyntaxHighlighter;
 class Buffer;
 
@@ -46,6 +46,7 @@ public:
     QString selectedText() const;
     void setSelection(int startLine, int startCol, int endLine, int endCol);
     void selectAll();
+    void clearSelection();
 
     void copy();
     void cut();
@@ -76,7 +77,6 @@ public:
     bool isLineNumberingEnabled() const;
 
     void setWhitespaceVisibility(bool visible);
-    void setEolVisibility(bool visible);
 
     void setWrapMode(bool wrap);
     bool wrapMode() const;
@@ -85,15 +85,26 @@ public:
     void clearMarkerLine();
 
     void findNext(const QString& text, FindOption options);
+    void findNext(const QString& text, FindOption options, bool forward);
     void findPrevious(const QString& text, FindOption options);
     int countMatches(const QString& text, FindOption options);
-    void replaceAll(const QString& find, const QString& replace, FindOption options);
+    int replaceAll(const QString& find, const QString& replace, FindOption options);
     void replace(const QString& replacement);
     int markAllMatches(const QString& text, FindOption options);
+
+    // Regex replace-all using SCI_TARGET approach (supports backreferences)
+    int replaceAllRegex(const QString& find, const QString& rep, FindOption options);
 
     void setAnnotationsEnabled(bool enabled);
     void addAnnotation(int line, const QString& text);
     void clearAnnotations();
+
+    // Selection helpers
+    void ensureLineVisible(int line);
+    void getCursorPosition(int* line, int* col) const;
+
+    // Indicator/selection helpers
+    void clearIndicatorRange(int startLine, int startCol, int endLine, int endCol, int indicator);
 
     void setAutoIndent(bool enabled);
     void setBackspaceUnindents(bool enabled);
@@ -107,6 +118,14 @@ public:
 
     // Access underlying QsciScintilla for advanced operations (e.g., document sharing)
     QsciScintilla* qsciEditor() const { return _editor; }
+
+    void setEolVisibility(bool visible);
+    void setCaretLineVisibility(bool visible);
+    bool isCaretLineVisible() const;
+    void setCaretWidth(int pixels);
+    int caretWidth() const;
+    void setCaretForegroundColor(const QColor& color);
+    void setCaretLineBackgroundColor(const QColor& color);
 
 signals:
     void textChanged();

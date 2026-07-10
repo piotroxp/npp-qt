@@ -41,6 +41,7 @@ endif()
 set(SOURCES
     src/main.cpp
     src/core/Buffer.cpp
+    src/core/Parameters.cpp
     src/core/Application.cpp
     src/core/EditorCommandManager.cpp
     src/core/EncodingDetector.cpp
@@ -64,6 +65,8 @@ set(SOURCES
     src/dialogs/GoToLineDialog.cpp
     src/dialogs/PreferenceDialog.cpp
     src/dialogs/AboutDialog.cpp
+    src/dialogs/ShortcutMapperDialog.cpp
+    src/dialogs/CommandPaletteDialog.cpp
     src/panels/DocumentMapPanel.cpp
     src/panels/FunctionListPanel.cpp
     src/panels/FileBrowserPanel.cpp
@@ -92,6 +95,8 @@ set(HEADERS
     src/dialogs/GoToLineDialog.h
     src/dialogs/PreferenceDialog.h
     src/dialogs/AboutDialog.h
+    src/dialogs/ShortcutMapperDialog.h
+    src/dialogs/CommandPaletteDialog.h
     src/panels/DocumentMapPanel.h
     src/panels/FunctionListPanel.h
     src/panels/FileBrowserPanel.h

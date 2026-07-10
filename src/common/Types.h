@@ -275,6 +275,92 @@ struct RecycleBin {
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 // ============================================================================
+// Settings structs (referenced by NppParameters)
+// ============================================================================
+struct NppGUI {
+    bool toolbarShow = true;
+    int  toolbarLines = 1;
+    bool showStatusBar = true;
+    bool showMenuBar = true;
+    bool autoUpdate = true;
+    bool tabBarHide = false;
+    bool tabBarHideShow = false;
+    bool multiInst = false;
+    bool smartHighLight = true;
+    bool highlightToken = true;
+    bool matchCase = false;
+    bool matchWholeWord = false;
+    bool autoIndent = true;
+    bool backspaceUnindents = false;
+    int  tabSize = 4;
+    bool useSpaces = false;
+    bool showEol = false;
+    bool showSpaceAndTab = false;
+    bool showWrapSymbol = false;
+    int  edgeMode = 0;
+    int  edgeColumn = 80;
+    bool wrapMode = false;
+    int  folderStyle = 0;
+    bool showFileTree = true;
+    bool titleBarShort = false;
+    QString titleBarAdd;
+};
+
+struct ScintillaViewParams {
+    bool displayeEol = false;
+    bool showIndentGuide = true;
+    bool wrap = false;
+
+    // Nested view parameters
+    struct SubParams {
+        bool _lineNumberMarginShow = true;
+        bool _bookmarkMarginShow = true;
+        bool _folderMarginShow = true;
+        bool _currentLineHilightingShow = true;
+        bool _currentLineFrameShow = false;
+        bool _marginFont = false;
+        int  _vrSymbol = 0;
+        int  _vpSymbol = 0;
+        int  _whitespaceSymbol = 0;
+        bool _smoothFont = true;
+        int  _braceAnalyser = 1;
+        int  _currentLineColor = 0xFF0000;
+        bool _highlightCurrentBlock = true;
+        bool _highlightOtherBlock = true;
+        int  _eolMode = 0;
+    } svp;
+};
+
+struct FindHistory {
+    bool _isSearchDialogChecked = false;
+    bool _isFilterChecked = false;
+    bool _isInSubFolderChecked = false;
+    bool _isInHiddenFolderChecked = false;
+    bool _searchResultSelected = false;
+    int  _transparencyMode = 0;
+    int  _transparency = 100;
+    bool _dotMatchesNewline = false;
+    bool _isSearch2ButtonsMode = false;
+    bool _regexBackward4PowerUser = false;
+    bool _isBookmarkLine = false;
+    bool _matchWord = false;
+    bool _matchCase = false;
+    int  _searchMode = 0;
+    int  _counter1 = 0;
+    int  _counter2 = 0;
+    int  _counter3 = 0;
+};
+
+struct Shortcut {
+    std::string name;
+    int id = 0;
+    int ctrl = 0;
+    int alt = 0;
+    int shift = 0;
+    int key = 0;
+};
+
+// ============================================================================
 // STL Hash specializations
 // ============================================================================
 namespace std {
