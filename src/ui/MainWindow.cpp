@@ -460,9 +460,9 @@ void MainWindow::dispatchCommand(const QString& cmd) {
     else if (cmd == "settings.preferences") {
         onPreferences();
     } else if (cmd == "settings.shortcutMapper") {
-        // TODO: open shortcut mapper
+        app().onShowShortcutMapper();
     } else if (cmd == "settings.commandPalette") {
-        // TODO: open command palette
+        app().onShowCommandPalette();
     }
     // Help commands
     else if (cmd == "help.about") {
@@ -870,9 +870,22 @@ void MainWindow::onBufferChanged() {
 
 // Theme
 void MainWindow::onThemeChanged(const QString& theme) {
-    // Apply theme colors to toolbar and status bar
-    // TODO: load theme colors
-    Q_UNUSED(theme);
+    // Load theme colors from theme file and apply to toolbar and status bar
+    ThemeManager* tm = app().themeManager();
+    ThemeColors colors = tm ? tm->getThemeColors(theme) : ThemeColors();
+    Q_UNUSED(colors);
+    // Apply to toolbar
+    if (_toolBar) {
+        QString qss = tm ? tm->getThemeQss(theme, "toolbar") : QString();
+        if (!qss.isEmpty()) _toolBar->setStyleSheet(qss);
+    }
+    // Apply to status bar
+    if (_statusBar) {
+        QString qss = tm ? tm->getThemeQss(theme, "statusbar") : QString();
+        if (!qss.isEmpty()) _statusBar->setStyleSheet(qss);
+    }
+    // Reload current theme resource
+    app().loadTheme(theme.toStdString());
 }
 
 // Tab events
