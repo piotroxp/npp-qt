@@ -87,8 +87,8 @@ void PreferenceDialog::setupUi() {
 
     // Connect signals
     connect(_categoryTree, &QTreeWidget::itemClicked, this, &PreferenceDialog::onCategoryChanged);
-    connect(_buttonBox, &QDialogButtonBox::accepted, this, &PreferenceDialog::accept);
-    connect(_buttonBox, &QDialogButtonBox::rejected, this, &PreferenceDialog::reject);
+    connect(_buttonBox->button(QDialogButtonBox::Ok), &QPushButton::clicked, this, &PreferenceDialog::accept);
+    connect(_buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, this, &PreferenceDialog::reject);
     connect(_buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &PreferenceDialog::applySettings);
 
     // Layout

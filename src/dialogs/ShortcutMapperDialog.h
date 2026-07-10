@@ -11,19 +11,22 @@
 #include <QDialogButtonBox>
 
 class ShortcutMapperDialog : public QDialog {
+    Q_OBJECT
 public:
     explicit ShortcutMapperDialog(QWidget* parent = nullptr);
     ~ShortcutMapperDialog() override;
 
 private slots:
-    void onCategoryChanged(int index);
+    void onCategoryChanged(const QString& category);
     void onItemDoubleClicked(int row, int col);
     void onClearShortcut();
     void onResetAll();
+    void onApplyAndClose();
 
 private:
+    bool eventFilter(QObject* obj, QEvent* event) override;
     void populateShortcuts(const QString& category);
-    QString grabKeyCombo(QWidget* parent);
+    QString grabKeyComboSync(QWidget* parent);
 
     QListWidget* _categoryList = nullptr;
     QTableWidget* _shortcutTable = nullptr;

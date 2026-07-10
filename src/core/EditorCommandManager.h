@@ -6,9 +6,13 @@
 
 #include "common/NonCopyable.h"
 #include "common/Types.h"
+#include <QObject>
+#include <QVector>
+#include "ShortcutManager.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include "ShortcutManager.h"
 #include <functional>
 
 class ScintillaEditor;
@@ -70,11 +74,18 @@ enum EditorCommandId : int {
     CMD_HELP_ABOUT = 1701,
 };
 
-class EditorCommandManager : public NonCopyable {
+class EditorCommandManager : public QObject, public NonCopyable {
+    Q_OBJECT
 public:
+    static EditorCommandManager& instance();
+    static void setInstance(EditorCommandManager* inst);
+    static EditorCommandManager* _singleton;
     EditorCommandManager();
     ~EditorCommandManager();
 
+private:
+
+public:
     // Execute by string name (primary dispatch path from menus)
     void execute(const std::string& commandName);
     // Execute by numeric ID
@@ -99,6 +110,18 @@ public:
     void unbindKey(const std::string& keySequence);
     int resolveKeyBinding(const std::string& keySequence) const;
     std::vector<int> getAllCommandIds() const;
+
+    // ShortcutManager integration
+    void loadShortcuts(const QString& path);
+    void saveShortcuts(const QString& path) const;
+    QVector<KeyBinding> getAllBindings() const;
+    QVector<ShortcutManager::Conflict> getConflicts() const;
+    // Expose all registered commands for shortcut mapper
+    struct CommandEntry { int id; std::string name; };
+    QVector<CommandEntry> getAllCommands() const;
+
+Q_SIGNALS:
+    void allShortcutsChanged();
 
 private:
     struct CommandInfo {

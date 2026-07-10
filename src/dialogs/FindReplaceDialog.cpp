@@ -345,3 +345,12 @@ void FindReplaceDialog::findPrevious() {
 
 void FindReplaceDialog::replace() { onReplace(); }
 void FindReplaceDialog::replaceAll() { onReplaceAll(); }
+void FindReplaceDialog::setMatchCount(int count) {
+    if (count > 0) {
+        _statusLabel->setText(QString("  %1 match%2")
+            .arg(count)
+            .arg(count == 1 ? "" : "es"));
+    } else {
+        _statusLabel->clear();
+    }
+}

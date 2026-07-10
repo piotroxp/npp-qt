@@ -898,19 +898,14 @@ void MainWindow::onBufferChanged() {
 
 // Theme
 void MainWindow::onThemeChanged(const QString& theme) {
-    // Load theme colors from theme file and apply to toolbar and status bar
-    ThemeManager* tm = app().themeManager();
-    ThemeColors colors = tm ? tm->getThemeColors(theme) : ThemeColors();
-    Q_UNUSED(colors);
-    // Apply to toolbar
+    // Apply theme to toolbar and status bar
     if (_toolBar) {
-        QString qss = tm ? tm->getThemeQss(theme, "toolbar") : QString();
-        if (!qss.isEmpty()) _toolBar->setStyleSheet(qss);
+        QString qss = QString("QToolBar { background: palette(window); }");
+        _toolBar->setStyleSheet(qss);
     }
-    // Apply to status bar
-    if (_statusBar) {
-        QString qss = tm ? tm->getThemeQss(theme, "statusbar") : QString();
-        if (!qss.isEmpty()) _statusBar->setStyleSheet(qss);
+    if (_statusBarWidget) {
+        QString qss = QString("QStatusBar { background: palette(window); }");
+        _statusBarWidget->setStyleSheet(qss);
     }
     // Reload current theme resource
     app().loadTheme(theme.toStdString());

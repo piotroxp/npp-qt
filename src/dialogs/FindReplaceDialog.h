@@ -32,6 +32,7 @@ public:
     void setSearchText(const QString& text);
     QString lastSearchText() const { return _lastSearchText; }
     FindOption lastSearchOptions() const { return _lastSearchOptions; }
+    void setMatchCount(int count);
 
 protected:
     void hideEvent(QHideEvent* event) override;
