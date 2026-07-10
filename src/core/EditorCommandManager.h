@@ -6,10 +6,13 @@
 
 #include "common/NonCopyable.h"
 #include "common/Types.h"
-#include <QString>
+#include <QObject>
+#include <QVector>
+#include "ShortcutManager.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include "ShortcutManager.h"
 #include <functional>
 
 class ScintillaEditor;
@@ -71,11 +74,18 @@ enum EditorCommandId : int {
     CMD_HELP_ABOUT = 1701,
 };
 
-class EditorCommandManager : public NonCopyable {
+class EditorCommandManager : public QObject, public NonCopyable {
+    Q_OBJECT
 public:
+    static EditorCommandManager& instance();
+    static void setInstance(EditorCommandManager* inst);
+    static EditorCommandManager* _singleton;
     EditorCommandManager();
     ~EditorCommandManager();
 
+private:
+
+public:
     // Execute by string name (primary dispatch path from menus)
     void execute(const std::string& commandName);
     // Execute by numeric ID
@@ -101,9 +111,19 @@ public:
     int resolveKeyBinding(const std::string& keySequence) const;
     std::vector<int> getAllCommandIds() const;
 
-    // Shortcut read/write — uses command name as lookup key
+    // ShortcutManager integration
+    void loadShortcuts(const QString& path);
+    void saveShortcuts(const QString& path) const;
+    QVector<KeyBinding> getAllBindings() const;
+    QVector<ShortcutManager::Conflict> getConflicts() const;
+    // Expose all registered commands for shortcut mapper
+    struct CommandEntry { int id; std::string name; };
+    QVector<CommandEntry> getAllCommands() const;
     QString getShortcut(const QString& name) const;
     void setShortcut(const QString& name, const QString& shortcut);
+
+Q_SIGNALS:
+    void allShortcutsChanged();
 
 private:
     struct CommandInfo {
@@ -111,7 +131,7 @@ private:
         std::function<void(ScintillaEditor*)> action;
     };
     std::unordered_map<int, CommandInfo> _commands;
+    std::unordered_map<std::string, QString> _shortcuts;  // command name → shortcut string
     std::unordered_map<std::string, int> _nameToId;
     std::unordered_map<std::string, int> _keyBindings;
-    std::unordered_map<std::string, QString> _shortcuts;  // name → shortcut string
 };

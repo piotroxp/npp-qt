@@ -15,10 +15,21 @@
 #include <mutex>
 #include "common/Types.h"
 #include "common/Util.h"
-#include "ThemeManager.h"
+#include "../dialogs/FindInFilesWorker.h"
+#include "dialogs/FindInFilesWorker.h"
 
 // Forward declarations
 class ScintillaEditor;
+
+// ImportResult enum (regular enum for moc compatibility — enum class not supported by moc parser)
+enum ApplicationImportResult {
+    ImportResult_Success,
+    ImportResult_NppNotFound,
+    ImportResult_ParseError,
+    ImportResult_PartialSuccess,
+    ImportResult_Cancelled
+};
+
 class Buffer;
 class FileManager;
 class EncodingDetector;
@@ -27,6 +38,7 @@ class SessionManager;
 class MacroManager;
 class RecentFilesManager;
 class EditorCommandManager;
+class UdlManager;
 class MainWindow;
 class SyntaxHighlighter;
 class FindReplaceDialog;
@@ -62,31 +74,26 @@ struct AppOptions {
     bool         smartHighlighting = true;
     int          maxHighlightingWords = 1000;
     bool         wrapWithQuotes = false;
-
     // File Associations
-    QStringList   fileAssociations;
-
-    // Backup / Auto-Save
-    bool         autoSave = false;
-    int          autoSaveInterval = 5;
-    bool         autoSaveCurrentOnly = false;
-    bool         autoSaveInBackground = false;
-    std::string  backupDir;
-    int          backupStyle = 0;        // 0=simple, 1=datetime, 2=numbered
-    int          maxBackups = 5;
-
-    // Margins / Editor Display
+    QStringList  fileAssociations;
+    bool         warnOnShortcutConflict = true;
+    // Margins
     bool         showLineNumbers = true;
-    int          lineNumberWidth = 40;
-    bool         showSymbols = true;
+    int          lineNumberWidth = 4;
+    bool         showSymbols = false;
     bool         showFolderMargin = true;
-    int          symbolMarginWidth = 14;
+    int          symbolMarginWidth = 1;
     bool         highlightCurrentLine = true;
     bool         showEdgeLine = false;
     int          edgeColumn = 80;
-
-    // Shortcut Mapper
-    bool         warnOnShortcutConflict = true;
+    // Backup / Auto-Save
+    QString      backupDir;
+    int          backupStyle = 0;
+    int          maxBackups = 10;
+    bool         autoSave = false;
+    int          autoSaveInterval = 5;
+    bool         autoSaveCurrentOnly = false;
+    bool         autoSaveInBackground = true;
 };
 
 // ============================================================================
@@ -239,7 +246,6 @@ public:
     // Theme
     void loadTheme(const std::string& themeName);
     std::string currentTheme() const { return _currentTheme; }
-    ThemeManager* themeManager() { return _themeManager.get(); }
 
     // Clipboard history
     void addToClipboardHistory(const std::string& text);
@@ -285,6 +291,7 @@ public slots:
     void onFindInFiles();
     void onCount();
     void onMarkAll();
+    void showFindInFilesResults(const QList<FindResult>& results);
 
     // View commands
     void onToggleFullScreen();
@@ -292,6 +299,20 @@ public slots:
     void onToggleTabBar();
     void onToggleStatusBar();
     void onToggleToolBar();
+
+    // Macro commands
+    void onMacroStartRecording();
+    void onMacroStopRecording();
+    void onMacroPlaybackLast();
+
+    // Import/Export (Notepad++ compatibility)
+    ApplicationImportResult importFromNpp();
+    ApplicationImportResult importFromNpp(const QString& nppPath);
+    QStringList detectNppPaths() const;
+    bool exportSettingsToJson(const QString& path);
+    bool exportSettingsToNpp(const QString& nppPath);
+    bool loadUdlsFromNpp(const QString& nppPath);
+    bool loadUdlsFromNpp();
 
     // Encoding commands
     void onConvertEncoding(EncodingType enc);
@@ -351,7 +372,7 @@ private:
     LanguageManager*        _languageManager = nullptr;
     SessionManager*         _sessionManager = nullptr;
     EditorCommandManager*   _commandManager = nullptr;
-    std::unique_ptr<ThemeManager> _themeManager;
+    UdlManager*             _udlManager = nullptr;
 
     // Dialogs
     FindReplaceDialog*  _findReplaceDialog = nullptr;

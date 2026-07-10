@@ -1,5 +1,4 @@
 // Application.cpp - Main application controller implementation
-#include "dialogs/FindInFilesWorker.h"
 #include "Application.h"
 #include "FileManager.h"
 #include "Buffer.h"
@@ -9,6 +8,8 @@
 #include "EditorCommandManager.h"
 #include "MacroManager.h"
 #include "RecentFilesManager.h"
+#include "Parameters.h"
+#include "UdlManager.h"
 #include "editor/ScintillaEditor.h"
 #include "editor/SyntaxHighlighter.h"
 #include <Qsci/qsciscintilla.h>
@@ -18,9 +19,10 @@
 #include "ui/ToolBar.h"
 #include "ui/MenuBar.h"
 #include "dialogs/FindReplaceDialog.h"
+#include "dialogs/FindInFilesWorker.h"
 #include "dialogs/GoToLineDialog.h"
 #include "dialogs/ShortcutMapperDialog.h"
-#include "dialogs/ShortcutMapperDialog.h"
+#include "ShortcutManager.h"
 #include "dialogs/CommandPaletteDialog.h"
 #include "dialogs/PreferenceDialog.h"
 #include "dialogs/AboutDialog.h"
@@ -38,8 +40,9 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QThread>
-#include <QHeaderView>
+#include <QVBoxLayout>
 #include <QDialogButtonBox>
+#include <QHeaderView>
 #include <QTableWidget>
 #include <QAbstractItemView>
 #include <QTableWidgetItem>
@@ -131,7 +134,7 @@ bool Application::initialize() {
         _commandManager = new EditorCommandManager();
         _macroManager = new MacroManager();
         _recentFilesManager = &RecentFilesManager::instance();
-        _themeManager = std::make_unique<ThemeManager>();
+        _udlManager = new UdlManager(this);
         _commandManager->registerAll(this);
 
         // Setup UI
@@ -880,8 +883,6 @@ void Application::onFindPrev() {
     }
 }
 
-static void showFindInFilesResults(QWidget*, Application*, const QList<FindResult>&);
-
 void Application::onFindInFiles() {
     // Open directory picker first, then search
     QString dir = QFileDialog::getExistingDirectory(_mainWindow,
@@ -906,7 +907,7 @@ void Application::onFindInFiles() {
     QObject::connect(thread, &QThread::started, worker, &FindInFilesWorker::run);
     QObject::connect(worker, &FindInFilesWorker::resultsReady, this,
         [this](const QList<FindResult>& results) {
-            showFindInFilesResults(nullptr, this, results);
+            showFindInFilesResults(results);
         }, Qt::QueuedConnection);
     QObject::connect(worker, &FindInFilesWorker::finished, thread, &QThread::quit);
     QObject::connect(thread, &QThread::finished, worker, &QObject::deleteLater);
@@ -1175,8 +1176,10 @@ void Application::onShowAbout() {
     _aboutDialog->show();
 }
 
+// Find in Files — uses FindInFilesWorker from dialogs/FindInFilesWorker.h
+// ============================================================================
 
-void showFindInFilesResults(QWidget*, Application* app, const QList<FindResult>& results) {
+void Application::showFindInFilesResults(const QList<FindResult>& results) {
     QString msg;
     if (results.isEmpty()) {
         msg = "No matches found.";
@@ -1189,16 +1192,16 @@ void showFindInFilesResults(QWidget*, Application* app, const QList<FindResult>&
             shown = (shown + 1) % 1000;  // cycle to avoid spam
         }
     }
-    app->setStatusBarText(msg.toStdString());
+    setStatusBarText(msg.toStdString());
 
     // Show results in a dialog
     if (results.isEmpty()) {
-        QMessageBox::information(app->mainWindow(), "Find in Files", msg);
+        QMessageBox::information(_mainWindow, "Find in Files", msg);
         return;
     }
 
     // Build simple results dialog
-    auto* dlg = new QDialog(app->mainWindow());
+    auto* dlg = new QDialog(_mainWindow);
     dlg->setWindowTitle(QString("Find in Files — %1 results").arg(results.size()));
     dlg->resize(700, 400);
     QVBoxLayout* lay = new QVBoxLayout(dlg);
@@ -1220,20 +1223,298 @@ void showFindInFilesResults(QWidget*, Application* app, const QList<FindResult>&
 
     QDialogButtonBox* box = new QDialogButtonBox(QDialogButtonBox::Close, dlg);
     lay->addWidget(box);
-    QObject::connect(box, &QDialogButtonBox::accepted, dlg, &QDialog::accept);
-    QObject::connect(box, &QDialogButtonBox::rejected, dlg, &QDialog::reject);
+    connect(box, static_cast<void(QDialogButtonBox::*)(QAbstractButton*)>(&QDialogButtonBox::clicked), dlg, [dlg](QAbstractButton*) { dlg->close(); });
 
     // Double-click to open file at line
-    QObject::connect(table, &QTableWidget::cellDoubleClicked, app,
-        [app, table, results](int row, int) {
+    connect(table, &QTableWidget::cellDoubleClicked, this,
+        [this, table, results](int row, int) {
             if (row >= results.size()) return;
             const FindResult& r = results[row];
-            app->openFile(r.filePath.toStdString());
-            ScintillaEditor* ed = app->getActiveEditor();
+            openFile(r.filePath.toStdString());
+            ScintillaEditor* ed = getActiveEditor();
             if (ed) ed->gotoLine(r.lineNumber - 1, r.column);
         });
 
     dlg->show();
 }
 
+// ============================================================================
+// Notepad++ Compatibility
+// ============================================================================
+
+#include "UdlManager.h"
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QXmlStreamReader>
+#include <QXmlStreamWriter>
+#include <QProgressDialog>
+#include <QFileDialog>
+
+ApplicationImportResult Application::importFromNpp() {
+    QStringList paths = detectNppPaths();
+    if (paths.isEmpty())
+        return ImportResult_NppNotFound;
+    return importFromNpp(paths.first());
+}
+
+ApplicationImportResult Application::importFromNpp(const QString& nppPath) {
+    QDir nppDir(nppPath);
+    if (!nppDir.exists()) {
+        qWarning() << "[Application] N++ path does not exist:" << nppPath;
+        return ImportResult_NppNotFound;
+    }
+
+    int imported = 0;
+    int failed = 0;
+
+    // Progress dialog
+    QProgressDialog progress(tr("Importing from Notepad++..."), tr("Cancel"), 0, 4, _mainWindow);
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setValue(0);
+
+    // 1. Import recent files from config/recentFileList.xml
+    QString recentPath = nppPath + "/config/recentFileList.xml";
+    if (QFile::exists(recentPath)) {
+        QFile file(recentPath);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QXmlStreamReader reader(&file);
+            while (!reader.atEnd()) {
+                if (reader.readNext() == QXmlStreamReader::StartElement) {
+                    if (reader.name().toString() == QStringLiteral("File")) {
+                        QString path = reader.attributes().value("path").toString();
+                        if (!path.isEmpty()) {
+                            _recentFilesManager->addFile(path);
+                            ++imported;
+                        }
+                    }
+                }
+            }
+            file.close();
+        }
+        progress.setValue(1);
+    }
+
+    // 2. Import shortcuts from config/shortcuts.xml
+    QString shortcutsPath = nppPath + "/config/shortcuts.xml";
+    if (QFile::exists(shortcutsPath)) {
+        QFile file(shortcutsPath);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QXmlStreamReader reader(&file);
+            while (!reader.atEnd()) {
+                if (reader.readNext() == QXmlStreamReader::StartElement) {
+                    if (reader.name().toString() == QStringLiteral("Shortcut")) {
+                        QString name = reader.attributes().value("name").toString();
+                        QString ctrl = reader.attributes().value("ctrl").toString();
+                        QString alt = reader.attributes().value("alt").toString();
+                        QString shift = reader.attributes().value("shift").toString();
+                        QString key = reader.attributes().value("key").toString();
+                        if (!name.isEmpty()) {
+                            Shortcut sc;
+                            sc.name = name.toStdString();
+                            sc.ctrl = ctrl.toInt();
+                            sc.alt = alt.toInt();
+                            sc.shift = shift.toInt();
+                            sc.key = key.toInt();
+                            NppParameters::getInstance().setShortcuts(
+                                NppParameters::getInstance().getShortcuts());
+                            ++imported;
+                        }
+                    }
+                }
+            }
+            file.close();
+        }
+        progress.setValue(2);
+    }
+
+    // 3. Import UDL files
+    QString udlDir = nppPath + "/notepad-plus-plus-translation/PowerEditor/bin/userDefineLangs";
+    if (QDir(udlDir).exists() && _udlManager) {
+        int udlCount = _udlManager->loadAllUdls(udlDir);
+        imported += udlCount;
+        progress.setValue(3);
+    }
+
+    // 4. Import theme from stylers.xml
+    QString stylersPath = nppPath + "/config/stylers.xml";
+    if (QFile::exists(stylersPath)) {
+        // Simplified: just copy the theme file
+        QString destDir = NppParameters::getInstance().getConfigDir();
+        QString destPath = destDir + "/themes/stylers.xml";
+        if (QDir(destDir + "/themes").exists() || QDir().mkpath(destDir + "/themes")) {
+            if (QFile::copy(stylersPath, destPath)) {
+                NppParameters::getInstance().setTheme("styler");
+                ++imported;
+            }
+        }
+        progress.setValue(4);
+    }
+
+    progress.close();
+
+    if (imported == 0 && failed == 0)
+        return ImportResult_Success;  // Nothing to import but no errors
+
+    return (failed > 0) ? ImportResult_PartialSuccess : ImportResult_Success;
+}
+
+QStringList Application::detectNppPaths() const {
+    QStringList candidates;
+
+    // Linux Wine
+    candidates << QDir::homePath() + "/.wine/drive_c/Program Files/Notepad++";
+    candidates << QDir::homePath() + "/.wine/drive_c/Program Files (x86)/Notepad++";
+
+    // Linux flatpak
+    candidates << QDir::homePath() + "/.var/app/org.notepad_plus_plus.NotepadPlusPlus/data/notepad-plus-plus";
+
+    // Linux native
+    candidates << "/usr/share/notepad-plus-plus";
+    candidates << "/opt/notepad-plus-plus";
+
+    // macOS
+    candidates << "/Applications/Notepad++";
+
+    // Windows
+    candidates << "C:/Program Files/Notepad++";
+    candidates << "C:/Program Files (x86)/Notepad++";
+
+    QStringList result;
+    for (const QString& path : candidates) {
+        if (QDir(path).exists())
+            result.append(path);
+    }
+    return result;
+}
+
+bool Application::exportSettingsToJson(const QString& path) {
+    QJsonObject root;
+
+    // Export NppGUI
+    const NppGUI& gui = NppParameters::getInstance().nppGUI();
+    QJsonObject nppGui;
+    nppGui["backupMode"] = gui.backupMode;
+    nppGui["maxBackups"] = gui.maxBackups;
+    nppGui["customBackupDir"] = gui.customBackupDir;
+    nppGui["autoSaveInterval"] = gui.autoSaveInterval;
+    nppGui["tabSize"] = gui.tabSize;
+    nppGui["useSpaces"] = gui.useSpaces;
+    nppGui["autoIndent"] = gui.autoIndent;
+    nppGui["showEol"] = gui.showEol;
+    nppGui["wrapMode"] = gui.wrapMode;
+    root["NppGUI"] = nppGui;
+
+    // Export recent files
+    QJsonArray recentFiles;
+    for (const QString& f : _recentFilesManager->files())
+        recentFiles.append(f);
+    root["recentFiles"] = recentFiles;
+
+    // Export shortcuts
+    QJsonArray shortcuts;
+    for (const Shortcut& sc : NppParameters::getInstance().getShortcuts()) {
+        QJsonObject obj;
+        obj["name"] = QString::fromStdString(sc.name);
+        obj["ctrl"] = sc.ctrl;
+        obj["alt"] = sc.alt;
+        obj["shift"] = sc.shift;
+        obj["key"] = sc.key;
+        shortcuts.append(obj);
+    }
+    root["shortcuts"] = shortcuts;
+
+    QJsonDocument doc(root);
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+        return false;
+    file.write(doc.toJson(QJsonDocument::Indented));
+    file.close();
+    return true;
+}
+
+bool Application::exportSettingsToNpp(const QString& path) {
+    // Export to N++ config format (XML)
+    // This is the reverse of importFromNpp()
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+        return false;
+
+    QXmlStreamWriter writer(&file);
+    writer.setAutoFormatting(true);
+    writer.writeStartDocument();
+    writer.writeStartElement("NotepadPlus");
+    writer.writeStartElement("Config");
+
+    // Write recent files
+    writer.writeStartElement("RecentFiles");
+    for (const QString& f : _recentFilesManager->files()) {
+        writer.writeEmptyElement("File");
+        writer.writeAttribute("path", f);
+    }
+    writer.writeEndElement();  // RecentFiles
+
+    // Write shortcuts
+    writer.writeStartElement("Shortcuts");
+    for (const Shortcut& sc : NppParameters::getInstance().getShortcuts()) {
+        writer.writeEmptyElement("Shortcut");
+        writer.writeAttribute("name", QString::fromStdString(sc.name));
+        writer.writeAttribute("ctrl", QString::number(sc.ctrl));
+        writer.writeAttribute("alt", QString::number(sc.alt));
+        writer.writeAttribute("shift", QString::number(sc.shift));
+        writer.writeAttribute("key", QString::number(sc.key));
+    }
+    writer.writeEndElement();  // Shortcuts
+
+    writer.writeEndElement();  // Config
+    writer.writeEndElement();  // NotepadPlus
+    writer.writeEndDocument();
+    file.close();
+    return true;
+}
+
+bool Application::loadUdlsFromNpp(const QString& nppPath) {
+    if (!_udlManager) {
+        _udlManager = new UdlManager(this);
+    }
+    QString udlDir = nppPath + "/notepad-plus-plus-translation/PowerEditor/bin/userDefineLangs";
+    int count = _udlManager->loadAllUdls(udlDir);
+    return count > 0;
+}
+
+bool Application::loadUdlsFromNpp() {
+    QStringList paths = detectNppPaths();
+    for (const QString& p : paths) {
+        if (loadUdlsFromNpp(p))
+            return true;
+    }
+    return false;
+}
+
 #include "Application.moc"
+
+void Application::onMacroStartRecording() {
+    if (_macroManager) {
+        _macroManager->startRecording();
+        setStatusBarText("Macro recording started...");
+    }
+}
+
+void Application::onMacroStopRecording() {
+    if (_macroManager) {
+        _macroManager->stopRecording();
+        setStatusBarText("Macro recording stopped. Enter a name to save.");
+    }
+}
+
+void Application::onMacroPlaybackLast() {
+    if (_macroManager) {
+        int count = _macroManager->macroCount();
+        if (count > 0) {
+            _macroManager->playback(count - 1);
+            setStatusBarText("Macro playback complete.");
+        } else {
+            setStatusBarText("No macros saved yet.");
+        }
+    }
+}

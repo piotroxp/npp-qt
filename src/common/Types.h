@@ -304,6 +304,15 @@ struct NppGUI {
     bool showFileTree = true;
     bool titleBarShort = false;
     QString titleBarAdd;
+
+    // Backup / Auto-save settings
+    int  backupMode = 0;          // 0=None, 1=Simple, 2=Numbered, 3=Verbose
+    int  maxBackups = 3;          // 1-10
+    bool useCustomBackupDir = false;
+    QString customBackupDir;      // empty = same dir as file
+    int  autoSaveInterval = 0;    // 0=disabled, 1-30 minutes
+    bool autoSaveWithBackup = true;
+    bool autoReloadOnChange = false;
 };
 
 struct ScintillaViewParams {
@@ -360,6 +369,14 @@ struct Shortcut {
     int key = 0;
 };
 
+
+struct FindResult {
+    QString filePath;
+    int lineNumber = 0;
+    int column = 0;
+    QString lineContent;
+    QString context;
+};
 // ============================================================================
 // STL Hash specializations
 // ============================================================================

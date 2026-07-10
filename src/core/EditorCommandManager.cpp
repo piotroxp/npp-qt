@@ -7,6 +7,13 @@
 #include "../editor/ScintillaEditor.h"
 #include <cassert>
 
+EditorCommandManager* EditorCommandManager::_singleton = nullptr;
+
+EditorCommandManager& EditorCommandManager::instance() {
+    if (!_singleton) _singleton = new EditorCommandManager();
+    return *_singleton;
+}
+
 EditorCommandManager::EditorCommandManager() = default;
 EditorCommandManager::~EditorCommandManager() = default;
 
@@ -61,10 +68,13 @@ std::string EditorCommandManager::getCommandName(int commandId) const {
 
 void EditorCommandManager::bindKey(int commandId, const std::string& keySequence) {
     _keyBindings[keySequence] = commandId;
+    // Also register with ShortcutManager for conflict detection and persistence
+    ShortcutManager::instance().bindKey(commandId, QString::fromStdString(keySequence));
 }
 
 void EditorCommandManager::unbindKey(const std::string& keySequence) {
     _keyBindings.erase(keySequence);
+    ShortcutManager::instance().unbindKey(QString::fromStdString(keySequence));
 }
 
 int EditorCommandManager::resolveKeyBinding(const std::string& keySequence) const {
@@ -77,6 +87,31 @@ std::vector<int> EditorCommandManager::getAllCommandIds() const {
     ids.reserve(_commands.size());
     for (const auto& [id, _] : _commands) ids.push_back(id);
     return ids;
+}
+
+void EditorCommandManager::loadShortcuts(const QString& path) {
+    ShortcutManager::instance().loadFromJson(path);
+}
+
+void EditorCommandManager::saveShortcuts(const QString& path) const {
+    ShortcutManager::instance().saveToJson(path);
+}
+
+QVector<KeyBinding> EditorCommandManager::getAllBindings() const {
+    return ShortcutManager::instance().allBindings();
+}
+
+QVector<ShortcutManager::Conflict> EditorCommandManager::getConflicts() const {
+    return ShortcutManager::instance().getConflicts();
+}
+
+QVector<EditorCommandManager::CommandEntry> EditorCommandManager::getAllCommands() const {
+    QVector<CommandEntry> entries;
+    entries.reserve(_commands.size());
+    for (const auto& [id, info] : _commands) {
+        entries.append({id, info.name});
+    }
+    return entries;
 }
 
 // ============================================================================

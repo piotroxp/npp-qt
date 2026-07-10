@@ -94,7 +94,7 @@ void FindInFilesWorker::searchInFile(const QString& filePath) {
                 }
             }
 
-            _results.append(FindResult(filePath, lineNumber, line, pos, endPos));
+            _results.append(FindResult{filePath, lineNumber, pos, line, {}});
             pos = endPos;
 
             // Limit matches per file to avoid huge result sets

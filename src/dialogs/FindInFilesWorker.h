@@ -8,22 +8,8 @@
 #include <QList>
 #include <QThread>
 #include <QFile>
+#include "common/Types.h"
 #include <QTextStream>
-
-// Result of a single match in Find in Files
-struct FindResult {
-    QString filePath;
-    int lineNumber;
-    QString lineContent;
-    int matchStart;
-    int matchEnd;
-    int column;   // character offset within the line
-
-    FindResult() : lineNumber(0), matchStart(0), matchEnd(0), column(0) {}
-    FindResult(const QString& path, int line, const QString& content, int start, int end)
-        : filePath(path), lineNumber(line), lineContent(content),
-          matchStart(start), matchEnd(end), column(start) {}
-};
 
 // Background worker that searches files in a directory tree
 class FindInFilesWorker : public QObject {

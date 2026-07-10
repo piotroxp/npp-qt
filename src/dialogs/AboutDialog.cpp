@@ -41,7 +41,7 @@ AboutDialog::AboutDialog(QWidget* parent)
     mainLayout->addWidget(_descriptionBrowser, 1);
     mainLayout->addWidget(btnBox);
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
+    connect(btnBox, &QDialogButtonBox::accepted, this, [this]() { accept(); });
 }
 
 AboutDialog::~AboutDialog() = default;

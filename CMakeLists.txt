@@ -48,13 +48,17 @@ set(SOURCES
     src/core/FileManager.cpp
     src/core/LanguageManager.cpp
     src/core/SessionManager.cpp
+    src/core/ShortcutManager.cpp
     src/core/MacroManager.cpp
+    src/core/MacroAction.cpp
     src/core/RecentFilesManager.cpp
     src/core/ThemeManager.cpp
     src/core/NppIO.cpp
     src/core/NppBigSwitch.cpp
     src/core/NppCommands.cpp
     src/core/Notepad_plus.cpp
+    src/core/WorkspaceManager.cpp
+    src/core/UdlManager.cpp
     src/editor/ScintillaEditor.cpp
     src/editor/SyntaxHighlighter.cpp
     src/ui/MainWindow.cpp
@@ -70,9 +74,13 @@ set(SOURCES
     src/dialogs/FindInFilesWorker.cpp
     src/dialogs/ShortcutMapperDialog.cpp
     src/dialogs/CommandPaletteDialog.cpp
+    src/dialogs/LargeFileWarningDialog.cpp
+    src/dialogs/FileReloadDialog.cpp
+    src/dialogs/FindInFilesWorker.cpp
     src/panels/DocumentMapPanel.cpp
     src/panels/FunctionListPanel.cpp
     src/panels/FileBrowserPanel.cpp
+    src/common/DpiManager.cpp
     src/common/Util.cpp
     src/common/FileHelper.cpp
     src/common/StringHelper.cpp
@@ -88,7 +96,10 @@ set(HEADERS
     src/core/FileManager.h
     src/core/LanguageManager.h
     src/core/SessionManager.h
+    src/core/ShortcutManager.h
     src/core/MacroManager.h
+    src/core/WorkspaceManager.h
+    src/core/UdlManager.h
     src/editor/ScintillaEditor.h
     src/editor/SyntaxHighlighter.h
     src/ui/MainWindow.h
@@ -103,6 +114,8 @@ set(HEADERS
     src/dialogs/AboutDialog.h
     src/dialogs/ShortcutMapperDialog.h
     src/dialogs/CommandPaletteDialog.h
+    src/dialogs/LargeFileWarningDialog.h
+    src/dialogs/FileReloadDialog.h
     src/panels/DocumentMapPanel.h
     src/panels/FunctionListPanel.h
     src/panels/FileBrowserPanel.h
@@ -111,13 +124,14 @@ set(HEADERS
     src/common/Util.h
     src/common/FileHelper.h
     src/common/StringHelper.h
+    src/common/DpiManager.h
 )
 
 # Create executable
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
 # Include directories
-target_include_directories(${PROJECT_NAME} PRIVATE src src/common)
+target_include_directories(${PROJECT_NAME} PRIVATE src src/common src/dialogs src/ui src/panels)
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE

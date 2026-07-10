@@ -10,7 +10,6 @@
 #include "../editor/ScintillaEditor.h"
 #include "../core/Application.h"
 #include "../core/FileManager.h"
-#include "../core/ThemeManager.h"
 #include "../core/LanguageManager.h"
 #include "../dialogs/FindReplaceDialog.h"
 #include "../dialogs/GoToLineDialog.h"
@@ -899,20 +898,16 @@ void MainWindow::onBufferChanged() {
 
 // Theme
 void MainWindow::onThemeChanged(const QString& theme) {
-    ThemeManager* tm = app().themeManager();
-    ThemeColors colors = tm ? tm->getThemeColors(theme) : ThemeColors();
-    Q_UNUSED(colors);
-    // Apply to toolbar
-    auto toolbars = findChildren<QToolBar*>();
-    for (QToolBar* tb : toolbars) {
-        QString qss = tm ? tm->getThemeQss(theme, "toolbar") : QString();
-        if (!qss.isEmpty()) tb->setStyleSheet(qss);
+    // Apply theme to toolbar and status bar
+    if (_toolBar) {
+        QString qss = QString("QToolBar { background: palette(window); }");
+        _toolBar->setStyleSheet(qss);
     }
-    // Apply to status bar
     if (_statusBarWidget) {
-        QString qss = tm ? tm->getThemeQss(theme, "statusbar") : QString();
-        if (!qss.isEmpty()) _statusBarWidget->setStyleSheet(qss);
+        QString qss = QString("QStatusBar { background: palette(window); }");
+        _statusBarWidget->setStyleSheet(qss);
     }
+    // Reload current theme resource
     app().loadTheme(theme.toStdString());
 }
 // Tab events

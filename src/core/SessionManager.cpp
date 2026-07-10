@@ -6,337 +6,366 @@
 #include "core/Application.h"
 #include "common/FileHelper.h"
 #include "common/StringHelper.h"
+#include "Parameters.h"
+#include <QFile>
+#include <QDir>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QSettings>
+#include <QTimer>
 #include <fstream>
 #include <sstream>
 #include <algorithm>
 
-SessionManager::SessionManager() = default;
-SessionManager::~SessionManager() = default;
-
-// ============================================================================
-// XML Helpers
-// ============================================================================
-namespace {
-
-// Find XML tag content (returns content between <tag> and </tag>)
-std::string_view extractTagContent(std::string_view xml, std::string_view tagName) {
-    std::string openTag = "<" + std::string(tagName) + ">";
-    std::string closeTag = "</" + std::string(tagName) + ">";
-
-    auto startPos = xml.find(openTag);
-    if (startPos == std::string_view::npos) {
-        openTag = "<" + std::string(tagName) + " ";
-        startPos = xml.find(openTag);
-        if (startPos == std::string_view::npos) return {};
-        // Find the end of the opening tag
-        auto tagEnd = xml.find('>', startPos);
-        if (tagEnd == std::string_view::npos) return {};
-        startPos = tagEnd + 1;
-    } else {
-        startPos += openTag.length();
-    }
-
-    auto endPos = xml.find(closeTag, startPos);
-    if (endPos == std::string_view::npos) return {};
-
-    return xml.substr(startPos, endPos - startPos);
+SessionManager::SessionManager() {
+    loadRecentSessionsList();
 }
 
-// Extract attribute value from XML tag
-std::string extractAttribute(std::string_view tag, const std::string& attrName) {
-    std::string search = attrName + "=\"";
-    auto pos = tag.find(search);
-    if (pos == std::string_view::npos) return "";
-    pos += search.length();
-    auto end = tag.find('"', pos);
-    if (end == std::string_view::npos) return "";
-    return std::string(tag.substr(pos, end - pos));
+SessionManager::~SessionManager() {
+    saveRecentSessionsList();
 }
-
-// Parse a File element from session
-bool parseFileElement(std::string_view fileXml, BufferViewInfo& info) {
-    // Look for the file path (content of the File element)
-    auto closePos = fileXml.find("</File>");
-    if (closePos == std::string_view::npos) return false;
-
-    // Extract path (trim whitespace and encoding markers)
-    std::string_view path = fileXml.substr(0, closePos);
-    while (!path.empty() && std::isspace(path.front())) path.remove_prefix(1);
-    while (!path.empty() && std::isspace(path.back())) path.remove_suffix(1);
-
-    // Get attributes
-    std::string mainView = extractAttribute(fileXml, "mainView");
-    std::string subView = extractAttribute(fileXml, "subView");
-
-    info._iView = StringHelper::toInt(std::string(mainView), 0);
-    // Note: The actual BufferID lookup happens in Application
-    // For now we store the path in a way that can be matched later
-    return !path.empty();
-}
-
-// Get the path from a File element
-std::string getFilePathFromElement(std::string_view fileXml) {
-    auto closePos = fileXml.find("</File>");
-    if (closePos == std::string_view::npos) {
-        closePos = fileXml.find("/>");
-        if (closePos == std::string_view::npos) return "";
-    }
-    std::string_view content = fileXml.substr(0, closePos);
-    // Remove any leading whitespace
-    while (!content.empty() && std::isspace(content.front())) content.remove_prefix(1);
-    return std::string(content);
-}
-
-} // anonymous namespace
 
 // ============================================================================
-// Load Session
+// JSON Session Format
 // ============================================================================
+
 bool SessionManager::loadSession(const std::string& path) {
-    // Check if file exists
-    if (!FileHelper::exists(path)) {
+    return loadSessionFromJson(QString::fromStdString(path));
+}
+
+bool SessionManager::saveSession(const std::string& path) {
+    return saveSessionToJson(QString::fromStdString(path));
+}
+
+bool SessionManager::loadSessionFromJson(const QString& path) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
         return false;
-    }
 
-    // Read file content
-    auto contentOpt = FileHelper::readFile(path);
-    if (!contentOpt) {
+    QByteArray data = file.readAll();
+    file.close();
+
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(data, &parseError);
+    if (parseError.error != QJsonParseError::NoError)
         return false;
-    }
 
-    std::string_view xml(*contentOpt);
-
-    // Check for NotepadPlus root element
-    if (xml.find("<NotepadPlus>") == std::string_view::npos) {
+    if (!doc.isObject())
         return false;
-    }
 
-    // Find Session element
-    auto sessionStart = xml.find("<Session");
-    if (sessionStart == std::string_view::npos) {
-        // Try without attributes
-        sessionStart = xml.find("<Session>");
-        if (sessionStart == std::string_view::npos) {
-            return false;
-        }
-    }
+    return sessionFromJson(doc.object());
+}
 
-    // Find end of Session element
-    auto sessionEnd = xml.find("</Session>");
-    if (sessionEnd == std::string_view::npos) {
+bool SessionManager::saveSessionToJson(const QString& path) {
+    QJsonObject obj = sessionToJson();
+    QJsonDocument doc(obj);
+
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
         return false;
+
+    file.write(doc.toJson(QJsonDocument::Indented));
+    file.close();
+
+    _activeSessionPath = path;
+    emit sessionSaved(path);
+    return true;
+}
+
+QJsonObject SessionManager::sessionToJson() const {
+    QJsonObject obj;
+    obj["version"] = _session.version;
+    obj["workspacePath"] = _session.workspacePath;
+
+    // Window geometry
+    QJsonObject win;
+    win["x"] = _session.window.x;
+    win["y"] = _session.window.y;
+    win["width"] = _session.window.width;
+    win["height"] = _session.window.height;
+    win["maximized"] = _session.window.maximized;
+    obj["window"] = win;
+
+    // Buffers
+    QJsonArray bufs;
+    for (const SessionBuffer& buf : _session.buffers) {
+        QJsonObject b;
+        b["path"] = buf.path;
+        b["language"] = buf.language;
+        b["cursorLine"] = buf.cursor.line;
+        b["cursorCol"] = buf.cursor.column;
+        b["scrollX"] = buf.scrollX;
+        b["scrollY"] = buf.scrollY;
+        b["isActive"] = buf.isActive;
+        bufs.append(b);
     }
-    std::string_view sessionXml = xml.substr(sessionStart, sessionEnd - sessionStart + strlen("</Session>"));
+    obj["buffers"] = bufs;
 
-    // Parse Files section
-    auto filesStart = sessionXml.find("<Files>");
-    if (filesStart != std::string_view::npos) {
-        auto filesEnd = sessionXml.find("</Files>");
-        if (filesEnd != std::string_view::npos) {
-            std::string_view filesXml = sessionXml.substr(filesStart + strlen("<Files>"), filesEnd - filesStart - strlen("<Files>"));
+    obj["activeBufferIndex"] = _session.activeBufferIndex;
+    obj["activeView"] = _session.activeView;
 
-            // Parse each File element
-            size_t filePos = 0;
-            while ((filePos = filesXml.find("<File", filePos)) != std::string_view::npos) {
-                auto fileEnd = filesXml.find("</File>", filePos);
-                if (fileEnd == std::string_view::npos) break;
+    // Panels
+    QJsonObject panels;
+    panels["functionList"] = _session.panels.functionList;
+    panels["documentMap"] = _session.panels.documentMap;
+    panels["fileBrowser"] = _session.panels.fileBrowser;
+    obj["panels"] = panels;
 
-                std::string_view fileXml = filesXml.substr(filePos, fileEnd - filePos + strlen("</File>"));
-                std::string filePath = getFilePathFromElement(fileXml);
+    return obj;
+}
 
-                if (!filePath.empty()) {
-                    BufferViewInfo info;
-                    info._iView = StringHelper::toInt(extractAttribute(fileXml, "mainView"), 0);
-                    // Store path as filePath in Buffer (we'll resolve to BufferID in Application)
-                    // For session loading, we add the file to recent files for later opening
-                    QString path = QString::fromStdString(filePath);
-                    _current._recentFiles.push_back(path);
-                }
+bool SessionManager::sessionFromJson(const QJsonObject& obj) {
+    _session.version = obj.value("version").toInt(1);
+    _session.workspacePath = obj.value("workspacePath").toString();
 
-                filePos = fileEnd + strlen("</File>");
-            }
-        }
-    }
+    // Window
+    QJsonObject win = obj.value("window").toObject();
+    _session.window.x = win.value("x").toInt(100);
+    _session.window.y = win.value("y").toInt(100);
+    _session.window.width = win.value("width").toInt(1200);
+    _session.window.height = win.value("height").toInt(800);
+    _session.window.maximized = win.value("maximized").toBool(false);
 
-    // Parse ActiveView
-    auto activeViewStart = sessionXml.find("<ActiveView");
-    if (activeViewStart != std::string_view::npos) {
-        std::string_view activeViewTag = sessionXml.substr(activeViewStart);
-        auto tagEnd = activeViewTag.find('>');
-        if (tagEnd != std::string_view::npos) {
-            activeViewTag = activeViewTag.substr(0, tagEnd);
-            std::string mainView = extractAttribute(activeViewTag, "mainView");
-            _current._activeTab = StringHelper::toInt(mainView, 0);
-        }
-    }
-
-    // Parse RecentFiles section
-    auto recentStart = sessionXml.find("<RecentFiles>");
-    if (recentStart != std::string_view::npos) {
-        auto recentEnd = sessionXml.find("</RecentFiles>");
-        if (recentEnd != std::string_view::npos) {
-            std::string_view recentXml = sessionXml.substr(recentStart + strlen("<RecentFiles>"), recentEnd - recentStart - strlen("<RecentFiles>"));
-
-            size_t filePos = 0;
-            while ((filePos = recentXml.find("<File", filePos)) != std::string_view::npos) {
-                auto fileEnd = recentXml.find("</File>", filePos);
-                if (fileEnd == std::string_view::npos) break;
-
-                std::string_view fileXml = recentXml.substr(filePos, fileEnd - filePos + strlen("</File>"));
-                std::string filePath = getFilePathFromElement(fileXml);
-
-                if (!filePath.empty()) {
-                    QString path = QString::fromStdString(filePath);
-                    // Check for duplicates
-                    auto it = std::find(_current._recentFiles.begin(), _current._recentFiles.end(), path);
-                    if (it == _current._recentFiles.end()) {
-                        _current._recentFiles.push_back(path);
-                    }
-                }
-
-                filePos = fileEnd + strlen("</File>");
-            }
-        }
-    }
-
-    // Parse WorkingDirectory
-    auto workingDirContent = extractTagContent(sessionXml, "WorkingDir");
-    if (!workingDirContent.empty()) {
-        std::string dir(workingDirContent);
-        StringHelper::trim(dir);
-        if (!dir.empty()) {
-            _current._workingDir = QString::fromStdString(std::string(dir.begin(), dir.end()));
-        }
+    // Buffers
+    _session.buffers.clear();
+    QJsonArray bufs = obj.value("buffers").toArray();
+    for (const QJsonValue& bv : bufs) {
+        QJsonObject b = bv.toObject();
+        SessionBuffer buf;
+        buf.path = b.value("path").toString();
+        buf.language = b.value("language").toString();
+        buf.cursor.line = b.value("cursorLine").toInt(0);
+        buf.cursor.column = b.value("cursorCol").toInt(0);
+        buf.scrollX = b.value("scrollX").toInt(0);
+        buf.scrollY = b.value("scrollY").toInt(0);
+        buf.isActive = b.value("isActive").toBool(false);
+        _session.buffers.append(buf);
     }
 
+    _session.activeBufferIndex = obj.value("activeBufferIndex").toInt(0);
+    _session.activeView = obj.value("activeView").toInt(0);
+
+    // Panels
+    QJsonObject panels = obj.value("panels").toObject();
+    _session.panels.functionList = panels.value("functionList").toBool(false);
+    _session.panels.documentMap = panels.value("documentMap").toBool(false);
+    _session.panels.fileBrowser = panels.value("fileBrowser").toBool(false);
+
+    emit sessionLoaded(_activeSessionPath);
     return true;
 }
 
 // ============================================================================
-// Save Session
+// XML Session (backward compatibility)
 // ============================================================================
-bool SessionManager::saveSession(const std::string& path) {
-    std::ostringstream xml;
 
+bool SessionManager::loadSessionXml(const std::string& path) {
+    // Delegate to loadSession for now (auto-detect format)
+    return loadSession(path);
+}
+
+bool SessionManager::saveSessionXml(const std::string& path) {
+    // Convert NppSession to XML format
+    std::ostringstream xml;
     xml << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
     xml << "<NotepadPlus>\n";
     xml << "  <Session>\n";
 
-    // Save Files section
-    xml << "    <Files>\n";
-
-    // Get all open buffers from Application
-    int bufferCount = app().getBufferCount();
-    int activeView = app().activeViewId();
-
-    for (int i = 0; i < bufferCount; ++i) {
-        BufferID buf = app().getBufferAt(i);
-        if (buf) {
-            auto nameOpt = app().getFileName(buf);
-            if (nameOpt && !nameOpt->empty()) {
-                // Escape XML special characters in path
-                std::string escapedPath = *nameOpt;
-                StringHelper::replaceAll(escapedPath, "&", "&amp;");
-                StringHelper::replaceAll(escapedPath, "<", "&lt;");
-                StringHelper::replaceAll(escapedPath, ">", "&gt;");
-                StringHelper::replaceAll(escapedPath, "\"", "&quot;");
-
-                xml << "      <File mainView=\"" << i << "\" subView=\"-1\""
-                    << " encoding=\"utf-8\">" << escapedPath << "</File>\n";
-            }
-        }
+    // Workspace path
+    if (!_session.workspacePath.isEmpty()) {
+        xml << "    <WorkspacePath>" << _session.workspacePath.toStdString() << "</WorkspacePath>\n";
     }
 
+    // Files
+    xml << "    <Files>\n";
+    for (const SessionBuffer& buf : _session.buffers) {
+        std::string p = buf.path.toStdString();
+        StringHelper::replaceAll(p, "&", "&amp;");
+        StringHelper::replaceAll(p, "<", "&lt;");
+        StringHelper::replaceAll(p, ">", "&gt;");
+        xml << "      <File mainView=\"0\" subView=\"-1\" encoding=\"utf-8\">" << p << "</File>\n";
+    }
     xml << "    </Files>\n";
 
-    // Save ActiveView
-    xml << "    <ActiveView mainView=\"" << activeView << "\" subView=\"-1\" />\n";
-
-    // Save RecentFiles
-    xml << "    <RecentFiles>\n";
-    for (const QString& path : _current._recentFiles) {
-        // Escape XML special characters
-        std::string escapedPath = path.toStdString();
-        StringHelper::replaceAll(escapedPath, "&", "&amp;");
-        StringHelper::replaceAll(escapedPath, "<", "&lt;");
-        StringHelper::replaceAll(escapedPath, ">", "&gt;");
-        StringHelper::replaceAll(escapedPath, "\"", "&quot;");
-
-        xml << "      <File encoding=\"utf-8\">" << escapedPath << "</File>\n";
-    }
-    xml << "    </RecentFiles>\n";
-
-    // Save WorkingDirectory
-    if (!_current._workingDir.isEmpty()) {
-        std::string workDir = _current._workingDir.toStdString();
-        xml << "    <WorkingDir>" << workDir << "</WorkingDir>\n";
-    }
+    // ActiveView
+    xml << "    <ActiveView mainView=\"" << _session.activeView << "\" subView=\"-1\" />\n";
 
     xml << "  </Session>\n";
     xml << "</NotepadPlus>\n";
 
-    // Write to file
     return FileHelper::writeFile(path, xml.str());
 }
 
 // ============================================================================
 // Active Session Path
 // ============================================================================
+
 void SessionManager::setActiveSession(const std::string& sessionPath) {
-    _activeSessionPath = sessionPath;
+    _activeSessionPath = QString::fromStdString(sessionPath);
 }
 
 std::string SessionManager::getActiveSession() const {
-    return _activeSessionPath;
+    return _activeSessionPath.toStdString();
+}
+
+// ============================================================================
+// Recent Sessions
+// ============================================================================
+
+void SessionManager::addRecentSession(const QString& path) {
+    _recentSessions.removeAll(path);
+    _recentSessions.prepend(path);
+    while (_recentSessions.size() > _maxRecentSessions)
+        _recentSessions.removeLast();
+}
+
+void SessionManager::removeRecentSession(const QString& path) {
+    _recentSessions.removeAll(path);
+}
+
+void SessionManager::loadRecentSessionsList() {
+    QSettings s;
+    s.beginGroup("SessionManager");
+    _recentSessions = s.value("RecentSessions").toStringList();
+    _maxRecentSessions = s.value("MaxRecentSessions", 10).toInt();
+    s.endGroup();
+
+    // Prune non-existent
+    for (auto it = _recentSessions.begin(); it != _recentSessions.end(); ) {
+        if (!QFile::exists(*it))
+            it = _recentSessions.erase(it);
+        else
+            ++it;
+    }
+}
+
+void SessionManager::saveRecentSessionsList() {
+    QSettings s;
+    s.beginGroup("SessionManager");
+    s.setValue("RecentSessions", _recentSessions);
+    s.setValue("MaxRecentSessions", _maxRecentSessions);
+    s.endGroup();
+}
+
+// ============================================================================
+// Session Backup
+// ============================================================================
+
+QString SessionManager::backupPath(const QString& sessionPath, int backupNumber) const {
+    QFileInfo fi(sessionPath);
+    return QStringLiteral("%1/%2.bak%3")
+               .arg(fi.absolutePath())
+               .arg(fi.completeBaseName())
+               .arg(backupNumber);
+}
+
+bool SessionManager::createBackup(const QString& sessionPath) {
+    if (!QFile::exists(sessionPath))
+        return false;
+
+    QString backup = backupPath(sessionPath, 1);
+    if (QFile::exists(backup))
+        QFile::remove(backup);
+    return QFile::copy(sessionPath, backup);
+}
+
+bool SessionManager::restoreFromBackup(const QString& sessionPath, int backupNumber) {
+    QString backup = backupPath(sessionPath, backupNumber);
+    if (!QFile::exists(backup))
+        return false;
+
+    if (QFile::exists(sessionPath))
+        QFile::remove(sessionPath);
+    return QFile::copy(backup, sessionPath);
+}
+
+bool SessionManager::rotateBackups(const QString& sessionPath) {
+    QFileInfo fi(sessionPath);
+    QString base = fi.absolutePath() + "/" + fi.completeBaseName();
+    QString ext = fi.suffix();
+    for (int i = _maxBackups - 1; i >= 1; --i) {
+        QString src = QStringLiteral("%1.bak%2").arg(base).arg(i);
+        QString dst = QStringLiteral("%1.bak%2").arg(base).arg(i + 1);
+        if (QFile::exists(src)) {
+            if (QFile::exists(dst))
+                QFile::remove(dst);
+            QFile::rename(src, dst);
+        }
+    }
+    return true;
 }
 
 // ============================================================================
 // Recent Files
 // ============================================================================
+
 void SessionManager::addRecentFile(const std::string& rawPath) {
     QString path = QString::fromStdString(rawPath);
-
-    // Remove if already exists (to move to front)
-    _current._recentFiles.removeAll(path);
-
-    // Add to front
-    _current._recentFiles.insert(_current._recentFiles.begin(), path);
-
-    // Limit to max recent files
-    int maxRecent = app().options().maxRecentFiles;
-    if ((int)_current._recentFiles.size() > maxRecent) {
-        _current._recentFiles.resize(maxRecent);
-    }
+    _recentFiles.removeAll(path);
+    _recentFiles.prepend(path);
+    // Limit to 50
+    if (_recentFiles.size() > 50)
+        _recentFiles.resize(50);
 }
 
 void SessionManager::removeRecentFile(const std::string& rawPath) {
     QString path = QString::fromStdString(rawPath);
-    _current._recentFiles.removeAll(path);
+    _recentFiles.removeAll(path);
 }
 
 std::vector<std::string> SessionManager::getRecentFiles() const {
     std::vector<std::string> result;
-    result.reserve(_current._recentFiles.size());
-    for (const QString& path : _current._recentFiles) {
-        result.emplace_back(path.toStdString());
-    }
+    result.reserve(_recentFiles.size());
+    for (const QString& p : _recentFiles)
+        result.emplace_back(p.toStdString());
     return result;
 }
 
 void SessionManager::clearRecentFiles() {
-    _current._recentFiles.clear();
+    _recentFiles.clear();
 }
 
 // ============================================================================
 // Working Directory
 // ============================================================================
+
 void SessionManager::setWorkingDirectory(const std::string& dir) {
-    _current._workingDir = QString::fromStdString(std::string(dir.begin(), dir.end()));
+    _workingDir = QString::fromStdString(dir);
 }
 
 std::string SessionManager::getWorkingDirectory() const {
-    if (_current._workingDir.isEmpty()) {
-        return "";
-    }
-    return _current._workingDir.toStdString();
+    return _workingDir.toStdString();
+}
+
+// ============================================================================
+// Auto-save
+// ============================================================================
+
+void SessionManager::triggerAutoSave() {
+    if (!_autoSaveEnabled || _activeSessionPath.isEmpty())
+        return;
+
+    // Create backup before overwriting
+    rotateBackups(_activeSessionPath);
+    createBackup(_activeSessionPath);
+
+    // Overwrite session
+    saveSessionToJson(_activeSessionPath);
+
+    emit autoSaveTriggered();
+}
+
+// ============================================================================
+// Build Session from Current State
+// ============================================================================
+
+void SessionManager::captureCurrentSession() {
+    // Capture from Application state
+    // This would be called when saving a session interactively
+    // The actual population of _session happens in Application::saveSession
+}
+
+void SessionManager::applySession(const NppSession& session) {
+    _session = session;
 }

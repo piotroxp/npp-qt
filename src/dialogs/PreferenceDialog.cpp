@@ -88,8 +88,8 @@ void PreferenceDialog::setupUi() {
 
     // Connect signals
     connect(_categoryTree, &QTreeWidget::itemClicked, this, &PreferenceDialog::onCategoryChanged);
-    connect(_buttonBox, &QDialogButtonBox::accepted, this, &PreferenceDialog::accept);
-    connect(_buttonBox, &QDialogButtonBox::rejected, this, &PreferenceDialog::reject);
+    connect(_buttonBox->button(QDialogButtonBox::Ok), &QPushButton::clicked, this, &PreferenceDialog::accept);
+    connect(_buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, this, &PreferenceDialog::reject);
     connect(_buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &PreferenceDialog::applySettings);
 
     // Layout
@@ -569,7 +569,7 @@ void PreferenceDialog::loadSettings() {
     _spinAutoSaveInterval->setValue(opts.autoSaveInterval > 0 ? opts.autoSaveInterval : 5);
     _chkAutoSaveCurrentOnly->setChecked(opts.autoSaveCurrentOnly);
     _chkAutoSaveInBackground->setChecked(opts.autoSaveInBackground);
-    _backupDirEdit->setText(QString::fromStdString(opts.backupDir));
+    _backupDirEdit->setText(opts.backupDir);
     _backupStyleCombo->setCurrentIndex(opts.backupStyle);
     _spinMaxBackups->setValue(opts.maxBackups);
     _grpAutoSaveOptions->setEnabled(opts.autoSave);
@@ -645,7 +645,7 @@ void PreferenceDialog::applySettings() {
     opts.autoSaveInterval = _spinAutoSaveInterval->value();
     opts.autoSaveCurrentOnly = _chkAutoSaveCurrentOnly->isChecked();
     opts.autoSaveInBackground = _chkAutoSaveInBackground->isChecked();
-    opts.backupDir = _backupDirEdit->text().toStdString();
+    opts.backupDir = _backupDirEdit->text();
     opts.backupStyle = _backupStyleCombo->currentIndex();
     opts.maxBackups = _spinMaxBackups->value();
 
