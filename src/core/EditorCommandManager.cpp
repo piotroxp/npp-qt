@@ -208,3 +208,17 @@ void EditorCommandManager::registerAll(Application* app) {
     registerCommand(CMD_HELP_ABOUT, "help.about",
         [app](ScintillaEditor*) { app->onShowAbout(); });
 }
+
+// ---------------------------------------------------------------------------
+// Shortcut read/write
+// ---------------------------------------------------------------------------
+QString EditorCommandManager::getShortcut(const QString& name) const {
+    auto it = _shortcuts.find(name.toStdString());
+    if (it != _shortcuts.end())
+        return it->second;
+    return QString();
+}
+
+void EditorCommandManager::setShortcut(const QString& name, const QString& shortcut) {
+    _shortcuts[name.toStdString()] = shortcut;
+}

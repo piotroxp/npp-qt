@@ -1,4 +1,5 @@
 // Application.cpp - Main application controller implementation
+#include "dialogs/FindInFilesWorker.h"
 #include "Application.h"
 #include "FileManager.h"
 #include "Buffer.h"
@@ -19,6 +20,7 @@
 #include "dialogs/FindReplaceDialog.h"
 #include "dialogs/GoToLineDialog.h"
 #include "dialogs/ShortcutMapperDialog.h"
+#include "dialogs/ShortcutMapperDialog.h"
 #include "dialogs/CommandPaletteDialog.h"
 #include "dialogs/PreferenceDialog.h"
 #include "dialogs/AboutDialog.h"
@@ -36,7 +38,7 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QThread>
-#include <QVBoxLayout>
+#include <QHeaderView>
 #include <QDialogButtonBox>
 #include <QTableWidget>
 #include <QAbstractItemView>
@@ -129,6 +131,7 @@ bool Application::initialize() {
         _commandManager = new EditorCommandManager();
         _macroManager = new MacroManager();
         _recentFilesManager = &RecentFilesManager::instance();
+        _themeManager = std::make_unique<ThemeManager>();
         _commandManager->registerAll(this);
 
         // Setup UI
@@ -877,6 +880,8 @@ void Application::onFindPrev() {
     }
 }
 
+static void showFindInFilesResults(QWidget*, Application*, const QList<FindResult>&);
+
 void Application::onFindInFiles() {
     // Open directory picker first, then search
     QString dir = QFileDialog::getExistingDirectory(_mainWindow,
@@ -901,7 +906,7 @@ void Application::onFindInFiles() {
     QObject::connect(thread, &QThread::started, worker, &FindInFilesWorker::run);
     QObject::connect(worker, &FindInFilesWorker::resultsReady, this,
         [this](const QList<FindResult>& results) {
-            showFindInFilesResults(results);
+            showFindInFilesResults(nullptr, this, results);
         }, Qt::QueuedConnection);
     QObject::connect(worker, &FindInFilesWorker::finished, thread, &QThread::quit);
     QObject::connect(thread, &QThread::finished, worker, &QObject::deleteLater);
@@ -1170,84 +1175,8 @@ void Application::onShowAbout() {
     _aboutDialog->show();
 }
 
-// ============================================================================
-// Find in Files — helper structs and workers
-// ============================================================================
-struct FindResult {
-    QString filePath;
-    int lineNumber;
-    QString lineContent;
-    int column;
-};
 
-class FindInFilesWorker : public QObject {
-    Q_OBJECT
-public:
-    FindInFilesWorker(const QString& dir, const QString& text, QObject* parent = nullptr)
-        : QObject(parent), _dir(dir), _text(text) {}
-
-public slots:
-    void run() {
-        QList<FindResult> results;
-        searchDirectory(QDir(_dir), _text, results, 0);
-        emit resultsReady(results);
-        emit finished();
-    }
-
-signals:
-    void resultsReady(const QList<FindResult>& results);
-    void finished();
-
-private:
-    void searchDirectory(const QDir& dir, const QString& text,
-                         QList<FindResult>& results, int depth) {
-        if (depth > 10) return;  // max recursion depth
-
-        QFileInfoList entries = dir.entryInfoList(
-            QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot,
-            QDir::Name);
-
-        for (const QFileInfo& fi : entries) {
-            if (results.size() > 10000) break;  // limit results
-
-            if (fi.isDir()) {
-                searchDirectory(QDir(fi.absoluteFilePath()), text, results, depth + 1);
-            } else {
-                // Only search text-like files
-                QString ext = fi.suffix().toLower();
-                static QStringList skipExts = {"exe","dll","so","dylib","o","obj",
-                    "png","jpg","jpeg","gif","ico","bmp","svg","ttf","otf","woff",
-                    "mp3","wav","mp4","avi","mkv","zip","tar","gz","rar","pdf"};
-                if (skipExts.contains(ext)) continue;
-
-                QFile file(fi.absoluteFilePath());
-                if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) continue;
-
-                int lineNum = 0;
-                QTextStream in(&file);
-                while (!in.atEnd()) {
-                    ++lineNum;
-                    QString line = in.readLine();
-                    if (line.contains(text, Qt::CaseInsensitive)) {
-                        FindResult r;
-                        r.filePath = fi.absoluteFilePath();
-                        r.lineNumber = lineNum;
-                        r.lineContent = line.trimmed();
-                        r.column = line.indexOf(text, 0, Qt::CaseInsensitive);
-                        results.append(r);
-                        if (results.size() > 10000) break;
-                    }
-                }
-                file.close();
-            }
-        }
-    }
-
-    QString _dir;
-    QString _text;
-};
-
-void Application::showFindInFilesResults(const QList<FindResult>& results) {
+void showFindInFilesResults(QWidget*, Application* app, const QList<FindResult>& results) {
     QString msg;
     if (results.isEmpty()) {
         msg = "No matches found.";
@@ -1260,16 +1189,16 @@ void Application::showFindInFilesResults(const QList<FindResult>& results) {
             shown = (shown + 1) % 1000;  // cycle to avoid spam
         }
     }
-    setStatusBarText(msg.toStdString());
+    app->setStatusBarText(msg.toStdString());
 
     // Show results in a dialog
     if (results.isEmpty()) {
-        QMessageBox::information(_mainWindow, "Find in Files", msg);
+        QMessageBox::information(app->mainWindow(), "Find in Files", msg);
         return;
     }
 
     // Build simple results dialog
-    auto* dlg = new QDialog(_mainWindow);
+    auto* dlg = new QDialog(app->mainWindow());
     dlg->setWindowTitle(QString("Find in Files — %1 results").arg(results.size()));
     dlg->resize(700, 400);
     QVBoxLayout* lay = new QVBoxLayout(dlg);
@@ -1291,16 +1220,16 @@ void Application::showFindInFilesResults(const QList<FindResult>& results) {
 
     QDialogButtonBox* box = new QDialogButtonBox(QDialogButtonBox::Close, dlg);
     lay->addWidget(box);
-    connect(box, &QDialogButtonBox::accepted, dlg, &QDialog::accept);
-    connect(box, &QDialogButtonBox::rejected, dlg, &QDialog::reject);
+    QObject::connect(box, &QDialogButtonBox::accepted, dlg, &QDialog::accept);
+    QObject::connect(box, &QDialogButtonBox::rejected, dlg, &QDialog::reject);
 
     // Double-click to open file at line
-    connect(table, &QTableWidget::cellDoubleClicked, this,
-        [this, table, results](int row, int) {
+    QObject::connect(table, &QTableWidget::cellDoubleClicked, app,
+        [app, table, results](int row, int) {
             if (row >= results.size()) return;
             const FindResult& r = results[row];
-            openFile(r.filePath.toStdString());
-            ScintillaEditor* ed = getActiveEditor();
+            app->openFile(r.filePath.toStdString());
+            ScintillaEditor* ed = app->getActiveEditor();
             if (ed) ed->gotoLine(r.lineNumber - 1, r.column);
         });
 

@@ -18,6 +18,8 @@
 #include <QListWidget>
 #include <QTableWidget>
 #include <QRadioButton>
+#include <QPushButton>
+#include <QFileDialog>
 
 class PreferenceDialog : public QDialog {
     Q_OBJECT
@@ -65,34 +67,31 @@ private:
     QCheckBox* _chkShowMenubar = nullptr;
 
     // File Associations page widgets
-    QListWidget* _extensionList = nullptr;
-    QLineEdit* _extensionEdit = nullptr;
+    QListWidget* _extListWidget = nullptr;
+    QLineEdit* _extLineEdit = nullptr;
 
     // Shortcut Mapper page widgets
-    QListWidget* _shortcutCategoryList = nullptr;
-    QTableWidget* _shortcutTable = nullptr;
+    QCheckBox* _chkConflictWarning = nullptr;
 
     // Margins page widgets
     QCheckBox* _chkShowLineNumbers = nullptr;
     QSpinBox* _spinLineNumberWidth = nullptr;
-    QPushButton* _lineNumberBgBtn = nullptr;
-    QCheckBox* _chkShowSymbolMargin = nullptr;
-    QCheckBox* _chkShowFolderMargin = nullptr;
-    QCheckBox* _chkEnableFolding = nullptr;
-    QComboBox* _cmbFoldStyle = nullptr;
+    QCheckBox* _chkShowSymbols = nullptr;
+    QCheckBox* _chkShowFolder = nullptr;
     QCheckBox* _chkHighlightCurrentLine = nullptr;
-    QPushButton* _currentLineColorBtn = nullptr;
+    QCheckBox* _chkShowEdgeLine = nullptr;
+    QSpinBox* _spinSymbolMarginWidth = nullptr;
+    QSpinBox* _spinEdgeColumn = nullptr;
 
     // Backup/Auto-Save page widgets
-    QRadioButton* _radioBackupNone = nullptr;
-    QRadioButton* _radioBackupSimple = nullptr;
-    QRadioButton* _radioBackupVerbose = nullptr;
-    QLineEdit* _backupPathEdit = nullptr;
-    QPushButton* _backupPathBtn = nullptr;
     QCheckBox* _chkAutoSave = nullptr;
     QSpinBox* _spinAutoSaveInterval = nullptr;
-    QComboBox* _cmbAutoSaveMode = nullptr;
-    QCheckBox* _chkAutoSaveInBackg = nullptr;
+    QGroupBox* _grpAutoSaveOptions = nullptr;
+    QCheckBox* _chkAutoSaveCurrentOnly = nullptr;
+    QCheckBox* _chkAutoSaveInBackground = nullptr;
+    QLineEdit* _backupDirEdit = nullptr;
+    QComboBox* _backupStyleCombo = nullptr;
+    QSpinBox* _spinMaxBackups = nullptr;
 
     QTreeWidget* _categoryTree = nullptr;
     QStackedWidget* _pageStack = nullptr;

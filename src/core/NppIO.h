@@ -636,8 +636,6 @@ inline NppIO::NppIO(QObject* parent)
     _fileWatcher.moveToThread(this->thread());
     connect(&_fileWatcher, &QFileSystemWatcher::fileChanged,
             this, &NppIO::onFileChanged, Qt::QueuedConnection);
-    connect(&_fileWatcher, &QFileSystemWatcher::errorOccurred,
-            this, &NppIO::onFileWatchError, Qt::QueuedConnection);
 }
 
 inline EncodingType NppIO::detectEncodingBOM(const QByteArray& rawBytes) const

@@ -3,6 +3,7 @@
 // GPL v3
 
 #include "PreferenceDialog.h"
+#include "ShortcutMapperDialog.h"
 #include "core/Application.h"
 #include <QVBoxLayout>
 #include <QMenuBar>
@@ -251,22 +252,78 @@ QWidget* PreferenceDialog::createAppearancePage() {
 // ============================================================================
 // File Associations Page
 // ============================================================================
+// ============================================================================
+// File Associations Page
+// ============================================================================
 QWidget* PreferenceDialog::createFileAssociationPage() {
     QWidget* page = new QWidget(this);
     QVBoxLayout* layout = new QVBoxLayout(page);
 
-    QLabel* placeholder = new QLabel(
-        "File associations allow you to open specific file types "
-        "with Notepad-- by default.\n\n"
-        "This feature is not yet implemented.\n"
-        "You can configure file associations through your operating system instead.",
-        page);
-    placeholder->setWordWrap(true);
-    placeholder->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    // Info text
+    layout->addWidget(new QLabel(
+        "Associate file extensions with Notepad--Qt. "
+        "Separate multiple extensions with commas (e.g. .txt, .md, .log).",
+        page));
 
-    layout->addWidget(placeholder);
+    QGroupBox* extGroup = new QGroupBox("Extension Mappings", page);
+    QVBoxLayout* extLayout = new QVBoxLayout(extGroup);
+
+    // Custom extensions list
+    _extListWidget = new QListWidget(extGroup);
+    _extListWidget->setAlternatingRowColors(true);
+    _extListWidget->setToolTip("Double-click to edit, Delete key to remove");
+    extLayout->addWidget(_extListWidget);
+
+    // Add / Remove buttons
+    QHBoxLayout* extBtnRow = new QHBoxLayout();
+    QPushButton* addExtBtn = new QPushButton("Add...", extGroup);
+    QPushButton* removeExtBtn = new QPushButton("Remove", extGroup);
+    QPushButton* clearExtBtn = new QPushButton("Clear All", extGroup);
+    extBtnRow->addWidget(addExtBtn);
+    extBtnRow->addWidget(removeExtBtn);
+    extBtnRow->addWidget(clearExtBtn);
+    extBtnRow->addStretch();
+    extLayout->addLayout(extBtnRow);
+    layout->addWidget(extGroup);
+
+    // Extension entry row
+    QHBoxLayout* entryRow = new QHBoxLayout();
+    entryRow->addWidget(new QLabel("Extension(s):", page));
+    _extLineEdit = new QLineEdit(page);
+    _extLineEdit->setPlaceholderText(".txt, .md, .log");
+    entryRow->addWidget(_extLineEdit, 1);
+    layout->addLayout(entryRow);
+
+    // Buttons
+    QHBoxLayout* btnRow = new QHBoxLayout();
+    btnRow->addStretch();
+    QPushButton* importBtn = new QPushButton("Import from System", page);
+    QPushButton* exportBtn = new QPushButton("Export", page);
+    btnRow->addWidget(importBtn);
+    btnRow->addWidget(exportBtn);
+    layout->addLayout(btnRow);
+
+    // Connections
+    connect(addExtBtn, &QPushButton::clicked, this, [this, page]() {
+        QString text = _extLineEdit->text().trimmed();
+        if (text.isEmpty()) return;
+        for (const QString& ext : text.split(',', Qt::SkipEmptyParts)) {
+            QString clean = ext.trimmed();
+            if (!clean.startsWith('.')) clean = "." + clean;
+            QList<QListWidgetItem*> existing = _extListWidget->findItems(clean, Qt::MatchExactly);
+            if (existing.isEmpty())
+                _extListWidget->addItem(clean);
+        }
+        _extLineEdit->clear();
+    });
+    connect(removeExtBtn, &QPushButton::clicked, this, [this]() {
+        qDeleteAll(_extListWidget->selectedItems());
+    });
+    connect(clearExtBtn, &QPushButton::clicked, this, [this]() {
+        _extListWidget->clear();
+    });
+
     layout->addStretch();
-
     return page;
 }
 
@@ -277,22 +334,42 @@ QWidget* PreferenceDialog::createShortcutPage() {
     QWidget* page = new QWidget(this);
     QVBoxLayout* layout = new QVBoxLayout(page);
 
-    QLabel* placeholder = new QLabel(
-        "Shortcut Mapper allows you to view and customize keyboard shortcuts "
-        "for menu commands and Scintilla commands.\n\n"
-        "This feature is not yet implemented.",
-        page);
-    placeholder->setWordWrap(true);
+    QLabel* info = new QLabel(
+        "Click 'Open Shortcut Mapper' to view and customize keyboard shortcuts "
+        "for all menu commands and Scintilla editor commands.", page);
+    info->setWordWrap(true);
+    layout->addWidget(info);
 
-    QPushButton* openMapper = new QPushButton("Open Shortcut Mapper", page);
-    connect(openMapper, &QPushButton::clicked, []() {
-        QMessageBox::information(nullptr, "Shortcut Mapper",
-            "Shortcut Mapper will be implemented in a future version.");
-    });
-
-    layout->addWidget(placeholder);
+    QPushButton* openMapper = new QPushButton("Open Shortcut Mapper...", page);
+    openMapper->setMinimumHeight(36);
     layout->addWidget(openMapper);
+
+    // Conflict detection info
+    QGroupBox* conflictBox = new QGroupBox("Conflict Detection", page);
+    QVBoxLayout* conflictLayout = new QVBoxLayout(conflictBox);
+    _chkConflictWarning = new QCheckBox(
+        "Warn when a shortcut conflicts with an existing binding", conflictBox);
+    _chkConflictWarning->setChecked(true);
+    conflictLayout->addWidget(_chkConflictWarning);
+    layout->addWidget(conflictBox);
+
+    // Import / Export
+    QGroupBox* impBox = new QGroupBox("Import / Export", page);
+    QHBoxLayout* impRow = new QHBoxLayout(impBox);
+    impRow->addWidget(new QPushButton("Import Shortcuts...", impBox));
+    impRow->addWidget(new QPushButton("Export Shortcuts...", impBox));
+    impRow->addStretch();
+    layout->addWidget(impBox);
+
     layout->addStretch();
+
+    connect(openMapper, &QPushButton::clicked, this, [this]() {
+        // Hide pref dialog, open mapper, re-show when mapper closes
+        this->hide();
+        ShortcutMapperDialog mapper(this);
+        mapper.exec();
+        this->show();
+    });
 
     return page;
 }
@@ -304,42 +381,135 @@ QWidget* PreferenceDialog::createMarginsPage() {
     QWidget* page = new QWidget(this);
     QVBoxLayout* layout = new QVBoxLayout(page);
 
-    QLabel* placeholder = new QLabel(
-        "Margins and Borders settings allow you to customize:\n\n"
-        "• Line number margin width\n"
-        "• Symbol margin visibility\n"
-        "• Fold margin settings\n"
-        "• Current line highlighting\n\n"
-        "This feature is not yet implemented.",
-        page);
-    placeholder->setWordWrap(true);
+    // Line Numbers
+    QGroupBox* lnGroup = new QGroupBox("Line Number Margin", page);
+    QGridLayout* lnGrid = new QGridLayout(lnGroup);
+    _chkShowLineNumbers = new QCheckBox("Show line numbers", lnGroup);
+    lnGrid->addWidget(_chkShowLineNumbers, 0, 0, 1, 2);
 
-    layout->addWidget(placeholder);
+    lnGrid->addWidget(new QLabel("Width (pixels):", lnGroup), 1, 0);
+    _spinLineNumberWidth = new QSpinBox(lnGroup);
+    _spinLineNumberWidth->setRange(20, 200);
+    _spinLineNumberWidth->setSuffix(" px");
+    lnGrid->addWidget(_spinLineNumberWidth, 1, 1);
+    layout->addWidget(lnGroup);
+
+    // Symbol / Marker Margin
+    QGroupBox* symGroup = new QGroupBox("Symbol Margin", page);
+    QGridLayout* symGrid = new QGridLayout(symGroup);
+    _chkShowSymbols = new QCheckBox("Show symbol margin", symGroup);
+    _chkShowFolder = new QCheckBox("Show folder (expand/collapse) margin", symGroup);
+    symGrid->addWidget(_chkShowSymbols, 0, 0);
+    symGrid->addWidget(_chkShowFolder, 1, 0);
+    symGrid->addWidget(new QLabel("Symbol margin width:", symGroup), 2, 0);
+    _spinSymbolMarginWidth = new QSpinBox(symGroup);
+    _spinSymbolMarginWidth->setRange(10, 80);
+    _spinSymbolMarginWidth->setSuffix(" px");
+    symGrid->addWidget(_spinSymbolMarginWidth, 2, 1);
+    layout->addWidget(symGroup);
+
+    // Current Line Highlight
+    QGroupBox* curLineGroup = new QGroupBox("Current Line", page);
+    QGridLayout* curLineGrid = new QGridLayout(curLineGroup);
+    _chkHighlightCurrentLine = new QCheckBox(
+        "Highlight current line background", curLineGroup);
+    curLineGrid->addWidget(_chkHighlightCurrentLine, 0, 0);
+    curLineGrid->addWidget(new QLabel("Highlight color:", curLineGroup), 1, 0);
+    // Color indicator — a read-only line showing the color
+    QLabel* colorPreview = new QLabel(curLineGroup);
+    colorPreview->setFixedHeight(22);
+    colorPreview->setStyleSheet("background: #FFFFD0; border: 1px solid gray; border-radius: 3px;");
+    curLineGrid->addWidget(colorPreview, 1, 1);
+    layout->addWidget(curLineGroup);
+
+    // Border Edge
+    QGroupBox* borderGroup = new QGroupBox("Edge / Right Margin", page);
+    QGridLayout* borderGrid = new QGridLayout(borderGroup);
+    _chkShowEdgeLine = new QCheckBox("Show vertical edge line", borderGroup);
+    borderGrid->addWidget(_chkShowEdgeLine, 0, 0);
+    borderGrid->addWidget(new QLabel("Edge column:", borderGroup), 1, 0);
+    _spinEdgeColumn = new QSpinBox(borderGroup);
+    _spinEdgeColumn->setRange(0, 500);
+    borderGrid->addWidget(_spinEdgeColumn, 1, 1);
+    borderGrid->addWidget(new QLabel("(0 = disabled)", borderGroup), 1, 2);
+    layout->addWidget(borderGroup);
+
     layout->addStretch();
-
     return page;
 }
 
 // ============================================================================
-// Backup/Auto-Save Page
+// Backup / Auto-Save Page
 // ============================================================================
 QWidget* PreferenceDialog::createBackupPage() {
     QWidget* page = new QWidget(this);
     QVBoxLayout* layout = new QVBoxLayout(page);
 
-    QLabel* placeholder = new QLabel(
-        "Backup and Auto-Save settings allow you to:\n\n"
-        "• Enable periodic auto-save\n"
-        "• Configure backup directory\n"
-        "• Set backup file naming scheme\n"
-        "• Control snapshot retention\n\n"
-        "This feature is not yet implemented.",
-        page);
-    placeholder->setWordWrap(true);
+    // Auto-Save
+    QGroupBox* autoSaveGroup = new QGroupBox("Auto-Save", page);
+    QGridLayout* asGrid = new QGridLayout(autoSaveGroup);
 
-    layout->addWidget(placeholder);
+    _chkAutoSave = new QCheckBox("Enable auto-save", autoSaveGroup);
+    asGrid->addWidget(_chkAutoSave, 0, 0, 1, 3);
+
+    asGrid->addWidget(new QLabel("Interval:", autoSaveGroup), 1, 0);
+    _spinAutoSaveInterval = new QSpinBox(autoSaveGroup);
+    _spinAutoSaveInterval->setRange(1, 1440);
+    _spinAutoSaveInterval->setSuffix(" min");
+    _spinAutoSaveInterval->setToolTip("How often to auto-save (in minutes)");
+    asGrid->addWidget(_spinAutoSaveInterval, 1, 1);
+
+    _grpAutoSaveOptions = new QGroupBox("Auto-save options", autoSaveGroup);
+    QVBoxLayout* asOptLayout = new QVBoxLayout(_grpAutoSaveOptions);
+    _chkAutoSaveCurrentOnly = new QCheckBox(
+        "Auto-save current file only (not all open files)", _grpAutoSaveOptions);
+    _chkAutoSaveInBackground = new QCheckBox(
+        "Save silently without switching focus", _grpAutoSaveOptions);
+    asOptLayout->addWidget(_chkAutoSaveCurrentOnly);
+    asOptLayout->addWidget(_chkAutoSaveInBackground);
+    asGrid->addWidget(_grpAutoSaveOptions, 2, 0, 1, 3);
+    layout->addWidget(autoSaveGroup);
+
+    // Backup
+    QGroupBox* backupGroup = new QGroupBox("Backup", page);
+    QGridLayout* bkGrid = new QGridLayout(backupGroup);
+
+    bkGrid->addWidget(new QLabel("Backup directory:", backupGroup), 0, 0);
+    _backupDirEdit = new QLineEdit(backupGroup);
+    _backupDirEdit->setPlaceholderText("(same as original file)");
+    bkGrid->addWidget(_backupDirEdit, 0, 1);
+    QPushButton* browseBackupBtn = new QPushButton("Browse...", backupGroup);
+    bkGrid->addWidget(browseBackupBtn, 0, 2);
+
+    bkGrid->addWidget(new QLabel("Backup style:", backupGroup), 1, 0);
+    _backupStyleCombo = new QComboBox(backupGroup);
+    _backupStyleCombo->addItems({
+        "Simple (single backup file)",
+        "With date/time (one file per save)",
+        "Numbered (backup_1, backup_2, ...)"
+    });
+    bkGrid->addWidget(_backupStyleCombo, 1, 1, 1, 2);
+
+    bkGrid->addWidget(new QLabel("Keep up to:", backupGroup), 2, 0);
+    _spinMaxBackups = new QSpinBox(backupGroup);
+    _spinMaxBackups->setRange(1, 100);
+    _spinMaxBackups->setSuffix(" backups");
+    _spinMaxBackups->setToolTip("Maximum numbered backups to keep (numbered style only)");
+    bkGrid->addWidget(_spinMaxBackups, 2, 1, 1, 2);
+    layout->addWidget(backupGroup);
+
+    // Connections
+    connect(_chkAutoSave, &QCheckBox::toggled, this, [this](bool on) {
+        _spinAutoSaveInterval->setEnabled(on);
+        _grpAutoSaveOptions->setEnabled(on);
+    });
+    connect(browseBackupBtn, &QPushButton::clicked, this, [this]() {
+        QString dir = QFileDialog::getExistingDirectory(this,
+            "Select Backup Directory", _backupDirEdit->text());
+        if (!dir.isEmpty()) _backupDirEdit->setText(dir);
+    });
+
     layout->addStretch();
-
     return page;
 }
 
@@ -375,6 +545,35 @@ void PreferenceDialog::loadSettings() {
     _chkShowTabbar->setChecked(opts.showTabBar);
     _chkShowStatusbar->setChecked(opts.showStatusBar);
     _chkShowMenubar->setChecked(opts.showMenuBar);
+
+    // File Associations
+    _extListWidget->clear();
+    for (const QString& ext : opts.fileAssociations)
+        _extListWidget->addItem(ext);
+
+    // Shortcut Mapper
+    _chkConflictWarning->setChecked(opts.warnOnShortcutConflict);
+
+    // Margins
+    _chkShowLineNumbers->setChecked(opts.showLineNumbers);
+    _spinLineNumberWidth->setValue(opts.lineNumberWidth);
+    _chkShowSymbols->setChecked(opts.showSymbols);
+    _chkShowFolder->setChecked(opts.showFolderMargin);
+    _spinSymbolMarginWidth->setValue(opts.symbolMarginWidth);
+    _chkHighlightCurrentLine->setChecked(opts.highlightCurrentLine);
+    _chkShowEdgeLine->setChecked(opts.showEdgeLine);
+    _spinEdgeColumn->setValue(opts.edgeColumn);
+
+    // Backup / Auto-Save
+    _chkAutoSave->setChecked(opts.autoSave);
+    _spinAutoSaveInterval->setValue(opts.autoSaveInterval > 0 ? opts.autoSaveInterval : 5);
+    _chkAutoSaveCurrentOnly->setChecked(opts.autoSaveCurrentOnly);
+    _chkAutoSaveInBackground->setChecked(opts.autoSaveInBackground);
+    _backupDirEdit->setText(QString::fromStdString(opts.backupDir));
+    _backupStyleCombo->setCurrentIndex(opts.backupStyle);
+    _spinMaxBackups->setValue(opts.maxBackups);
+    _grpAutoSaveOptions->setEnabled(opts.autoSave);
+    _spinAutoSaveInterval->setEnabled(opts.autoSave);
 
     // Store original values
     _originalSettings.singleInstance = opts.singleInstance;
@@ -422,6 +621,33 @@ void PreferenceDialog::applySettings() {
     opts.showTabBar = _chkShowTabbar->isChecked();
     opts.showStatusBar = _chkShowStatusbar->isChecked();
     opts.showMenuBar = _chkShowMenubar->isChecked();
+
+    // File Associations — collect from list widget
+    opts.fileAssociations.clear();
+    for (int i = 0; i < _extListWidget->count(); ++i)
+        opts.fileAssociations.append(_extListWidget->item(i)->text());
+
+    // Shortcut Mapper
+    opts.warnOnShortcutConflict = _chkConflictWarning->isChecked();
+
+    // Margins
+    opts.showLineNumbers = _chkShowLineNumbers->isChecked();
+    opts.lineNumberWidth = _spinLineNumberWidth->value();
+    opts.showSymbols = _chkShowSymbols->isChecked();
+    opts.showFolderMargin = _chkShowFolder->isChecked();
+    opts.symbolMarginWidth = _spinSymbolMarginWidth->value();
+    opts.highlightCurrentLine = _chkHighlightCurrentLine->isChecked();
+    opts.showEdgeLine = _chkShowEdgeLine->isChecked();
+    opts.edgeColumn = _spinEdgeColumn->value();
+
+    // Backup / Auto-Save
+    opts.autoSave = _chkAutoSave->isChecked();
+    opts.autoSaveInterval = _spinAutoSaveInterval->value();
+    opts.autoSaveCurrentOnly = _chkAutoSaveCurrentOnly->isChecked();
+    opts.autoSaveInBackground = _chkAutoSaveInBackground->isChecked();
+    opts.backupDir = _backupDirEdit->text().toStdString();
+    opts.backupStyle = _backupStyleCombo->currentIndex();
+    opts.maxBackups = _spinMaxBackups->value();
 
     // Apply UI changes
     if (app().mainWindow()) {

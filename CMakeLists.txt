@@ -50,6 +50,8 @@ set(SOURCES
     src/core/SessionManager.cpp
     src/core/MacroManager.cpp
     src/core/RecentFilesManager.cpp
+    src/core/ThemeManager.cpp
+    src/core/NppIO.cpp
     src/core/NppBigSwitch.cpp
     src/core/NppCommands.cpp
     src/core/Notepad_plus.cpp
@@ -65,6 +67,7 @@ set(SOURCES
     src/dialogs/GoToLineDialog.cpp
     src/dialogs/PreferenceDialog.cpp
     src/dialogs/AboutDialog.cpp
+    src/dialogs/FindInFilesWorker.cpp
     src/dialogs/ShortcutMapperDialog.cpp
     src/dialogs/CommandPaletteDialog.cpp
     src/panels/DocumentMapPanel.cpp
@@ -78,6 +81,8 @@ set(SOURCES
 set(HEADERS
     src/core/Buffer.h
     src/core/Application.h
+    src/core/ThemeManager.h
+    src/core/NppIO.h
     src/core/EditorCommandManager.h
     src/core/EncodingDetector.h
     src/core/FileManager.h
@@ -92,6 +97,7 @@ set(HEADERS
     src/ui/ToolBar.h
     src/ui/MenuBar.h
     src/dialogs/FindReplaceDialog.h
+    src/dialogs/FindInFilesWorker.h
     src/dialogs/GoToLineDialog.h
     src/dialogs/PreferenceDialog.h
     src/dialogs/AboutDialog.h

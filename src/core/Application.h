@@ -15,6 +15,7 @@
 #include <mutex>
 #include "common/Types.h"
 #include "common/Util.h"
+#include "ThemeManager.h"
 
 // Forward declarations
 class ScintillaEditor;
@@ -61,6 +62,31 @@ struct AppOptions {
     bool         smartHighlighting = true;
     int          maxHighlightingWords = 1000;
     bool         wrapWithQuotes = false;
+
+    // File Associations
+    QStringList   fileAssociations;
+
+    // Backup / Auto-Save
+    bool         autoSave = false;
+    int          autoSaveInterval = 5;
+    bool         autoSaveCurrentOnly = false;
+    bool         autoSaveInBackground = false;
+    std::string  backupDir;
+    int          backupStyle = 0;        // 0=simple, 1=datetime, 2=numbered
+    int          maxBackups = 5;
+
+    // Margins / Editor Display
+    bool         showLineNumbers = true;
+    int          lineNumberWidth = 40;
+    bool         showSymbols = true;
+    bool         showFolderMargin = true;
+    int          symbolMarginWidth = 14;
+    bool         highlightCurrentLine = true;
+    bool         showEdgeLine = false;
+    int          edgeColumn = 80;
+
+    // Shortcut Mapper
+    bool         warnOnShortcutConflict = true;
 };
 
 // ============================================================================
@@ -213,6 +239,7 @@ public:
     // Theme
     void loadTheme(const std::string& themeName);
     std::string currentTheme() const { return _currentTheme; }
+    ThemeManager* themeManager() { return _themeManager.get(); }
 
     // Clipboard history
     void addToClipboardHistory(const std::string& text);
@@ -324,6 +351,7 @@ private:
     LanguageManager*        _languageManager = nullptr;
     SessionManager*         _sessionManager = nullptr;
     EditorCommandManager*   _commandManager = nullptr;
+    std::unique_ptr<ThemeManager> _themeManager;
 
     // Dialogs
     FindReplaceDialog*  _findReplaceDialog = nullptr;

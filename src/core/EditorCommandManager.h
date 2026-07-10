@@ -6,6 +6,7 @@
 
 #include "common/NonCopyable.h"
 #include "common/Types.h"
+#include <QString>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -100,6 +101,10 @@ public:
     int resolveKeyBinding(const std::string& keySequence) const;
     std::vector<int> getAllCommandIds() const;
 
+    // Shortcut read/write — uses command name as lookup key
+    QString getShortcut(const QString& name) const;
+    void setShortcut(const QString& name, const QString& shortcut);
+
 private:
     struct CommandInfo {
         std::string name;
@@ -108,4 +113,5 @@ private:
     std::unordered_map<int, CommandInfo> _commands;
     std::unordered_map<std::string, int> _nameToId;
     std::unordered_map<std::string, int> _keyBindings;
+    std::unordered_map<std::string, QString> _shortcuts;  // name → shortcut string
 };
