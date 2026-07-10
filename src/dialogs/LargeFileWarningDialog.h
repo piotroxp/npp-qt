@@ -29,6 +29,9 @@ public:
     static OpenMode prompt(const QString& filePath, qint64 fileSize, QWidget* parent);
 
 private slots:
+    void onOpenNormally();
+    void onOpenReadOnly();
+    void onCancel();
     void onOpenChunked();
 
 private:

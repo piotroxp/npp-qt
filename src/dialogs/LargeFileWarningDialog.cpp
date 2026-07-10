@@ -133,3 +133,19 @@ void LargeFileWarningDialog::onOpenChunked() {
     _selectedMode = OpenMode::Chunked;
     accept();
 }
+
+
+void LargeFileWarningDialog::onOpenNormally() {
+    _selectedMode = OpenMode::Normal;
+    accept();
+}
+
+void LargeFileWarningDialog::onOpenReadOnly() {
+    _selectedMode = OpenMode::ReadOnly;
+    accept();
+}
+
+void LargeFileWarningDialog::onCancel() {
+    _selectedMode = OpenMode::Cancel;
+    reject();
+}
