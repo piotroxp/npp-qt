@@ -100,7 +100,7 @@ TEST(test_utf8_valid_utf8_chars) {
     ASSERT_TRUE(valid);
 }
 
-TEST(test_utf8_valid_multibyte) {
+TEST(test_utf8_euro_sign_byte_sequence) {
     std::string data = "\xE2\x82\xAC100";  // Euro sign
 
     EncodingDetector detector;

@@ -18,7 +18,8 @@
 | 7 | File I/O: UTF-16 + Encoding + EOL | wave-7 | ✅ complete | UTF-16 BOM decode/encode, encoding detection, EOL conversion, wired into openFile pipeline |
 | 8 | Syntax Highlighting + Theme Integration | wave-8 | ✅ complete | LangType→QsciLexer (18 langs), ThemeManager singleton, dark mode toggle (4b66e3e) |
 | 9 | Auto-Save, Session, Macros, Clipboard, Column | wave-9 | ✅ complete | auto-save timer, SessionManager JSON, MacroManager, clipboard history, column mode (56c9bbf) |
-| 10 | Final Verification + README + Tag | wave-10 | ✅ complete | Win32 sweep (0 remnants), README rewritten, binary clean (88d4c4c) |
+| 10 | Final Verification + README + Tag | wave-10 | ✅ complete |
+| 11 | Keyword Lists + Charset Conversion + Encoding Test | wave-11 | ✅ complete (cee8214) | Win32 sweep (0 remnants), README rewritten, binary clean (88d4c4c) |
 
 ### After Each Wave
 1. Build: `cd /home/node/.openclaw/workspace-employee-hart/npp-qt && cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build`
