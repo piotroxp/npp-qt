@@ -158,7 +158,17 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 )
 
 # Installation
-install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
+include(GNUInstallDirs)
+
+install(TARGETS ${PROJECT_NAME}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+install(DIRECTORY themes/
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/notepad--qt/themes
+        OPTIONAL)
+
+install(FILES README.md
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/notepad--qt)
 
 # Testing
 enable_testing()

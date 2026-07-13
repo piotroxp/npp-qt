@@ -380,8 +380,9 @@ cmake --build build -j$(nproc) 2>&1 | grep -E "error:|FAILED"
 
 ---
 
-## Wave 15 — CI + Release
+## Wave 15 — CI + Release ✅
 **Goal:** GitHub Actions CI, install target, release.
+**Status:** ✅ COMPLETE — commit `TBD`
 
 ### Agent tasks
 
