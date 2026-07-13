@@ -13,7 +13,7 @@
 | 2 | Status Bar + Cursor/Encoding | agent-wave2 | pending | live display |
 | 3 | Tab Bar + Multi-Document | agent-wave3 | pending | per-tab EditorView |
 | 4 | Find/Replace Dialog | agent-wave4 | pending | real search |
-| 5 | Menu Bar Language Actions | agent-wave5 | pending | wired language menu |
+| 5 | Menu Bar Language Actions | agent-wave5 | ✅ complete | menu routing + StatusBar wiring (eb64aab) |
 | 6 | Encoding Pantry + EOL | agent-wave6 | pending | Buffer.cpp UTF-16 + backups |
 | 7 | Keyboard Shortcuts + Edit | agent-wave7 | pending | all edit menu actions |
 | 8 | Advanced Editor Features | agent-wave8 | pending | bracket match, auto-indent, etc |
@@ -77,7 +77,7 @@
 **2026-07-13T14:42 UTC — WAVE DEPLOY (waves 5-10 running)**
 
 **Agent sessions running:**
-- wave-5 (e4de0717): Menu routing + StatusBar finalization → menuCommand dispatcher + StatusBar wiring
+- wave-5 (e4de0717): ✅ DONE — commit eb64aab
 - wave-6 (eeee05e0): Editor-tab integration → each tab owns Buffer+ScintillaEditor, lifecycle, context menu
 - wave-7 (9e0c8a90): File I/O UTF-16 + encoding + EOL → BOM, detect, convert, wire
 - wave-8 (56b8323c): Syntax highlighting + theme → LangType→QsciLexer map, ThemeManager, dark mode
