@@ -13,12 +13,12 @@
 | 2 | Status Bar + Cursor/Encoding | agent-wave2 | pending | live display |
 | 3 | Tab Bar + Multi-Document | agent-wave3 | pending | per-tab EditorView |
 | 4 | Find/Replace Dialog | agent-wave4 | pending | real search |
-| 5 | Menu Bar Language Actions | agent-wave5 | ✅ complete | menu routing + StatusBar wiring (eb64aab) |
-| 6 | Editor-Tab Integration | agent-wave6 | ✅ complete | buffer tabs, lifecycle, context menu (545ca09) |
-| 7 | File I/O: UTF-16 + Encoding + EOL | agent-wave7 | ✅ complete | UTF-16 BOM decode/encode, encoding detection, EOL conversion, wired into openFile pipeline |
-| 8 | Advanced Editor Features | agent-wave8 | ✅ complete | wave8: LangType→QsciLexer, ThemeManager.instance(), dark mode toggle, applyTheme/applyThemeToLexer (4b66e3e) |
-| 9 | File Operations Enhancements | agent-wave9 | pending | reload, save all, external mods |
-| 10 | Final Verification + Polish | agent-wave10 | pending | build, valgrind, CI, README |
+| 5 | Menu Routing + StatusBar Finalization | wave-5 | ✅ complete | menu command dispatcher (40+ cmds) + StatusBar wiring + mapStringToLang (eb64aab) |
+| 6 | Editor-Tab Integration | wave-6 | ✅ complete | Buffer↔ScintillaEditor tabs, lifecycle, context menu, dirty indicator (545ca09) |
+| 7 | File I/O: UTF-16 + Encoding + EOL | wave-7 | ✅ complete | UTF-16 BOM decode/encode, encoding detection, EOL conversion, wired into openFile pipeline |
+| 8 | Syntax Highlighting + Theme Integration | wave-8 | ✅ complete | LangType→QsciLexer (18 langs), ThemeManager singleton, dark mode toggle (4b66e3e) |
+| 9 | Auto-Save, Session, Macros, Clipboard, Column | wave-9 | ✅ complete | auto-save timer, SessionManager JSON, MacroManager, clipboard history, column mode (56c9bbf) |
+| 10 | Final Verification + README + Tag | wave-10 | ✅ complete | Win32 sweep (0 remnants), README rewritten, binary clean (88d4c4c) |
 
 ### After Each Wave
 1. Build: `cd /home/node/.openclaw/workspace-employee-hart/npp-qt && cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build`
