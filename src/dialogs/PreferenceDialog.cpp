@@ -5,6 +5,7 @@
 #include "PreferenceDialog.h"
 #include "ShortcutMapperDialog.h"
 #include "core/Application.h"
+#include "ui/MainWindow.h"
 #include <QVBoxLayout>
 #include <QMenuBar>
 #include <QToolBar>
