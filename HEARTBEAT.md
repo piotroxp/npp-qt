@@ -15,7 +15,7 @@
 | 4 | Find/Replace Dialog | agent-wave4 | pending | real search |
 | 5 | Menu Bar Language Actions | agent-wave5 | ✅ complete | menu routing + StatusBar wiring (eb64aab) |
 | 6 | Encoding Pantry + EOL | agent-wave6 | pending | Buffer.cpp UTF-16 + backups |
-| 7 | Keyboard Shortcuts + Edit | agent-wave7 | pending | all edit menu actions |
+| 7 | File I/O: UTF-16 + Encoding + EOL | agent-wave7 | ✅ complete | UTF-16 BOM decode/encode, encoding detection, EOL conversion, wired into openFile pipeline |
 | 8 | Advanced Editor Features | agent-wave8 | ✅ complete | wave8: LangType→QsciLexer, ThemeManager.instance(), dark mode toggle, applyTheme/applyThemeToLexer (4b66e3e) |
 | 9 | File Operations Enhancements | agent-wave9 | pending | reload, save all, external mods |
 | 10 | Final Verification + Polish | agent-wave10 | pending | build, valgrind, CI, README |
@@ -81,7 +81,7 @@
 - wave-6 (eeee05e0): Editor-tab integration → each tab owns Buffer+ScintillaEditor, lifecycle, context menu
 - wave-7 (9e0c8a90): File I/O UTF-16 + encoding + EOL → BOM, detect, convert, wire
 - wave-8 (56b8323c): ✅ DONE — commit 4b66e3e — Syntax highlighting + theme → LangType→QsciLexer map, ThemeManager.instance(), dark mode, applyTheme+applyThemeToLexer wired
-- wave-9 (4dc0c968): Auto-save, SessionManager JSON, MacroManager, clipboard history, column mode
+- wave-9 (4dc0c968): ✅ DONE — auto-save timer, macro commands (record/stop/playback), clipboard history, column selection mode wired into onMenuCommand (aa1b79bd)
 
 **To deploy when slots free:**
 - wave-10: Final build verification, Win32 sweep, README rewrite, ctest, tag v0.1.0-semantic-lift
