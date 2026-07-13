@@ -1,0 +1,42 @@
+CMakeFiles/npp-qt.dir/src/uchardet/nsUniversalDetector.cpp.o: \
+ /home/node/.openclaw/workspace/src/uchardet/nsUniversalDetector.cpp \
+ /usr/include/stdc-predef.h \
+ /home/node/.openclaw/workspace/src/uchardet/nscore.h \
+ /usr/include/c++/13/cstdint \
+ /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
+ /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
+ /usr/include/features.h /usr/include/features-time64.h \
+ /usr/include/x86_64-linux-gnu/bits/wordsize.h \
+ /usr/include/x86_64-linux-gnu/bits/timesize.h \
+ /usr/include/x86_64-linux-gnu/sys/cdefs.h \
+ /usr/include/x86_64-linux-gnu/bits/long-double.h \
+ /usr/include/x86_64-linux-gnu/gnu/stubs.h \
+ /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
+ /usr/include/x86_64-linux-gnu/c++/13/bits/cpu_defines.h \
+ /usr/include/c++/13/pstl/pstl_config.h \
+ /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h /usr/include/stdint.h \
+ /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
+ /usr/include/x86_64-linux-gnu/bits/types.h \
+ /usr/include/x86_64-linux-gnu/bits/typesizes.h \
+ /usr/include/x86_64-linux-gnu/bits/time64.h \
+ /usr/include/x86_64-linux-gnu/bits/wchar.h \
+ /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
+ /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+ /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsUniversalDetector.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsMBCSGroupProber.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsSJISProber.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsCharSetProber.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsCodingStateMachine.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsPkgInt.h \
+ /home/node/.openclaw/workspace/src/uchardet/JpCntx.h \
+ /home/node/.openclaw/workspace/src/uchardet/CharDistribution.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsUTF8Prober.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsEUCJPProber.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsGB2312Prober.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsEUCKRProber.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsBig5Prober.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsEUCTWProber.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsSBCSGroupProber.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsEscCharsetProber.h \
+ /home/node/.openclaw/workspace/src/uchardet/nsLatin1Prober.h

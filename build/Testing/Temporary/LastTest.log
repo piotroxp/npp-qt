@@ -1,0 +1,325 @@
+Start testing: Jul 03 21:09 UTC
+----------------------------------------------------------
+1/7 Testing: npp-test-utf8_16
+1/7 Test: npp-test-utf8_16
+Command: "/home/node/.openclaw/workspace/build/tests/npp-test-utf8_16"
+Directory: /home/node/.openclaw/workspace/build/tests
+"npp-test-utf8_16" start time: Jul 03 21:09 UTC
+Output:
+----------------------------------------------------------
+********* Start testing of TestUtf8_16 *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+PASS   : TestUtf8_16::initTestCase()
+PASS   : TestUtf8_16::test_bomConstants()
+PASS   : TestUtf8_16::test_determineEncodingFromBOM(utf8_bom)
+PASS   : TestUtf8_16::test_determineEncodingFromBOM(utf16be_bom)
+PASS   : TestUtf8_16::test_determineEncodingFromBOM(utf16le_bom)
+PASS   : TestUtf8_16::test_determineEncodingFromBOM(no_bom)
+PASS   : TestUtf8_16::test_determineEncodingFromBOM(too_short)
+PASS   : TestUtf8_16::test_determineEncodingFromBOM(partial_utf16le)
+PASS   : TestUtf8_16::test_utf16Iter_asciiOnly()
+PASS   : TestUtf8_16::test_utf16Iter_twoByteChars()
+PASS   : TestUtf8_16::test_utf16Iter_surrogatePairs()
+PASS   : TestUtf8_16::test_utf16Iter_leVsBe()
+PASS   : TestUtf8_16::test_utf16Iter_reset()
+DBG toStart: m_code=0x00041 m_leadingByte=0 (high_surr=(m_code>>10)&0x3FF=0x0, 0xD800|that=0xD800)
+DBG pushout: c=0x0041
+DBG toStart: m_code=0x00042 m_leadingByte=0 (high_surr=(m_code>>10)&0x3FF=0x0, 0xD800|that=0xD800)
+DBG pushout: c=0x0042
+PASS   : TestUtf8_16::test_utf8Iter_asciiOnly()
+DBG toStart: m_code=0x000E9 m_leadingByte=0 (high_surr=(m_code>>10)&0x3FF=0x0, 0xD800|that=0xD800)
+DBG pushout: c=0x00E9
+DBG toStart: m_code=0x00041 m_leadingByte=0 (high_surr=(m_code>>10)&0x3FF=0x0, 0xD800|that=0xD800)
+DBG pushout: c=0x0041
+PASS   : TestUtf8_16::test_utf8Iter_twoByteChars()
+DBG toStart: m_code=0x020AC m_leadingByte=0 (high_surr=(m_code>>10)&0x3FF=0x8, 0xD800|that=0xD808)
+DBG pushout: c=0x20AC
+DBG toStart: m_code=0x00045 m_leadingByte=0 (high_surr=(m_code>>10)&0x3FF=0x0, 0xD800|that=0xD800)
+DBG pushout: c=0x0045
+PASS   : TestUtf8_16::test_utf8Iter_threeByteChars()
+DBG toStart: m_code=0x1F600 m_leadingByte=0 (high_surr=(m_code>>10)&0x3FF=0x7D, 0xD800|that=0xD87D)
+DBG pushout: c=0xD83D
+DBG pushout: c=0xDE00
+DBG toStart: m_code=0x00058 m_leadingByte=0 (high_surr=(m_code>>10)&0x3FF=0x0, 0xD800|that=0xD800)
+DBG pushout: c=0x0058
+QDEBUG : TestUtf8_16::test_utf8Iter_fourByteSurrogates() Result bytes: "f09f988058" size: 3
+QDEBUG : TestUtf8_16::test_utf8Iter_fourByteSurrogates() Expected bytes: "f09f988058" size: 3
+QDEBUG : TestUtf8_16::test_utf8Iter_fourByteSurrogates() result[ 0 ] = "d83d"
+QDEBUG : TestUtf8_16::test_utf8Iter_fourByteSurrogates() result[ 1 ] = "de00"
+QDEBUG : TestUtf8_16::test_utf8Iter_fourByteSurrogates() result[ 2 ] = "58"
+QDEBUG : TestUtf8_16::test_utf8Iter_fourByteSurrogates() expected[ 0 ] = "d83d"
+QDEBUG : TestUtf8_16::test_utf8Iter_fourByteSurrogates() expected[ 1 ] = "de00"
+QDEBUG : TestUtf8_16::test_utf8Iter_fourByteSurrogates() expected[ 2 ] = "58"
+PASS   : TestUtf8_16::test_utf8Iter_fourByteSurrogates()
+DBG toStart: m_code=0x00041 m_leadingByte=0 (high_surr=(m_code>>10)&0x3FF=0x0, 0xD800|that=0xD800)
+DBG pushout: c=0x0041
+DBG toStart: m_code=0x00041 m_leadingByte=0 (high_surr=(m_code>>10)&0x3FF=0x0, 0xD800|that=0xD800)
+DBG pushout: c=0x0041
+DBG toStart: m_code=0x00042 m_leadingByte=0 (high_surr=(m_code>>10)&0x3FF=0x0, 0xD800|that=0xD800)
+DBG pushout: c=0x0042
+PASS   : TestUtf8_16::test_utf8Iter_reset()
+PASS   : TestUtf8_16::test_readPassthrough()
+PASS   : TestUtf8_16::test_readUtf8BomSkip()
+PASS   : TestUtf8_16::test_readUtf16LeBom()
+PASS   : TestUtf8_16::test_readUtf16BeBom()
+PASS   : TestUtf8_16::test_readUtf16LeNoBom()
+PASS   : TestUtf8_16::test_readUtf16BeNoBom()
+PASS   : TestUtf8_16::test_readUtf8NoBomDetection()
+PASS   : TestUtf8_16::test_read7Bit()
+PASS   : TestUtf8_16::test_read8Bit()
+PASS   : TestUtf8_16::test_readEmpty()
+PASS   : TestUtf8_16::test_isLikelyUtf16Le(le_like)
+PASS   : TestUtf8_16::test_isLikelyUtf16Le(ascii_normal)
+PASS   : TestUtf8_16::test_isLikelyUtf16Le(too_short)
+PASS   : TestUtf8_16::test_isLikelyUtf16Le(odd_length)
+PASS   : TestUtf8_16::test_isLikelyUtf16Be(be_like)
+PASS   : TestUtf8_16::test_isLikelyUtf16Be(ascii_normal)
+PASS   : TestUtf8_16::test_isLikelyUtf16Be(too_short)
+PASS   : TestUtf8_16::test_singleByte()
+PASS   : TestUtf8_16::test_veryLongAscii()
+PASS   : TestUtf8_16::cleanupTestCase()
+Totals: 38 passed, 0 failed, 0 skipped, 0 blacklisted, 1ms
+********* Finished testing of TestUtf8_16 *********
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"npp-test-utf8_16" end time: Jul 03 21:09 UTC
+"npp-test-utf8_16" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/7 Testing: npp-test-dirwatch
+2/7 Test: npp-test-dirwatch
+Command: "/home/node/.openclaw/workspace/build/tests/npp-test-dirwatch"
+Directory: /home/node/.openclaw/workspace/build/tests
+"npp-test-dirwatch" start time: Jul 03 21:09 UTC
+Output:
+----------------------------------------------------------
+********* Start testing of TestDirectoryWatcher *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+PASS   : TestDirectoryWatcher::initTestCase()
+PASS   : TestDirectoryWatcher::test_fileActionConstants()
+PASS   : TestDirectoryWatcher::test_pendingCount_empty()
+PASS   : TestDirectoryWatcher::test_push_thenPendingCount()
+PASS   : TestDirectoryWatcher::test_pushPop_single()
+PASS   : TestDirectoryWatcher::test_pushPop_multiple()
+PASS   : TestDirectoryWatcher::test_pushPop_ordering()
+PASS   : TestDirectoryWatcher::test_pop_empty_returnsFalse()
+PASS   : TestDirectoryWatcher::test_pop_emptyZeroWait_returnsFalse()
+PASS   : TestDirectoryWatcher::test_popWithWait_returnsFalseWhenEmpty()
+PASS   : TestDirectoryWatcher::test_pendingCount_afterPop()
+PASS   : TestDirectoryWatcher::test_pushPop_mixedActions()
+PASS   : TestDirectoryWatcher::test_pop_returnsCorrectAction()
+PASS   : TestDirectoryWatcher::test_pop_returnsCorrectFileName()
+PASS   : TestDirectoryWatcher::test_pop_returnsUtf8FileName()
+PASS   : TestDirectoryWatcher::cleanupTestCase()
+Totals: 16 passed, 0 failed, 0 skipped, 0 blacklisted, 51ms
+********* Finished testing of TestDirectoryWatcher *********
+<end of output>
+Test time =   0.05 sec
+----------------------------------------------------------
+Test Passed.
+"npp-test-dirwatch" end time: Jul 03 21:09 UTC
+"npp-test-dirwatch" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/7 Testing: npp-test-darkmode
+3/7 Test: npp-test-darkmode
+Command: "/home/node/.openclaw/workspace/build/tests/npp-test-darkmode"
+Directory: /home/node/.openclaw/workspace/build/tests
+"npp-test-darkmode" start time: Jul 03 21:09 UTC
+Output:
+----------------------------------------------------------
+********* Start testing of TestNppDarkMode *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+PASS   : TestNppDarkMode::initTestCase()
+PASS   : TestNppDarkMode::test_singletonNotNull()
+PASS   : TestNppDarkMode::test_singletonSameInstance()
+PASS   : TestNppDarkMode::test_hexRgb_basic()
+PASS   : TestNppDarkMode::test_hexRgb_roundtrip()
+PASS   : TestNppDarkMode::test_hexRgb_borderColors()
+PASS   : TestNppDarkMode::test_defaultColorsBlackTone()
+PASS   : TestNppDarkMode::test_defaultColorsRedTone()
+PASS   : TestNppDarkMode::test_defaultColorsBlueTone()
+PASS   : TestNppDarkMode::test_defaultColorsGreenTone()
+PASS   : TestNppDarkMode::test_defaultColorsPurpleTone()
+PASS   : TestNppDarkMode::test_defaultColorsCyanTone()
+PASS   : TestNppDarkMode::test_defaultColorsOliveTone()
+PASS   : TestNppDarkMode::test_defaultDisabled()
+PASS   : TestNppDarkMode::test_enableDisable()
+PASS   : TestNppDarkMode::test_enableEmitsSignal()
+PASS   : TestNppDarkMode::test_colorGetters()
+PASS   : TestNppDarkMode::test_colorSetters()
+PASS   : TestNppDarkMode::test_setColorEmitsSignal()
+PASS   : TestNppDarkMode::test_brushesAreBuilt()
+PASS   : TestNppDarkMode::test_brushesCaching()
+PASS   : TestNppDarkMode::test_brushesAfterColorChange()
+PASS   : TestNppDarkMode::test_pensAreBuilt()
+PASS   : TestNppDarkMode::test_pensCaching()
+PASS   : TestNppDarkMode::test_paletteWhenDisabledIsEmpty()
+PASS   : TestNppDarkMode::test_paletteWhenEnabled()
+PASS   : TestNppDarkMode::test_setToneBlack()
+PASS   : TestNppDarkMode::test_setToneEmitsColorsChanged()
+PASS   : TestNppDarkMode::test_calculateTreeViewStyle(very_dark)
+PASS   : TestNppDarkMode::test_calculateTreeViewStyle(mid_dark)
+PASS   : TestNppDarkMode::test_calculateTreeViewStyle(mid_light)
+PASS   : TestNppDarkMode::test_calculateTreeViewStyle(very_light)
+PASS   : TestNppDarkMode::test_calculateTreeViewStyle(medium_gray)
+PASS   : TestNppDarkMode::test_perceivedLightness_white()
+PASS   : TestNppDarkMode::test_perceivedLightness_black()
+PASS   : TestNppDarkMode::test_perceivedLightness_midGray()
+PASS   : TestNppDarkMode::test_perceivedLightness_blue()
+PASS   : TestNppDarkMode::test_kDarkColorsConstants()
+PASS   : TestNppDarkMode::test_kDarkColorsValues()
+PASS   : TestNppDarkMode::cleanupTestCase()
+Totals: 40 passed, 0 failed, 0 skipped, 0 blacklisted, 1ms
+********* Finished testing of TestNppDarkMode *********
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"npp-test-darkmode" end time: Jul 03 21:09 UTC
+"npp-test-darkmode" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/7 Testing: npp-test-colour
+4/7 Test: npp-test-colour
+Command: "/home/node/.openclaw/workspace/build/tests/npp-test-colour"
+Directory: /home/node/.openclaw/workspace/build/tests
+"npp-test-colour" start time: Jul 03 21:09 UTC
+Output:
+----------------------------------------------------------
+********* Start testing of TestColourPicker *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+PASS   : TestColourPicker::initTestCase()
+PASS   : TestColourPicker::test_colourItemsData_count()
+PASS   : TestColourPicker::test_colourItemsData_ranges()
+PASS   : TestColourPicker::test_colourItemsData_noDuplicates()
+PASS   : TestColourPicker::test_colourItemsData_includesWhiteBlack()
+PASS   : TestColourPicker::test_colourItemsData_includesAccentColors()
+PASS   : TestColourPicker::test_colourPopup_constructs()
+PASS   : TestColourPicker::test_colourPopup_selectedColorInitially()
+PASS   : TestColourPicker::test_colourPopup_selectedColorAfterSet()
+PASS   : TestColourPicker::cleanupTestCase()
+Totals: 10 passed, 0 failed, 0 skipped, 0 blacklisted, 7ms
+********* Finished testing of TestColourPicker *********
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"npp-test-colour" end time: Jul 03 21:09 UTC
+"npp-test-colour" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/7 Testing: npp-test-lesdlgs
+5/7 Test: npp-test-lesdlgs
+Command: "/home/node/.openclaw/workspace/build/tests/npp-test-lesdlgs"
+Directory: /home/node/.openclaw/workspace/build/tests
+"npp-test-lesdlgs" start time: Jul 03 21:09 UTC
+Output:
+----------------------------------------------------------
+********* Start testing of TestLesDlgs *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+PASS   : TestLesDlgs::initTestCase()
+PASS   : TestLesDlgs::test_buttonStatus_nada()
+PASS   : TestLesDlgs::test_buttonStatus_flags()
+PASS   : TestLesDlgs::test_buttonStatus_combinations()
+PASS   : TestLesDlgs::test_buttonStatus_exclusiveVsCumulative()
+PASS   : TestLesDlgs::test_buttonDlg_defaultStatus()
+PASS   : TestLesDlgs::test_buttonDlg_setGetStatus()
+PASS   : TestLesDlgs::test_buttonDlg_isCreated()
+PASS   : TestLesDlgs::cleanupTestCase()
+Totals: 9 passed, 0 failed, 0 skipped, 0 blacklisted, 0ms
+********* Finished testing of TestLesDlgs *********
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"npp-test-lesdlgs" end time: Jul 03 21:09 UTC
+"npp-test-lesdlgs" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/7 Testing: npp-test-filedlg
+6/7 Test: npp-test-filedlg
+Command: "/home/node/.openclaw/workspace/build/tests/npp-test-filedlg"
+Directory: /home/node/.openclaw/workspace/build/tests
+"npp-test-filedlg" start time: Jul 03 21:09 UTC
+Output:
+----------------------------------------------------------
+********* Start testing of TestCustomFileDialog *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+PASS   : TestCustomFileDialog::initTestCase()
+PASS   : TestCustomFileDialog::test_setTitleGetTitle()
+PASS   : TestCustomFileDialog::test_setExtFilter_accumulates()
+PASS   : TestCustomFileDialog::test_setExtFilter_wildcardIndex()
+PASS   : TestCustomFileDialog::test_setDefExt_getDefExt()
+PASS   : TestCustomFileDialog::test_setDefFileName_noExt()
+PASS   : TestCustomFileDialog::test_setDefFileName_withExt()
+PASS   : TestCustomFileDialog::test_setFolder()
+PASS   : TestCustomFileDialog::test_setCheckbox()
+PASS   : TestCustomFileDialog::test_enableFileTypeCheckbox()
+PASS   : TestCustomFileDialog::test_setSaveAsCopy()
+PASS   : TestCustomFileDialog::test_getFileTypeCheckboxValue()
+PASS   : TestCustomFileDialog::test_getCheckboxState()
+PASS   : TestCustomFileDialog::test_resolveInitialFolder_initialFolderWins()
+PASS   : TestCustomFileDialog::cleanupTestCase()
+Totals: 15 passed, 0 failed, 0 skipped, 0 blacklisted, 1ms
+********* Finished testing of TestCustomFileDialog *********
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"npp-test-filedlg" end time: Jul 03 21:09 UTC
+"npp-test-filedlg" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/7 Testing: npp-test-iconset
+7/7 Test: npp-test-iconset
+Command: "/home/node/.openclaw/workspace/build/tests/npp-test-iconset"
+Directory: /home/node/.openclaw/workspace/build/tests
+"npp-test-iconset" start time: Jul 03 21:09 UTC
+Output:
+----------------------------------------------------------
+********* Start testing of TestImageListSet *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+PASS   : TestImageListSet::initTestCase()
+PASS   : TestImageListSet::test_iconList_initClearsIcons()
+PASS   : TestImageListSet::test_iconList_initSetsSize()
+PASS   : TestImageListSet::test_iconList_defaultSize()
+PASS   : TestImageListSet::test_iconList_sizeAfterInit()
+PASS   : TestImageListSet::test_addIcon_incrementsSize()
+PASS   : TestImageListSet::test_addIcon_nullIconSkipped()
+PASS   : TestImageListSet::test_addIcon_iconAtIndex()
+PASS   : TestImageListSet::test_addIcon_replaceIncrementsSize()
+PASS   : TestImageListSet::test_replaceIcon_validIndex()
+PASS   : TestImageListSet::test_replaceIcon_invalidIndex()
+PASS   : TestImageListSet::test_replaceIcon_emptyPath()
+PASS   : TestImageListSet::test_removeAll_sizeZero()
+PASS   : TestImageListSet::test_removeAll_canReAdd()
+PASS   : TestImageListSet::test_toolbarColorConstants()
+PASS   : TestImageListSet::test_toolbarColorConstants_notZero()
+PASS   : TestImageListSet::test_toolbarColorConstants_reasonableRange()
+PASS   : TestImageListSet::test_invertLightness_black()
+PASS   : TestImageListSet::test_invertLightness_white()
+PASS   : TestImageListSet::test_invertLightness_gray()
+PASS   : TestImageListSet::test_invertLightness_colourPreservesAlpha()
+PASS   : TestImageListSet::test_invertLightness_invertIsIdempotent()
+PASS   : TestImageListSet::test_fluentColorMap_enumValues()
+PASS   : TestImageListSet::test_fluentColorMap_accentVsCustom()
+PASS   : TestImageListSet::test_fluentColorMap_allEnumValues()
+PASS   : TestImageListSet::test_toolBarIcons_createSize()
+PASS   : TestImageListSet::test_toolBarIcons_allListsExist()
+PASS   : TestImageListSet::test_toolBarIcons_reInitClears()
+PASS   : TestImageListSet::test_toolBarIcons_destroyClearsAll()
+PASS   : TestImageListSet::cleanupTestCase()
+Totals: 30 passed, 0 failed, 0 skipped, 0 blacklisted, 0ms
+********* Finished testing of TestImageListSet *********
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"npp-test-iconset" end time: Jul 03 21:09 UTC
+"npp-test-iconset" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Jul 03 21:09 UTC

@@ -1,0 +1,176 @@
+/****************************************************************************
+** Meta object code from reading C++ file 'TestLesDlgs.cpp'
+**
+** Created by: The Qt Meta Object Compiler version 68 (Qt 6.4.2)
+**
+** WARNING! All changes made in this file will be lost!
+*****************************************************************************/
+
+#include <memory>
+#include <QtCore/qmetatype.h>
+#if !defined(Q_MOC_OUTPUT_REVISION)
+#error "The header file 'TestLesDlgs.cpp' doesn't include <QObject>."
+#elif Q_MOC_OUTPUT_REVISION != 68
+#error "This file was generated using the moc from 6.4.2. It"
+#error "cannot be used with the include files from this version of Qt."
+#error "(The moc has changed too much.)"
+#endif
+
+#ifndef Q_CONSTINIT
+#define Q_CONSTINIT
+#endif
+
+QT_BEGIN_MOC_NAMESPACE
+QT_WARNING_PUSH
+QT_WARNING_DISABLE_DEPRECATED
+namespace {
+struct qt_meta_stringdata_TestLesDlgs_t {
+    uint offsetsAndSizes[18];
+    char stringdata0[12];
+    char stringdata1[23];
+    char stringdata2[1];
+    char stringdata3[24];
+    char stringdata4[31];
+    char stringdata5[40];
+    char stringdata6[29];
+    char stringdata7[28];
+    char stringdata8[25];
+};
+#define QT_MOC_LITERAL(ofs, len) \
+    uint(sizeof(qt_meta_stringdata_TestLesDlgs_t::offsetsAndSizes) + ofs), len 
+Q_CONSTINIT static const qt_meta_stringdata_TestLesDlgs_t qt_meta_stringdata_TestLesDlgs = {
+    {
+        QT_MOC_LITERAL(0, 11),  // "TestLesDlgs"
+        QT_MOC_LITERAL(12, 22),  // "test_buttonStatus_nada"
+        QT_MOC_LITERAL(35, 0),  // ""
+        QT_MOC_LITERAL(36, 23),  // "test_buttonStatus_flags"
+        QT_MOC_LITERAL(60, 30),  // "test_buttonStatus_combinations"
+        QT_MOC_LITERAL(91, 39),  // "test_buttonStatus_exclusiveVs..."
+        QT_MOC_LITERAL(131, 28),  // "test_buttonDlg_defaultStatus"
+        QT_MOC_LITERAL(160, 27),  // "test_buttonDlg_setGetStatus"
+        QT_MOC_LITERAL(188, 24)   // "test_buttonDlg_isCreated"
+    },
+    "TestLesDlgs",
+    "test_buttonStatus_nada",
+    "",
+    "test_buttonStatus_flags",
+    "test_buttonStatus_combinations",
+    "test_buttonStatus_exclusiveVsCumulative",
+    "test_buttonDlg_defaultStatus",
+    "test_buttonDlg_setGetStatus",
+    "test_buttonDlg_isCreated"
+};
+#undef QT_MOC_LITERAL
+} // unnamed namespace
+
+Q_CONSTINIT static const uint qt_meta_data_TestLesDlgs[] = {
+
+ // content:
+      10,       // revision
+       0,       // classname
+       0,    0, // classinfo
+       7,   14, // methods
+       0,    0, // properties
+       0,    0, // enums/sets
+       0,    0, // constructors
+       0,       // flags
+       0,       // signalCount
+
+ // slots: name, argc, parameters, tag, flags, initial metatype offsets
+       1,    0,   56,    2, 0x08,    1 /* Private */,
+       3,    0,   57,    2, 0x08,    2 /* Private */,
+       4,    0,   58,    2, 0x08,    3 /* Private */,
+       5,    0,   59,    2, 0x08,    4 /* Private */,
+       6,    0,   60,    2, 0x08,    5 /* Private */,
+       7,    0,   61,    2, 0x08,    6 /* Private */,
+       8,    0,   62,    2, 0x08,    7 /* Private */,
+
+ // slots: parameters
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+
+       0        // eod
+};
+
+Q_CONSTINIT const QMetaObject TestLesDlgs::staticMetaObject = { {
+    QMetaObject::SuperData::link<QObject::staticMetaObject>(),
+    qt_meta_stringdata_TestLesDlgs.offsetsAndSizes,
+    qt_meta_data_TestLesDlgs,
+    qt_static_metacall,
+    nullptr,
+    qt_incomplete_metaTypeArray<qt_meta_stringdata_TestLesDlgs_t,
+        // Q_OBJECT / Q_GADGET
+        QtPrivate::TypeAndForceComplete<TestLesDlgs, std::true_type>,
+        // method 'test_buttonStatus_nada'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_buttonStatus_flags'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_buttonStatus_combinations'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_buttonStatus_exclusiveVsCumulative'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_buttonDlg_defaultStatus'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_buttonDlg_setGetStatus'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_buttonDlg_isCreated'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>
+    >,
+    nullptr
+} };
+
+void TestLesDlgs::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+{
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        auto *_t = static_cast<TestLesDlgs *>(_o);
+        (void)_t;
+        switch (_id) {
+        case 0: _t->test_buttonStatus_nada(); break;
+        case 1: _t->test_buttonStatus_flags(); break;
+        case 2: _t->test_buttonStatus_combinations(); break;
+        case 3: _t->test_buttonStatus_exclusiveVsCumulative(); break;
+        case 4: _t->test_buttonDlg_defaultStatus(); break;
+        case 5: _t->test_buttonDlg_setGetStatus(); break;
+        case 6: _t->test_buttonDlg_isCreated(); break;
+        default: ;
+        }
+    }
+    (void)_a;
+}
+
+const QMetaObject *TestLesDlgs::metaObject() const
+{
+    return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
+}
+
+void *TestLesDlgs::qt_metacast(const char *_clname)
+{
+    if (!_clname) return nullptr;
+    if (!strcmp(_clname, qt_meta_stringdata_TestLesDlgs.stringdata0))
+        return static_cast<void*>(this);
+    return QObject::qt_metacast(_clname);
+}
+
+int TestLesDlgs::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+{
+    _id = QObject::qt_metacall(_c, _id, _a);
+    if (_id < 0)
+        return _id;
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        if (_id < 7)
+            qt_static_metacall(this, _c, _id, _a);
+        _id -= 7;
+    } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
+        if (_id < 7)
+            *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
+        _id -= 7;
+    }
+    return _id;
+}
+QT_WARNING_POP
+QT_END_MOC_NAMESPACE

@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG "CMakeFiles/npp-test-utf8_16.dir/npp-test-utf8_16_autogen/mocs_compilation.cpp.o" "CMakeFiles/npp-test-utf8_16.dir/TestUtf8_16.cpp.o" -o npp-test-utf8_16  -Wl,-rpath,/usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/libQt6Test.so.6.4.2 libnpp-qt-test-lib.a /usr/lib/x86_64-linux-gnu/libQt6Xml.so.6.4.2 /usr/lib/x86_64-linux-gnu/libQt6Core.so.6.4.2 

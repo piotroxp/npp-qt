@@ -1,0 +1,24 @@
+# ninja log v7
+4	203	1782917008456763331	npp-qt_autogen/timestamp	224ecfd3fb55532
+4	203	1782917008456763331	npp-qt_autogen/mocs_compilation.cpp	224ecfd3fb55532
+4	203	1782917008456763331	/home/piotro/.openclaw/workspace/npp-qt-build/npp-qt_autogen/timestamp	224ecfd3fb55532
+4	203	1782917008456763331	/home/piotro/.openclaw/workspace/npp-qt-build/npp-qt_autogen/mocs_compilation.cpp	224ecfd3fb55532
+221	7155	1782917008487929317	CMakeFiles/npp-qt.dir/src/FunctionCallTip.cpp.o	363968f2ac2336a7
+208	7363	1782917008475955739	CMakeFiles/npp-qt.dir/src/ScintillaComponent/UserDefineDialog.cpp.o	3e15ea633d05fddf
+213	8165	1782917008479763777	CMakeFiles/npp-qt.dir/src/ScintillaCtrls.cpp.o	32cfb53a292c8a90
+224	8365	1782917008490763990	CMakeFiles/npp-qt.dir/src/GoToLineDlg.cpp.o	a978bb6b304d4073
+231	8493	1782917008498316107	CMakeFiles/npp-qt.dir/src/xmlMatchedTagsHighlighter.cpp.o	18b52d6957cf5475
+208	10516	1782917008475783964	CMakeFiles/npp-qt.dir/src/ScintillaComponent.cpp.o	fbf24bb37a50f836
+7159	12020	1782917015425898189	CMakeFiles/npp-qt.dir/src/ScintillaEditBase.cpp.o	3bf2bc7d54de86ba
+8366	12769	1782917016632921543	CMakeFiles/npp-qt.dir/src/Utf8_16.cpp.o	76f11962fdce19e3
+216	13555	1782917008482763835	CMakeFiles/npp-qt.dir/src/DocTabView.cpp.o	4b7f3d456d4ef702
+208	13587	1782917008475596729	CMakeFiles/npp-qt.dir/src/MainWindow.cpp.o	f02b01eab1d67f71
+8165	13606	1782917016431917654	CMakeFiles/npp-qt.dir/src/DarkMode/DarkMode.cpp.o	1fd6a50168858893
+7364	14108	1782917015630902155	CMakeFiles/npp-qt.dir/src/NppDarkMode.cpp.o	7f82535a85924582
+8493	14266	1782917016759924000	CMakeFiles/npp-qt.dir/src/lesDlgs.cpp.o	e13a2905d974f8d5
+218	14487	1782917008484763873	CMakeFiles/npp-qt.dir/src/AutoCompletion.cpp.o	c13f846a4ba97870
+231	14635	1782917008497764125	CMakeFiles/npp-qt.dir/src/Printer.cpp.o	4f8b7b185d821932
+226	14824	1782917008492764028	CMakeFiles/npp-qt.dir/src/columnEditor.cpp.o	6b189223dad06fb
+10516	15239	1782917018782963142	CMakeFiles/npp-qt.dir/src/RunDlg.cpp.o	999aa92c9e72f44d
+12769	16065	1782917021035006711	CMakeFiles/npp-qt.dir/src/documentSnapshot.cpp.o	ad22b5dabe78e23b
+12020	16085	1782917020285992221	CMakeFiles/npp-qt.dir/src/md5Dlgs.cpp.o	42a4e0fafe671471

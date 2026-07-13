@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <!-- Save disk -->
+  <path fill="#0078D4" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+  <polyline fill="none" stroke="#FFFFFF" stroke-width="1.5" points="17,21 17,11 7,11"/>
+  <rect fill="#FFFFFF" x="9" y="7" width="6" height="6"/>
+</svg>

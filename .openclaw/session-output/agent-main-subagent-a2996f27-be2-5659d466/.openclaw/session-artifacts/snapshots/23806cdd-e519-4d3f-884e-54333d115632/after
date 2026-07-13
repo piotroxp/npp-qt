@@ -1,0 +1,33 @@
+# 2026-07-02 — npp-qt Semantic Lift
+
+## Credentials Stored
+- **npp-qt host**: `piotro@192.168.2.128` — password: `"p"` (from explicit instruction)
+  - Used for: building/testing npp-qt binary on Arch Linux host
+  - Build path: `~/workspace/npp-qt`
+  - Binary: `~/workspace/npp-qt/build/npp-qt`
+
+## Session Open Tasks
+- [Thu 2026-07-02 21:47 UTC] Continue semantic lift of notepad-plus-plus-translation → npp-qt
+- Keep researching gaps, add findings to heartbeat, keep going until explicitly stopped
+
+## Status (from prior session context)
+- gate_status: build ✅, holography ✅ (97.1%), documentation ✅, runtime ✅, translation ✅, tests ✅ (109 subtests), units ✅
+- done: true (prior session)
+
+## REMAINING P2 Gaps (from HEARTBEAT.md)
+1. **Plugin NPP API** — PluginsManager implementation, NPPM_* messages
+2. **i18n .qm files** — Qt translation files; translations embedded in localizationString.h
+3. **Linux dark mode specifics** — palette propagation on Linux/X11/Wayland
+
+## Binary Location
+- Container: `/home/node/.openclaw/workspace/npp-qt/build/npp-qt`
+- Host: `piotro@192.168.2.128:~/workspace/npp-qt/build/npp-qt`
+
+## Key Source Paths
+- npp-qt: `/home/node/.openclaw/workspace/npp-qt/src/`
+- Translation source: `/home/node/.openclaw/workspace/notepad-plus-plus-translation/PowerEditor/src/`
+
+## Research In Progress (this session)
+- DarkMode gap: original NppDarkMode.cpp has 4542 lines, npp-qt has 764 lines (~3778 lines missing, mostly Windows-specific)
+- Linux dark mode: palette propagation already has X11/Wayland/XDG fallbacks in npp-qt
+- Plugin API: PluginInterface.h is complete; PluginsManager.cpp (492 lines) exists with QPluginLoader

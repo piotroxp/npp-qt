@@ -1,0 +1,232 @@
+/****************************************************************************
+** Meta object code from reading C++ file 'TestDirectoryWatcher.cpp'
+**
+** Created by: The Qt Meta Object Compiler version 68 (Qt 6.4.2)
+**
+** WARNING! All changes made in this file will be lost!
+*****************************************************************************/
+
+#include <memory>
+#include <QtCore/qmetatype.h>
+#if !defined(Q_MOC_OUTPUT_REVISION)
+#error "The header file 'TestDirectoryWatcher.cpp' doesn't include <QObject>."
+#elif Q_MOC_OUTPUT_REVISION != 68
+#error "This file was generated using the moc from 6.4.2. It"
+#error "cannot be used with the include files from this version of Qt."
+#error "(The moc has changed too much.)"
+#endif
+
+#ifndef Q_CONSTINIT
+#define Q_CONSTINIT
+#endif
+
+QT_BEGIN_MOC_NAMESPACE
+QT_WARNING_PUSH
+QT_WARNING_DISABLE_DEPRECATED
+namespace {
+struct qt_meta_stringdata_TestDirectoryWatcher_t {
+    uint offsetsAndSizes[32];
+    char stringdata0[21];
+    char stringdata1[25];
+    char stringdata2[1];
+    char stringdata3[24];
+    char stringdata4[27];
+    char stringdata5[20];
+    char stringdata6[22];
+    char stringdata7[22];
+    char stringdata8[28];
+    char stringdata9[36];
+    char stringdata10[39];
+    char stringdata11[27];
+    char stringdata12[26];
+    char stringdata13[30];
+    char stringdata14[32];
+    char stringdata15[29];
+};
+#define QT_MOC_LITERAL(ofs, len) \
+    uint(sizeof(qt_meta_stringdata_TestDirectoryWatcher_t::offsetsAndSizes) + ofs), len 
+Q_CONSTINIT static const qt_meta_stringdata_TestDirectoryWatcher_t qt_meta_stringdata_TestDirectoryWatcher = {
+    {
+        QT_MOC_LITERAL(0, 20),  // "TestDirectoryWatcher"
+        QT_MOC_LITERAL(21, 24),  // "test_fileActionConstants"
+        QT_MOC_LITERAL(46, 0),  // ""
+        QT_MOC_LITERAL(47, 23),  // "test_pendingCount_empty"
+        QT_MOC_LITERAL(71, 26),  // "test_push_thenPendingCount"
+        QT_MOC_LITERAL(98, 19),  // "test_pushPop_single"
+        QT_MOC_LITERAL(118, 21),  // "test_pushPop_multiple"
+        QT_MOC_LITERAL(140, 21),  // "test_pushPop_ordering"
+        QT_MOC_LITERAL(162, 27),  // "test_pop_empty_returnsFalse"
+        QT_MOC_LITERAL(190, 35),  // "test_pop_emptyZeroWait_return..."
+        QT_MOC_LITERAL(226, 38),  // "test_popWithWait_returnsFalse..."
+        QT_MOC_LITERAL(265, 26),  // "test_pendingCount_afterPop"
+        QT_MOC_LITERAL(292, 25),  // "test_pushPop_mixedActions"
+        QT_MOC_LITERAL(318, 29),  // "test_pop_returnsCorrectAction"
+        QT_MOC_LITERAL(348, 31),  // "test_pop_returnsCorrectFileName"
+        QT_MOC_LITERAL(380, 28)   // "test_pop_returnsUtf8FileName"
+    },
+    "TestDirectoryWatcher",
+    "test_fileActionConstants",
+    "",
+    "test_pendingCount_empty",
+    "test_push_thenPendingCount",
+    "test_pushPop_single",
+    "test_pushPop_multiple",
+    "test_pushPop_ordering",
+    "test_pop_empty_returnsFalse",
+    "test_pop_emptyZeroWait_returnsFalse",
+    "test_popWithWait_returnsFalseWhenEmpty",
+    "test_pendingCount_afterPop",
+    "test_pushPop_mixedActions",
+    "test_pop_returnsCorrectAction",
+    "test_pop_returnsCorrectFileName",
+    "test_pop_returnsUtf8FileName"
+};
+#undef QT_MOC_LITERAL
+} // unnamed namespace
+
+Q_CONSTINIT static const uint qt_meta_data_TestDirectoryWatcher[] = {
+
+ // content:
+      10,       // revision
+       0,       // classname
+       0,    0, // classinfo
+      14,   14, // methods
+       0,    0, // properties
+       0,    0, // enums/sets
+       0,    0, // constructors
+       0,       // flags
+       0,       // signalCount
+
+ // slots: name, argc, parameters, tag, flags, initial metatype offsets
+       1,    0,   98,    2, 0x08,    1 /* Private */,
+       3,    0,   99,    2, 0x08,    2 /* Private */,
+       4,    0,  100,    2, 0x08,    3 /* Private */,
+       5,    0,  101,    2, 0x08,    4 /* Private */,
+       6,    0,  102,    2, 0x08,    5 /* Private */,
+       7,    0,  103,    2, 0x08,    6 /* Private */,
+       8,    0,  104,    2, 0x08,    7 /* Private */,
+       9,    0,  105,    2, 0x08,    8 /* Private */,
+      10,    0,  106,    2, 0x08,    9 /* Private */,
+      11,    0,  107,    2, 0x08,   10 /* Private */,
+      12,    0,  108,    2, 0x08,   11 /* Private */,
+      13,    0,  109,    2, 0x08,   12 /* Private */,
+      14,    0,  110,    2, 0x08,   13 /* Private */,
+      15,    0,  111,    2, 0x08,   14 /* Private */,
+
+ // slots: parameters
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+
+       0        // eod
+};
+
+Q_CONSTINIT const QMetaObject TestDirectoryWatcher::staticMetaObject = { {
+    QMetaObject::SuperData::link<QObject::staticMetaObject>(),
+    qt_meta_stringdata_TestDirectoryWatcher.offsetsAndSizes,
+    qt_meta_data_TestDirectoryWatcher,
+    qt_static_metacall,
+    nullptr,
+    qt_incomplete_metaTypeArray<qt_meta_stringdata_TestDirectoryWatcher_t,
+        // Q_OBJECT / Q_GADGET
+        QtPrivate::TypeAndForceComplete<TestDirectoryWatcher, std::true_type>,
+        // method 'test_fileActionConstants'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_pendingCount_empty'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_push_thenPendingCount'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_pushPop_single'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_pushPop_multiple'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_pushPop_ordering'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_pop_empty_returnsFalse'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_pop_emptyZeroWait_returnsFalse'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_popWithWait_returnsFalseWhenEmpty'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_pendingCount_afterPop'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_pushPop_mixedActions'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_pop_returnsCorrectAction'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_pop_returnsCorrectFileName'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'test_pop_returnsUtf8FileName'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>
+    >,
+    nullptr
+} };
+
+void TestDirectoryWatcher::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+{
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        auto *_t = static_cast<TestDirectoryWatcher *>(_o);
+        (void)_t;
+        switch (_id) {
+        case 0: _t->test_fileActionConstants(); break;
+        case 1: _t->test_pendingCount_empty(); break;
+        case 2: _t->test_push_thenPendingCount(); break;
+        case 3: _t->test_pushPop_single(); break;
+        case 4: _t->test_pushPop_multiple(); break;
+        case 5: _t->test_pushPop_ordering(); break;
+        case 6: _t->test_pop_empty_returnsFalse(); break;
+        case 7: _t->test_pop_emptyZeroWait_returnsFalse(); break;
+        case 8: _t->test_popWithWait_returnsFalseWhenEmpty(); break;
+        case 9: _t->test_pendingCount_afterPop(); break;
+        case 10: _t->test_pushPop_mixedActions(); break;
+        case 11: _t->test_pop_returnsCorrectAction(); break;
+        case 12: _t->test_pop_returnsCorrectFileName(); break;
+        case 13: _t->test_pop_returnsUtf8FileName(); break;
+        default: ;
+        }
+    }
+    (void)_a;
+}
+
+const QMetaObject *TestDirectoryWatcher::metaObject() const
+{
+    return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
+}
+
+void *TestDirectoryWatcher::qt_metacast(const char *_clname)
+{
+    if (!_clname) return nullptr;
+    if (!strcmp(_clname, qt_meta_stringdata_TestDirectoryWatcher.stringdata0))
+        return static_cast<void*>(this);
+    return QObject::qt_metacast(_clname);
+}
+
+int TestDirectoryWatcher::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+{
+    _id = QObject::qt_metacall(_c, _id, _a);
+    if (_id < 0)
+        return _id;
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        if (_id < 14)
+            qt_static_metacall(this, _c, _id, _a);
+        _id -= 14;
+    } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
+        if (_id < 14)
+            *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
+        _id -= 14;
+    }
+    return _id;
+}
+QT_WARNING_POP
+QT_END_MOC_NAMESPACE

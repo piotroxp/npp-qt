@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnpp-qt-test-lib.a "CMakeFiles/npp-qt-test-lib.dir/npp-qt-test-lib_autogen/mocs_compilation.cpp.o" "CMakeFiles/npp-qt-test-lib.dir/__/src/Utf8_16.cpp.o" "CMakeFiles/npp-qt-test-lib.dir/__/src/WinControls/ReadDirectoryChanges.cpp.o" "CMakeFiles/npp-qt-test-lib.dir/__/src/WinControls/ReadDirectoryChanges/ReadDirectoryChangesPrivate.cpp.o"
+/usr/bin/ranlib libnpp-qt-test-lib.a
