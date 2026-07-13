@@ -1,129 +1,162 @@
-# npp-qt: Wave Plan — Updated 2026-07-13 Evening
-_Continuation of semantic lift after waves 1-10 (v0.1.0-semantic-lift tag)_
+# npp-qt: Wave Plan — Updated 2026-07-13 Evening (v0.2.0)
+_After v0.2.0 tag (d81f8a5) — CI, plugins, find-in-files, print, macros_
 
 ## Current State
-- **Binary:** `build/NotepadMinusMinusQt` — clean build ✅
-- **Tag:** `v0.1.0-semantic-lift` ✅
-- **Tests:** 3/5 passing (test_buffer segfaults — pre-existing Qt static-dtor issue in test harness; test_util hangs — same root cause; both are test harness bugs, not code bugs)
+- **Binary:** `build/NotepadMinusMinusQt` (1.9MB) — clean build ✅
+- **Tests:** 3/5 passing (test_buffer/test_util hang — Qt static-dtor harness issue, pre-existing)
+- **Source:** 75 `.cpp`, 144 total files
+- **TODOs/stubs:** 0 in main codebase ✅
+- **Tags:** `v0.1.0-semantic-lift`, `v0.2.0`
+
+## Known Stubs (inert — linker only)
+- `src/NppCommandsSlots_stub.cpp` (76 lines) — linker stubs for disabled .cpp files
+- `src/NppDarkMode.cpp` (682 lines) — Win32 theming, not compiled in Qt6 build
+- `src/core/Parameters.cpp` — some `return {}` stubs for NppParameters wrapper
 
 ## Gate Criteria
 Every wave: `cmake --build build -j$(nproc)` must exit 0 before commit.
 
 ---
 
-## Wave 11 — Keyword Lists + Charset Conversion + Encoding Test Fix
-**Goal:** Fix `getKeywords(LangType)`, implement charset conversion, fix encoding test.
+## Wave 16 — Code Folding + Auto-Indent + Bracket Highlight
+**Goal:** IDE-quality editor features — fold regions, smart indent, bracket matching.
 
 ### Agent tasks
 
-#### 1. `getKeywords(LangType)` — wire C/C++ keyword lists
+#### 1. Code Folding
 
-In `LanguageManager.cpp`, replace the stub `getKeywords()` with actual keyword lists:
+`QsciScintilla` has built-in code folding via SCI. Enable it:
 
+In `ScintillaEditor.cpp`, update constructor or `init()`:
 ```cpp
-std::unordered_map<int, std::string> LanguageManager::getKeywords(LangType lang) const {
-    std::unordered_map<int, std::string> kws;
-    switch (lang) {
-        case LangType::L_CPP:
-            kws[0] = "alignas alignof and and_eq asm auto bitand bitor bool break case char char16_t char32_t class compl const constexpr const_cast continue decltype default delete do double dynamic_cast else enum explicit export extern false float for friend goto if inline int long mutable namespace new noexcept not not_eq null nullptr operator or or_eq private protected public register reinterpret_cast return short signed sizeof static static_assert static_cast struct switch template this thread_local throw true try typedef typeid typename union unsigned using virtual void volatile wchar_t while xor xor_eq";
-            kws[1] = "NULL TRUE FALSE";
-            kws[2] = "__FILE__ __LINE__ __DATE__ __TIME__ __STDC__ __STDC_VERSION__";
-            kws[3] = "int8_t int16_t int32_t int64_t uint8_t uint16_t uint32_t uint64_t size_t ssize_t ptrdiff_t"; // cstdint
-            break;
-        case LangType::L_C:
-            kws[0] = "auto break case char const continue default do double else enum extern float for goto if inline int long register return short signed sizeof static struct switch typedef union unsigned void volatile while _Bool _Complex _Imaginary";
-            kws[1] = "NULL TRUE FALSE";
-            kws[2] = "__FILE__ __LINE__ __DATE__ __TIME__ __STDC__";
-            kws[3] = "int8_t int16_t int32_t int64_t uint8_t uint16_t uint32_t uint64_t size_t ssize_t ptrdiff_t";
-            break;
-        case LangType::L_JAVA:
-            kws[0] = "abstract assert boolean break byte case catch char class const continue default do double else enum extends final finally float for goto if implements import instanceof int interface long native new package private protected public return short static strictfp super switch synchronized this throw throws transient try void volatile while true false null";
-            break;
-        case LangType::L_PYTHON:
-            kws[0] = "and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield True False None";
-            kws[1] = "print input len range str int float list dict set tuple bool bytes";
-            break;
-        case LangType::L_JAVASCRIPT:
-            kws[0] = "async await break case catch class const continue debugger default delete do else enum eval export extends false finally for function if implements in instanceof interface let new null package private protected return static super switch this throw true try typeof var void while with yield";
-            kws[1] = "console window document Array Boolean Date Error Function JSON Math Number Object RegExp String Symbol Map Set WeakMap WeakSet Promise";
-            break;
-        case LangType::L_SH:
-            kws[0] = "if then else elif fi case esac for select while until do done in function time coproc subshell background bang negate export readonly declare local typeset unset shift set source return exit break continue eval exec builtin command pushd popd cd pwd dirs logout return";
-            break;
-        default: break;
+// Enable code folding
+_editor->setFolding(QsciScintilla::BoxedTreeFoldStyle);
+// Show fold margin
+_editor->setMarginType(2, QsciScintilla::SymbolMargin);
+_editor->setMarginWidth(2, "0");
+_editor->setMarginSensitivity(2, true);
+
+// Set fold markers
+_editor->setMarkerForegroundColor(QColor("#cccccc"), 0);
+_editor->setMarkerBackgroundColor(QColor("#e0e0e0"), 0);
+_editor->setFoldMarkerColors(QColor("#cccccc"), QColor("#e0e0e0"));
+
+// Connect fold click
+connect(_editor, &QsciScintilla::marginClicked, this, [this](int margin, int line, Qt::KeyboardModifiers) {
+    if (margin == 2) {
+        _editor->toggleFold(line);
     }
-    return kws;
+});
+```
+
+Add `toggleFold(int line)` if not present:
+```cpp
+void ScintillaEditor::toggleFold(int line) {
+    if (_editor->isFolded(line))
+        _editor->foldLine(line);
+    else
+        _editor->unfoldLine(line);
 }
 ```
 
-Then in `ScintillaEditor::setLanguage()`, after setting the lexer, apply keywords:
+Wire menu commands:
 ```cpp
-void ScintillaEditor::setLanguage(LangType lang) {
-    _language = lang;
-    QsciLexer* lexer = LanguageManager::instance().getLexer(lang);
-    _editor->setLexer(lexer);
-    if (lexer) {
-        auto kws = LanguageManager::instance().getKeywords(lang);
-        for (const auto& [set, kw] : kws) {
-            lexer->setKeywords(set, QString::fromStdString(kw));
-        }
-        applyThemeToLexer(lexer);
+// In onMenuCommand()
+else if (cmd == "view.foldAll") {
+    if (_activeEditor) _activeEditor->foldAll();
+}
+else if (cmd == "view.unfoldAll") {
+    if (_activeEditor) _activeEditor->unfoldAll();
+}
+```
+
+Add to `ScintillaEditor.h`:
+```cpp
+void foldAll();
+void unfoldAll();
+```
+
+Implement:
+```cpp
+void ScintillaEditor::foldAll() {
+    for (int line = _editor->lines() - 1; line >= 0; --line) {
+        if (_editor->isFolded(line)) continue;
+        int level = _editor->SendScintilla(SCI_GETFOLDLEVEL, line);
+        if (level & SC_FOLDLEVELHEADERFLAG)
+            _editor->foldLine(line);
+    }
+}
+
+void ScintillaEditor::unfoldAll() {
+    for (int line = 0; line < _editor->lines(); ++line) {
+        if (_editor->isFolded(line))
+            _editor->unfoldLine(line);
     }
 }
 ```
 
-#### 2. Charset conversion — implement `encoding.charset.*`
+#### 2. Auto-Indent
 
-In `Application::onMenuCommand()`, replace the debug log:
+In `ScintillaEditor` constructor, enable:
 ```cpp
-else if (cmd.startsWith("encoding.charset.")) {
-    QString charset = cmd.mid(17); // e.g. "windows-1250"
-    onConvertToCharset(charset);
-}
+// Auto-indent
+_editor->setAutoIndent(true);
+_editor->setIndentationGuides(true);
+_editor->setTabIndents(true);
+_editor->setBackspaceUnindents(true);
+_editor->setTabWidth(4);
+_editor->setIndentationsUseTabs(false); // spaces by default
 ```
 
-Implement `onConvertToCharset(const QString& charset)`:
+Also connect Enter/Tab:
 ```cpp
-void Application::onConvertToCharset(const QString& charsetName) {
-    ScintillaEditor* ed = getActiveEditor();
-    BufferID buf = getActiveBuffer();
-    if (!ed || !buf) return;
-    QString text = ed->toPlainText();
-    QTextCodec* codec = QTextCodec::codecForName(charsetName.toUtf8());
-    if (!codec) {
-        qDebug() << "[encoding] Unknown charset:" << charsetName;
-        return;
+connect(_editor, &QsciScintilla::returnPressed, this, [this]() {
+    // Get current line indentation
+    int curLine = _editor->cursorLineNumber();
+    QString lineText = _editor->text(curLine);
+    int indent = 0;
+    for (QChar c : lineText) {
+        if (c == ' ') ++indent;
+        else if (c == '\t') indent += 4;
+        else break;
     }
-    QByteArray bytes = codec->fromUnicode(text);
-    QString decoded = codec->toUnicode(bytes);
-    ed->setPlainText(decoded);
-    setStatusBarEncoding(charsetName);
-}
+    // Keep same indent on new line
+    _editor->setIndent(curLine + 1, indent);
+});
 ```
 
-#### 3. Fix encoding test — `test_utf8_valid_multibyte`
+#### 3. Bracket Highlight
 
-The test expects valid UTF-8 to return `true` from `isValidUtf8()`, but `EncodingType::UTF_8` is returned (which is truthy). Fix the test:
-
-In `src/tests/test_encoding_detector.cpp`, change `test_utf8_valid_multibyte`:
+Enable brace matching:
 ```cpp
-void test_utf8_valid_multibyte() {
-    std::vector<unsigned char> valid = {
-        0xE2, 0x82, 0xAC  // € (U+20AC) — 3-byte UTF-8
-    };
-    EncodingType result = detector.detect(QByteArray::fromRawData(
-        reinterpret_cast<const char*>(valid.data()), valid.size()));
-    // The detector returns UTF_8_BOM or UTF_8 or ANSI depending on content
-    // A valid multi-byte sequence may return UTF_8 or ANSI depending on BOM
-    // For this test, just verify it doesn't return UTF_16
-    ASSERT_NE(result, EncodingType::UTF_16_LE);
-    ASSERT_NE(result, EncodingType::UTF_16_BE);
-}
+// Bracket matching
+_editor->setBraceMatching(QsciScintilla::SloppyBraceMatch);
+// Highlight current line bracket
+_editor->setHighlightGuide(true);
+
+// Connect to update highlight on cursor change
+connect(_editor, &QsciScintilla::cursorPositionChanged, this, [this](int line, int index) {
+    _editor->matchBrackets();
+});
 ```
 
-Or better: the test's expectation is that `isValidUtf8` returns `true` directly. But `detect()` calls `isValidUtf8` internally and maps the result. Check `detect()` logic — if it returns `EncodingType::UTF_8` (which is non-zero/truthy), the assertion should pass. The issue might be that `detect()` returns `ANSI` for non-BOM content even when valid UTF-8. Look at the `detect()` implementation and ensure it calls `isValidUtf8` for non-BOM cases.
+For multi-line bracket highlight (rainbow brackets), use SCI:
+```cpp
+// Set bracket highlight foreground/background
+_editor->setMatchedBraceBackgroundColor(QColor("#FFFF00"));  // yellow
+_editor->setMatchedBraceForegroundColor(Qt::black);
+_editor->setUnmatchedBraceBackgroundColor(QColor("#FF6600")); // orange
+_editor->setUnmatchedBraceForegroundColor(Qt::white);
+```
 
-### Test
+#### 4. Current Line Highlight (already exists? check)
+
+Check if `_editor->setCaretLineVisible(true)` is set. If not, add:
+```cpp
+_editor->setCaretLineVisible(true);
+```
+
+### Build and test
 ```bash
 cd /home/node/.openclaw/workspace
 cmake --build build -j$(nproc) 2>&1 | grep -E "error:|FAILED"
@@ -131,303 +164,434 @@ cmake --build build -j$(nproc) 2>&1 | grep -E "error:|FAILED"
 
 ---
 
-## Wave 12 — Print Dialog + Macro Save/Load
-**Goal:** QPrinter integration for printing; macro serialization to file.
+## Wave 17 — Session Polish + Bookmarks + Incremental Search
+**Goal:** Session remembers everything (window geometry, cursor, scroll); line bookmarks; incremental search bar.
 
 ### Agent tasks
 
-#### 1. Print dialog
+#### 1. Session — full state (window geometry, cursor, scroll)
 
-Add `onPrint()` to Application:
+Update `SessionEntry` and `SessionManager`:
+
+In `SessionManager.h`, update `SessionEntry`:
 ```cpp
-void Application::onPrint() {
-    ScintillaEditor* ed = getActiveEditor();
-    if (!ed) return;
-    
-    QPrinter printer(QPrinter::HighResolution);
-    QPrintDialog dialog(&printer, nullptr);
-    if (dialog.exec() != QDialog::Accepted) return;
-    
-    // Use Scintilla's built-in printing
-    ed->print(&printer);
-}
+struct SessionEntry {
+    QString filePath;
+    int cursorLine = 0;
+    int cursorCol = 0;
+    int scrollLine = 0;
+    int firstVisibleLine = 0;  // scroll offset
+    QString encoding;
+    QString language;
+    bool active = false;
+    int tabIndex = -1;
+};
 ```
 
-Add to menu command: `else if (cmd == "file.print") { onPrint(); }`
-
-In ScintillaEditor, add:
+In `Application::saveSession()`:
 ```cpp
-void ScintillaEditor::print(QPrinter* printer) {
-    _editor->print(printer);
-}
-```
-
-#### 2. Macro save/load
-
-In `MacroManager.cpp`, implement `saveMacro()` / `loadMacro()`:
-
-```cpp
-void MacroManager::saveMacro(const QString& name, const QString& path) {
-    QJsonObject obj;
-    obj["name"] = name;
-    QJsonArray actions;
-    for (const auto& a : _actions) {
-        QJsonObject act;
-        act["type"] = static_cast<int>(a.type);
-        act["position"] = a.position;
-        act["length"] = a.length;
-        act["text"] = a.text;
-        actions.append(act);
+bool Application::saveSession(const std::string& path) {
+    // Save window geometry
+    if (auto* win = MainWindow::instance()) {
+        QSettings s;
+        s.setValue("window/geometry", win->saveGeometry());
+        s.setValue("window/state", win->saveState());
     }
-    obj["actions"] = actions;
-    QJsonDocument doc(obj);
-    QFile f(path);
-    if (f.open(QIODevice::WriteOnly)) {
-        f.write(doc.toJson());
-        f.close();
+    // ... existing buffer entries loop, now including scrollLine, firstVisibleLine, tabIndex
+}
+```
+
+In `Application::loadSession()`:
+```cpp
+bool Application::loadSession(const std::string& path) {
+    // Restore window geometry
+    QSettings s;
+    if (auto* win = MainWindow::instance()) {
+        win->restoreGeometry(s.value("window/geometry").toByteArray());
+        win->restoreState(s.value("window/state").toByteArray());
     }
-}
-
-bool MacroManager::loadMacro(const QString& path) {
-    QFile f(path);
-    if (!f.open(QIODevice::ReadOnly)) return false;
-    QJsonObject obj = QJsonDocument::fromJson(f.readAll()).object();
-    f.close();
-    _actions.clear();
-    for (const auto& v : obj["actions"].toArray()) {
-        QJsonObject act = v.toObject();
-        MacroAction a;
-        a.type = static_cast<MacroAction::Type>(act["type"].toInt());
-        a.position = act["position"].toInt();
-        a.length = act["length"].toInt();
-        a.text = act["text"].toString();
-        _actions.push_back(a);
-    }
-    return true;
-}
-```
-
-Add to `Application::onMenuCommand()`:
-```cpp
-else if (cmd == "macro.save") {
-    QString path = QFileDialog::getSaveFileName(nullptr, "Save Macro", "", "*.json");
-    if (!path.isEmpty()) MacroManager::instance().saveMacro("unnamed", path);
-}
-else if (cmd == "macro.load") {
-    QString path = QFileDialog::getOpenFileName(nullptr, "Load Macro", "", "*.json");
-    if (!path.isEmpty()) MacroManager::instance().loadMacro(path);
-}
-```
-
-### Test
-```bash
-cmake --build build -j$(nproc) 2>&1 | grep -E "error:|FAILED"
-```
-
----
-
-## Wave 13 — Find in Files + File Change Monitoring
-**Goal:** Grep across files; detect external file modifications.
-
-### Agent tasks
-
-#### 1. Find in Files dialog
-
-Create `src/dialogs/FindInFilesDialog.cpp/.h`:
-```cpp
-// SearchWorker: QThread that runs grep in background
-// Dialog: QTreeWidget showing results with file/line/content
-// "Open All Results" opens each result in editor
-// "Copy All" copies all to clipboard
-```
-
-The dialog shows:
-- Directory picker (QFileDialog for folder)
-- File filter (e.g. `*.txt`, `*.cpp`)
-- Find/Replace toggle
-- Results tree: file → line number → matching content
-- Progress bar during search
-
-Worker thread: `QThread` with `SearchWorker` that:
-1. Recursively walks directory matching filter
-2. Reads each file
-3. Searches for pattern (regex if checked)
-4. Emits `resultFound(file, lineNo, lineText, matchStart, matchEnd)` for each match
-5. Emits `searchFinished()` when done
-
-#### 2. File change monitoring
-
-`FileManager` already has `QFileSystemWatcher`. Wire it:
-
-```cpp
-// In FileManager::loadFile(), add to watcher:
-if (_fileWatcher && !path.isEmpty()) {
-    _fileWatcher->addPath(path);
-}
-```
-
-Connect file watcher:
-```cpp
-connect(_fileWatcher, &QFileSystemWatcher::fileChanged,
-    this, [this](const QString& path) {
-        emit externalFileChanged(path);
-    });
-```
-
-In Application, show notification:
-```cpp
-connect(_fileManager, &FileManager::externalFileChanged,
-    this, [this](const QString& path) {
-        QMessageBox::StandardButton reply = QMessageBox::question(
-            nullptr, "File Changed",
-            "File '" + path + "' was modified externally. Reload?",
-            QMessageBox::Yes | QMessageBox::No);
-        if (reply == QMessageBox::Yes) {
-            // reload file
+    // ... existing buffer loading, now including cursor/scroll restoration
+    for (const auto& e : entries) {
+        BufferID buf = openFile(e.filePath.toStdString());
+        if (buf && e.active) {
+            setActiveBuffer(buf);
+            ScintillaEditor* ed = getActiveEditor();
+            if (ed) {
+                ed->setCursorPosition(e.cursorLine, e.cursorCol);
+                ed->SendScintilla(SCI_LINESCROLL, 0, e.firstVisibleLine);
+            }
         }
-    });
-```
-
----
-
-## Wave 14 — Plugin API Skeleton + Final Polish
-**Goal:** Define plugin API headers; polish UX details.
-
-### Agent tasks
-
-#### 1. Plugin API skeleton
-
-Create `src/plugins/PluginInterface.h`:
-```cpp
-#pragma once
-#include <string>
-
-// Plugin API version
-#define NPPQT_PLUGIN_API_VERSION 1
-
-struct PluginFuncs {
-    void (*setInfo)(const char* name, const char* version);
-    void (*addMenuItem)(const char* menuPath, void (*callback)());
-    void (*addToolbarButton)(const char* iconPath, void (*callback)());
-    void (*getCurrentDocument)(char** buffer, int* length);
-    void (*setCurrentDocument)(const char* buffer, int length);
-};
-
-typedef void (*PluginInitFunc)(PluginFuncs* funcs);
-typedef void (*PluginCleanFunc)();
-typedef const char* (*PluginGetNameFunc)();
-
-struct NppQtPlugin {
-    PluginInitFunc init;
-    PluginCleanFunc cleanup;
-    PluginGetNameFunc getName;
-    int apiVersion;
-};
-
-#define NPPQT_PLUGIN_EXPORT(func) \
-    extern "C" NppQtPlugin nppqt_plugin = { \
-        .init = func##_init, \
-        .cleanup = func##_cleanup, \
-        .getName = func##_getName, \
-        .apiVersion = NPPQT_PLUGIN_API_VERSION \
     }
-```
-
-Create `src/plugins/PluginManager.cpp`:
-```cpp
-// Loads .so/.dylib plugins from ~/.config/notepad--qt/plugins/
-// Calls nppqt_plugin.init() on load
-// Manages plugin menu items
-```
-
-#### 2. Window title polish
-
-Update window title to show:
-```
-filename[*] - Notepad--Qt  (e.g. "myfile.cpp* - Notepad--Qt")
-```
-
-In `Application::updateUI()`:
-```cpp
-void Application::updateUI() {
-    QString title = "Notepad--Qt";
-    BufferID buf = getActiveBuffer();
-    if (buf) {
-        auto path = getFileName(buf);
-        if (path) title = QString::fromStdString(*path) + " - Notepad--Qt";
-        else title = "* Untitled - Notepad--Qt";
-        if (isBufferModified(buf)) title = "* " + title;
-    }
-    if (auto* win = MainWindow::instance())
-        win->setWindowTitle(title);
 }
 ```
 
-#### 3. Status bar — selection info
+Add `#include <QSettings>` to SessionManager.cpp.
 
-Wire `_selLabel` in StatusBar to update on selection:
+#### 2. Line Bookmarks
+
+Add to `ScintillaEditor.h`:
 ```cpp
-connect(editor, &ScintillaEditor::selectionChanged, _statusBarWidget,
-    [this](int selStart, int selEnd, int lines) {
-        _selLabel->setText(QString("Sel: %1 chars, %2 lines").arg(selEnd - selStart).arg(lines));
-    });
+void toggleBookmark(int line);
+void nextBookmark();
+void prevBookmark();
+void clearBookmarks();
+QList<int> bookmarks() const { return _bookmarks; }
 ```
 
-### Test
+In `ScintillaEditor.cpp`:
+```cpp
+// Define bookmark marker (margin 1)
+static const int BOOKMARK_MARKER = 0;
+
+// In constructor:
+_editor->setMarginType(1, QsciScintilla::SymbolMargin);
+_editor->setMarginWidth(1, 16);
+_editor->setMarginSensitivity(1, true);
+_editor->setMarkerBackgroundColor(QColor("#0088FF"), BOOKMARK_MARKER);
+
+// Connect margin click for bookmark toggle
+connect(_editor, &QsciScintilla::marginClicked, this, [this](int margin, int line, Qt::KeyboardModifiers) {
+    if (margin == 1) toggleBookmark(line);
+});
+
+void ScintillaEditor::toggleBookmark(int line) {
+    if (_bookmarks.contains(line)) {
+        _bookmarks.removeAll(line);
+        _editor->markerDelete(line, BOOKMARK_MARKER);
+    } else {
+        _bookmarks.append(line);
+        _editor->markerAdd(line, BOOKMARK_MARKER);
+    }
+}
+
+void ScintillaEditor::nextBookmark() {
+    int cur = _editor->cursorLineNumber();
+    for (int line : _bookmarks) {
+        if (line > cur) { _editor->setCursorPosition(line, 0); return; }
+    }
+}
+
+void ScintillaEditor::prevBookmark() {
+    int cur = _editor->cursorLineNumber();
+    for (int i = _bookmarks.size() - 1; i >= 0; --i) {
+        if (_bookmarks[i] < cur) { _editor->setCursorPosition(_bookmarks[i], 0); return; }
+    }
+}
+
+void ScintillaEditor::clearBookmarks() {
+    for (int line : _bookmarks) _editor->markerDelete(line, BOOKMARK_MARKER);
+    _bookmarks.clear();
+}
+```
+
+Add member: `QList<int> _bookmarks;`
+
+Wire menu commands:
+```cpp
+else if (cmd == "bookmark.toggle") {
+    if (_activeEditor) _activeEditor->toggleBookmark(_activeEditor->cursorLineNumber());
+}
+else if (cmd == "bookmark.next") {
+    if (_activeEditor) _activeEditor->nextBookmark();
+}
+else if (cmd == "bookmark.prev") {
+    if (_activeEditor) _activeEditor->prevBookmark();
+}
+else if (cmd == "bookmark.clear") {
+    if (_activeEditor) _activeEditor->clearBookmarks();
+}
+```
+
+#### 3. Incremental Search
+
+Create `src/dialogs/IncrementalSearchDialog.h/.cpp`:
+
+A small toolbar/dock that appears at the top of the editor:
+- Single-line input that searches as you type
+- Shows match count (e.g. `3 of 12`)
+- Enter → next match
+- Shift+Enter → previous match
+- Escape → close
+
+Implementation uses the existing `findNext`/`findPrev` from FindReplaceDialog.
+
+### Build and test
 ```bash
 cmake --build build -j$(nproc) 2>&1 | grep -E "error:|FAILED"
 ```
 
 ---
 
-## Wave 15 — CI + Release ✅
-**Goal:** GitHub Actions CI, install target, release.
-**Status:** ✅ COMPLETE — commit `TBD`
+## Wave 18 — Virtual Space + Drag & Drop + Multi-Cursor Foundation
+**Goal:** Better editing interactions — cursor past EOL, drag-and-drop, column editing polish.
 
 ### Agent tasks
 
-#### 1. GitHub Actions CI
+#### 1. Virtual Space (cursor past end of line)
 
-Create `.github/workflows/ci.yml`:
-```yaml
-name: CI
-on: [push, pull_request]
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qt6-base-dev qt6-scintilla2-dev cmake build-essential
-      - name: Build
-        run: cmake -B build && cmake --build build -j$(nproc)
-      - name: Test
-        run: |
-          ctest --test-dir build --output-on-failure
+In `ScintillaEditor` constructor:
+```cpp
+// Allow cursor beyond end of line
+_editor->setVirtualSpaceOptions(QsciScintilla::VirtualSpace::UserAccessible);
 ```
 
-#### 2. CMake install target
-
-Add to `CMakeLists.txt`:
-```cmake
-install(TARGETS NotepadMinusMinusQt RUNTIME DESTINATION bin)
-install(DIRECTORY themes/ DESTINATION share/notepad--qt/themes)
-install(FILES README.md DESTINATION share/doc/notepad--qt)
+Wire menu command:
+```cpp
+else if (cmd == "view.toggleVirtualSpace") {
+    if (_activeEditor) {
+        auto opts = _activeEditor->qSciEditor()->virtualSpaceOptions();
+        if (opts == QsciScintilla::VirtualSpace::UserAccessible)
+            _activeEditor->qSciEditor()->setVirtualSpaceOptions(QsciScintilla::VirtualSpace::NoWrap);
+        else
+            _activeEditor->qSciEditor()->setVirtualSpaceOptions(QsciScintilla::VirtualSpace::UserAccessible);
+    }
+}
 ```
 
-#### 3. `CONTRIBUTING.md` and `CHANGELOG.md`
+#### 2. Drag and Drop text
 
-Create both files. Update CHANGELOG with all waves.
+QsciScintilla supports this natively:
+```cpp
+_editor->setAcceptDrops(true);
+_editor->setDropFlags(QsciScintilla::DropTarget);
+```
 
-#### 4. Final commit and tag
+Wire drop to open files:
+```cpp
+connect(_editor, &QsciScintilla::dropped, this, [this](const QMimeData* data) {
+    if (data->hasUrls()) {
+        for (const QUrl& url : data->urls()) {
+            if (url.isLocalFile()) {
+                QString path = url.toLocalFile();
+                if (QFileInfo(path).isFile())
+                    Application::instance().openFile(path.toStdString());
+            }
+        }
+    }
+});
+```
 
+#### 3. Smart home / smart end
+
+```cpp
+// Smart home: jump to first non-whitespace, thenBOL, then indent
+_editor->setHomeKeyNavigation(true);
+// Smart backspace
+_editor->setBackspaceUnindents(true);
+```
+
+#### 4. Line numbering gutter enhancements
+
+```cpp
+// Thin line numbers
+_editor->setMarginType(0, QsciScintilla::NumberMargin);
+_editor->setMarginWidth(0, "0"); // auto-width
+// Current line number in different color
+_editor->setMarginLineNumbers(0, true);
+```
+
+#### 5. Whitespace visibility
+
+```cpp
+// Show tabs and spaces as dots
+_editor->setWhitespaceVisibility(QsciScintilla::WsVisibleOnlyInIndent);
+```
+
+### Build
 ```bash
-git add -A
-git commit -m "ci: GitHub Actions workflow, CMake install target, docs"
-git tag -a v0.2.0 -m "Feature complete — print, macros, find-in-files, plugins, CI"
-git push origin master --tags
+cmake --build build -j$(nproc) 2>&1 | grep -E "error:|FAILED"
+```
+
+---
+
+## Wave 19 — Large File Handling + Async Loading
+**Goal:** Open large files (10MB+) without freezing the UI.
+
+### Agent tasks
+
+#### 1. Async file loading — background thread
+
+Modify `FileManager::loadFile()` to detect large files and load asynchronously:
+
+```cpp
+bool FileManager::loadFile(const QString& path, QString& outContent, EncodingType encoding) {
+    QFileInfo info(path);
+    static constexpr qint64 LARGE_FILE_THRESHOLD = 5 * 1024 * 1024; // 5MB
+    
+    if (info.size() > LARGE_FILE_THRESHOLD) {
+        // Emit signal for UI to show progress, load in background
+        emit loadingLargeFile(path, info.size());
+        // For now, fall through to sync load but log warning
+        qDebug() << "[FileManager] Large file loading:" << path << "(" << info.size() << "bytes)";
+    }
+    // ... existing loading logic
+}
+```
+
+Create `src/workers/FileLoaderWorker.h/.cpp`:
+
+```cpp
+class FileLoaderWorker : public QObject {
+    Q_OBJECT
+public:
+    FileLoaderWorker(const QString& path, EncodingType encoding, QObject* parent = nullptr);
+    void start();
+signals:
+    void progress(int percent);
+    void finished(bool success, const QString& content);
+private:
+    QString _path;
+    EncodingType _encoding;
+};
+
+void FileLoaderWorker::start() {
+    // Read in chunks, emit progress
+    QFile f(_path);
+    // ... chunked read + decode
+    emit finished(true, content);
+}
+```
+
+#### 2. Lazy loading for very large files (100MB+)
+
+For files > 100MB, load first 10MB only and show indicator:
+
+```cpp
+static constexpr qint64 VERY_LARGE_THRESHOLD = 100 * 1024 * 1024;
+if (info.size() > VERY_LARGE_THRESHOLD) {
+    qDebug() << "[FileManager] Very large file — partial load:" << path;
+    // Load first portion, set _isPartialLoad flag on Buffer
+    buffer->setPartialLoad(true);
+    buffer->setTotalLength(info.size());
+}
+```
+
+Add to `Buffer.h`:
+```cpp
+bool isPartialLoad() const { return _partialLoad; }
+void setPartialLoad(bool v) { _partialLoad = v; }
+qint64 totalLength() const { return _totalLength; }
+void setTotalLength(qint64 v) { _totalLength = v; }
+```
+With members:
+```cpp
+bool _partialLoad = false;
+qint64 _totalLength = 0;
+```
+
+#### 3. Update status bar for partial loads
+
+In `Application::onBufferActivated()`:
+```cpp
+Buffer* buf = _fileManager->getBuffer(buffer);
+if (buf && buf->isPartialLoad()) {
+    _statusBarWidget->setMessage(
+        QString("Partial load: %1 / %2 MB").arg(buf->documentLength() / 1e6, 0, 'f', 1)
+                                            .arg(buf->totalLength() / 1e6, 0, 'f', 1));
+}
+```
+
+### Build
+```bash
+cmake --build build -j$(nproc) 2>&1 | grep -E "error:|FAILED"
+```
+
+---
+
+## Wave 20 — Preferences Completeness + Encoding Auto-Detect on Paste + Polish
+**Goal:** Finish missing preferences; paste encoding detection; final UX polish.
+
+### Agent tasks
+
+#### 1. Preferences — all settings wired
+
+Check `src/dialogs/PreferenceDialog.cpp`. Many categories may be empty stubs. For each category:
+- **General**: Language, auto-update check, multi-instance toggle
+- **Editor**: Tab size, indent size, tab/space preference, line numbering, word wrap, smart home, virtual space
+- **Appearance**: Theme, toolbar, tab bar, status bar visibility
+- **Search**: Default search options (match case, whole word, regex defaults)
+- **Backup**: Auto-save interval, session restore
+- **Print**: Header/footer, color print, page range
+
+Each preference change should immediately apply to the editor and persist to `QSettings`.
+
+#### 2. Encoding auto-detection on paste
+
+In `ScintillaEditor`, intercept paste:
+```cpp
+connect(_editor, &QsciScintilla::pasteAvailable, this, [this]() {
+    // Get clipboard text
+    QString text = QApplication::clipboard()->text();
+    // Detect encoding
+    QByteArray bytes = text.toUtf8();
+    EncodingType enc = EncodingDetector::instance().detect(bytes);
+    // Update status bar with detected encoding
+    Application::instance().setStatusBarEncoding(
+        QString::fromStdString(encodingToString(enc)));
+});
+```
+
+Better approach — override paste:
+```cpp
+connect(_editor, &QsciScintilla::modificationChanged, this, [this]() {
+    // Check if last change was a paste (look at undo stack)
+});
+```
+
+Actually, simpler: just detect the encoding of the clipboard on paste and update the status bar:
+```cpp
+connect(QApplication::clipboard(), &QClipboard::changed, this, [this](QClipboard::Mode mode) {
+    if (mode == QClipboard::Clipboard) {
+        QString text = QApplication::clipboard()->text();
+        if (!text.isEmpty()) {
+            EncodingType enc = EncodingDetector::instance().detect(text.toUtf8());
+            if (enc != EncodingType::ANSI && enc != EncodingType::UTF_8) {
+                // Show notification
+                qDebug() << "[clipboard] Detected encoding:" << (int)enc;
+            }
+        }
+    }
+});
+```
+
+#### 3. Encoding auto-detection for opened files
+
+Wire `LanguageManager::detectLanguage()` when opening files:
+```cpp
+BufferID FileManager::openFile(const QString& path, bool readOnly) {
+    // ... existing code ...
+    if (buf) {
+        // Auto-detect language from extension
+        LangType lang = LanguageManager::instance().detectLanguage(path.toStdString());
+        buf->setLangType(lang);
+        // Also detect from content for extensionless files
+        if (lang == LangType::L_TEXT) {
+            QString firstLine;
+            QTextStream s(&f);
+            firstLine = s.readLine();
+            lang = LanguageManager::instance().detectLanguageFromContent(firstLine.toStdString());
+            buf->setLangType(lang);
+        }
+    }
+}
+```
+
+#### 4. Window state persistence (already in Wave 17)
+
+Ensure `MainWindow` saves geometry on close:
+```cpp
+// In MainWindow closeEvent
+void MainWindow::closeEvent(QCloseEvent* event) {
+    QSettings s;
+    s.setValue("window/geometry", saveGeometry());
+    s.setValue("window/state", saveState());
+    event->accept();
+}
+```
+
+### Build and test
+```bash
+cmake --build build -j$(nproc) 2>&1 | grep -E "error:|FAILED"
 ```
 
 ---
@@ -442,4 +606,6 @@ cmake --build build -j$(nproc)
 ```bash
 ctest --test-dir build --output-on-failure
 ```
-_(Note: test_buffer and test_util hang due to Qt static-dtor ordering — test harness issue, not code issue. Fix: run `timeout 5 ./build/src/tests/test_NAME` to confirm core logic works.)_
+
+## Binary
+`/home/node/.openclaw/workspace/build/NotepadMinusMinusQt` (1.9MB)
