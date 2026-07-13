@@ -802,6 +802,10 @@ void Application::onMenuCommand(const QString& cmd) {
     // View
     else if (cmd == "view.fullScreen") { onToggleFullScreen(); }
     else if (cmd == "view.distractionFree") { onToggleDistractionFree(); }
+    else if (cmd == "view.zoomIn") { if (_activeEditor) _activeEditor->zoomIn(); }
+    else if (cmd == "view.zoomOut") { if (_activeEditor) _activeEditor->zoomOut(); }
+    else if (cmd == "view.zoomRestore") { if (_activeEditor) _activeEditor->zoomReset(); }
+    else if (cmd == "file.reload") { onReloadFile(); }
     else if (cmd == "view.darkMode" || cmd == "view.toggleDarkMode") {
         QString nextTheme = _currentTheme == "dark" ? "light" : "dark";
         onThemeChanged(nextTheme.toStdString());
@@ -943,6 +947,30 @@ void Application::onCloseAll() {
     for (int i = count - 1; i >= 0; --i) {
         BufferID id = getBufferAt(i);
         if (id) closeFile(id);
+    }
+}
+
+void Application::onReloadFile() {
+    BufferID buf = getActiveBuffer();
+    if (!buf) return;
+    auto path = getFileName(buf);
+    if (!path) return;
+    if (isBufferModified(buf)) {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            nullptr, "Reload File",
+            "This file has unsaved changes. Reload anyway?",
+            QMessageBox::Yes | QMessageBox::No);
+        if (reply != QMessageBox::Yes) return;
+    }
+    QString filePath = QString::fromStdString(*path);
+    closeFile(buf);
+    ScintillaEditor* ed = getActiveEditor();
+    if (ed) {
+        BufferID newBuf = openFile(filePath.toStdString());
+        if (newBuf) {
+            setActiveBuffer(newBuf);
+            ed->setPlainText(QString::fromStdString(getBufferText(newBuf)));
+        }
     }
 }
 

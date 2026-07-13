@@ -330,6 +330,7 @@ public slots:
     // Settings commands
     void onShowPreferences();
     void onShowShortcutMapper();
+    void onReloadFile();
     void onShowCommandPalette();
 
     // Help commands

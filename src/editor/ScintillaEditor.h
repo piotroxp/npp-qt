@@ -133,6 +133,12 @@ public:
     void applyTheme(const QString& themeName);
     void applyThemeToLexer(QsciLexer* lexer);
 
+    // Zoom — tracks zoom level internally
+    void zoomIn();
+    void zoomOut();
+    void zoomReset();
+    int zoomLevel() const;
+
 signals:
     void textChanged();
     void cursorPositionChanged(int line, int col);
@@ -147,4 +153,5 @@ private:
     LangType _language = LangType::L_TEXT;
     EncodingType _encoding = EncodingType::UTF_8;
     EolType _eolType = EolType::EOL_LF;
+    int _zoomLevel = 0;
 };

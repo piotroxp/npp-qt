@@ -318,6 +318,13 @@ void ScintillaEditor::setCaretLineBackgroundColor(const QColor& color) {
     _editor->setCaretLineBackgroundColor(color);
 }
 
+void ScintillaEditor::zoomIn() { _editor->zoomIn(); ++_zoomLevel; }
+void ScintillaEditor::zoomOut() { _editor->zoomOut(); --_zoomLevel; }
+void ScintillaEditor::zoomReset() {
+    while (_zoomLevel > 0) { _editor->zoomOut(); --_zoomLevel; }
+    while (_zoomLevel < 0) { _editor->zoomIn(); ++_zoomLevel; }
+}
+
 void ScintillaEditor::setWrapMode(bool wrap) {
     _editor->setWrapMode(wrap ? QsciScintilla::WrapWord : QsciScintilla::WrapNone);
 }
