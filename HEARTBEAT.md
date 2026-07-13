@@ -22,6 +22,7 @@
 | 11 | Keyword Lists + Charset Conversion + Encoding Test | wave-11 | ✅ complete (cee8214) | Win32 sweep (0 remnants), README rewritten, binary clean (88d4c4c) |
 | 12 | Print Dialog (QPrinter) + Macro Save/Load to JSON | wave-12 | ✅ complete (78b7d4f) | ScintillaEditor::print(), Application::onPrint(), QPrintDialog, MacroManager::saveMacro(path)/loadMacro(path), macro.save/load menu commands |
 | 13 | Find in Files Dialog + File Change Monitoring | wave-13 | ✅ complete | FindInFilesDialog (results tree, regex/match-case/whole-word filters, Replace in Files), FileManager::fileSystemChanged → Application::onExternalFileChanged (auto-reload if clean, prompt if dirty) |
+| 14 | Plugin API Skeleton + Window Title Polish + Selection Info | wave-14 | ✅ complete (ad3ab27) | PluginInterface.h (NppQtFuncs + export macro), PluginManager (QLibrary load/unload, API version check), updateWindowTitle() (filename, dirty *, Untitled), StatusBar::setSelection(chars, lines), ScintillaEditor::selectionChanged(start,end,lineCount) signal wired to status bar |
 
 ### After Each Wave
 1. Build: `cd /home/node/.openclaw/workspace-employee-hart/npp-qt && cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build`
