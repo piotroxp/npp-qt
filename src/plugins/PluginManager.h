@@ -3,9 +3,8 @@
 #include <QString>
 #include <QVector>
 #include <QMap>
-
-struct NppQtFuncs;
-struct NppQtPlugin;
+#include <QLibrary>
+#include "PluginInterface.h"
 
 class PluginManager : public QObject {
     Q_OBJECT
@@ -30,6 +29,6 @@ private:
     void loadPlugin(const QString& path);
 
     QVector<QString> _pluginNames;
-    QMap<QString, void*> _pluginHandles;  // library handles (void* from QLibrary::handle())
-    NppQtFuncs _funcs;                    // shared function table
+    QMap<QString, QLibrary*> _pluginHandles;
+    NppQtFuncs _funcs;
 };

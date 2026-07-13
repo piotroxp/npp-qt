@@ -592,7 +592,7 @@ void MainWindow::onNewFile() {
     });
 
     // Wire selection info to status bar
-    connect(editor, &ScintillaEditor::selectionChanged,
+    connect(editor, qOverload<int, int, int>(&ScintillaEditor::selectionChanged),
             _statusBarWidget, [this](int start, int end, int lines) {
         _statusBarWidget->setSelection(end - start, lines);
     });
@@ -671,7 +671,7 @@ void MainWindow::openFileInTab(const QString& path) {
     });
 
     // Wire selection info to status bar
-    connect(editor, &ScintillaEditor::selectionChanged,
+    connect(editor, qOverload<int, int, int>(&ScintillaEditor::selectionChanged),
             _statusBarWidget, [this](int start, int end, int lines) {
         _statusBarWidget->setSelection(end - start, lines);
     });
@@ -973,7 +973,7 @@ void MainWindow::onBufferOpened(BufferID buffer) {
     connect(editor, &ScintillaEditor::cursorPositionChanged, _statusBarWidget, [this](int line, int col) {
         _statusBarWidget->setPosition(line, col);
     });
-    connect(editor, &ScintillaEditor::selectionChanged, _statusBarWidget, [this](int start, int end, int lines) {
+    connect(editor, qOverload<int, int, int>(&ScintillaEditor::selectionChanged), _statusBarWidget, [this](int start, int end, int lines) {
         _statusBarWidget->setSelection(end - start, lines);
     });
 

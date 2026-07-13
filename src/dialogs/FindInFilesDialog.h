@@ -29,6 +29,10 @@ public:
 
     void setDirectory(const QString& dir);
     void setSearchText(const QString& text);
+    QMap<QString, QList<FindResult>> groupResultsByFile() const;
+
+private:
+    void setupUi();
 
 signals:
     // Emitted when user double-clicks a result — open file at line

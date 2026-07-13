@@ -8,6 +8,10 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
+#include <QFileDialog>
+#include <QSettings>
+#include <QMessageBox>
+#include <QHeaderView>
 #include <QGroupBox>
 #include <QFileDialog>
 #include <QDialogButtonBox>
@@ -18,6 +22,8 @@
 #include <QMenu>
 #include <QAction>
 #include <QApplication>
+#include <QClipboard>
+#include <QSettings>
 
 // ============================================================================
 // Construction / UI Setup

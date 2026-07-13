@@ -1053,6 +1053,30 @@ src/dialogs/FileReloadDialog.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/dialogs/FileReloadDialog.cpp.s
 .PHONY : src/dialogs/FileReloadDialog.cpp.s
 
+src/dialogs/FindInFilesDialog.o: src/dialogs/FindInFilesDialog.cpp.o
+.PHONY : src/dialogs/FindInFilesDialog.o
+
+# target to build an object file
+src/dialogs/FindInFilesDialog.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/dialogs/FindInFilesDialog.cpp.o
+.PHONY : src/dialogs/FindInFilesDialog.cpp.o
+
+src/dialogs/FindInFilesDialog.i: src/dialogs/FindInFilesDialog.cpp.i
+.PHONY : src/dialogs/FindInFilesDialog.i
+
+# target to preprocess a source file
+src/dialogs/FindInFilesDialog.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/dialogs/FindInFilesDialog.cpp.i
+.PHONY : src/dialogs/FindInFilesDialog.cpp.i
+
+src/dialogs/FindInFilesDialog.s: src/dialogs/FindInFilesDialog.cpp.s
+.PHONY : src/dialogs/FindInFilesDialog.s
+
+# target to generate assembly for a file
+src/dialogs/FindInFilesDialog.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/dialogs/FindInFilesDialog.cpp.s
+.PHONY : src/dialogs/FindInFilesDialog.cpp.s
+
 src/dialogs/FindInFilesWorker.o: src/dialogs/FindInFilesWorker.cpp.o
 .PHONY : src/dialogs/FindInFilesWorker.o
 
@@ -1621,6 +1645,9 @@ help:
 	@echo "... src/dialogs/FileReloadDialog.o"
 	@echo "... src/dialogs/FileReloadDialog.i"
 	@echo "... src/dialogs/FileReloadDialog.s"
+	@echo "... src/dialogs/FindInFilesDialog.o"
+	@echo "... src/dialogs/FindInFilesDialog.i"
+	@echo "... src/dialogs/FindInFilesDialog.s"
 	@echo "... src/dialogs/FindInFilesWorker.o"
 	@echo "... src/dialogs/FindInFilesWorker.i"
 	@echo "... src/dialogs/FindInFilesWorker.s"

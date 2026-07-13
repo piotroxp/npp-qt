@@ -67,13 +67,8 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     });
     connect(_editor, &QsciScintilla::modificationChanged, this, &ScintillaEditor::modificationChanged);
     connect(_editor, &QsciScintilla::selectionChanged, this, [this]() {
-        int start = _editor->selectionStart();
-        int end = _editor->selectionEnd();
-        emit selectionChanged(start, end);
-    });
-    connect(_editor, &QsciScintilla::selectionChanged, this, [this]() {
-        int start = _editor->selectionStart();
-        int end = _editor->selectionEnd();
+        int start = _editor->SendScintilla(QsciScintilla::SCI_GETSELECTIONNSTART, 0);
+        int end = _editor->SendScintilla(QsciScintilla::SCI_GETSELECTIONNEND, 0);
         int lines = 0;
         if (end > start) {
             QString sel = _editor->selectedText();

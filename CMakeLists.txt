@@ -71,12 +71,12 @@ set(SOURCES
     src/dialogs/GoToLineDialog.cpp
     src/dialogs/PreferenceDialog.cpp
     src/dialogs/AboutDialog.cpp
+    src/dialogs/FindInFilesDialog.cpp
     src/dialogs/FindInFilesWorker.cpp
     src/dialogs/ShortcutMapperDialog.cpp
     src/dialogs/CommandPaletteDialog.cpp
     src/dialogs/LargeFileWarningDialog.cpp
     src/dialogs/FileReloadDialog.cpp
-    src/dialogs/FindInFilesWorker.cpp
     src/panels/DocumentMapPanel.cpp
     src/panels/FunctionListPanel.cpp
     src/panels/FileBrowserPanel.cpp
