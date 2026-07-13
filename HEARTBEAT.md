@@ -36,3 +36,26 @@
 - **This is the ONLY project.** Do not work on anything else.
 - Keep going until Wave 10 is marked ✅ in WAVES.md
 - Wake up → check WAVES.md → continue next incomplete wave
+
+**2026-07-05T10:20 UTC — P0 fixes applied:**
+- `AutoCompletion::setLanguage()` — fully implemented: loads `autoCompletion/{lang}.xml` via NppXml, populates keyword arrays and calltip data
+- `FunctionCallTip::loadFunction()` — implemented: parses function signatures for calltip display
+- `showPathCompletion()` — rewired with QDir enumeration (was `/` placeholder)
+- `KeywordLoader.cpp/h` — new: parses `langs.model.xml` for 40+ languages, feeds Scintilla via SCI_SETKEYWORDS (set 0–15)
+- `StyleConfig.cpp/h` — new: parses `stylers.model.xml`, applies fg/bg/bold/italic/font per lexer+style
+- `ScintillaComponent::setLexerLanguage()` — wired: calls KeywordLoader + StyleConfig after lexer install
+- `Parameters::load()` — wired: calls KeywordLoader::instance().load() and StyleConfig::instance().load() at startup
+- CMakeLists.txt (root): added KeywordLoader.cpp + StyleConfig.cpp to SOURCES
+- Engineering fix: `SCI_SETKEYWORDS=4005` defined directly (not via SciLexer.h) to avoid Qt macro conflicts
+
+**Gates (2026-07-05 10:20 UTC):** build ✅ runtime ✅ tests 158/158 ✅ documentation ✅ units ✅ | differential 🔴 (Windows oracle required)
+
+**Workspace paths:** source at `~/.openclaw/workspace/src/`, build at `~/.openclaw/workspace/build_npp/`, binary at `build_npp/npp-qt`.
+
+**Remaining gaps (non-blocking):** Buffer.cpp, FindReplaceDlg.cpp, columnEditor.cpp, 3830L ScintillaEditView missing, UserDefineDialog stub 81L vs 2105L source.
+
+**Commit:** `71ab747` — "feat: P0 auto-completion and syntax highlighting fixes"
+**SSH:** Key generated at `/home/node/.ssh/id_ed25519_nppqt.pub` — waiting for user to add to `piotro@192.168.2.128:~/.ssh/authorized_keys`
+
+**Last gate run:** 2026-07-05T09:21:48 UTC | report: `/home/node/jaisiu/skills/codebase-translate/build/npp-qt/translation_report.json`
+<!-- semantic-lift:end -->
