@@ -14,7 +14,7 @@
 | 3 | Tab Bar + Multi-Document | agent-wave3 | pending | per-tab EditorView |
 | 4 | Find/Replace Dialog | agent-wave4 | pending | real search |
 | 5 | Menu Bar Language Actions | agent-wave5 | ✅ complete | menu routing + StatusBar wiring (eb64aab) |
-| 6 | Encoding Pantry + EOL | agent-wave6 | pending | Buffer.cpp UTF-16 + backups |
+| 6 | Editor-Tab Integration | agent-wave6 | ✅ complete | buffer tabs, lifecycle, context menu (545ca09) |
 | 7 | File I/O: UTF-16 + Encoding + EOL | agent-wave7 | ✅ complete | UTF-16 BOM decode/encode, encoding detection, EOL conversion, wired into openFile pipeline |
 | 8 | Advanced Editor Features | agent-wave8 | ✅ complete | wave8: LangType→QsciLexer, ThemeManager.instance(), dark mode toggle, applyTheme/applyThemeToLexer (4b66e3e) |
 | 9 | File Operations Enhancements | agent-wave9 | pending | reload, save all, external mods |
