@@ -57,5 +57,22 @@
 **Commit:** `71ab747` — "feat: P0 auto-completion and syntax highlighting fixes"
 **SSH:** Key generated at `/home/node/.ssh/id_ed25519_nppqt.pub` — waiting for user to add to `piotro@192.168.2.128:~/.ssh/authorized_keys`
 
+**2026-07-13T14:24 UTC — Wave state report:**
+- Wave 1–3: ✅ COMPLETE — all 30 translation units accepted/flagged
+- Wave 4: ❌ BROKEN — 4 build fix units remain:
+  - fix-1: src/AutoCompletion.cpp — pointer deref on _funcCalltip + wstring/QString type mismatches (~20 errors)
+  - fix-2: src/MISC/PluginsManager/PluginsManager.cpp — QLibrary::resolve() function pointer cast errors (~13 errors)
+  - fix-3: src/Printer.cpp — Qt::TextSingleFlag (doesn't exist) + ScintillaComponent::send() overload missing (~7 errors)
+  - fix-4: qlist.h — missing operator== for PluginCommand (1 error)
+- Translation gate: ✅ DONE — 0 missing, 69.1% coverage
+- Units gate: ✅ DONE — 30/30 resolved
+- Differential gate: ⚠️ BLOCKED — needs target_cmd for 4 unverifiable units
+- Tests gate: ✅
+- Runtime gate: ✅
+- Docs gate: ✅
+
+**Commit:** `e731db8` — "fix: resolve stash merge conflicts, update HEARTBEAT state"
+**Binary:** `build/NotepadMinusMinusQt` (pre-Jul-13 state)
+
 **Last gate run:** 2026-07-05T09:21:48 UTC | report: `/home/node/jaisiu/skills/codebase-translate/build/npp-qt/translation_report.json`
 <!-- semantic-lift:end -->
