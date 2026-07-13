@@ -6,6 +6,7 @@
 #include "ShortcutMapperDialog.h"
 #include "core/Application.h"
 #include "ui/MainWindow.h"
+#include "ui/MenuBar.h"
 #include <QVBoxLayout>
 #include <QMenuBar>
 #include <QToolBar>

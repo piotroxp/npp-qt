@@ -11,6 +11,9 @@ public:
     void setSearchText(const QString& text);
     void showAtTop();
 
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
+
 signals:
     void searchNext(const QString& text);
     void searchPrev(const QString& text);

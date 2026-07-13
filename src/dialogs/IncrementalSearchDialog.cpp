@@ -3,6 +3,7 @@
 #include <QHBoxLayout>
 #include <QApplication>
 #include <QLabel>
+#include <QKeyEvent>
 
 IncrementalSearchDialog::IncrementalSearchDialog(QWidget* parent)
     : QDialog(parent, Qt::Tool | Qt::FramelessWindowHint)
@@ -34,11 +35,21 @@ IncrementalSearchDialog::IncrementalSearchDialog(QWidget* parent)
         else
             onNext();
     });
-    // Escape key hides the dialog and emits closeRequested
-    connect(_searchEdit, &QLineEdit::escapePressed, this, [this]() {
-        hide();
-        emit closeRequested();
-    });
+
+    // Handle Escape key to close dialog
+    _searchEdit->installEventFilter(this);
+}
+
+bool IncrementalSearchDialog::eventFilter(QObject* obj, QEvent* event) {
+    if (obj == _searchEdit && event->type() == QEvent::KeyPress) {
+        auto* ke = static_cast<QKeyEvent*>(event);
+        if (ke->key() == Qt::Key_Escape) {
+            hide();
+            emit closeRequested();
+            return true;
+        }
+    }
+    return QDialog::eventFilter(obj, event);
 }
 
 void IncrementalSearchDialog::onTextChanged(const QString& text) {
