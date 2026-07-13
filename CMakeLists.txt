@@ -77,6 +77,7 @@ set(SOURCES
     src/dialogs/CommandPaletteDialog.cpp
     src/dialogs/LargeFileWarningDialog.cpp
     src/dialogs/FileReloadDialog.cpp
+    src/dialogs/IncrementalSearchDialog.cpp
     src/panels/DocumentMapPanel.cpp
     src/panels/FunctionListPanel.cpp
     src/panels/FileBrowserPanel.cpp
@@ -117,6 +118,7 @@ set(HEADERS
     src/dialogs/CommandPaletteDialog.h
     src/dialogs/LargeFileWarningDialog.h
     src/dialogs/FileReloadDialog.h
+    src/dialogs/IncrementalSearchDialog.h
     src/panels/DocumentMapPanel.h
     src/panels/FunctionListPanel.h
     src/panels/FileBrowserPanel.h

@@ -66,6 +66,8 @@
 #include <QPrinter>
 #include <QSettings>
 #include <QFileInfo>
+#include "ui/MainWindow.h"
+#include "dialogs/IncrementalSearchDialog.h"
 
 // ============================================================================
 // Singleton
@@ -79,7 +81,7 @@ Application& Application::instance() {
 // Constructor / Destructor
 // ============================================================================
 Application::Application() : QObject(qApp) {
-    _mainWindow = new QMainWindow();
+    _mainWindow = new MainWindow();
     _centralWidget = new QWidget();
     _viewStack = new QStackedWidget();
 }
@@ -178,6 +180,27 @@ bool Application::initialize() {
             });
             _autoSaveTimer->start(_options.autoSaveInterval * 60 * 1000);
         }
+
+        // Show main window
+        showMainWindow();
+
+        // Restore window geometry from settings
+        {
+            QSettings s;
+            QByteArray geom = s.value("window/geometry").toByteArray();
+            if (!geom.isEmpty() && _mainWindow) _mainWindow->restoreGeometry(geom);
+            QByteArray state = s.value("window/state").toByteArray();
+            if (!state.isEmpty() && _mainWindow) _mainWindow->restoreState(state);
+        }
+
+        // Incremental search dialog
+        _incrementalSearch = new IncrementalSearchDialog(_mainWindow);
+        connect(_incrementalSearch, &IncrementalSearchDialog::searchNext,
+            this, [this](const QString&) { onFindNext(); });
+        connect(_incrementalSearch, &IncrementalSearchDialog::searchPrev,
+            this, [this](const QString&) { onFindPrev(); });
+        connect(_incrementalSearch, &IncrementalSearchDialog::closeRequested,
+            this, [this]() { /* nothing needed */ });
 
         return true;
     } catch (const std::exception& e) {
@@ -878,6 +901,22 @@ void Application::onMenuCommand(const QString& cmd) {
     else if (cmd == "search.count") { onCount(); }
     else if (cmd == "search.markAll") { onMarkAll(); }
     else if (cmd == "search.findInFiles") { onFindInFiles(); }
+    else if (cmd == "search.incremental") {
+        if (_incrementalSearch) _incrementalSearch->showAtTop();
+    }
+    // Bookmarks
+    else if (cmd == "bookmark.toggle") {
+        if (_activeEditor) _activeEditor->toggleBookmark(_activeEditor->currentLine());
+    }
+    else if (cmd == "bookmark.next") {
+        if (_activeEditor) _activeEditor->nextBookmark();
+    }
+    else if (cmd == "bookmark.prev") {
+        if (_activeEditor) _activeEditor->prevBookmark();
+    }
+    else if (cmd == "bookmark.clear") {
+        if (_activeEditor) _activeEditor->clearBookmarks();
+    }
     // View
     else if (cmd == "view.fullScreen") { onToggleFullScreen(); }
     else if (cmd == "view.distractionFree") { onToggleDistractionFree(); }
@@ -901,6 +940,9 @@ void Application::onMenuCommand(const QString& cmd) {
         _options.showToolBar = !_options.showToolBar;
         emit onToggleToolBar();
     }
+    else if (cmd == "view.foldAll") { if (_activeEditor) _activeEditor->foldAll(); }
+    else if (cmd == "view.unfoldAll") { if (_activeEditor) _activeEditor->unfoldAll(); }
+    else if (cmd == "view.toggleFold") { if (_activeEditor) _activeEditor->toggleFold(_activeEditor->currentLine()); }
     // Encoding
     else if (cmd == "encoding.utf8") { onConvertEncoding(EncodingType::UTF_8); }
     else if (cmd == "encoding.utf8bom") { onConvertEncoding(EncodingType::UTF_8_BOM); }

@@ -1149,6 +1149,30 @@ src/dialogs/GoToLineDialog.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/dialogs/GoToLineDialog.cpp.s
 .PHONY : src/dialogs/GoToLineDialog.cpp.s
 
+src/dialogs/IncrementalSearchDialog.o: src/dialogs/IncrementalSearchDialog.cpp.o
+.PHONY : src/dialogs/IncrementalSearchDialog.o
+
+# target to build an object file
+src/dialogs/IncrementalSearchDialog.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/dialogs/IncrementalSearchDialog.cpp.o
+.PHONY : src/dialogs/IncrementalSearchDialog.cpp.o
+
+src/dialogs/IncrementalSearchDialog.i: src/dialogs/IncrementalSearchDialog.cpp.i
+.PHONY : src/dialogs/IncrementalSearchDialog.i
+
+# target to preprocess a source file
+src/dialogs/IncrementalSearchDialog.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/dialogs/IncrementalSearchDialog.cpp.i
+.PHONY : src/dialogs/IncrementalSearchDialog.cpp.i
+
+src/dialogs/IncrementalSearchDialog.s: src/dialogs/IncrementalSearchDialog.cpp.s
+.PHONY : src/dialogs/IncrementalSearchDialog.s
+
+# target to generate assembly for a file
+src/dialogs/IncrementalSearchDialog.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/dialogs/IncrementalSearchDialog.cpp.s
+.PHONY : src/dialogs/IncrementalSearchDialog.cpp.s
+
 src/dialogs/LargeFileWarningDialog.o: src/dialogs/LargeFileWarningDialog.cpp.o
 .PHONY : src/dialogs/LargeFileWarningDialog.o
 
@@ -1657,6 +1681,9 @@ help:
 	@echo "... src/dialogs/GoToLineDialog.o"
 	@echo "... src/dialogs/GoToLineDialog.i"
 	@echo "... src/dialogs/GoToLineDialog.s"
+	@echo "... src/dialogs/IncrementalSearchDialog.o"
+	@echo "... src/dialogs/IncrementalSearchDialog.i"
+	@echo "... src/dialogs/IncrementalSearchDialog.s"
 	@echo "... src/dialogs/LargeFileWarningDialog.o"
 	@echo "... src/dialogs/LargeFileWarningDialog.i"
 	@echo "... src/dialogs/LargeFileWarningDialog.s"

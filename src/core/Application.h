@@ -45,6 +45,7 @@ class MainWindow;
 class SyntaxHighlighter;
 class FindReplaceDialog;
 class GoToLineDialog;
+class IncrementalSearchDialog;
 class PreferenceDialog;
 class AboutDialog;
 class DocumentMapPanel;
@@ -192,7 +193,7 @@ public:
     void toggleDistractionFree();
     bool isFullScreen() const { return _isFullScreen; }
     bool isDistractionFree() const { return _isDistractionFree; }
-    QMainWindow* mainWindow() const { return _mainWindow; }
+    MainWindow* mainWindow() const { return _mainWindow; }
 
     // Dialogs
     FindReplaceDialog*  findReplaceDialog() const { return _findReplaceDialog; }
@@ -375,7 +376,7 @@ private:
     bool            _isFullScreen = false;
     bool            _isDistractionFree = false;
 
-    QMainWindow*    _mainWindow = nullptr;
+    MainWindow*     _mainWindow = nullptr;
     QWidget*        _centralWidget = nullptr;
     QStackedWidget* _viewStack = nullptr;
 
@@ -395,6 +396,7 @@ private:
     PreferenceDialog*   _preferenceDialog = nullptr;
     AboutDialog*        _aboutDialog = nullptr;
     FindInFilesDialog*  _findInFilesDialog = nullptr;
+    IncrementalSearchDialog* _incrementalSearch = nullptr;
 
     // Panels
     DocumentMapPanel*   _docMapPanel = nullptr;

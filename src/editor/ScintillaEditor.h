@@ -117,7 +117,19 @@ public:
 
     void convertEol(EolType eol);
 
+    // Code folding
+    void foldAll();
+    void unfoldAll();
+    void toggleFold(int line);
+
     SyntaxHighlighter* highlighter() const { return _highlighter; }
+
+    // Bookmarks
+    void toggleBookmark(int line);
+    void nextBookmark();
+    void prevBookmark();
+    void clearBookmarks();
+    QList<int> bookmarks() const { return _bookmarks; }
 
     // Access underlying QsciScintilla for advanced operations (e.g., document sharing)
     QsciScintilla* qsciEditor() const { return _editor; }
@@ -158,4 +170,6 @@ private:
     EncodingType _encoding = EncodingType::UTF_8;
     EolType _eolType = EolType::EOL_LF;
     int _zoomLevel = 0;
+    QList<int> _bookmarks;
+    static const int BOOKMARK_MARKER = 0;
 };

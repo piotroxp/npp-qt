@@ -31,6 +31,8 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
+    static MainWindow* instance() { return _instance; }
+
     MainWindow();
     ~MainWindow() override;
 
@@ -135,6 +137,7 @@ private:
 
     // Editor registry — maps between tabs, buffers, and editors
     QMap<int, BufferID> _tabToBuffer;          // tab index → buffer
+    static MainWindow* _instance;
     QMap<BufferID, ScintillaEditor*> _bufferToEditor; // buffer → editor
     QMap<BufferID, int> _bufferToTab;          // buffer → tab index
 

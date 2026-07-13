@@ -51,7 +51,27 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     _editor->setIndentationsUseTabs(false);
     _editor->setAutoIndent(true);
     _editor->setCaretLineVisible(true);
+    _editor->setIndentationGuides(true);
+    _editor->setTabIndents(true);
+    _editor->setBackspaceUnindents(true);
+
+    // Bracket matching
     _editor->setBraceMatching(QsciScintilla::SloppyBraceMatch);
+    _editor->setMatchedBraceBackgroundColor(QColor("#FFFF00")); // yellow
+    _editor->setMatchedBraceForegroundColor(Qt::black);
+    _editor->setUnmatchedBraceBackgroundColor(QColor("#FF6600")); // orange
+    _editor->setUnmatchedBraceForegroundColor(Qt::white);
+    // Highlight guide (indentation guide column indicator)
+    _editor->SendScintilla(QsciScintilla::SCI_SETINDENTATIONGUIDES, 1); // SC_IV_LOOKBOTH
+
+    // Code folding — boxed tree style with fold margin
+    _editor->setFolding(QsciScintilla::BoxedTreeFoldStyle);
+    _editor->setMarginType(2, QsciScintilla::SymbolMargin);
+    _editor->setMarginWidth(2, "0");
+    _editor->setMarginSensitivity(2, true);
+    _editor->setMarkerForegroundColor(QColor("#cccccc"), 0);
+    _editor->setMarkerBackgroundColor(QColor("#e0e0e0"), 0);
+    _editor->setFoldMarginColors(QColor("#888888"), QColor("#f0f0f0"));
 
     // Pre-configure indicators for match highlighting.
     // Indicator 0: for current-selection highlight (yellow)
@@ -61,9 +81,22 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     _editor->indicatorDefine(QsciScintilla::BoxIndicator, 1);
     _editor->setIndicatorForegroundColor(QColor("#FFFF00"), 1);
 
+    // Bookmark margin (margin 1)
+    _editor->setMarginType(1, QsciScintilla::SymbolMargin);
+    _editor->setMarginWidth(1, "0");
+    _editor->setMarginSensitivity(1, true);
+    _editor->setMarkerBackgroundColor(QColor("#0088FF"), BOOKMARK_MARKER);
+
+    // Connect margin click for bookmarks
+    connect(_editor, &QsciScintilla::marginClicked, this, [this](int margin, int line, Qt::KeyboardModifiers) {
+        if (margin == 1) toggleBookmark(line);
+    });
+
     connect(_editor, &QsciScintilla::textChanged, this, &ScintillaEditor::textChanged);
     connect(_editor, &QsciScintilla::cursorPositionChanged, [this](int line, int col) {
         emit cursorPositionChanged(line, col);
+        // Trigger bracket matching on cursor move
+        _editor->SendScintilla(QsciScintilla::SCI_BRACEMATCH, -1);
     });
     connect(_editor, &QsciScintilla::modificationChanged, this, &ScintillaEditor::modificationChanged);
     connect(_editor, &QsciScintilla::selectionChanged, this, [this]() {
@@ -75,6 +108,12 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
             lines = sel.count('\n') + 1;
         }
         emit selectionChanged(start, end, lines);
+    });
+    connect(_editor, &QsciScintilla::marginClicked, this, [this](int margin, int line, Qt::KeyboardModifiers) {
+        if (margin == 2) {
+            // foldLine() internally sends SCI_FOLDLINE which toggles fold state
+            _editor->foldLine(line);
+        }
     });
 }
 
@@ -585,4 +624,59 @@ void ScintillaEditor::print(QPrinter* printer) {
     if (!painter.isActive()) return;
     _editor->render(&painter);
     painter.end();
+}
+
+// ============================================================================
+// Code Folding
+// ============================================================================
+void ScintillaEditor::foldAll() {
+    _editor->foldAll(false);
+}
+
+void ScintillaEditor::unfoldAll() {
+    // SCI_SETFOLDEXPANDED with expanded=1 forces lines to expand.
+    // Use explicit casts to resolve SendScintilla overload ambiguity.
+    for (int line = 0; line < _editor->lines(); ++line) {
+        unsigned int msg = static_cast<unsigned int>(QsciScintilla::SCI_SETFOLDEXPANDED);
+        unsigned long lParam = 1UL; // 1 = expanded (force expand)
+        _editor->SendScintilla(msg, static_cast<unsigned long>(line), lParam);
+    }
+}
+
+void ScintillaEditor::toggleFold(int line) {
+    _editor->foldLine(line);
+}
+
+// ============================================================================
+// Bookmarks
+// ============================================================================
+void ScintillaEditor::toggleBookmark(int line) {
+    if (_bookmarks.contains(line)) {
+        _bookmarks.removeAll(line);
+        _editor->markerDelete(line, BOOKMARK_MARKER);
+    } else {
+        _bookmarks.append(line);
+        _editor->markerAdd(line, BOOKMARK_MARKER);
+    }
+}
+
+void ScintillaEditor::nextBookmark() {
+    int cur = 0, col = 0;
+    _editor->getCursorPosition(&cur, &col);
+    for (int line : _bookmarks) {
+        if (line > cur) { _editor->setCursorPosition(line, 0); return; }
+    }
+}
+
+void ScintillaEditor::prevBookmark() {
+    int cur = 0, col = 0;
+    _editor->getCursorPosition(&cur, &col);
+    for (int i = _bookmarks.size() - 1; i >= 0; --i) {
+        if (_bookmarks[i] < cur) { _editor->setCursorPosition(_bookmarks[i], 0); return; }
+    }
+}
+
+void ScintillaEditor::clearBookmarks() {
+    for (int line : _bookmarks) _editor->markerDelete(line, BOOKMARK_MARKER);
+    _bookmarks.clear();
 }

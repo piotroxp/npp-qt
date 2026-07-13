@@ -23,6 +23,8 @@
 #include <QMimeData>
 #include <QCloseEvent>
 #include <QFileInfo>
+#include <QSettings>
+#include <QShortcut>
 #include <QAction>
 #include <QKeySequence>
 #include <QStyle>
@@ -33,9 +35,12 @@
 #include <QDesktopServices>
 #include <QUrl>
 
+MainWindow* MainWindow::_instance = nullptr;
+
 MainWindow::MainWindow()
     : QMainWindow(nullptr)
 {
+    _instance = this;
     setWindowTitle("Notepad--Qt");
     setAcceptDrops(true);
     resize(1200, 800);
@@ -90,6 +95,10 @@ MainWindow::MainWindow()
     // Tab context menu (right-click on tab)
     _tabWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(_tabWidget, &QWidget::customContextMenuRequested, this, &MainWindow::onTabContextMenu);
+
+    // Ctrl+I for incremental search
+    connect(new QShortcut(QKeySequence("Ctrl+I"), this), &QShortcut::activated,
+        this, []() { Application::instance().onMenuCommand("search.incremental"); });
 }
 
 MainWindow::~MainWindow() = default;
@@ -1191,6 +1200,11 @@ void MainWindow::closeEvent(QCloseEvent* event) {
             return;
         }
     }
+    
+    // Save window geometry and state
+    QSettings s;
+    s.setValue("window/geometry", saveGeometry());
+    s.setValue("window/state", saveState());
     
     event->accept();
 }
