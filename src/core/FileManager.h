@@ -163,4 +163,5 @@ private:
     BufferID _nextBufferId = reinterpret_cast<BufferID>(1);
     BufferID _activeBuffer = BUFFER_INVALID;
     bool _autoDetectEncoding = true;
+    std::unordered_map<BufferID, QString> _bufferText;
 };

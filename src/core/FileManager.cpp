@@ -448,9 +448,11 @@ bool FileManager::isBufferModified(BufferID buffer) const {
 
 QString FileManager::getBufferText(BufferID buffer) const {
     Buffer* buf = bufferFromId(buffer);
-    // In a real implementation, this would get text from the Scintilla editor
-    // For now, we return empty - actual text is managed by Scintilla
-    Q_UNUSED(buf);
+    if (!buf)
+        return QString();
+    auto it = _bufferText.find(buffer);
+    if (it != _bufferText.end())
+        return it->second;
     return QString();
 }
 
@@ -458,6 +460,7 @@ bool FileManager::setBufferText(BufferID buffer, const QString& text) {
     Buffer* buf = bufferFromId(buffer);
     if (!buf)
         return false;
+    _bufferText[buffer] = text;
     buf->setDocumentLength(text.length());
     buf->setDirty(true);
     return true;

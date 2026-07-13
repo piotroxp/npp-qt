@@ -104,6 +104,17 @@ void debugOutput(const std::string& msg) {
 // ============================================================================
 // INI Parser
 // ============================================================================
+
+static std::string iniKey(const std::string& section, const std::string& key) {
+    return section + "\x1F" + key;
+}
+
+static std::string iniSectionFromKey(const std::string& compound) {
+    size_t pos = compound.find("\x1F");
+    if (pos == std::string::npos) return "";
+    return compound.substr(0, pos);
+}
+
 bool IniParser::load(const std::string& path) {
     _path = path;
     std::ifstream fin(path);
@@ -124,9 +135,9 @@ bool IniParser::load(const std::string& path) {
         } else {
             auto eq = line.find('=');
             if (eq != std::string::npos) {
-                _lines.emplace_back(currentSection + "\x1F" +
-                    StringHelper::trim(line.substr(0, eq)),
-                    StringHelper::trim(line.substr(eq + 1)));
+                std::string k = StringHelper::trim(line.substr(0, eq));
+                std::string v = StringHelper::trim(line.substr(eq + 1));
+                _lines.emplace_back(iniKey(currentSection, k), v);
             }
         }
     }
@@ -138,30 +149,23 @@ bool IniParser::save(const std::string& path) {
     if (!fout) return false;
     std::string currentSection;
     for (size_t i = 0; i < _lines.size(); ++i) {
-        auto sep = _lines[i].first.find('\x1F');
-        std::string section, key;
-        if (sep != std::string::npos) {
-            section = _lines[i].first.substr(0, sep);
-            key = _lines[i].first.substr(sep + 1);
-        } else {
-            section = "";
-            key = _lines[i].first;
-        }
-        if (section != currentSection) {
+        std::string s = iniSectionFromKey(_lines[i].first);
+        std::string k = _lines[i].first.substr(s.size() + 1);
+        if (s != currentSection) {
             if (i > 0) fout << "\n";
-            if (!section.empty()) fout << "[" << section << "]\n";
-            currentSection = section;
+            if (!s.empty()) fout << "[" << s << "]\n";
+            currentSection = s;
         }
-        fout << key << "=" << _lines[i].second << "\n";
+        fout << k << "=" << _lines[i].second << "\n";
     }
     return fout.good();
 }
 
 std::string IniParser::get(const std::string& section, const std::string& key,
                              const std::string& defaultVal) const {
-    std::string prefix = section + "\x1F" + key;
+    std::string compound = iniKey(section, key);
     for (const auto& [k, v] : _lines) {
-        if (k == prefix) return v;
+        if (k == compound) return v;
     }
     return defaultVal;
 }
@@ -178,11 +182,11 @@ bool IniParser::getBool(const std::string& section, const std::string& key, bool
 }
 
 void IniParser::set(const std::string& section, const std::string& key, const std::string& val) {
-    std::string prefix = section + "\x1F" + key;
+    std::string compound = iniKey(section, key);
     for (auto& [k, v] : _lines) {
-        if (k == prefix) { v = val; return; }
+        if (k == compound) { v = val; return; }
     }
-    _lines.emplace_back(prefix, val);
+    _lines.emplace_back(compound, val);
     if (!hasSection(section)) _sections.push_back(section);
 }
 
@@ -191,7 +195,7 @@ void IniParser::set(const std::string& section, const std::string& key, int val)
 }
 
 void IniParser::set(const std::string& section, const std::string& key, bool val) {
-    set(section, key, std::string(val ? "1" : "0"));
+    set(section, key, val ? "1" : "0");
 }
 
 bool IniParser::hasSection(const std::string& section) const {
@@ -199,16 +203,15 @@ bool IniParser::hasSection(const std::string& section) const {
 }
 
 void IniParser::removeSection(const std::string& section) {
+    std::string prefix = section + "\x1F";
     _lines.erase(
         std::remove_if(_lines.begin(), _lines.end(),
-            [&](const auto& p) { return p.first.find(section + "\x1F") == 0; }),
+            [&](const auto& p) { return p.first.find(prefix) == 0; }),
         _lines.end());
     _sections.erase(std::remove(_sections.begin(), _sections.end(), section), _sections.end());
 }
 
-// ============================================================================
-// Process info
-// ============================================================================
+
 std::string getProcessId() {
     char buf[64];
 #if defined(_WIN32) || defined(_WIN64)

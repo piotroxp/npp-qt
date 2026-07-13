@@ -250,10 +250,10 @@ bool equalsIgnoreCase(const std::wstring& a, const std::wstring& b) {
 // ============================================================================
 std::string tabsToSpaces(const std::string& text, size_t tabWidth) {
     std::string result;
-    result.reserve(text.size() * 2);
+    result.reserve(text.size() * tabWidth);
     for (char c : text) {
         if (c == '\t') {
-            result.append(tabWidth - (result.size() % tabWidth), ' ');
+            result.append(tabWidth, ' ');
         } else {
             result += c;
         }
@@ -265,29 +265,44 @@ std::string spacesToTabs(const std::string& text, size_t tabWidth) {
     std::string result;
     result.reserve(text.size());
     size_t col = 0;
-    for (char c : text) {
-        if (c == ' ') {
-            size_t mod = col % tabWidth;
-            size_t nextTabStop = mod == 0 ? tabWidth : tabWidth - mod;
-            if (result.size() >= nextTabStop && result[result.size() - nextTabStop] == '\t') {
-                result[result.size() - nextTabStop] = '\t';
-            } else {
-                result += '\t';
-            }
-            ++col;
-        } else if (c == '\t') {
+    size_t i = 0;
+    while (i < text.size()) {
+        char c = text[i];
+        if (c == '\t') {
             result += '\t';
             col = (col / tabWidth + 1) * tabWidth;
+            ++i;
         } else if (c == '\n' || c == '\r') {
             result += c;
             col = 0;
+            ++i;
+        } else if (c == ' ') {
+            size_t spaceCount = 0;
+            size_t j = i;
+            while (j < text.size() && text[j] == ' ') {
+                ++spaceCount;
+                ++j;
+            }
+            size_t nextTabStop = (col / tabWidth + 1) * tabWidth;
+            if (spaceCount == nextTabStop - col) {
+                result += '\t';
+                col = nextTabStop;
+            } else {
+                for (size_t k = 0; k < spaceCount; ++k) {
+                    result += ' ';
+                    ++col;
+                }
+            }
+            i += spaceCount;
         } else {
             result += c;
             ++col;
+            ++i;
         }
     }
     return result;
 }
+
 
 std::string makeEolConsistent(std::string_view text, int eolMode) {
     const char* eol = "\n";

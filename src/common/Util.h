@@ -75,7 +75,11 @@ public:
     const std::vector<std::string>& sections() const { return _sections; }
 
 private:
+    int findKey(const std::string& section, const std::string& key) const;
+
+private:
     std::vector<std::string> _sections;
+    // Each entry: (section, key) -> value  [no separator needed]
     std::vector<std::pair<std::string, std::string>> _lines;
     std::string _path;
 };
