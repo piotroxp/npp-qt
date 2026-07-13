@@ -326,7 +326,7 @@ int main() {
     std::cout << "\nUTF-8 Validation:\n";
     RUN(test_utf8_valid_ascii);
     RUN(test_utf8_valid_utf8_chars);
-    RUN(test_utf8_valid_multibyte);
+    RUN(test_utf8_euro_sign_byte_sequence);
     RUN(test_utf8_valid_chinese);
     RUN(test_utf8_invalid_sequence);
     RUN(test_utf8_invalid_truncated);
