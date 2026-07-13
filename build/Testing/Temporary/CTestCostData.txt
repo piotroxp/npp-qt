@@ -1,8 +1,0 @@
-npp-test-utf8_16 4 0.00120829
-npp-test-dirwatch 4 0.0137093
-npp-test-darkmode 1 0.0157535
-npp-test-colour 4 0.00547698
-npp-test-lesdlgs 1 0.0154392
-npp-test-filedlg 4 0.00400637
-npp-test-iconset 5 0.00314139
----

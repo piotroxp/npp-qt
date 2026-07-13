@@ -158,9 +158,38 @@ std::vector<LangType> LanguageManager::getAllLanguages() const {
     return langs;
 }
 
-std::vector<std::string> LanguageManager::getKeywords(LangType lang) const {
-    (void)lang;
-    return {};
+std::unordered_map<int, std::string> LanguageManager::getKeywords(LangType lang) const {
+    std::unordered_map<int, std::string> kws;
+    switch (lang) {
+        case LangType::L_CPP:
+            kws[0] = "alignas alignof and and_eq asm auto bitand bitor bool break case char char16_t char32_t class compl const constexpr const_cast continue decltype default delete do double dynamic_cast else enum explicit export extern false float for friend goto if inline int long mutable namespace new noexcept not not_eq null nullptr operator or or_eq private protected public register reinterpret_cast return short signed sizeof static static_assert static_cast struct switch template this thread_local throw true try typedef typeid typename union unsigned using virtual void volatile wchar_t while xor xor_eq";
+            kws[1] = "NULL TRUE FALSE";
+            kws[2] = "__FILE__ __LINE__ __DATE__ __TIME__ __STDC__ __STDC_VERSION__";
+            kws[3] = "int8_t int16_t int32_t int64_t uint8_t uint16_t uint32_t uint64_t size_t ssize_t ptrdiff_t";
+            break;
+        case LangType::L_C:
+            kws[0] = "auto break case char const continue default do double else enum extern float for goto if inline int long register return short signed sizeof static struct switch typedef union unsigned void volatile while _Bool _Complex _Imaginary";
+            kws[1] = "NULL TRUE FALSE";
+            kws[2] = "__FILE__ __LINE__ __DATE__ __TIME__ __STDC__";
+            kws[3] = "int8_t int16_t int32_t int64_t uint8_t uint16_t uint32_t uint64_t size_t";
+            break;
+        case LangType::L_JAVA:
+            kws[0] = "abstract assert boolean break byte case catch char class const continue debugger default do double else enum extends final finally float for goto if implements import instanceof int interface long native new package private protected public return short static strictfp super switch synchronized this throw throws transient try void volatile while true false null";
+            break;
+        case LangType::L_PYTHON:
+            kws[0] = "and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield True False None";
+            kws[1] = "print input len range str int float list dict set tuple bool bytes";
+            break;
+        case LangType::L_JS:
+            kws[0] = "async await break case catch class const continue debugger default delete do else enum eval export extends false finally for function if implements in instanceof interface let new null package private protected return static super switch this throw true try typeof var void while with yield";
+            kws[1] = "console window document Array Boolean Date Error Function JSON Math Number Object RegExp String Symbol Map Set WeakMap WeakSet Promise";
+            break;
+        case LangType::L_BATCH:
+            kws[0] = "if then else elif fi case esac for select while until do done in function time coproc subshell background bang negate export readonly declare local typeset unset shift set source return exit break continue eval exec builtin command pushd popd dirs logout";
+            break;
+        default: break;
+    }
+    return kws;
 }
 
 bool LanguageManager::isCaseSensitive(LangType lang) const {

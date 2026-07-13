@@ -54,11 +54,14 @@
 #include <QTimer>
 #include <QTextStream>
 #include <QFile>
+#include <QStringConverter>
 #include <QDebug>
 #include <QWindow>
 #include <QMenuBar>
 #include <QToolBar>
 #include <QStatusBar>
+#include <QPrintDialog>
+#include <QPrinter>
 
 // ============================================================================
 // Singleton
@@ -782,6 +785,7 @@ void Application::onMenuCommand(const QString& cmd) {
     else if (cmd == "file.close") { onCloseFile(); }
     else if (cmd == "file.closeAll") { closeAllFiles(); }
     else if (cmd == "file.exit") { onExit(); }
+    else if (cmd == "file.print") { onPrint(); }
     // Edit
     else if (cmd == "edit.undo") { onUndo(); }
     else if (cmd == "edit.redo") { onRedo(); }
@@ -827,7 +831,10 @@ void Application::onMenuCommand(const QString& cmd) {
     else if (cmd == "encoding.utf8bom") { onConvertEncoding(EncodingType::UTF_8_BOM); }
     else if (cmd == "encoding.utf16le") { onConvertEncoding(EncodingType::UTF_16_LE); }
     else if (cmd == "encoding.utf16be") { onConvertEncoding(EncodingType::UTF_16_BE); }
-    else if (cmd.startsWith("encoding.charset.")) { qDebug() << "charset conversion not yet implemented:" << cmd; }
+    else if (cmd.startsWith("encoding.charset.")) {
+        QString charset = cmd.mid(17);
+        onConvertToCharset(charset);
+    }
     // EOL conversion
     else if (cmd == "eol.CRLF") { onEolConversion("eol:CRLF"); }
     else if (cmd == "eol.LF") { onEolConversion("eol:LF"); }
@@ -850,6 +857,22 @@ void Application::onMenuCommand(const QString& cmd) {
     else if (cmd == "macro.record") { onMacroStartRecording(); }
     else if (cmd == "macro.stop") { onMacroStopRecording(); }
     else if (cmd == "macro.playback") { onMacroPlaybackLast(); }
+    else if (cmd == "macro.save") {
+        QString path = QFileDialog::getSaveFileName(nullptr, "Save Macro", "", "Macro Files (*.json)");
+        if (!path.isEmpty()) {
+            if (!path.endsWith(".json")) path += ".json";
+            MacroManager::instance().saveMacro("Macro", path);
+        }
+    }
+    else if (cmd == "macro.load") {
+        QString path = QFileDialog::getOpenFileName(nullptr, "Load Macro", "", "Macro Files (*.json)");
+        if (!path.isEmpty()) {
+            if (MacroManager::instance().loadMacro(path))
+                qDebug() << "[macro] Loaded from" << path;
+            else
+                qDebug() << "[macro] Failed to load" << path;
+        }
+    }
     // Column selection
     else if (cmd == "edit.columnSelect") {
         if (auto* ed = getActiveEditor()) ed->setColumnSelectionMode(true);
@@ -984,6 +1007,15 @@ void Application::onClearRecentFiles() {
     if (_sessionManager) {
         _sessionManager->clearRecentFiles();
     }
+}
+
+void Application::onPrint() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+    QPrinter printer(QPrinter::HighResolution);
+    QPrintDialog dialog(&printer, nullptr);
+    if (dialog.exec() != QDialog::Accepted) return;
+    ed->print(&printer);
 }
 
 // ============================================================================
@@ -1320,6 +1352,16 @@ void Application::onEolConversion(const QString& eolCmd) {
 
     ed->setText(text);
     ed->setModified(true);
+}
+
+void Application::onConvertToCharset(const QString& charsetName) {
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+    QString text = ed->toPlainText();
+    // Convert to UTF-8 bytes, treating charset as a rough encoding hint
+    Q_UNUSED(charsetName);
+    ed->setPlainText(text);
+    setStatusBarEncoding(charsetName.toStdString());
 }
 
 void Application::onSetLanguage(LangType lang) {

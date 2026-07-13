@@ -44,7 +44,7 @@ public:
     LangType getLanguageForExtension(const std::string& ext) const;
 
     std::vector<LangType> getAllLanguages() const;
-    std::vector<std::string> getKeywords(LangType lang) const;
+    std::unordered_map<int, std::string> getKeywords(LangType lang) const;
 
     bool isCaseSensitive(LangType lang) const;
     int getIndentSize(LangType lang) const;

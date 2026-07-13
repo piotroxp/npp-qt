@@ -23,6 +23,8 @@ public:
 
     // Storage
     void saveMacro(const QString& name);
+    void saveMacro(const QString& name, const QString& path);
+    bool loadMacro(const QString& path);
     void loadMacros();
     void deleteMacro(int index);
 

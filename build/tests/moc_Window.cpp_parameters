@@ -1,5 +1,0 @@
--I/home/node/.openclaw/workspace/tests
--I/home/node/.openclaw/workspace/build/tests
--o
-/home/node/.openclaw/workspace/build/tests/moc_Window.cpp
-/home/node/.openclaw/workspace/src/WinControls/Window.h

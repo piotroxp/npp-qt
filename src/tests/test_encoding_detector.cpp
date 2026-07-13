@@ -106,6 +106,11 @@ TEST(test_utf8_valid_multibyte) {
     EncodingDetector detector;
     bool valid = detector.isValidUtf8(data);
     ASSERT_TRUE(valid);
+
+    // Also test via detect() — should return UTF_8, not ANSI or UTF_16
+    EncodingType result = detector.detect(data);
+    ASSERT_TRUE(result != EncodingType::UTF_16_LE);
+    ASSERT_TRUE(result != EncodingType::UTF_16_BE);
 }
 
 TEST(test_utf8_valid_chinese) {

@@ -310,6 +310,7 @@ public slots:
     void onMacroStartRecording();
     void onMacroStopRecording();
     void onMacroPlaybackLast();
+    void onPrint();
 
     // Import/Export (Notepad++ compatibility)
     ApplicationImportResult importFromNpp();
@@ -322,6 +323,7 @@ public slots:
 
     // Encoding commands
     void onConvertEncoding(EncodingType enc);
+    void onConvertToCharset(const QString& charsetName);
     void onEolConversion(const QString& eolCmd);
 
     // Language commands

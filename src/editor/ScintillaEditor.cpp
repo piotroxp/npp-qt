@@ -28,7 +28,10 @@
 #include <Qsci/qscilexerxml.h>
 #include <QVBoxLayout>
 #include <QFont>
+#include <QPainter>
 #include <QCoreApplication>
+#include <QPrinter>
+#include <QPainter>
 
 ScintillaEditor::ScintillaEditor(QWidget* parent)
     : QFrame(parent)
@@ -566,4 +569,11 @@ void ScintillaEditor::setColumnSelectionMode(bool on) {
 
 void ScintillaEditor::convertEol(EolType eol) {
     setEolType(eol);
+}
+
+void ScintillaEditor::print(QPrinter* printer) {
+    QPainter painter(printer);
+    if (!painter.isActive()) return;
+    _editor->render(&painter);
+    painter.end();
 }

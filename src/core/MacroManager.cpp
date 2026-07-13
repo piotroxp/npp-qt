@@ -143,6 +143,38 @@ void MacroManager::saveMacro(const QString& name) {
     }
 }
 
+void MacroManager::saveMacro(const QString& name, const QString& path) {
+    QJsonObject obj;
+    obj["name"] = name;
+    QJsonArray actions;
+    for (const auto& [cmd, param] : m_currentRecording) {
+        QJsonObject act;
+        act["command"] = cmd;
+        act["param"] = param;
+        actions.append(act);
+    }
+    obj["actions"] = actions;
+    QJsonDocument doc(obj);
+    QFile f(path);
+    if (f.open(QIODevice::WriteOnly)) {
+        f.write(doc.toJson());
+        f.close();
+    }
+}
+
+bool MacroManager::loadMacro(const QString& path) {
+    QFile f(path);
+    if (!f.open(QIODevice::ReadOnly)) return false;
+    QJsonObject obj = QJsonDocument::fromJson(f.readAll()).object();
+    f.close();
+    m_currentRecording.clear();
+    for (const QJsonValue& v : obj["actions"].toArray()) {
+        QJsonObject act = v.toObject();
+        m_currentRecording.append(qMakePair(act["command"].toString(), act["param"].toString()));
+    }
+    return true;
+}
+
 void MacroManager::deleteMacro(int index) {
     if (index < 0 || index >= m_savedMacros.size())
         return;

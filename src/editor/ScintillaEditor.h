@@ -7,6 +7,7 @@
 #include <QFrame>
 #include <QString>
 #include <QColor>
+#include <QPrinter>
 #include <vector>
 #include <Qsci/qsciscintilla.h>
 #include "../common/Types.h"
@@ -138,6 +139,8 @@ public:
     void zoomOut();
     void zoomReset();
     int zoomLevel() const;
+
+    void print(QPrinter* printer);
 
 signals:
     void textChanged();
