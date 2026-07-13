@@ -547,11 +547,13 @@ void ScintillaEditor::setMultipleSelectionEnabled(bool) { }
 
 void ScintillaEditor::setColumnSelectionMode(bool on) {
     if (on) {
-        _editor->setSelectionMode(QsciScintilla::SelectionMode::ColumnSelection);
-        _editor->setVirtualSpaceOptions(QsciScintilla::VirtualSpace::UserAccessible);
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE,
+                               QsciScintilla::SC_SEL_LINES);
+        _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 1);  // SC_VS_USERACCESSIBLE
     } else {
-        _editor->setSelectionMode(QsciScintilla::SelectionMode::NormalSelection);
-        _editor->setVirtualSpaceOptions(QsciScintilla::VirtualSpace::NoWrap);
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE,
+                               QsciScintilla::SC_SEL_STREAM);
+        _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 0);  // SC_VS_NONE
     }
 }
 

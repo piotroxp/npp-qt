@@ -16,7 +16,7 @@
 | 5 | Menu Bar Language Actions | agent-wave5 | ✅ complete | menu routing + StatusBar wiring (eb64aab) |
 | 6 | Encoding Pantry + EOL | agent-wave6 | pending | Buffer.cpp UTF-16 + backups |
 | 7 | Keyboard Shortcuts + Edit | agent-wave7 | pending | all edit menu actions |
-| 8 | Advanced Editor Features | agent-wave8 | pending | bracket match, auto-indent, etc |
+| 8 | Advanced Editor Features | agent-wave8 | ✅ complete | wave8: LangType→QsciLexer, ThemeManager.instance(), dark mode toggle, applyTheme/applyThemeToLexer (4b66e3e) |
 | 9 | File Operations Enhancements | agent-wave9 | pending | reload, save all, external mods |
 | 10 | Final Verification + Polish | agent-wave10 | pending | build, valgrind, CI, README |
 
@@ -80,7 +80,7 @@
 - wave-5: ✅ DONE — commit eb64aab
 - wave-6 (eeee05e0): Editor-tab integration → each tab owns Buffer+ScintillaEditor, lifecycle, context menu
 - wave-7 (9e0c8a90): File I/O UTF-16 + encoding + EOL → BOM, detect, convert, wire
-- wave-8 (56b8323c): Syntax highlighting + theme → LangType→QsciLexer map, ThemeManager, dark mode
+- wave-8 (56b8323c): ✅ DONE — commit 4b66e3e — Syntax highlighting + theme → LangType→QsciLexer map, ThemeManager.instance(), dark mode, applyTheme+applyThemeToLexer wired
 - wave-9 (4dc0c968): Auto-save, SessionManager JSON, MacroManager, clipboard history, column mode
 
 **To deploy when slots free:**
