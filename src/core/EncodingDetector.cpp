@@ -41,12 +41,7 @@ EncodingType EncodingDetector::detectBOM(const std::string& bytes) const {
 }
 
 bool EncodingDetector::isValidUtf8(const std::string& bytes) const {
-    return isValidUtf8(std::string_view(bytes));
-}
-
-bool EncodingDetector::isValidUtf8(const std::string_view bytes) const {
-    size_t len = 0;
-    return validateUtf8Sequence(reinterpret_cast<const unsigned char*>(bytes.data()), bytes.size(), &len) >= 0;
+    return isValidUtf8(std::string_view(bytes.data(), bytes.size()));
 }
 
 int EncodingDetector::validateUtf8Sequence(const unsigned char* data, size_t len, size_t* outLen) const {
@@ -62,6 +57,20 @@ int EncodingDetector::validateUtf8Sequence(const unsigned char* data, size_t len
         if ((data[i] & 0xC0) != 0x80) return -1;
     }
     return 0;
+}
+
+bool EncodingDetector::isValidUtf8(const std::string_view bytes) const {
+    size_t i = 0;
+    size_t len = bytes.size();
+    const unsigned char* data = reinterpret_cast<const unsigned char*>(bytes.data());
+
+    while (i < len) {
+        size_t seqLen = 0;
+        if (validateUtf8Sequence(data + i, len - i, &seqLen) < 0)
+            return false;
+        i += seqLen;
+    }
+    return true;
 }
 
 std::string EncodingDetector::toUtf8(const std::string& bytes, EncodingType from) const {

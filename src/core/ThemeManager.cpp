@@ -10,6 +10,11 @@
 #include <QDir>
 #include <QApplication>
 
+ThemeManager& ThemeManager::instance() {
+    static ThemeManager inst;
+    return inst;
+}
+
 ThemeManager::ThemeManager() {
     // Initialize with default dark theme
     applyDefaultDark();

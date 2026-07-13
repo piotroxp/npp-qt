@@ -11,6 +11,7 @@
 #include <Qsci/qsciscintilla.h>
 #include "../common/Types.h"
 #include "common/NonCopyable.h"
+#include "../core/ThemeManager.h"
 
 class SyntaxHighlighter;
 class Buffer;
@@ -126,6 +127,10 @@ public:
     int caretWidth() const;
     void setCaretForegroundColor(const QColor& color);
     void setCaretLineBackgroundColor(const QColor& color);
+
+    // Theme application — applies colors from ThemeManager to the editor surface
+    void applyTheme(const QString& themeName);
+    void applyThemeToLexer(QsciLexer* lexer);
 
 signals:
     void textChanged();

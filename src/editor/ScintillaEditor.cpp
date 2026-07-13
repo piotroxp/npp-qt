@@ -4,6 +4,8 @@
 
 #include "ScintillaEditor.h"
 #include "SyntaxHighlighter.h"
+#include "../core/ThemeManager.h"
+#include "../core/LanguageManager.h"
 #include <Qsci/qsciscintilla.h>
 #include <Qsci/qscilexercustom.h>
 #include <QVBoxLayout>
@@ -65,6 +67,142 @@ QString ScintillaEditor::toPlainText() const { return _editor->text(); }
 void ScintillaEditor::setLanguage(LangType lang) {
     _language = lang;
     if (_highlighter) _highlighter->setLanguage(lang);
+
+    // Use QsciScintilla's built-in lexers via LanguageManager
+    QsciLexer* lexer = LanguageManager::instance().getLexer(lang);
+    _editor->setLexer(lexer);
+    if (lexer) {
+        applyThemeToLexer(lexer);
+    }
+}
+
+void ScintillaEditor::applyTheme(const QString& themeName) {
+    ThemeManager::instance().loadTheme(themeName);
+    ThemeColors c = ThemeManager::instance().currentThemeColors();
+
+    _editor->setColor(QColor(c.foreground));
+    _editor->setPaper(QColor(c.background));
+    _editor->setCaretForegroundColor(QColor(c.caretColor));
+    _editor->setCaretLineBackgroundColor(QColor(c.currentLineBackground));
+    _editor->setSelectionBackgroundColor(QColor(c.selectionBackground));
+    // Re-apply lexer colors if a lexer is active
+    if (_editor->lexer()) {
+        applyThemeToLexer(_editor->lexer());
+    }
+}
+
+void ScintillaEditor::applyThemeToLexer(QsciLexer* lexer) {
+    if (!lexer) return;
+    ThemeColors c = ThemeManager::instance().currentThemeColors();
+
+    // Set base colors for all text
+    lexer->setColor(QColor(c.foreground));
+    lexer->setPaper(QColor(c.background));
+
+    // Use the editor font as the default for all styles
+    QFont f = _editor->font();
+    lexer->setFont(f);
+
+    // Map ThemeColors to common QsciLexer style roles.
+    // QsciLexer uses its own per-lexer style constants (e.g. QsciLexerCPP::Comment).
+    // We cast to specific types and set colours for the most important categories.
+    // For unknown lexers, the base colour set above is used as fallback.
+
+    if (auto* cpp = dynamic_cast<QsciLexerCPP*>(lexer)) {
+        cpp->setColor(QColor(c.keywordColor),  QsciLexerCPP::Keyword);
+        cpp->setColor(QColor(c.stringColor),   QsciLexerCPP::DoubleQuotedString);
+        cpp->setColor(QColor(c.stringColor),   QsciLexerCPP::SingleQuotedString);
+        cpp->setColor(QColor(c.commentColor),  QsciLexerCPP::Comment);
+        cpp->setColor(QColor(c.commentColor),  QsciLexerCPP::CommentLine);
+        cpp->setColor(QColor(c.numberColor),   QsciLexerCPP::Number);
+    } else if (auto* py = dynamic_cast<QsciLexerPython*>(lexer)) {
+        py->setColor(QColor(c.keywordColor),  QsciLexerPython::Keyword);
+        py->setColor(QColor(c.stringColor),   QsciLexerPython::DoubleQuotedString);
+        py->setColor(QColor(c.stringColor),   QsciLexerPython::SingleQuotedString);
+        py->setColor(QColor(c.commentColor),  QsciLexerPython::Comment);
+        py->setColor(QColor(c.numberColor),   QsciLexerPython::Number);
+    } else if (auto* js = dynamic_cast<QsciLexerJavaScript*>(lexer)) {
+        js->setColor(QColor(c.keywordColor),  QsciLexerJavaScript::Keyword);
+        js->setColor(QColor(c.stringColor),   QsciLexerJavaScript::String);
+        js->setColor(QColor(c.commentColor),  QsciLexerJavaScript::Comment);
+        js->setColor(QColor(c.numberColor),   QsciLexerJavaScript::Number);
+    } else if (auto* html = dynamic_cast<QsciLexerHTML*>(lexer)) {
+        html->setColor(QColor(c.keywordColor),  QsciLexerHTML::Tag);
+        html->setColor(QColor(c.stringColor),   QsciLexerHTML::DoubleQuotedString);
+        html->setColor(QColor(c.stringColor),   QsciLexerHTML::SingleQuotedString);
+        html->setColor(QColor(c.commentColor),  QsciLexerHTML::Comment);
+        html->setColor(QColor(c.numberColor),   QsciLexerHTML::Number);
+    } else if (auto* css = dynamic_cast<QsciLexerCSS*>(lexer)) {
+        css->setColor(QColor(c.keywordColor),  QsciLexerCSS::Property);
+        css->setColor(QColor(c.stringColor),   QsciLexerCSS::Value);
+        css->setColor(QColor(c.commentColor),  QsciLexerCSS::Comment);
+        css->setColor(QColor(c.numberColor),   QsciLexerCSS::Number);
+    } else if (auto* json = dynamic_cast<QsciLexerJSON*>(lexer)) {
+        json->setColor(QColor(c.keywordColor),  QsciLexerJSON::Property);
+        json->setColor(QColor(c.stringColor),   QsciLexerJSON::String);
+        json->setColor(QColor(c.commentColor),  QsciLexerJSON::Comment);
+        json->setColor(QColor(c.numberColor),   QsciLexerJSON::Number);
+    } else if (auto* mkdn = dynamic_cast<QsciLexerMarkdown*>(lexer)) {
+        mkdn->setColor(QColor(c.keywordColor),  QsciLexerMarkdown::Heading);
+        mkdn->setColor(QColor(c.stringColor),   QsciLexerMarkdown::StrongEmphasis);
+        mkdn->setColor(QColor(c.commentColor),  QsciLexerMarkdown::Comment);
+        mkdn->setColor(QColor(c.numberColor),   QsciLexerMarkdown::Number);
+    } else if (auto* mkf = dynamic_cast<QsciLexerMakefile*>(lexer)) {
+        mkf->setColor(QColor(c.keywordColor),  QsciLexerMakefile::Target);
+        mkf->setColor(QColor(c.stringColor),   QsciLexerMakefile::Variable);
+        mkf->setColor(QColor(c.commentColor),  QsciLexerMakefile::Comment);
+    } else if (auto* bash = dynamic_cast<QsciLexerBash*>(lexer)) {
+        bash->setColor(QColor(c.keywordColor),  QsciLexerBash::Keyword);
+        bash->setColor(QColor(c.stringColor),   QsciLexerBash::DoubleQuotedString);
+        bash->setColor(QColor(c.stringColor),   QsciLexerBash::SingleQuotedString);
+        bash->setColor(QColor(c.commentColor),  QsciLexerBash::Comment);
+        bash->setColor(QColor(c.numberColor),   QsciLexerBash::Number);
+    } else if (auto* bat = dynamic_cast<QsciLexerBatch*>(lexer)) {
+        bat->setColor(QColor(c.keywordColor),  QsciLexerBatch::Keyword);
+        bat->setColor(QColor(c.stringColor),   QsciLexerBatch::Variable);
+        bat->setColor(QColor(c.commentColor),  QsciLexerBatch::Comment);
+        bat->setColor(QColor(c.numberColor),   QsciLexerBatch::Number);
+    } else if (auto* lua = dynamic_cast<QsciLexerLua*>(lexer)) {
+        lua->setColor(QColor(c.keywordColor),  QsciLexerLua::Keyword);
+        lua->setColor(QColor(c.stringColor),   QsciLexerLua::String);
+        lua->setColor(QColor(c.commentColor),  QsciLexerLua::Comment);
+        lua->setColor(QColor(c.numberColor),   QsciLexerLua::Number);
+    } else if (auto* ruby = dynamic_cast<QsciLexerRuby*>(lexer)) {
+        ruby->setColor(QColor(c.keywordColor),  QsciLexerRuby::Keyword);
+        ruby->setColor(QColor(c.stringColor),   QsciLexerRuby::String);
+        ruby->setColor(QColor(c.commentColor),  QsciLexerRuby::Comment);
+        ruby->setColor(QColor(c.numberColor),   QsciLexerRuby::Number);
+    } else if (auto* perl = dynamic_cast<QsciLexerPerl*>(lexer)) {
+        perl->setColor(QColor(c.keywordColor),  QsciLexerPerl::Keyword);
+        perl->setColor(QColor(c.stringColor),   QsciLexerPerl::String);
+        perl->setColor(QColor(c.commentColor),  QsciLexerPerl::Comment);
+        perl->setColor(QColor(c.numberColor),   QsciLexerPerl::Number);
+    } else if (auto* yaml = dynamic_cast<QsciLexerYAML*>(lexer)) {
+        yaml->setColor(QColor(c.keywordColor),  QsciLexerYAML::Key);
+        yaml->setColor(QColor(c.stringColor),   QsciLexerYAML::String);
+        yaml->setColor(QColor(c.commentColor),  QsciLexerYAML::Comment);
+        yaml->setColor(QColor(c.numberColor),   QsciLexerYAML::Number);
+    } else if (auto* diff = dynamic_cast<QsciLexerDiff*>(lexer)) {
+        diff->setColor(QColor(c.stringColor),   QsciLexerDiff::AddedLine);
+        diff->setColor(QColor(c.keywordColor),  QsciLexerDiff::RemovedLine);
+        diff->setColor(QColor(c.commentColor),  QsciLexerDiff::Comment);
+    } else if (auto* sql = dynamic_cast<QsciLexerSQL*>(lexer)) {
+        sql->setColor(QColor(c.keywordColor),  QsciLexerSQL::Keyword);
+        sql->setColor(QColor(c.stringColor),   QsciLexerSQL::String);
+        sql->setColor(QColor(c.commentColor),  QsciLexerSQL::Comment);
+        sql->setColor(QColor(c.numberColor),   QsciLexerSQL::Number);
+    } else if (auto* tex = dynamic_cast<QsciLexerTeX*>(lexer)) {
+        tex->setColor(QColor(c.keywordColor),  QsciLexerTeX::Keyword);
+        tex->setColor(QColor(c.stringColor),   QsciLexerTeX::String);
+        tex->setColor(QColor(c.commentColor),  QsciLexerTeX::Comment);
+    } else if (auto* xml = dynamic_cast<QsciLexerXML*>(lexer)) {
+        xml->setColor(QColor(c.keywordColor),  QsciLexerXML::Tag);
+        xml->setColor(QColor(c.stringColor),   QsciLexerXML::DoubleQuotedString);
+        xml->setColor(QColor(c.commentColor),  QsciLexerXML::Comment);
+        xml->setColor(QColor(c.numberColor),   QsciLexerXML::Number);
+    }
+    // L_TEXT and other unhandled lexers: base colour already set above
+    Q_UNUSED(c);
 }
 void ScintillaEditor::setEncoding(EncodingType enc) { _encoding = enc; }
 void ScintillaEditor::setEolType(EolType eol) {

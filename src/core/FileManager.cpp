@@ -42,6 +42,39 @@ FileManager::~FileManager() {
 // File I/O
 // ============================================================================
 
+// Helper: convert QByteArray (UTF-16 raw bytes) to QString
+static QString decodeUtf16(const QByteArray& data, bool littleEndian) {
+    QString result;
+    result.reserve(data.size() / 2);
+    for (int i = 0; i + 1 < data.size(); i += 2) {
+        ushort code;
+        if (littleEndian) {
+            code = static_cast<uchar>(data[i]) | (static_cast<uchar>(data[i + 1]) << 8);
+        } else {
+            code = (static_cast<uchar>(data[i]) << 8) | static_cast<uchar>(data[i + 1]);
+        }
+        result.append(QChar(code));
+    }
+    return result;
+}
+
+// Helper: convert QString to QByteArray (raw UTF-16 bytes)
+static QByteArray encodeUtf16(const QString& str, bool littleEndian) {
+    QByteArray result;
+    result.reserve(str.length() * 2);
+    for (QChar c : str) {
+        ushort code = c.unicode();
+        if (littleEndian) {
+            result.append(static_cast<char>(code & 0xFF));
+            result.append(static_cast<char>((code >> 8) & 0xFF));
+        } else {
+            result.append(static_cast<char>((code >> 8) & 0xFF));
+            result.append(static_cast<char>(code & 0xFF));
+        }
+    }
+    return result;
+}
+
 bool FileManager::loadFile(const QString& path, QString& outContent, EncodingType encoding) {
     QFile file(path);
     if (!file.exists())
@@ -53,79 +86,68 @@ bool FileManager::loadFile(const QString& path, QString& outContent, EncodingTyp
     QByteArray data = file.readAll();
     file.close();
 
-    // Convert bytes to QString based on encoding
+    // Strip BOM if present
+    QByteArray content = data;
+    if (content.size() >= 3 && (uchar)content[0] == 0xEF && (uchar)content[1] == 0xBB && (uchar)content[2] == 0xBF)
+        content = content.mid(3);
+    if (content.size() >= 2) {
+        if ((uchar)content[0] == 0xFF && (uchar)content[1] == 0xFE) content = content.mid(2);
+        if ((uchar)content[0] == 0xFE && (uchar)content[1] == 0xFF) content = content.mid(2);
+    }
+
+    // Decode based on encoding
     switch (encoding) {
         case EncodingType::UTF_8:
         case EncodingType::UTF_8_BOM:
-            outContent = QString::fromUtf8(data);
+            outContent = QString::fromUtf8(content);
             break;
         case EncodingType::UTF_16_LE:
-            outContent = QString::fromUtf8(data);  // Qt handles UTF-16 internally
+            outContent = decodeUtf16(content, true);
             break;
         case EncodingType::UTF_16_BE:
-            outContent = QString::fromUtf8(data);  // Handle BE if needed
+            outContent = decodeUtf16(content, false);
             break;
-        default:
-            outContent = QString::fromLocal8Bit(data);
+        default: {
+            // Try UTF-8 first, fall back to locale
+            if (EncodingDetector::instance().isValidUtf8(content.toStdString()))
+                outContent = QString::fromUtf8(content);
+            else
+                outContent = QString::fromLocal8Bit(content);
             break;
+        }
     }
 
     return true;
 }
 
 bool FileManager::saveFile(const QString& path, const QString& content, EncodingType encoding, EolType eol) {
-    // Convert line endings if needed
-    QString processedContent = content;
-    if (eol != EolType::EOL_LF) {
-        processedContent.replace("\n",
-            eol == EolType::EOL_CRLF ? "\r\n" : "\r");
-    }
+    // Convert EOL first
+    QString processed = content;
+    if (eol == EolType::EOL_CRLF) processed.replace('\n', "\r\n");
+    else if (eol == EolType::EOL_CR) processed.replace('\n', "\r");
 
     QByteArray bytes;
     switch (encoding) {
         case EncodingType::UTF_8:
+            bytes = processed.toUtf8();
+            break;
         case EncodingType::UTF_8_BOM:
-            bytes = processedContent.toUtf8();
-            if (encoding == EncodingType::UTF_8_BOM) {
-                bytes.prepend("\xEF\xBB\xBF");  // Add BOM
-            }
+            bytes = QByteArray("\xEF\xBB\xBF", 3) + processed.toUtf8();
             break;
-        case EncodingType::UTF_16_LE: {
-            QByteArray contentBytes = processedContent.toUtf8();  // Convert to UTF-8 first
-            // Convert to UTF-16LE manually
-            QString u16 = QString::fromUtf8(contentBytes);
-            QByteArray u16bytes;
-            u16bytes.reserve(u16.length() * 2);
-            for (QChar c : u16) {
-                ushort uc = c.unicode();
-                u16bytes.append(static_cast<char>(uc & 0xFF));
-                u16bytes.append(static_cast<char>((uc >> 8) & 0xFF));
-            }
-            bytes = u16bytes;
+        case EncodingType::UTF_16_LE:
+            bytes = encodeUtf16(processed, true);
             break;
-        }
-        case EncodingType::UTF_16_BE: {
-            QByteArray contentBytes = processedContent.toUtf8();
-            QString u16 = QString::fromUtf8(contentBytes);
-            QByteArray u16bytes;
-            u16bytes.reserve(u16.length() * 2);
-            for (QChar c : u16) {
-                ushort uc = c.unicode();
-                u16bytes.append(static_cast<char>((uc >> 8) & 0xFF));
-                u16bytes.append(static_cast<char>(uc & 0xFF));
-            }
-            bytes = u16bytes;
+        case EncodingType::UTF_16_BE:
+            bytes = encodeUtf16(processed, false);
             break;
-        }
         default:
-            bytes = processedContent.toLocal8Bit();
+            bytes = processed.toLocal8Bit();
             break;
     }
 
     QFile file(path);
-    if (!file.open(QIODevice::WriteOnly))
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
         return false;
-
     qint64 written = file.write(bytes);
     file.close();
 
@@ -288,14 +310,30 @@ BufferID FileManager::openFile(const QString& path, bool readOnly) {
     Buffer* buf = new Buffer(this, _nextBufferId, path, false);
     ++_nextBufferId;
 
-    // Load content
-    QString content;
-    EncodingType detectedEnc = EncodingDetector::detectFromPath(path.toStdString());
+    // Read raw bytes for encoding detection
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        delete buf;
+        return nullptr;
+    }
+    QByteArray raw = file.readAll();
+    file.close();
+
+    // Detect encoding from BOM + content
+    EncodingType detectedEnc = EncodingDetector::instance().detect(raw.toStdString());
     buf->setEncoding(detectedEnc);
 
-    if (loadFile(path, content, detectedEnc)) {
-        buf->setDocumentLength(content.length());
-    }
+    // Decode content using detected encoding
+    QString content;
+    loadFile(path, content, detectedEnc);
+
+    // Detect EOL from decoded content
+    EolType eol = EolType::EOL_LF;
+    if (content.contains("\r\n")) eol = EolType::EOL_CRLF;
+    else if (content.contains('\r')) eol = EolType::EOL_CR;
+    buf->setEolFormat(eol);
+
+    buf->setDocumentLength(content.length());
 
     // Detect language from extension
     QString ext = getFileExtension(path).toLower();
@@ -435,6 +473,19 @@ bool FileManager::setEncoding(BufferID buffer, EncodingType enc) {
     if (!buf)
         return false;
     buf->setEncoding(enc);
+    return true;
+}
+
+EolType FileManager::getEolFormat(BufferID buffer) const {
+    Buffer* buf = bufferFromId(buffer);
+    return buf ? buf->getEolFormat() : EolType::EOL_LF;
+}
+
+bool FileManager::setEolFormat(BufferID buffer, EolType eol) {
+    Buffer* buf = bufferFromId(buffer);
+    if (!buf)
+        return false;
+    buf->setEolFormat(eol);
     return true;
 }
 

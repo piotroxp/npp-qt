@@ -3,6 +3,7 @@
 // GPL v3
 
 #include "LanguageManager.h"
+#include <QHash>
 #include <Qsci/qscilexercpp.h>
 #include <Qsci/qscilexerjava.h>
 #include <Qsci/qscilexercsharp.h>
@@ -14,6 +15,16 @@
 #include <Qsci/qscilexermakefile.h>
 #include <Qsci/qscilexerlua.h>
 #include <Qsci/qscilexerbatch.h>
+#include <Qsci/qscilexerruby.h>
+#include <Qsci/qscilexerperl.h>
+#include <Qsci/qscilexerpython.h>
+#include <Qsci/qscilexerbash.h>
+#include <Qsci/qscilexeroctave.h>
+#include <Qsci/qscilexeryaml.h>
+#include <Qsci/qscilexerdiff.h>
+#include <Qsci/qscilexersql.h>
+#include <Qsci/qscilexertex.h>
+#include <Qsci/qscilexerxml.h>
 #include <algorithm>
 #include <cctype>
 
@@ -236,22 +247,66 @@ LangType LanguageManager::detect(const std::string& fileExtension) {
     return instance().getLanguageForExtension(fileExtension);
 }
 
+// Map a string name to LangType
+LangType LanguageManager::mapStringToLang(const QString& name) {
+    static const QHash<QString, LangType> map = {
+        {"c",           LangType::L_C},
+        {"c++",         LangType::L_CPP},
+        {"cpp",         LangType::L_CPP},
+        {"java",        LangType::L_JAVA},
+        {"csharp",      LangType::L_CS},
+        {"c#",          LangType::L_CS},
+        {"objective-c", LangType::L_OBJC},
+        {"html",        LangType::L_HTML},
+        {"xml",         LangType::L_XML},
+        {"php",         LangType::L_PHP},
+        {"python",      LangType::L_PYTHON},
+        {"python3",     LangType::L_PYTHON},
+        {"javascript",  LangType::L_JS},
+        {"js",          LangType::L_JS},
+        {"json",        LangType::L_JSON},
+        {"css",         LangType::L_CSS},
+        {"makefile",    LangType::L_MAKEFILE},
+        {"markdown",    LangType::L_MARKDOWN},
+        {"md",          LangType::L_MARKDOWN},
+        {"ruby",        LangType::L_RUBY},
+        {"rb",          LangType::L_RUBY},
+        {"perl",        LangType::L_PERL},
+        {"pl",          LangType::L_PERL},
+        {"lua",         LangType::L_LUA},
+        {"yaml",        LangType::L_YAML},
+        {"yml",         LangType::L_YAML},
+        {"batch",       LangType::L_BATCH},
+        {"bat",         LangType::L_BATCH},
+        {"ini",         LangType::L_INI},
+        {"normal_text", LangType::L_TEXT},
+        {"text",        LangType::L_TEXT},
+    };
+    return map.value(name.toLower(), LangType::L_TEXT);
+}
+
 
 // Create a QsciLexer for the given language (nullptr for L_TEXT/unknown)
-QsciLexer* LanguageManager::createLexer(LangType lang) {
+QsciLexer* LanguageManager::getLexer(LangType lang) const {
     switch (lang) {
         case LangType::L_CPP:
-        case LangType::L_C:      return new QsciLexerCPP;
-        case LangType::L_JAVA:   return new QsciLexerJava;
-        case LangType::L_CS:     return new QsciLexerCSharp;
-        case LangType::L_HTML:   return new QsciLexerHTML;
-        case LangType::L_CSS:    return new QsciLexerCSS;
-        case LangType::L_JS:     return new QsciLexerJavaScript;
-        case LangType::L_JSON:   return new QsciLexerJSON;
-        case LangType::L_MARKDOWN: return new QsciLexerMarkdown;
-        case LangType::L_MAKEFILE: return new QsciLexerMakefile;
-        case LangType::L_LUA:    return new QsciLexerLua;
-        case LangType::L_BATCH:  return new QsciLexerBatch;
-        default: return nullptr;
+        case LangType::L_C:        return new QsciLexerCPP;
+        case LangType::L_JAVA:      return new QsciLexerJava;
+        case LangType::L_CS:        return new QsciLexerCSharp;
+        case LangType::L_HTML:      return new QsciLexerHTML;
+        case LangType::L_XML:       return new QsciLexerXML;
+        case LangType::L_CSS:       return new QsciLexerCSS;
+        case LangType::L_JS:        return new QsciLexerJavaScript;
+        case LangType::L_JSON:      return new QsciLexerJSON;
+        case LangType::L_MARKDOWN:  return new QsciLexerMarkdown;
+        case LangType::L_MAKEFILE:  return new QsciLexerMakefile;
+        case LangType::L_LUA:       return new QsciLexerLua;
+        case LangType::L_BATCH:     return new QsciLexerBatch;
+        case LangType::L_RUBY:      return new QsciLexerRuby;
+        case LangType::L_PERL:      return new QsciLexerPerl;
+        case LangType::L_PYTHON:    return new QsciLexerPython;
+        case LangType::L_YAML:      return new QsciLexerYAML;
+        case LangType::L_OBJC:      return new QsciLexerBash;     // Shell/ObjC scripts use Bash lexer
+        default:                     return nullptr;
     }
 }

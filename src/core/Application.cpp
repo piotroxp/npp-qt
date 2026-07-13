@@ -4,6 +4,7 @@
 #include "Buffer.h"
 #include "EncodingDetector.h"
 #include "LanguageManager.h"
+#include "ThemeManager.h"
 #include "SessionManager.h"
 #include "EditorCommandManager.h"
 #include "MacroManager.h"
@@ -246,8 +247,8 @@ void Application::setupToolBar() {
 }
 
 void Application::setupStatusBar() {
-    StatusBar* statusBar = new StatusBar(_mainWindow);
-    _mainWindow->setStatusBar(statusBar);
+    _statusBarWidget = new StatusBar(_mainWindow);
+    _mainWindow->setStatusBar(_statusBarWidget);
 }
 
 void Application::setupDockingPanels() {
@@ -309,6 +310,27 @@ void Application::setupConnections() {
     // Command execution
     connect(this, &Application::commandExecuted, this, [this](int cmdId) {
         _commandManager->execute(cmdId);
+    });
+
+    // StatusBar updates — encoding/EOL on buffer switch
+    connect(this, &Application::bufferActivated, this, [this](BufferID buf) {
+        if (buf) {
+            auto enc = getBufferEncoding(buf);
+            auto encStr = encodingToString(enc);
+            QString eolStr = "Unix (LF)";
+            _statusBarWidget->setEncoding(QString::fromStdString(encStr));
+            _statusBarWidget->setEol(eolStr);
+        }
+    });
+
+    // Cursor position → StatusBar position
+    connect(this, &Application::activeEditorChanged, this, [this](ScintillaEditor* ed) {
+        if (ed) {
+            connect(ed, &ScintillaEditor::cursorPositionChanged, _statusBarWidget,
+                [this](int line, int col) {
+                    _statusBarWidget->setPosition(line, col);
+                });
+        }
     });
 }
 
@@ -477,6 +499,14 @@ bool Application::setBufferEncoding(BufferID buffer, EncodingType enc) {
     return _fileManager->setEncoding(buffer, enc);
 }
 
+EolType Application::getBufferEol(BufferID buffer) const {
+    return _fileManager->getEolFormat(buffer);
+}
+
+bool Application::setBufferEol(BufferID buffer, EolType eol) {
+    return _fileManager->setEolFormat(buffer, eol);
+}
+
 // ============================================================================
 // Main Window
 // ============================================================================
@@ -608,6 +638,15 @@ void Application::loadTheme(const std::string& themeName) {
 void Application::onThemeChanged(const std::string& themeName) {
     _currentTheme = themeName;
     _themeObserver.notify({themeName});
+
+    // Reapply theme to all editors
+    for (QWidget* container : _viewContainers) {
+        QList<ScintillaEditor*> editors = container->findChildren<ScintillaEditor*>();
+        for (ScintillaEditor* ed : editors) {
+            ed->applyTheme(QString::fromStdString(themeName));
+            ed->setLanguage(ed->language());  // re-apply lexer with new colors
+        }
+    }
 }
 
 // ============================================================================
@@ -690,6 +729,18 @@ void Application::onBufferOpened(BufferID buffer) {
 
 void Application::onBufferActivated(BufferID buffer) {
     qDebug() << "[App] Buffer activated:" << buffer;
+    if (!buffer) return;
+
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+
+    Buffer* buf = buffer;
+    if (!buf) return;
+
+    ed->setLanguage(buf->getLangType());
+    ed->setEncoding(buf->getEncoding());
+    ed->setEolType(buf->getEolFormat());
+
     updateUI();
 }
 
@@ -700,7 +751,79 @@ void Application::onBufferClosed(BufferID buffer) {
 }
 
 void Application::onMenuCommand(const QString& cmd) {
-    executeCommand(cmd.toStdString());
+    // File
+    if (cmd == "file.new") { onNewFile(); }
+    else if (cmd == "file.open") { onOpenFile(); }
+    else if (cmd == "file.save") { onSaveFile(); }
+    else if (cmd == "file.saveAs") { onSaveFileAs(); }
+    else if (cmd == "file.saveAll") { onSaveAll(); }
+    else if (cmd == "file.close") { onCloseFile(); }
+    else if (cmd == "file.closeAll") { closeAllFiles(); }
+    else if (cmd == "file.exit") { onExit(); }
+    // Edit
+    else if (cmd == "edit.undo") { onUndo(); }
+    else if (cmd == "edit.redo") { onRedo(); }
+    else if (cmd == "edit.cut") { onCut(); }
+    else if (cmd == "edit.copy") { onCopy(); }
+    else if (cmd == "edit.paste") { onPaste(); }
+    else if (cmd == "edit.delete") { onDelete(); }
+    else if (cmd == "edit.selectAll") { onSelectAll(); }
+    else if (cmd == "edit.find") { onFind(); }
+    else if (cmd == "edit.replace") { onReplace(); }
+    else if (cmd == "edit.goto") { onGotoLine(); }
+    // Search
+    else if (cmd == "search.findNext") { onFindNext(); }
+    else if (cmd == "search.findPrev") { onFindPrev(); }
+    else if (cmd == "search.count") { onCount(); }
+    else if (cmd == "search.markAll") { onMarkAll(); }
+    else if (cmd == "search.findInFiles") { onFindInFiles(); }
+    // View
+    else if (cmd == "view.fullScreen") { onToggleFullScreen(); }
+    else if (cmd == "view.distractionFree") { onToggleDistractionFree(); }
+    else if (cmd == "view.darkMode" || cmd == "view.toggleDarkMode") {
+        QString nextTheme = _currentTheme == "dark" ? "light" : "dark";
+        onThemeChanged(nextTheme.toStdString());
+    }
+    else if (cmd == "view.showTabBar") {
+        _options.showTabBar = !_options.showTabBar;
+        emit onToggleTabBar();
+    }
+    else if (cmd == "view.showStatusBar") {
+        _options.showStatusBar = !_options.showStatusBar;
+        emit onToggleStatusBar();
+    }
+    else if (cmd == "view.showToolBar") {
+        _options.showToolBar = !_options.showToolBar;
+        emit onToggleToolBar();
+    }
+    // Encoding
+    else if (cmd == "encoding.utf8") { onConvertEncoding(EncodingType::UTF_8); }
+    else if (cmd == "encoding.utf8bom") { onConvertEncoding(EncodingType::UTF_8_BOM); }
+    else if (cmd == "encoding.utf16le") { onConvertEncoding(EncodingType::UTF_16_LE); }
+    else if (cmd == "encoding.utf16be") { onConvertEncoding(EncodingType::UTF_16_BE); }
+    else if (cmd.startsWith("encoding.charset.")) { qDebug() << "charset conversion not yet implemented:" << cmd; }
+    // EOL conversion
+    else if (cmd == "eol.CRLF") { onEolConversion("eol:CRLF"); }
+    else if (cmd == "eol.LF") { onEolConversion("eol:LF"); }
+    else if (cmd == "eol.CR") { onEolConversion("eol:CR"); }
+    else if (cmd.startsWith("eol:")) { onEolConversion(cmd); }
+    // Language
+    else if (cmd.startsWith("language.")) {
+        QString langName = cmd.mid(9);
+        LangType lt = LanguageManager::mapStringToLang(langName);
+        if (lt != LangType::L_TEXT || langName == "normal_text")
+            onSetLanguage(lt);
+    }
+    // Settings
+    else if (cmd == "settings.preferences") { onShowPreferences(); }
+    else if (cmd == "settings.shortcutMapper") { onShowShortcutMapper(); }
+    else if (cmd == "settings.commandPalette") { onShowCommandPalette(); }
+    // Help
+    else if (cmd == "help.about") { onShowAbout(); }
+    else {
+        qDebug() << "[onMenuCommand] Unknown command:" << cmd;
+    }
+    updateUI();
 }
 
 void Application::onToolBarCommand(const QString& cmd) {
@@ -1113,6 +1236,34 @@ void Application::onConvertEncoding(EncodingType enc) {
     setStatusBarEncoding(encName);
 }
 
+void Application::onEolConversion(const QString& eolCmd) {
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+
+    BufferID buffer = getActiveBuffer();
+    if (!buffer) return;
+
+    QString text = ed->text();
+    if (text.isEmpty()) return;
+
+    if (eolCmd == "eol:CRLF") {
+        text.replace('\n', "\r\n");
+        setBufferEol(buffer, EolType::EOL_CRLF);
+        setStatusBarEol("Windows (CRLF)");
+    } else if (eolCmd == "eol:LF") {
+        text.replace("\r\n", "\n").replace('\r', '\n');
+        setBufferEol(buffer, EolType::EOL_LF);
+        setStatusBarEol("Unix (LF)");
+    } else if (eolCmd == "eol:CR") {
+        text.replace("\r\n", "\r").replace('\n', '\r');
+        setBufferEol(buffer, EolType::EOL_CR);
+        setStatusBarEol("Mac (CR)");
+    }
+
+    ed->setText(text);
+    ed->setModified(true);
+}
+
 void Application::onSetLanguage(LangType lang) {
     ScintillaEditor* ed = getActiveEditor();
     if (!ed) return;
@@ -1135,6 +1286,21 @@ void Application::convertEncoding(EncodingType enc) {
 // ============================================================================
 void Application::setLanguage(LangType lang) {
     onSetLanguage(lang);
+}
+
+// ============================================================================
+// Encoding helpers
+// ============================================================================
+std::string Application::encodingToString(EncodingType enc) const {
+    switch (enc) {
+        case EncodingType::UTF_8:       return "UTF-8";
+        case EncodingType::UTF_8_BOM:  return "UTF-8 BOM";
+        case EncodingType::UTF_16_LE:  return "UTF-16 LE";
+        case EncodingType::UTF_16_BE:  return "UTF-16 BE";
+        case EncodingType::OEM:         return "OEM";
+        case EncodingType::ANSI:
+        default:                        return "ANSI";
+    }
 }
 
 // ============================================================================

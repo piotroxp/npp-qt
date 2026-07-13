@@ -29,6 +29,9 @@
 #include <Qsci/qscilexercustom.h>
 #include "../panels/DocumentMapPanel.h"
 #include <QApplication>
+#include <QClipboard>
+#include <QDesktopServices>
+#include <QUrl>
 
 MainWindow::MainWindow()
     : QMainWindow(nullptr)
@@ -83,6 +86,10 @@ MainWindow::MainWindow()
     // Connections
     connect(_tabWidget, &QTabWidget::currentChanged, this, &MainWindow::onTabChanged);
     connect(_tabWidget, &QTabWidget::tabCloseRequested, this, &MainWindow::onTabCloseRequested);
+
+    // Tab context menu (right-click on tab)
+    _tabWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(_tabWidget, &QWidget::customContextMenuRequested, this, &MainWindow::onTabContextMenu);
 }
 
 MainWindow::~MainWindow() = default;
@@ -494,18 +501,13 @@ void MainWindow::addEditorTab(ScintillaEditor* editor, const QString& title) {
 
 void MainWindow::removeEditorTab(int index, BufferID closingBuffer) {
     if (index < 0 || index >= _tabWidget->count()) return;
-    if (closingBuffer != BUFFER_INVALID) _bufferToTab.remove(closingBuffer);
-    _tabWidget->removeTab(index);
-    // Rebuild map: tab indices shift down after removal
-    QMap<BufferID, int> newMap;
-    for (int i = 0; i < _tabWidget->count(); ++i) {
-        if (auto* editor = editorAt(i)) {
-            if (BufferID buf = bufferAtTabIndex(i); buf != BUFFER_INVALID) {
-                newMap[buf] = i;
-            }
-        }
+    if (closingBuffer != BUFFER_INVALID) {
+        _bufferToEditor.remove(closingBuffer);
+        _bufferToTab.remove(closingBuffer);
     }
-    _bufferToTab = newMap;
+    _tabToBuffer.remove(index);
+    _tabWidget->removeTab(index);
+    rebuildTabToBufferMap();
     updateTabBar();
 }
 
@@ -539,11 +541,7 @@ int MainWindow::editorCount() const {
 
 BufferID MainWindow::bufferAtTabIndex(int tabIndex) const {
     if (tabIndex < 0 || tabIndex >= _tabWidget->count()) return BUFFER_INVALID;
-    // Find the buffer whose tab index matches
-    for (auto it = _bufferToTab.constBegin(); it != _bufferToTab.constEnd(); ++it) {
-        if (it.value() == tabIndex) return it.key();
-    }
-    return BUFFER_INVALID;
+    return _tabToBuffer.value(tabIndex, BUFFER_INVALID);
 }
 
 void MainWindow::updateTabBar() { 
@@ -580,9 +578,45 @@ void MainWindow::updateTitleBar(const QString& fileName) {
 }
 
 // File operations
-void MainWindow::onNewFile() { 
-    BufferID buffer = app().newFile();
-    emit app().bufferOpened(buffer);
+void MainWindow::onNewFile() {
+    auto& appRef = Application::instance();
+    BufferID buf = appRef.newFile();
+
+    // Create editor
+    ScintillaEditor* editor = new ScintillaEditor(_tabWidget);
+
+    // Wire cursor position to status bar
+    connect(editor, &ScintillaEditor::cursorPositionChanged,
+             _statusBarWidget, [this](int line, int col) {
+        _statusBarWidget->setPosition(line, col);
+    });
+
+    // Connect text change to update buffer
+    connect(editor, &ScintillaEditor::textChanged, this, [this, editor, buf]() {
+        Application::instance().syncEditorToBuffer(editor, buf);
+        if (_bufferToTab.contains(buf)) {
+            int idx = _bufferToTab[buf];
+            setTabModified(idx, editor->isModified());
+        }
+    });
+
+    // Connect modificationChanged
+    connect(editor, &ScintillaEditor::modificationChanged, this, [this, buf](bool modified) {
+        onBufferModified(buf, modified);
+    });
+
+    int idx = _tabWidget->addTab(editor, "* Untitled");
+    _tabWidget->setTabToolTip(idx, "Untitled");
+    _tabWidget->setCurrentIndex(idx);
+
+    // Register
+    _tabToBuffer[idx] = buf;
+    _bufferToEditor[buf] = editor;
+    _bufferToTab[buf] = idx;
+
+    updateTabBar();
+    updateTitleBar();
+    editor->setFocus();
 }
 
 void MainWindow::onOpenFile() {
@@ -603,6 +637,84 @@ void MainWindow::onOpenFile() {
             updateRecentFilesMenu();
             qDebug() << "[onOpenFile] DONE";
         }
+    }
+}
+
+void MainWindow::openFileInTab(const QString& path) {
+    auto& appRef = Application::instance();
+    BufferID buf = appRef.openFile(path.toStdString());
+    if (!buf) {
+        QMessageBox::warning(this, "Open Error", "Could not open: " + path);
+        return;
+    }
+
+    // Check if already open — switch to existing tab
+    if (_bufferToTab.contains(buf)) {
+        _tabWidget->setCurrentIndex(_bufferToTab[buf]);
+        return;
+    }
+
+    // Create editor
+    ScintillaEditor* editor = new ScintillaEditor(_tabWidget);
+
+    // Wire cursor position to status bar
+    connect(editor, &ScintillaEditor::cursorPositionChanged,
+             _statusBarWidget, [this](int line, int col) {
+        _statusBarWidget->setPosition(line, col);
+    });
+
+    // Load content
+    QString text = QString::fromUtf8(appRef.getBufferText(buf).c_str());
+    editor->setPlainText(text);
+
+    // Encoding
+    auto enc = appRef.getBufferEncoding(buf);
+    editor->setEncoding(enc);
+
+    // Tab title from filename
+    QString fileName = QFileInfo(path).fileName();
+    int idx = _tabWidget->addTab(editor, fileName);
+    _tabWidget->setTabToolTip(idx, path);
+
+    // Register in all three maps
+    _tabToBuffer[idx] = buf;
+    _bufferToEditor[buf] = editor;
+    _bufferToTab[buf] = idx;
+
+    // Connect text change to update buffer
+    connect(editor, &ScintillaEditor::textChanged, this, [this, editor, buf]() {
+        Application::instance().syncEditorToBuffer(editor, buf);
+        if (_bufferToTab.contains(buf)) {
+            int idx = _bufferToTab[buf];
+            setTabModified(idx, editor->isModified());
+        }
+    });
+
+    // Connect modificationChanged to update tab title
+    connect(editor, &ScintillaEditor::modificationChanged, this, [this, buf](bool modified) {
+        onBufferModified(buf, modified);
+    });
+
+    _tabWidget->setCurrentIndex(idx);
+    updateTabBar();
+    updateTitleBar();
+}
+
+void MainWindow::updateTabTitle(BufferID buf, bool dirty) {
+    if (!_bufferToTab.contains(buf)) return;
+    int idx = _bufferToTab[buf];
+    QString title = _tabWidget->tabText(idx);
+    if (dirty && !title.startsWith("* ")) {
+        _tabWidget->setTabText(idx, "* " + title);
+    } else if (!dirty && title.startsWith("* ")) {
+        _tabWidget->setTabText(idx, title.mid(2));
+    }
+}
+
+void MainWindow::rebuildTabToBufferMap() {
+    _tabToBuffer.clear();
+    for (auto it = _bufferToTab.constBegin(); it != _bufferToTab.constEnd(); ++it) {
+        _tabToBuffer[it.value()] = it.key();
     }
 }
 
@@ -804,38 +916,49 @@ void MainWindow::onCommandPalette() {
 // Buffer notifications
 void MainWindow::onBufferOpened(BufferID buffer) {
     if (!buffer) return;
-    qDebug() << "[onBufferOpened] buffer:" << buffer;
+
+    // Check if already open — switch to existing tab
+    if (_bufferToTab.contains(buffer)) {
+        int idx = _bufferToTab[buffer];
+        _tabWidget->setCurrentIndex(idx);
+        return;
+    }
 
     // Create editor for this buffer
     auto* editor = new ScintillaEditor(_tabWidget);
-    qDebug() << "[onBufferOpened] editor created:" << editor;
 
     // Load text
     std::string text = app().getBufferText(buffer);
-    qDebug() << "[onBufferOpened] text loaded, length:" << text.size();
     editor->setPlainText(QString::fromUtf8(text.c_str()));
-    qDebug() << "[onBufferOpened] text set in editor";
-    
-    // Get file name
+
+    // Get file name for tab title
     QString title = "Untitled";
     auto name = app().getFileName(buffer);
     if (name && !name->empty()) {
         title = QString::fromStdString(*name);
     }
-    
+
     // Add tab
-    int index = _tabWidget->addTab(editor, title);
-    _tabWidget->setCurrentIndex(index);
-    
-    // Map buffer to tab
-    _bufferToTab[buffer] = index;
-    
+    int idx = _tabWidget->addTab(editor, title);
+    if (name && !name->empty()) {
+        _tabWidget->setTabToolTip(idx, QString::fromStdString(*name));
+    }
+    _tabWidget->setCurrentIndex(idx);
+
+    // Register in all three maps
+    _tabToBuffer[idx] = buffer;
+    _bufferToEditor[buffer] = editor;
+    _bufferToTab[buffer] = idx;
+
     // Connect editor signals
     connect(editor, &ScintillaEditor::textChanged, this, &MainWindow::onBufferChanged);
     connect(editor, &ScintillaEditor::modificationChanged, this, [this, buffer](bool modified) {
         onBufferModified(buffer, modified);
     });
-    
+    connect(editor, &ScintillaEditor::cursorPositionChanged, _statusBarWidget, [this](int line, int col) {
+        _statusBarWidget->setPosition(line, col);
+    });
+
     // Wire DocumentMap to the first editor (initial setup)
     if (app().documentMapPanel() && !app().getActiveEditor()) {
         app().documentMapPanel()->setEditor(editor);
@@ -912,18 +1035,20 @@ void MainWindow::onThemeChanged(const QString& theme) {
 }
 // Tab events
 void MainWindow::onTabChanged(int index) {
-    if (index >= 0) {
-        BufferID buffer = bufferAtTabIndex(index);
-        if (buffer) app().setActiveBuffer(buffer);
-        ScintillaEditor* ed = editorAt(index);
-        if (ed) app().setActiveEditor(ed);
+    if (index < 0) return;
+    if (!_tabToBuffer.contains(index)) return;
 
-        // Wire DocumentMap to the newly active editor
-        if (app().documentMapPanel()) {
-            app().documentMapPanel()->setEditor(ed);
-            app().documentMapPanel()->onBufferChanged();
-        }
+    BufferID buf = _tabToBuffer[index];
+    Application::instance().setActiveBuffer(buf);
+    ScintillaEditor* ed = _bufferToEditor.value(buf);
+    if (ed) Application::instance().setActiveEditor(ed);
+
+    // Wire DocumentMap to the newly active editor
+    if (Application::instance().documentMapPanel()) {
+        Application::instance().documentMapPanel()->setEditor(ed);
+        Application::instance().documentMapPanel()->onBufferChanged();
     }
+
     updateStatusBar();
     updateTitleBar();
 }
@@ -931,8 +1056,8 @@ void MainWindow::onTabChanged(int index) {
 void MainWindow::onTabCloseRequested(int index) {
     if (index < 0 || index >= _tabWidget->count()) return;
 
-    BufferID closingBuffer = bufferAtTabIndex(index);
-    ScintillaEditor* editor = editorAt(index);
+    BufferID buf = _tabToBuffer.value(index);
+    ScintillaEditor* editor = _bufferToEditor.value(buf);
 
     // Save prompt if modified
     if (editor && editor->isModified()) {
@@ -942,24 +1067,87 @@ void MainWindow::onTabCloseRequested(int index) {
             QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
 
         if (btn == QMessageBox::Save) {
-            // Sync and save: switch to this tab, then save
-            app().setActiveEditor(editor);
-            app().setActiveBuffer(closingBuffer);
-            if (closingBuffer != BUFFER_INVALID) app().syncEditorToBuffer(editor, closingBuffer);
-            QString path = app().fileManager()->getBufferPath(closingBuffer);
-            if (!path.isEmpty()) app().saveFile(closingBuffer, path.toStdString());
-            // If no path (new file), fall through to save-as
-            if (path.isEmpty() || app().saveFile(closingBuffer, path.toStdString())) {
-                // saved
+            Application::instance().setActiveEditor(editor);
+            Application::instance().setActiveBuffer(buf);
+            if (buf != BUFFER_INVALID) Application::instance().syncEditorToBuffer(editor, buf);
+            QString path = Application::instance().fileManager()->getBufferPath(buf);
+            if (path.isEmpty()) {
+                // New file — use Save As
+                onSaveFileAs();
+            } else {
+                Application::instance().saveFile(buf, path.toStdString());
             }
         } else if (btn == QMessageBox::Cancel) {
             return;
         }
     }
 
-    // Close buffer and remove tab (removeEditorTab handles the map)
-    if (closingBuffer != BUFFER_INVALID) app().closeFile(closingBuffer);
-    removeEditorTab(index, closingBuffer);
+    // Remove from registry maps
+    if (buf != BUFFER_INVALID) {
+        _bufferToEditor.remove(buf);
+        _bufferToTab.remove(buf);
+    }
+    _tabToBuffer.remove(index);
+
+    // Close buffer
+    if (buf != BUFFER_INVALID) Application::instance().closeFile(buf);
+
+    // Remove tab
+    _tabWidget->removeTab(index);
+
+    // Rebuild tab→buffer map since indices shift
+    rebuildTabToBufferMap();
+
+    // Activate adjacent tab
+    if (_tabWidget->count() > 0) {
+        onTabChanged(_tabWidget->currentIndex());
+    }
+}
+
+void MainWindow::onTabContextMenu(const QPoint& pos) {
+    int tabIdx = _tabWidget->tabBar()->tabAt(pos);
+    if (tabIdx < 0) return;
+
+    QMenu menu(this);
+    QAction* closeAct = menu.addAction("Close");
+    QAction* closeOthersAct = menu.addAction("Close Other Tabs");
+    QAction* closeAllAct = menu.addAction("Close All Tabs");
+    menu.addSeparator();
+    QAction* openFolderAct = menu.addAction("Open Containing Folder");
+    QAction* copyPathAct = menu.addAction("Copy Full Path");
+
+    QAction* chosen = menu.exec(_tabWidget->tabBar()->mapToGlobal(pos));
+    if (!chosen) return;
+
+    if (chosen == closeAct) {
+        onTabCloseRequested(tabIdx);
+    } else if (chosen == closeOthersAct) {
+        for (int i = _tabWidget->count() - 1; i >= 0; --i) {
+            if (i != tabIdx) onTabCloseRequested(i);
+        }
+    } else if (chosen == closeAllAct) {
+        for (int i = _tabWidget->count() - 1; i >= 0; --i) {
+            onTabCloseRequested(i);
+        }
+    } else if (chosen == openFolderAct) {
+        BufferID buf = _tabToBuffer.value(tabIdx);
+        if (buf) {
+            QString path = QString::fromStdString(
+                Application::instance().getFileName(buf).value_or(""));
+            if (!path.isEmpty()) {
+                QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).absolutePath()));
+            }
+        }
+    } else if (chosen == copyPathAct) {
+        BufferID buf = _tabToBuffer.value(tabIdx);
+        if (buf) {
+            QString path = QString::fromStdString(
+                Application::instance().getFileName(buf).value_or(""));
+            if (!path.isEmpty()) {
+                QApplication::clipboard()->setText(path);
+            }
+        }
+    }
 }
 
 // Drag and drop

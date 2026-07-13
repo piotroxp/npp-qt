@@ -17,6 +17,10 @@ StatusBar::StatusBar(QWidget* parent) : QStatusBar(parent) {
     _msgLabel->setMinimumWidth(200);
     _msgLabel->setVisible(false);
 
+    _selLabel = new QLabel(this);
+    _selLabel->setMinimumWidth(60);
+    addPermanentWidget(_selLabel, 1);
+
     addWidget(_msgLabel, 2);
     addPermanentWidget(_posLabel, 1);
     addPermanentWidget(_encLabel, 1);

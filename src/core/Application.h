@@ -166,6 +166,8 @@ public:
     bool setBufferText(BufferID buffer, const std::string& text);
     EncodingType getBufferEncoding(BufferID buffer) const;
     bool setBufferEncoding(BufferID buffer, EncodingType enc);
+    EolType getBufferEol(BufferID buffer) const;
+    bool setBufferEol(BufferID buffer, EolType eol);
 
     // View management
     int currentView() const;
@@ -243,6 +245,9 @@ public:
     // Language
     void setLanguage(LangType lang);
 
+    // Encoding helpers
+    std::string encodingToString(EncodingType enc) const;
+
     // Theme
     void loadTheme(const std::string& themeName);
     std::string currentTheme() const { return _currentTheme; }
@@ -316,6 +321,7 @@ public slots:
 
     // Encoding commands
     void onConvertEncoding(EncodingType enc);
+    void onEolConversion(const QString& eolCmd);
 
     // Language commands
     void onSetLanguage(LangType lang);
@@ -388,6 +394,7 @@ private:
     // UI components (typed for signal access)
     MenuBar*    _menuBar = nullptr;
     ToolBar*    _toolBar = nullptr;
+    class StatusBar* _statusBarWidget = nullptr;
 
     // Views
     std::vector<QWidget*>    _viewContainers;

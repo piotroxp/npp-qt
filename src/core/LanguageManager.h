@@ -6,6 +6,7 @@
 
 #include "common/NonCopyable.h"
 #include "../common/Types.h"
+#include <QString>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -16,6 +17,12 @@ class LanguageManager : public NonCopyable {
 public:
     // Singleton access
     static LanguageManager& instance() { static LanguageManager m; return m; }
+
+    // Create and return a QsciLexer for the given language (caller owns it, may be nullptr)
+    QsciLexer* getLexer(LangType lang) const;
+
+    // Map a string name (e.g. "c++", "python", "javascript") to LangType
+    static LangType mapStringToLang(const QString& name);
 
     // Static convenience: detect language from file extension (e.g. ".cpp")
     static LangType detect(const std::string& fileExtension);

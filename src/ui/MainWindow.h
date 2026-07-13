@@ -15,6 +15,7 @@
 #include "../common/Types.h"
 
 class ScintillaEditor;
+class QMenu;
 class QTabWidget;
 class QMenu;
 class QAction;
@@ -102,6 +103,7 @@ private slots:
     void onTabCloseRequested(int index);
     void onBufferChanged();
     void onRecentFileSelected(const QString& file);
+    void onTabContextMenu(const QPoint& pos);
 
 private:
     void setupUi();
@@ -130,7 +132,18 @@ private:
     QMap<QString, QAction*> _actions;
     QString _lastOpenedDirectory;
     QSignalMapper* _recentFileMapper = nullptr;
-    
-    // Buffer to tab mapping
-    QMap<BufferID, int> _bufferToTab;
+
+    // Editor registry — maps between tabs, buffers, and editors
+    QMap<int, BufferID> _tabToBuffer;          // tab index → buffer
+    QMap<BufferID, ScintillaEditor*> _bufferToEditor; // buffer → editor
+    QMap<BufferID, int> _bufferToTab;          // buffer → tab index
+
+    // Open a file path in a new tab (or switch to existing tab)
+    void openFileInTab(const QString& path);
+
+    // Update tab title to reflect modified state
+    void updateTabTitle(BufferID buf, bool dirty);
+
+    // Rebuild _tabToBuffer from _bufferToTab (call after tab reordering)
+    void rebuildTabToBufferMap();
 };

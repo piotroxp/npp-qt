@@ -102,6 +102,8 @@ public:
     bool setBufferText(BufferID buffer, const QString& text);
     EncodingType getEncoding(BufferID buffer) const;
     bool setEncoding(BufferID buffer, EncodingType enc);
+    EolType getEolFormat(BufferID buffer) const;
+    bool setEolFormat(BufferID buffer, EolType eol);
     QString getBufferPath(BufferID buffer) const;
     bool setBufferPath(BufferID buffer, const QString& path);
     bool saveFile(BufferID buffer, const QString& path = QString());
