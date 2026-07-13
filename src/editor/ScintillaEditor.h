@@ -170,6 +170,7 @@ signals:
     void replaceAllDone(int count);
 
 private:
+    bool eventFilter(QObject* watched, QEvent* event) override;
     QsciScintilla* _editor;
     SyntaxHighlighter* _highlighter;
     LangType _language = LangType::L_TEXT;

@@ -74,9 +74,7 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     // SC_VS_USERACCESSIBLE = 1, SC_VS_NONE = 0
     _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 1);
 
-    // Smart home key — jumps to first non-whitespace, then BOL, then indent
-    _editor->SendScintilla(QsciScintilla::SCI_SETHOMEKEYS, 1);   // SC_HK_HOMEUSER = 1
-    _editor->SendScintilla(QsciScintilla::SCI_SETHOMEENEXTRA, 1); // also jump past indent on 2nd press
+    // Smart home: Scintilla handles Home key natively with virtual space enabled above
     // Smart backspace
     _editor->setBackspaceUnindents(true);
 
