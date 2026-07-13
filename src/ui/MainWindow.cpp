@@ -591,6 +591,12 @@ void MainWindow::onNewFile() {
         _statusBarWidget->setPosition(line, col);
     });
 
+    // Wire selection info to status bar
+    connect(editor, &ScintillaEditor::selectionChanged,
+            _statusBarWidget, [this](int start, int end, int lines) {
+        _statusBarWidget->setSelection(end - start, lines);
+    });
+
     // Connect text change to update buffer
     connect(editor, &ScintillaEditor::textChanged, this, [this, editor, buf]() {
         Application::instance().syncEditorToBuffer(editor, buf);
@@ -603,6 +609,7 @@ void MainWindow::onNewFile() {
     // Connect modificationChanged
     connect(editor, &ScintillaEditor::modificationChanged, this, [this, buf](bool modified) {
         onBufferModified(buf, modified);
+        emit Application::instance().bufferModifiedChanged(buf);
     });
 
     int idx = _tabWidget->addTab(editor, "* Untitled");
@@ -663,6 +670,12 @@ void MainWindow::openFileInTab(const QString& path) {
         _statusBarWidget->setPosition(line, col);
     });
 
+    // Wire selection info to status bar
+    connect(editor, &ScintillaEditor::selectionChanged,
+            _statusBarWidget, [this](int start, int end, int lines) {
+        _statusBarWidget->setSelection(end - start, lines);
+    });
+
     // Load content
     QString text = QString::fromUtf8(appRef.getBufferText(buf).c_str());
     editor->setPlainText(text);
@@ -690,9 +703,10 @@ void MainWindow::openFileInTab(const QString& path) {
         }
     });
 
-    // Connect modificationChanged to update tab title
+    // Connect modificationChanged to update tab title and window title
     connect(editor, &ScintillaEditor::modificationChanged, this, [this, buf](bool modified) {
         onBufferModified(buf, modified);
+        emit Application::instance().bufferModifiedChanged(buf);
     });
 
     _tabWidget->setCurrentIndex(idx);
@@ -954,9 +968,13 @@ void MainWindow::onBufferOpened(BufferID buffer) {
     connect(editor, &ScintillaEditor::textChanged, this, &MainWindow::onBufferChanged);
     connect(editor, &ScintillaEditor::modificationChanged, this, [this, buffer](bool modified) {
         onBufferModified(buffer, modified);
+        emit Application::instance().bufferModifiedChanged(buffer);
     });
     connect(editor, &ScintillaEditor::cursorPositionChanged, _statusBarWidget, [this](int line, int col) {
         _statusBarWidget->setPosition(line, col);
+    });
+    connect(editor, &ScintillaEditor::selectionChanged, _statusBarWidget, [this](int start, int end, int lines) {
+        _statusBarWidget->setSelection(end - start, lines);
     });
 
     // Wire DocumentMap to the first editor (initial setup)

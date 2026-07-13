@@ -1341,6 +1341,30 @@ src/panels/FunctionListPanel.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/panels/FunctionListPanel.cpp.s
 .PHONY : src/panels/FunctionListPanel.cpp.s
 
+src/plugins/PluginManager.o: src/plugins/PluginManager.cpp.o
+.PHONY : src/plugins/PluginManager.o
+
+# target to build an object file
+src/plugins/PluginManager.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/plugins/PluginManager.cpp.o
+.PHONY : src/plugins/PluginManager.cpp.o
+
+src/plugins/PluginManager.i: src/plugins/PluginManager.cpp.i
+.PHONY : src/plugins/PluginManager.i
+
+# target to preprocess a source file
+src/plugins/PluginManager.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/plugins/PluginManager.cpp.i
+.PHONY : src/plugins/PluginManager.cpp.i
+
+src/plugins/PluginManager.s: src/plugins/PluginManager.cpp.s
+.PHONY : src/plugins/PluginManager.s
+
+# target to generate assembly for a file
+src/plugins/PluginManager.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/plugins/PluginManager.cpp.s
+.PHONY : src/plugins/PluginManager.cpp.s
+
 src/ui/MainWindow.o: src/ui/MainWindow.cpp.o
 .PHONY : src/ui/MainWindow.o
 
@@ -1633,6 +1657,9 @@ help:
 	@echo "... src/panels/FunctionListPanel.o"
 	@echo "... src/panels/FunctionListPanel.i"
 	@echo "... src/panels/FunctionListPanel.s"
+	@echo "... src/plugins/PluginManager.o"
+	@echo "... src/plugins/PluginManager.i"
+	@echo "... src/plugins/PluginManager.s"
 	@echo "... src/ui/MainWindow.o"
 	@echo "... src/ui/MainWindow.i"
 	@echo "... src/ui/MainWindow.s"

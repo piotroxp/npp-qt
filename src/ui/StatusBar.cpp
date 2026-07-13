@@ -75,11 +75,13 @@ void StatusBar::clearMessage() {
     _msgLabel->setVisible(false);
 }
 
-void StatusBar::setSelection(int start, int end) {
-    int selLength = end - start;
-    if (selLength > 0) {
-        _selLabel->setText(QString("Sel: %1").arg(selLength));
+void StatusBar::setSelection(int chars, int lines) {
+    if (!_selLabel) return;
+    if (chars == 0 && lines == 0) {
+        _selLabel->setText("");
+    } else if (chars == 1 && lines == 1) {
+        _selLabel->setText("1 sel");
     } else {
-        _selLabel->clear();
+        _selLabel->setText(QString::number(chars) + " chars, " + QString::number(lines) + " lines sel");
     }
 }

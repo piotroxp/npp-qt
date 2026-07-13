@@ -81,6 +81,7 @@ set(SOURCES
     src/panels/FunctionListPanel.cpp
     src/panels/FileBrowserPanel.cpp
     src/common/DpiManager.cpp
+    src/plugins/PluginManager.cpp
     src/common/Util.cpp
     src/common/FileHelper.cpp
     src/common/StringHelper.cpp
@@ -125,6 +126,7 @@ set(HEADERS
     src/common/FileHelper.h
     src/common/StringHelper.h
     src/common/DpiManager.h
+    src/plugins/PluginInterface.h
 )
 
 # Create executable

@@ -21,6 +21,7 @@
 #include "ui/MenuBar.h"
 #include "dialogs/FindReplaceDialog.h"
 #include "dialogs/FindInFilesWorker.h"
+#include "dialogs/FindInFilesDialog.h"
 #include "dialogs/GoToLineDialog.h"
 #include "dialogs/ShortcutMapperDialog.h"
 #include "ShortcutManager.h"
@@ -50,6 +51,7 @@
 #include <QUrl>
 #include <QFileDialog>
 #include <QInputDialog>
+#include <QStandardPaths>
 #include <QCloseEvent>
 #include <QTimer>
 #include <QTextStream>
@@ -62,6 +64,8 @@
 #include <QStatusBar>
 #include <QPrintDialog>
 #include <QPrinter>
+#include <QSettings>
+#include <QFileInfo>
 
 // ============================================================================
 // Singleton
@@ -151,6 +155,12 @@ bool Application::initialize() {
         // Setup UI
         setupUI();
         setupConnections();
+
+        // Load plugins from config directory
+        QString pluginDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
+                            + "/notepad--qt/plugins";
+        QDir().mkpath(pluginDir);
+        PluginManager::instance().loadPlugins(pluginDir);
 
         _state = AppState::Ready;
         logInfo("Initialization complete");
@@ -254,6 +264,7 @@ void Application::setupUI() {
 
     // Create dialogs
     _findReplaceDialog = new FindReplaceDialog(_mainWindow);
+    _findInFilesDialog = new FindInFilesDialog(_mainWindow);
     _gotoLineDialog = new GoToLineDialog(_mainWindow);
     _preferenceDialog = new PreferenceDialog(_mainWindow);
     _aboutDialog = new AboutDialog(_mainWindow);
@@ -297,6 +308,7 @@ void Application::setupConnections() {
     connect(this, &Application::bufferOpened, this, [this](BufferID) { updateUI(); });
     connect(this, &Application::bufferActivated, this, [this](BufferID) { updateUI(); });
     connect(this, &Application::fileSaved, this, &Application::onFileSaved);
+    connect(this, &Application::bufferModifiedChanged, this, &Application::updateWindowTitle);
 
     // File browser → open file
     if (_fileBrowserPanel) {
@@ -336,6 +348,14 @@ void Application::setupConnections() {
     connect(this, &Application::commandExecuted, this, [this](int cmdId) {
         _commandManager->execute(cmdId);
     });
+
+    // File change monitoring — FileManager's QFileSystemWatcher emits fileSystemChanged
+    if (_fileManager) {
+        connect(_fileManager, &FileManager::fileSystemChanged,
+                this, [this](const QString& path) {
+                    onExternalFileChanged(path);
+                });
+    }
 
     // StatusBar updates — encoding/EOL on buffer switch
     connect(this, &Application::bufferActivated, this, [this](BufferID buf) {
@@ -378,6 +398,9 @@ void Application::shutdown() {
 
     // Close all files
     closeAllFiles();
+
+    // Unload plugins
+    PluginManager::instance().unloadPlugins();
 
     _state = AppState::Starting;
 }
@@ -596,9 +619,9 @@ void Application::setStatusBarPosition(int line, int col) {
     if (sb) sb->setPosition(line, col);
 }
 
-void Application::setStatusBarSelection(int selStart, int selEnd) {
+void Application::setStatusBarSelection(int chars, int lines) {
     StatusBar* sb = qobject_cast<StatusBar*>(_mainWindow->statusBar());
-    if (sb) sb->setSelection(selStart, selEnd);
+    if (sb) sb->setSelection(chars, lines);
 }
 
 // ============================================================================
@@ -725,19 +748,71 @@ void Application::onFileModifiedExternally(const std::string& path) {
     delete mb;
 }
 
-void Application::updateUI() {
-    // Update window title with current file
-    auto buffer = getActiveBuffer();
-    if (buffer) {
-        auto name = getFileName(buffer);
-        if (name) {
-            QString title = QString("%1 - %2").arg(QString::fromUtf8(name->c_str())).arg(APP_Title);
-            if (isBufferModified(buffer)) title += " *";
-            _mainWindow->setWindowTitle(title);
+void Application::onExternalFileChanged(const QString& path) {
+    // Find buffer(s) for this path
+    for (size_t i = 0; i < _fileManager->getBufferCount(); ++i) {
+        BufferID id = _fileManager->getBufferAt(static_cast<int>(i));
+        if (!id) continue;
+        QString bufPath = _fileManager->getBufferPath(id);
+        if (bufPath.isEmpty() || bufPath != path) continue;
+
+        // Check if buffer is modified (dirty)
+        bool isDirty = _fileManager->isBufferModified(id);
+
+        if (!isDirty) {
+            // Buffer clean → auto-reload
+            QString content;
+            EncodingType enc = _fileManager->getEncoding(id);
+            if (_fileManager->loadFile(path, content, enc)) {
+                auto it = _bufferToEditor.find(id);
+                ScintillaEditor* ed = (it != _bufferToEditor.end()) ? it->second : nullptr;
+                if (ed) ed->setPlainText(content);
+                setStatusBarText(("Reloaded: " + path).toStdString());
+            }
+        } else {
+            // Buffer dirty → prompt
+            QMessageBox::StandardButton reply = QMessageBox::question(
+                _mainWindow, "File Changed",
+                QString("File '%1' was modified externally.\nReload (discard changes) or Keep Current?").arg(path),
+                QMessageBox::Yes | QMessageBox::No);
+            if (reply == QMessageBox::Yes) {
+                QString content;
+                EncodingType enc = _fileManager->getEncoding(id);
+                if (_fileManager->loadFile(path, content, enc)) {
+                    auto it = _bufferToEditor.find(id);
+                    ScintillaEditor* ed = (it != _bufferToEditor.end()) ? it->second : nullptr;
+                    if (ed) ed->setPlainText(content);
+                    setStatusBarText(("Reloaded (with changes discarded): " + path).toStdString());
+                }
+            } else {
+                setStatusBarText(("Keeping local changes for: " + path).toStdString());
+            }
         }
-    } else {
-        _mainWindow->setWindowTitle(APP_Title);
+        break;  // only handle first matching buffer
     }
+}
+
+void Application::updateUI() {
+    updateWindowTitle();
+}
+
+void Application::updateWindowTitle() {
+    if (!_mainWindow) return;
+    QString title = "Notepad--Qt";
+    BufferID buf = getActiveBuffer();
+    if (buf) {
+        auto path = getFileName(buf);
+        if (path && !path->empty()) {
+            QString fileName = QFileInfo(QString::fromStdString(*path)).fileName();
+            title = fileName + " - Notepad--Qt";
+        } else {
+            title = "* Untitled - Notepad--Qt";
+        }
+        if (isBufferModified(buf)) {
+            title = "* " + title;
+        }
+    }
+    _mainWindow->setWindowTitle(title);
 }
 
 void Application::setConfigDirectory(const std::string& dir) { _options.configDir = dir; }
@@ -1097,37 +1172,42 @@ void Application::onFindPrev() {
 }
 
 void Application::onFindInFiles() {
-    // Open directory picker first, then search
-    QString dir = QFileDialog::getExistingDirectory(_mainWindow,
-        "Select Directory to Search In", QDir::homePath());
-    if (dir.isEmpty()) return;
-
-    QString searchText = "";
-    if (_findReplaceDialog) {
-        searchText = _findReplaceDialog->lastSearchText();
+    if (!_findInFilesDialog) {
+        _findInFilesDialog = new FindInFilesDialog(_mainWindow);
+        // Wire double-click on result → open file at line
+        connect(_findInFilesDialog, &FindInFilesDialog::openFile,
+                this, [this](const QString& path, int lineNumber) {
+            BufferID buf = openFile(path.toStdString());
+            if (buf) {
+                setActiveBuffer(buf);
+                ScintillaEditor* ed = getActiveEditor();
+                if (ed) {
+                    ed->setCursorPosition(lineNumber - 1, 0);
+                    ed->ensureLineVisible(lineNumber - 1);
+                    ed->setFocus();
+                }
+            }
+        });
     }
-    if (searchText.isEmpty()) {
-        searchText = QInputDialog::getText(_mainWindow, "Find in Files",
-            "Search text:");
+
+    // Pre-fill search text from Find/Replace dialog if available
+    if (_findReplaceDialog && !_findReplaceDialog->lastSearchText().isEmpty()) {
+        _findInFilesDialog->setSearchText(_findReplaceDialog->lastSearchText());
     }
-    if (searchText.isEmpty()) return;
 
-    // Search in background using QThread
-    auto* thread = new QThread;
-    auto* worker = new FindInFilesWorker(dir, searchText);
-    worker->moveToThread(thread);
+    // Default directory: current file's directory, or home
+    BufferID buf = getActiveBuffer();
+    if (buf) {
+        QString bufPath = _fileManager->getBufferPath(buf);
+        if (!bufPath.isEmpty()) {
+            QFileInfo info(bufPath);
+            _findInFilesDialog->setDirectory(info.dir().absolutePath());
+        }
+    }
 
-    QObject::connect(thread, &QThread::started, worker, &FindInFilesWorker::run);
-    QObject::connect(worker, &FindInFilesWorker::resultsReady, this,
-        [this](const QList<FindResult>& results) {
-            showFindInFilesResults(results);
-        }, Qt::QueuedConnection);
-    QObject::connect(worker, &FindInFilesWorker::finished, thread, &QThread::quit);
-    QObject::connect(thread, &QThread::finished, worker, &QObject::deleteLater);
-    QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
-    thread->start();
-
-    setStatusBarText(("Searching in " + dir + "...").toStdString());
+    _findInFilesDialog->show();
+    _findInFilesDialog->raise();
+    _findInFilesDialog->activateWindow();
 }
 
 void Application::onCount() {

@@ -66,7 +66,21 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
         emit cursorPositionChanged(line, col);
     });
     connect(_editor, &QsciScintilla::modificationChanged, this, &ScintillaEditor::modificationChanged);
-    connect(_editor, &QsciScintilla::selectionChanged, this, &ScintillaEditor::selectionChanged);
+    connect(_editor, &QsciScintilla::selectionChanged, this, [this]() {
+        int start = _editor->selectionStart();
+        int end = _editor->selectionEnd();
+        emit selectionChanged(start, end);
+    });
+    connect(_editor, &QsciScintilla::selectionChanged, this, [this]() {
+        int start = _editor->selectionStart();
+        int end = _editor->selectionEnd();
+        int lines = 0;
+        if (end > start) {
+            QString sel = _editor->selectedText();
+            lines = sel.count('\n') + 1;
+        }
+        emit selectionChanged(start, end, lines);
+    });
 }
 
 ScintillaEditor::~ScintillaEditor() {

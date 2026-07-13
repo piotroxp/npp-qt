@@ -466,6 +466,9 @@ set(SOURCES
     src/Dialogs/PreferenceDialog.cpp
     src/Dialogs/StyleConfigDialog.h
     src/Dialogs/StyleConfigDialog.cpp
+    src/dialogs/FindInFilesDialog.h
+    src/dialogs/FindInFilesDialog.cpp
+    src/Dialogs/StyleConfigDialog.cpp
     src/Dialogs/ShortcutMapperDialog.h
     src/Dialogs/ShortcutMapperDialog.cpp
 

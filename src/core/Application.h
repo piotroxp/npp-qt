@@ -16,8 +16,9 @@
 #include <mutex>
 #include "common/Types.h"
 #include "common/Util.h"
-#include "../dialogs/FindInFilesWorker.h"
 #include "dialogs/FindInFilesWorker.h"
+#include "dialogs/FindInFilesDialog.h"
+#include "plugins/PluginManager.h"
 
 // Forward declarations
 class ScintillaEditor;
@@ -194,10 +195,11 @@ public:
     QMainWindow* mainWindow() const { return _mainWindow; }
 
     // Dialogs
-    FindReplaceDialog* findReplaceDialog() const { return _findReplaceDialog; }
-    GoToLineDialog* gotoLineDialog() const { return _gotoLineDialog; }
-    PreferenceDialog* preferenceDialog() const { return _preferenceDialog; }
-    AboutDialog* aboutDialog() const { return _aboutDialog; }
+    FindReplaceDialog*  findReplaceDialog() const { return _findReplaceDialog; }
+    GoToLineDialog*    gotoLineDialog() const { return _gotoLineDialog; }
+    PreferenceDialog*  preferenceDialog() const { return _preferenceDialog; }
+    AboutDialog*       aboutDialog() const { return _aboutDialog; }
+    FindInFilesDialog* findInFilesDialog() const { return _findInFilesDialog; }
 
     // Panels
     DocumentMapPanel* documentMapPanel() const { return _docMapPanel; }
@@ -218,6 +220,7 @@ public:
     RecentFilesManager* recentFilesManager() const { return _recentFilesManager; }
 
     // Notifications / observers
+    void updateWindowTitle();
     Observer<BufferNotification>& bufferObserver() { return _bufferObserver; }
     Observer<FileNotification>& fileWatcherObserver() { return _fileWatcherObserver; }
     Observer<ThemeNotification>& themeObserver() { return _themeObserver; }
@@ -228,7 +231,7 @@ public:
     void setStatusBarEol(const std::string& eol);
     void setStatusBarLanguage(const std::string& lang);
     void setStatusBarPosition(int line, int col);
-    void setStatusBarSelection(int selStart, int selEnd);
+    void setStatusBarSelection(int chars, int lines);
 
     // Encoding detection
     EncodingDetector* encodingDetector() const { return _encodingDetector; }
@@ -266,6 +269,7 @@ public slots:
     void onToolBarCommand(const QString& cmd);
     void onFileSaved(const std::string& path);
     void onFileModifiedExternally(const std::string& path);
+    void onExternalFileChanged(const QString& path);
     void onThemeChanged(const std::string& themeName);
 
     // File commands
@@ -343,6 +347,7 @@ signals:
     void bufferClosed(BufferID buffer);
     void bufferActivated(BufferID buffer);
     void fileSaved(const std::string& path);
+    void bufferModifiedChanged(BufferID buffer);
     void themeChanged(const std::string& themeName);
     void commandExecuted(int commandId);
     void activeEditorChanged(ScintillaEditor* editor);
@@ -385,10 +390,11 @@ private:
     UdlManager*             _udlManager = nullptr;
 
     // Dialogs
-    FindReplaceDialog*  _findReplaceDialog = nullptr;
+    FindReplaceDialog*   _findReplaceDialog = nullptr;
     GoToLineDialog*     _gotoLineDialog = nullptr;
     PreferenceDialog*   _preferenceDialog = nullptr;
     AboutDialog*        _aboutDialog = nullptr;
+    FindInFilesDialog*  _findInFilesDialog = nullptr;
 
     // Panels
     DocumentMapPanel*   _docMapPanel = nullptr;
@@ -404,6 +410,9 @@ private:
     std::vector<QWidget*>    _viewContainers;
     int                       _activeViewId = 0;
     ScintillaEditor*          _activeEditor = nullptr;
+
+    // Buffer → Editor mapping (for file change monitoring)
+    std::unordered_map<BufferID, ScintillaEditor*> _bufferToEditor;
 
     // Clipboard
     std::vector<std::string> _clipboardHistory;

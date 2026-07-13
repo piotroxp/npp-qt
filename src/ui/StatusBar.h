@@ -20,7 +20,7 @@ public:
     void setLanguage(const QString& lang);
     void setFileType(const QString& type);
     void setMessage(const QString& msg);
-    void setSelection(int start, int end);
+    void setSelection(int chars, int lines);
     void clearMessage();
 
 private:

@@ -147,6 +147,7 @@ signals:
     void cursorPositionChanged(int line, int col);
     void modificationChanged(bool modified);
     void selectionChanged();
+    void selectionChanged(int start, int end, int lineCount);
     void updateUI();
     void replaceAllDone(int count);
 
