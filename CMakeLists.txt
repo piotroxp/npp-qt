@@ -78,6 +78,7 @@ set(SOURCES
     src/dialogs/LargeFileWarningDialog.cpp
     src/dialogs/FileReloadDialog.cpp
     src/dialogs/IncrementalSearchDialog.cpp
+    src/workers/FileLoaderWorker.cpp
     src/panels/DocumentMapPanel.cpp
     src/panels/FunctionListPanel.cpp
     src/panels/FileBrowserPanel.cpp

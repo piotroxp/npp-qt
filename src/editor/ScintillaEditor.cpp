@@ -6,6 +6,7 @@
 #include "SyntaxHighlighter.h"
 #include "../core/ThemeManager.h"
 #include "../core/LanguageManager.h"
+#include "../core/Application.h"
 #include <Qsci/qsciscintilla.h>
 #include <Qsci/qscilexercustom.h>
 #include <Qsci/qscilexercpp.h>
@@ -32,6 +33,10 @@
 #include <QCoreApplication>
 #include <QPrinter>
 #include <QPainter>
+#include <QFileInfo>
+#include <QMimeData>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 
 ScintillaEditor::ScintillaEditor(QWidget* parent)
     : QFrame(parent)
@@ -63,6 +68,30 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     _editor->setUnmatchedBraceForegroundColor(Qt::white);
     // Highlight guide (indentation guide column indicator)
     _editor->SendScintilla(QsciScintilla::SCI_SETINDENTATIONGUIDES, 1); // SC_IV_LOOKBOTH
+
+    // --- Wave 18 Features ---
+    // Allow cursor to move past end of line (virtual space)
+    // SC_VS_USERACCESSIBLE = 1, SC_VS_NONE = 0
+    _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 1);
+
+    // Smart home key — jumps to first non-whitespace, then BOL, then indent
+    _editor->SendScintilla(QsciScintilla::SCI_SETHOMEKEYS, 1);   // SC_HK_HOMEUSER = 1
+    _editor->SendScintilla(QsciScintilla::SCI_SETHOMEENEXTRA, 1); // also jump past indent on 2nd press
+    // Smart backspace
+    _editor->setBackspaceUnindents(true);
+
+    // Show tabs and spaces (only in indented areas)
+    _editor->setWhitespaceVisibility(QsciScintilla::WsVisibleOnlyInIndent);
+    // Also show eol markers
+    _editor->setEolMode(QsciScintilla::EolUnix);
+
+    // Thin line numbers — auto-width
+    _editor->setMarginType(0, QsciScintilla::NumberMargin);
+    _editor->setMarginWidth(0, "0");
+    _editor->setMarginLineNumbers(0, true);
+
+    // Drag & drop file support
+    setFileDropEnabled(true);
 
     // Code folding — boxed tree style with fold margin
     _editor->setFolding(QsciScintilla::BoxedTreeFoldStyle);
@@ -604,13 +633,12 @@ void ScintillaEditor::setRectangularSelectionEnabled(bool) { }
 void ScintillaEditor::setMultipleSelectionEnabled(bool) { }
 
 void ScintillaEditor::setColumnSelectionMode(bool on) {
+    // SC_SEL_RECTANGLE = 1, SC_SEL_STREAM = 0, SC_SEL_LINES = 2
     if (on) {
-        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE,
-                               QsciScintilla::SC_SEL_LINES);
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE, 1);  // SC_SEL_RECTANGLE
         _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 1);  // SC_VS_USERACCESSIBLE
     } else {
-        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE,
-                               QsciScintilla::SC_SEL_STREAM);
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE, 0);  // SC_SEL_STREAM
         _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 0);  // SC_VS_NONE
     }
 }
@@ -645,6 +673,62 @@ void ScintillaEditor::unfoldAll() {
 
 void ScintillaEditor::toggleFold(int line) {
     _editor->foldLine(line);
+}
+
+// ============================================================================
+// Drag & Drop
+// ============================================================================
+void ScintillaEditor::setFileDropEnabled(bool enabled) {
+    if (enabled) {
+        _editor->setAcceptDrops(true);
+        // Install event filter to catch QDragEnterEvent / QDropEvent with file URLs
+        _editor->installEventFilter(this);
+    }
+}
+
+bool ScintillaEditor::eventFilter(QObject* watched, QEvent* event) {
+    if (watched == _editor) {
+        if (event->type() == QEvent::DragEnter) {
+            auto* de = static_cast<QDragEnterEvent*>(event);
+            if (de->mimeData()->hasUrls()) {
+                for (const QUrl& url : de->mimeData()->urls()) {
+                    if (url.isLocalFile() && QFileInfo(url.toLocalFile()).isFile()) {
+                        de->acceptProposedAction();
+                        return true;
+                    }
+                }
+            }
+        } else if (event->type() == QEvent::Drop) {
+            auto* de = static_cast<QDropEvent*>(event);
+            if (de->mimeData()->hasUrls()) {
+                for (const QUrl& url : de->mimeData()->urls()) {
+                    if (url.isLocalFile()) {
+                        QString path = url.toLocalFile();
+                        if (QFileInfo(path).isFile()) {
+                            Application::instance().openFile(path.toStdString());
+                        }
+                    }
+                }
+                de->acceptProposedAction();
+                return true;
+            }
+        }
+    }
+    return QFrame::eventFilter(watched, event);
+}
+
+// ============================================================================
+// Rectangle Selection
+// ============================================================================
+void ScintillaEditor::setRectangularSelectionMode(bool on) {
+    // SC_SEL_RECTANGLE = 1, SC_SEL_STREAM = 0
+    if (on) {
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE, 1);  // SC_SEL_RECTANGLE
+        _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 1);  // SC_VS_USERACCESSIBLE
+    } else {
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE, 0);  // SC_SEL_STREAM
+        _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 0);  // SC_VS_NONE
+    }
 }
 
 // ============================================================================

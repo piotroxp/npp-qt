@@ -131,6 +131,12 @@ public:
     void clearBookmarks();
     QList<int> bookmarks() const { return _bookmarks; }
 
+    // Drag & drop
+    void setFileDropEnabled(bool enabled);
+
+    // Rectangle/column selection
+    void setRectangularSelectionMode(bool on);
+
     // Access underlying QsciScintilla for advanced operations (e.g., document sharing)
     QsciScintilla* qsciEditor() const { return _editor; }
 

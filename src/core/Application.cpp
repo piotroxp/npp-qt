@@ -391,6 +391,16 @@ void Application::setupConnections() {
         }
     });
 
+    // Loading progress → status bar
+    if (_fileManager) {
+        connect(_fileManager, &FileManager::loadingProgress, this, [this](int pct) {
+            _statusBarWidget->setMessage(QString("Loading... %1%").arg(pct));
+        });
+        connect(_fileManager, &FileManager::fileLoaded, this, [this](bool, BufferID, const QString&) {
+            // status bar will be updated by onBufferActivated
+        });
+    }
+
     // Cursor position → StatusBar position
     connect(this, &Application::activeEditorChanged, this, [this](ScintillaEditor* ed) {
         if (ed) {
@@ -864,6 +874,16 @@ void Application::onBufferActivated(BufferID buffer) {
     ed->setEncoding(buf->getEncoding());
     ed->setEolType(buf->getEolFormat());
 
+    // Partial load indicator in status bar
+    if (buf->isPartialLoad()) {
+        _statusBarWidget->setMessage(
+            QString("Partial load: %1 / %2 MB")
+                .arg(static_cast<double>(buf->getDocumentLength()) / 1e6, 0, 'f', 1)
+                .arg(static_cast<double>(buf->totalFileSize()) / 1e6, 0, 'f', 1));
+    } else {
+        _statusBarWidget->clearMessage();
+    }
+
     updateUI();
 }
 
@@ -943,6 +963,21 @@ void Application::onMenuCommand(const QString& cmd) {
     else if (cmd == "view.foldAll") { if (_activeEditor) _activeEditor->foldAll(); }
     else if (cmd == "view.unfoldAll") { if (_activeEditor) _activeEditor->unfoldAll(); }
     else if (cmd == "view.toggleFold") { if (_activeEditor) _activeEditor->toggleFold(_activeEditor->currentLine()); }
+    else if (cmd == "view.toggleVirtualSpace") {
+        if (_activeEditor) {
+            // SC_VS_USERACCESSIBLE = 1, SC_VS_NONE = 0
+            int current = _activeEditor->qsciEditor()->SendScintilla(QsciScintilla::SCI_GETVIRTUALSPACEOPTIONS);
+            int next = (current == 1) ? 0 : 1;
+            _activeEditor->qsciEditor()->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, next);
+        }
+    }
+    // Rectangle selection
+    else if (cmd == "edit.rectSelect") {
+        if (_activeEditor) _activeEditor->setRectangularSelectionMode(true);
+    }
+    else if (cmd == "edit.normalSelect") {
+        if (_activeEditor) _activeEditor->setRectangularSelectionMode(false);
+    }
     // Encoding
     else if (cmd == "encoding.utf8") { onConvertEncoding(EncodingType::UTF_8); }
     else if (cmd == "encoding.utf8bom") { onConvertEncoding(EncodingType::UTF_8_BOM); }

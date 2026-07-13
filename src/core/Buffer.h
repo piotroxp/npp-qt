@@ -230,6 +230,15 @@ public:
     int64_t getFileLength() const;
 
     // ========================================================================
+    // Partial load (large file) tracking
+    // ========================================================================
+
+    qint64 totalFileSize() const { return _totalFileSize; }
+    void setTotalFileSize(qint64 size) { _totalFileSize = size; }
+    bool isPartialLoad() const { return _isPartialLoad; }
+    void setPartialLoad(bool v) { _isPartialLoad = v; }
+
+    // ========================================================================
     // Backup system
     // ========================================================================
 
@@ -399,6 +408,8 @@ private:
     bool _isUnsync = false;
     bool _isSavePointDirty = false;
     bool _isLargeFile = false;
+    qint64 _totalFileSize = 0;
+    bool _isPartialLoad = false;
 
     // File monitoring
     QFileSystemWatcher* _fileWatcher = nullptr;

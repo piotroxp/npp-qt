@@ -1557,6 +1557,30 @@ src/ui/WinControls.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/ui/WinControls.cpp.s
 .PHONY : src/ui/WinControls.cpp.s
 
+src/workers/FileLoaderWorker.o: src/workers/FileLoaderWorker.cpp.o
+.PHONY : src/workers/FileLoaderWorker.o
+
+# target to build an object file
+src/workers/FileLoaderWorker.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/workers/FileLoaderWorker.cpp.o
+.PHONY : src/workers/FileLoaderWorker.cpp.o
+
+src/workers/FileLoaderWorker.i: src/workers/FileLoaderWorker.cpp.i
+.PHONY : src/workers/FileLoaderWorker.i
+
+# target to preprocess a source file
+src/workers/FileLoaderWorker.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/workers/FileLoaderWorker.cpp.i
+.PHONY : src/workers/FileLoaderWorker.cpp.i
+
+src/workers/FileLoaderWorker.s: src/workers/FileLoaderWorker.cpp.s
+.PHONY : src/workers/FileLoaderWorker.s
+
+# target to generate assembly for a file
+src/workers/FileLoaderWorker.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/NotepadMinusMinusQt.dir/build.make CMakeFiles/NotepadMinusMinusQt.dir/src/workers/FileLoaderWorker.cpp.s
+.PHONY : src/workers/FileLoaderWorker.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -1732,6 +1756,9 @@ help:
 	@echo "... src/ui/WinControls.o"
 	@echo "... src/ui/WinControls.i"
 	@echo "... src/ui/WinControls.s"
+	@echo "... src/workers/FileLoaderWorker.o"
+	@echo "... src/workers/FileLoaderWorker.i"
+	@echo "... src/workers/FileLoaderWorker.s"
 .PHONY : help
 
 

@@ -15,6 +15,7 @@
 #include <QString>
 #include <QFileSystemWatcher>
 #include <QDateTime>
+#include <QThread>
 
 // Forward declaration - FileNotification is defined in Application.h
 struct FileNotification;
@@ -146,8 +147,14 @@ signals:
     void bufferCreated(BufferID buffer);
     void bufferClosed(BufferID buffer);
     void fileSystemChanged(const QString& path);
+    void loadingProgress(int percent);
+    void fileLoaded(bool success, BufferID buffer, const QString& error);
 
 private:
+    // Forward declare to avoid circular dependency with FileLoaderWorker
+    class FileLoaderWorker;
+    FileLoaderWorker* _loader = nullptr;
+    QThread* _loaderThread = nullptr;
     // Internal helpers
     bool loadFileIntoBuffer(BufferID id, const QString& path);
     EncodingType detectEncoding(const QByteArray& data) const;

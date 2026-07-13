@@ -316,8 +316,36 @@ BufferID FileManager::openFile(const QString& path, bool readOnly) {
         delete buf;
         return nullptr;
     }
+    QFileInfo fileInfo(path);
+    qint64 fileSize = fileInfo.size();
     QByteArray raw = file.readAll();
     file.close();
+
+    // Large file handling: partial load for very large files (>100MB)
+    constexpr qint64 VERY_LARGE = 100 * 1024 * 1024; // 100MB
+    if (fileSize > VERY_LARGE) {
+        // Partial load: read first 10MB only
+        QFile f(path);
+        if (f.open(QIODevice::ReadOnly)) {
+            QByteArray chunk = f.read(10 * 1024 * 1024);
+            f.close();
+            QString text = QString::fromUtf8(chunk);
+            _bufferText[buf->getID()] = text;
+            buf->setDocumentLength(text.length());
+            buf->setPartialLoad(true);
+            buf->setTotalFileSize(fileSize);
+            buf->setEncoding(EncodingType::UTF_8);
+            buf->setEolFormat(EolType::EOL_LF);
+            buf->setLangType(LangType::L_TEXT);
+            buf->setFileName(path);
+            if (readOnly) buf->setFileReadOnly(true);
+            if (!readOnly) watchFile(path);
+            _buffers.push_back(buf);
+            emit bufferCreated(buf->getID());
+            emit fileLoaded(true, buf->getID(), QString());
+            return buf->getID();
+        }
+    }
 
     // Detect encoding from BOM + content
     EncodingType detectedEnc = EncodingDetector::instance().detect(raw.toStdString());
@@ -354,6 +382,7 @@ BufferID FileManager::openFile(const QString& path, bool readOnly) {
 
     _buffers.push_back(buf);
     emit bufferCreated(buf->getID());
+    emit fileLoaded(true, buf->getID(), QString());
 
     return buf->getID();
 }
