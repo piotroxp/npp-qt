@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-07-13
+
+### Added
+- **Code folding**: boxed tree style, fold/unfold all, margin click toggle, view.foldAll/unfoldAll commands
+- **Auto-indent**: indentation guides, backspace unindent, tab width 4, spaces by default
+- **Bracket matching**: sloppy brace match, yellow/orange highlight colors
+- **Current line highlight**: themed caret line background
+- **Session polish**: window geometry/state saved on close, restored on startup; cursor + scroll position saved per buffer
+- **Bookmarks**: toggle/next/prev/clear, blue marker in margin 1
+- **Incremental search**: Ctrl+I, real-time search as you type, Enter/shift-enter navigation, escape to close
+- **Virtual space**: cursor moves past end of line
+- **Drag & drop files**: drop file URLs onto editor to open
+- **Smart home/end**: jumps to first non-whitespace, then BOL, then indent
+- **Whitespace visibility**: dots for tabs/spaces in indented areas
+- **Rectangle/column selection**: column selection mode toggle
+- **Large file handling**: >100MB files partial-load first 10MB with status bar indicator
+- **Async file loading**: FileLoaderWorker background thread with progress signal
+- **Preferences completeness**: Editor tab width, indent width, word wrap, line numbers, virtual space, smart home, auto-indent wired to dialog
+- **Encoding clipboard**: clipboard text checked for high Unicode on paste
+
 ## [0.2.0] — 2026-07-13
 
 ### Added

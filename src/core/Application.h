@@ -69,6 +69,7 @@ struct AppOptions {
     bool         rememberSession = true;
     int          maxRecentFiles = 50;
     int          defaultTabWidth = 4;
+    int          indentWidth = 4;
     bool         defaultTabAsSpaces = false;
     EolType      defaultEolType = EolType::EOL_LF;
     EncodingType defaultEncoding = EncodingType::UTF_8_BOM;
@@ -77,6 +78,11 @@ struct AppOptions {
     bool         smartHighlighting = true;
     int          maxHighlightingWords = 1000;
     bool         wrapWithQuotes = false;
+    // Editor behavior
+    bool         wordWrap = false;
+    bool         virtualSpace = true;
+    bool         smartHome = true;
+    bool         autoIndent = true;
     // File Associations
     QStringList  fileAssociations;
     bool         warnOnShortcutConflict = true;

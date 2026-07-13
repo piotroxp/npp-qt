@@ -72,11 +72,15 @@ public:
     int tabWidth() const;
     void setUseTabs(bool useTabs);
     bool useTabs() const;
+    void setIndentWidth(int width);
     void setIndent(int indent);
+    void setVirtualSpaceOptions(bool on);
+    void setHomeKeyNavigation(bool on);
     int indent() const;
 
     void setLineNumberingEnabled(bool enabled);
     bool isLineNumberingEnabled() const;
+    void setMarginLineNumbers(int margin, bool on);
 
     void setWhitespaceVisibility(bool visible);
 

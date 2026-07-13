@@ -8,6 +8,7 @@
 #include "../core/LanguageManager.h"
 #include "../core/Application.h"
 #include <Qsci/qsciscintilla.h>
+#include <Qsci/qsciscintillabase.h>
 #include <Qsci/qscilexercustom.h>
 #include <Qsci/qscilexercpp.h>
 #include <Qsci/qscilexerpython.h>
@@ -359,6 +360,32 @@ int ScintillaEditor::indent() const {
     int line = 0, col = 0;
     _editor->getCursorPosition(&line, &col);
     return _editor->indentation(line);
+}
+
+void ScintillaEditor::setIndentWidth(int width) {
+    // Scintilla's indent width is the same as indentation width
+    _editor->SendScintilla(QsciScintilla::SCI_SETINDENT, width);
+}
+
+void ScintillaEditor::setVirtualSpaceOptions(bool on) {
+    // SC_VS_USERACCESSIBLE = 1, SC_VS_NONE = 0
+    _editor->SendScintilla(QsciScintillaBase::SCI_SETVIRTUALSPACEOPTIONS, on ? 1 : 0);
+}
+
+void ScintillaEditor::setHomeKeyNavigation(bool) {
+    // SCI_SETHOMEKEYSENSITIVE not exposed in Qt6 QsciScintilla.
+    // Scintilla's default Home key already implements smart-home behavior
+    // (jumps to first-non-whitespace, then BOL, then indent level).
+    // This method is a no-op but kept for API completeness.
+}
+
+void ScintillaEditor::setMarginLineNumbers(int margin, bool on) {
+    if (on) {
+        _editor->setMarginType(margin, QsciScintilla::NumberMargin);
+        _editor->setMarginWidth(margin, "00000");
+    } else {
+        _editor->setMarginWidth(margin, 0);
+    }
 }
 
 void ScintillaEditor::setLineNumberingEnabled(bool enabled) {

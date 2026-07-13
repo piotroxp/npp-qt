@@ -5,6 +5,7 @@
 #include "PreferenceDialog.h"
 #include "ShortcutMapperDialog.h"
 #include "core/Application.h"
+#include "editor/ScintillaEditor.h"
 #include "ui/MainWindow.h"
 #include "ui/MenuBar.h"
 #include <QVBoxLayout>
@@ -165,8 +166,13 @@ QWidget* PreferenceDialog::createEditorPage() {
     _spinTabWidth->setRange(1, 16);
     tabLayout->addWidget(_spinTabWidth, 0, 1);
 
+    tabLayout->addWidget(new QLabel("Indent width:", tabGroup), 1, 0);
+    _spinIndentWidth = new QSpinBox(tabGroup);
+    _spinIndentWidth->setRange(1, 16);
+    tabLayout->addWidget(_spinIndentWidth, 1, 1);
+
     _chkTabAsSpaces = new QCheckBox("Replace by spaces", tabGroup);
-    tabLayout->addWidget(_chkTabAsSpaces, 1, 0, 1, 2);
+    tabLayout->addWidget(_chkTabAsSpaces, 2, 0, 1, 2);
 
     layout->addWidget(tabGroup);
 
@@ -198,6 +204,15 @@ QWidget* PreferenceDialog::createEditorPage() {
 
     _chkAutoIndent = new QCheckBox("Auto-indent", editGroup);
     editLayout->addWidget(_chkAutoIndent);
+
+    _chkWordWrap = new QCheckBox("Word wrap", editGroup);
+    editLayout->addWidget(_chkWordWrap);
+
+    _chkVirtualSpace = new QCheckBox("Allow cursor past end of line (virtual space)", editGroup);
+    editLayout->addWidget(_chkVirtualSpace);
+
+    _chkSmartHome = new QCheckBox("Smart home (jump to indent, then BOL)", editGroup);
+    editLayout->addWidget(_chkSmartHome);
 
     _chkWrapWithQuotes = new QCheckBox("Wrap with quotes (selection)", editGroup);
     editLayout->addWidget(_chkWrapWithQuotes);
@@ -528,7 +543,11 @@ void PreferenceDialog::loadSettings() {
 
     // Editor
     _spinTabWidth->setValue(opts.defaultTabWidth);
+    _spinIndentWidth->setValue(opts.defaultTabWidth);  // same as tab width by default
     _chkTabAsSpaces->setChecked(opts.defaultTabAsSpaces);
+    _chkWordWrap->setChecked(opts.wordWrap);
+    _chkVirtualSpace->setChecked(opts.virtualSpace);
+    _chkSmartHome->setChecked(opts.smartHome);
 
     int eolIdx = _cmbEolMode->findData(QVariant(static_cast<int>(opts.defaultEolType)));
     if (eolIdx >= 0) _cmbEolMode->setCurrentIndex(eolIdx);
@@ -536,7 +555,7 @@ void PreferenceDialog::loadSettings() {
     int encIdx = _cmbDefaultEncoding->findData(QVariant(static_cast<int>(opts.defaultEncoding)));
     if (encIdx >= 0) _cmbDefaultEncoding->setCurrentIndex(encIdx);
 
-    _chkAutoIndent->setChecked(true);  // Default to enabled
+    _chkAutoIndent->setChecked(opts.autoIndent);
     _chkWrapWithQuotes->setChecked(opts.wrapWithQuotes);
 
     // Appearance
@@ -582,10 +601,14 @@ void PreferenceDialog::loadSettings() {
     _originalSettings.rememberSession = opts.rememberSession;
     _originalSettings.maxRecentFiles = opts.maxRecentFiles;
     _originalSettings.tabWidth = opts.defaultTabWidth;
+    _originalSettings.indentWidth = opts.defaultTabWidth;
     _originalSettings.tabAsSpaces = opts.defaultTabAsSpaces;
+    _originalSettings.wordWrap = opts.wordWrap;
+    _originalSettings.virtualSpace = opts.virtualSpace;
+    _originalSettings.smartHome = opts.smartHome;
     _originalSettings.eolMode = _cmbEolMode->currentData().toInt();
     _originalSettings.defaultEncoding = _cmbDefaultEncoding->currentData().toInt();
-    _originalSettings.autoIndent = true;
+    _originalSettings.autoIndent = opts.autoIndent;
     _originalSettings.wrapWithQuotes = opts.wrapWithQuotes;
     _originalSettings.theme = _cmbTheme->currentData().toString();
     _originalSettings.showToolbar = opts.showToolBar;
@@ -607,7 +630,12 @@ void PreferenceDialog::applySettings() {
 
     // Editor
     opts.defaultTabWidth = _spinTabWidth->value();
+    opts.indentWidth = _spinIndentWidth->value();
     opts.defaultTabAsSpaces = _chkTabAsSpaces->isChecked();
+    opts.wordWrap = _chkWordWrap->isChecked();
+    opts.virtualSpace = _chkVirtualSpace->isChecked();
+    opts.smartHome = _chkSmartHome->isChecked();
+    opts.autoIndent = _chkAutoIndent->isChecked();
 
     EolType eolType = static_cast<EolType>(_cmbEolMode->currentData().toInt());
     opts.defaultEolType = eolType;
@@ -651,6 +679,18 @@ void PreferenceDialog::applySettings() {
     opts.backupStyle = _backupStyleCombo->currentIndex();
     opts.maxBackups = _spinMaxBackups->value();
 
+    // Apply settings to the active editor (live preview)
+    if (ScintillaEditor* ed = Application::instance().getActiveEditor()) {
+        ed->setTabWidth(opts.defaultTabWidth);
+        ed->setIndentWidth(opts.indentWidth);
+        ed->setUseTabs(!opts.defaultTabAsSpaces);
+        ed->setWrapMode(opts.wordWrap);
+        ed->setMarginLineNumbers(0, opts.showLineNumbers);
+        ed->setVirtualSpaceOptions(opts.virtualSpace);
+        ed->setHomeKeyNavigation(opts.smartHome);
+        ed->setAutoIndent(opts.autoIndent);
+    }
+
     // Apply UI changes
     if (app().mainWindow()) {
         app().mainWindow()->menuBar()->setVisible(opts.showMenuBar);
@@ -678,9 +718,14 @@ void PreferenceDialog::applySettings() {
     _originalSettings.rememberSession = opts.rememberSession;
     _originalSettings.maxRecentFiles = opts.maxRecentFiles;
     _originalSettings.tabWidth = opts.defaultTabWidth;
+    _originalSettings.indentWidth = opts.indentWidth;
     _originalSettings.tabAsSpaces = opts.defaultTabAsSpaces;
+    _originalSettings.wordWrap = opts.wordWrap;
+    _originalSettings.virtualSpace = opts.virtualSpace;
+    _originalSettings.smartHome = opts.smartHome;
     _originalSettings.eolMode = _cmbEolMode->currentData().toInt();
     _originalSettings.defaultEncoding = _cmbDefaultEncoding->currentData().toInt();
+    _originalSettings.autoIndent = opts.autoIndent;
     _originalSettings.wrapWithQuotes = opts.wrapWithQuotes;
     _originalSettings.theme = _cmbTheme->currentData().toString();
     _originalSettings.showToolbar = opts.showToolBar;

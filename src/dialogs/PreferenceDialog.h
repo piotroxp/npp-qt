@@ -53,7 +53,11 @@ private:
 
     // Editor page widgets
     QSpinBox* _spinTabWidth = nullptr;
+    QSpinBox* _spinIndentWidth = nullptr;
     QCheckBox* _chkTabAsSpaces = nullptr;
+    QCheckBox* _chkWordWrap = nullptr;
+    QCheckBox* _chkVirtualSpace = nullptr;
+    QCheckBox* _chkSmartHome = nullptr;
     QComboBox* _cmbEolMode = nullptr;
     QComboBox* _cmbDefaultEncoding = nullptr;
     QCheckBox* _chkAutoIndent = nullptr;
@@ -103,7 +107,11 @@ private:
         bool rememberSession;
         int maxRecentFiles;
         int tabWidth;
+        int indentWidth;
         bool tabAsSpaces;
+        bool wordWrap;
+        bool virtualSpace;
+        bool smartHome;
         int eolMode;
         int defaultEncoding;
         bool autoIndent;

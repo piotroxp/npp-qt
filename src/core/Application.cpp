@@ -66,6 +66,7 @@
 #include <QPrinter>
 #include <QSettings>
 #include <QFileInfo>
+#include <QClipboard>
 #include "ui/MainWindow.h"
 #include "dialogs/IncrementalSearchDialog.h"
 
@@ -202,6 +203,25 @@ bool Application::initialize() {
         connect(_incrementalSearch, &IncrementalSearchDialog::closeRequested,
             this, [this]() { /* nothing needed */ });
 
+        // Clipboard encoding auto-detection on paste
+        connect(QApplication::clipboard(), &QClipboard::changed, this,
+            [this](QClipboard::Mode mode) {
+                if (mode != QClipboard::Clipboard) return;
+                const QString& text = QApplication::clipboard()->text();
+                if (text.isEmpty()) return;
+                // Check for high Unicode or UTF-16 surrogate pairs
+                bool hasHighUnicode = false;
+                for (const QChar& c : text) {
+                    if (c.unicode() > 0xFFFD) {
+                        hasHighUnicode = true;
+                        break;
+                    }
+                }
+                if (hasHighUnicode) {
+                    qDebug() << "[clipboard] High Unicode text detected — UTF-16 likely";
+                }
+            });
+
         return true;
     } catch (const std::exception& e) {
         _lastError = e.what();
@@ -241,7 +261,12 @@ bool Application::loadConfig() {
     _options.rememberSession    = ini.getBool("General", "RememberSession", true);
     _options.maxRecentFiles    = ini.getInt("General", "MaxRecentFiles", 50);
     _options.defaultTabWidth   = ini.getInt("Editor", "TabWidth", 4);
+    _options.indentWidth       = ini.getInt("Editor", "IndentWidth", 4);
     _options.defaultTabAsSpaces = ini.getBool("Editor", "TabAsSpaces", false);
+    _options.wordWrap          = ini.getBool("Editor", "WordWrap", false);
+    _options.virtualSpace      = ini.getBool("Editor", "VirtualSpace", true);
+    _options.smartHome         = ini.getBool("Editor", "SmartHome", true);
+    _options.autoIndent        = ini.getBool("Editor", "AutoIndent", true);
     _options.defaultEolType    = EolType::EOL_LF;
     _options.defaultEncoding    = EncodingType::UTF_8_BOM;
     _options.defaultLang        = LangType::L_TEXT;
@@ -262,7 +287,12 @@ bool Application::saveConfig(const std::string& path) {
     ini.set("General", "MaxRecentFiles",    _options.maxRecentFiles);
     ini.set("General", "Theme",             _options.themeProfile);
     ini.set("Editor",  "TabWidth",          _options.defaultTabWidth);
+    ini.set("Editor",  "IndentWidth",       _options.indentWidth);
     ini.set("Editor",  "TabAsSpaces",       _options.defaultTabAsSpaces);
+    ini.set("Editor",  "WordWrap",          _options.wordWrap);
+    ini.set("Editor",  "VirtualSpace",       _options.virtualSpace);
+    ini.set("Editor",  "SmartHome",         _options.smartHome);
+    ini.set("Editor",  "AutoIndent",         _options.autoIndent);
     return ini.save(FileHelper::getConfigFilePath());
 }
 

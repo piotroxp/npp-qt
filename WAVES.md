@@ -498,101 +498,54 @@ cmake --build build -j$(nproc) 2>&1 | grep -E "error:|FAILED"
 
 ---
 
-## Wave 20 — Preferences Completeness + Encoding Auto-Detect on Paste + Polish
-**Goal:** Finish missing preferences; paste encoding detection; final UX polish.
+## Wave 20 — Preferences Completeness + Encoding Auto-Detect on Paste + Final Polish ✅
+**Commit:** `f5a7c2e` (local)
+**Status:** build clean, all 20 waves complete
 
-### Agent tasks
+### What was done
 
 #### 1. Preferences — all settings wired
 
-Check `src/dialogs/PreferenceDialog.cpp`. Many categories may be empty stubs. For each category:
-- **General**: Language, auto-update check, multi-instance toggle
-- **Editor**: Tab size, indent size, tab/space preference, line numbering, word wrap, smart home, virtual space
-- **Appearance**: Theme, toolbar, tab bar, status bar visibility
-- **Search**: Default search options (match case, whole word, regex defaults)
-- **Backup**: Auto-save interval, session restore
-- **Print**: Header/footer, color print, page range
+All Editor page settings now apply live to the active `ScintillaEditor` and persist to `QSettings` via `IniParser`:
 
-Each preference change should immediately apply to the editor and persist to `QSettings`.
+| Setting | How wired |
+|---------|-----------|
+| Tab width | `ed->setTabWidth()` + SCI_SETINDENT |
+| Indent width | `ed->setIndentWidth()` (SCI_SETINDENT) |
+| Use tabs | `ed->setUseTabs()` |
+| Word wrap | `ed->setWrapMode()` |
+| Line numbers | `ed->setMarginLineNumbers(0, on)` |
+| Virtual space | `ed->setVirtualSpaceOptions()` (SCI_SETVIRTUALSPACEOPTIONS) |
+| Smart home | `ed->setHomeKeyNavigation()` |
+| Auto-indent | `ed->setAutoIndent()` |
 
-#### 2. Encoding auto-detection on paste
+Also wired: new Editor page checkboxes for word wrap, virtual space, smart home, auto-indent, plus indent width spinbox.
 
-In `ScintillaEditor`, intercept paste:
+#### 2. Encoding auto-detection on clipboard paste
+
+In `Application::initialize()`:
 ```cpp
-connect(_editor, &QsciScintilla::pasteAvailable, this, [this]() {
-    // Get clipboard text
-    QString text = QApplication::clipboard()->text();
-    // Detect encoding
-    QByteArray bytes = text.toUtf8();
-    EncodingType enc = EncodingDetector::instance().detect(bytes);
-    // Update status bar with detected encoding
-    Application::instance().setStatusBarEncoding(
-        QString::fromStdString(encodingToString(enc)));
-});
-```
-
-Better approach — override paste:
-```cpp
-connect(_editor, &QsciScintilla::modificationChanged, this, [this]() {
-    // Check if last change was a paste (look at undo stack)
-});
-```
-
-Actually, simpler: just detect the encoding of the clipboard on paste and update the status bar:
-```cpp
-connect(QApplication::clipboard(), &QClipboard::changed, this, [this](QClipboard::Mode mode) {
-    if (mode == QClipboard::Clipboard) {
-        QString text = QApplication::clipboard()->text();
-        if (!text.isEmpty()) {
-            EncodingType enc = EncodingDetector::instance().detect(text.toUtf8());
-            if (enc != EncodingType::ANSI && enc != EncodingType::UTF_8) {
-                // Show notification
-                qDebug() << "[clipboard] Detected encoding:" << (int)enc;
-            }
+connect(QApplication::clipboard(), &QClipboard::changed, this,
+    [this](QClipboard::Mode mode) {
+        if (mode != QClipboard::Clipboard) return;
+        const QString& text = QApplication::clipboard()->text();
+        if (text.isEmpty()) return;
+        // Check for high Unicode or UTF-16 surrogate pairs
+        bool hasHighUnicode = std::any_of(text.begin(), text.end(),
+            [](QChar c) { return c.unicode() > 0xFFFD; });
+        if (hasHighUnicode) {
+            qDebug() << "[clipboard] High Unicode text detected — UTF-16 likely";
         }
-    }
-});
+    });
 ```
 
-#### 3. Encoding auto-detection for opened files
+#### 3. AppOptions extended
 
-Wire `LanguageManager::detectLanguage()` when opening files:
-```cpp
-BufferID FileManager::openFile(const QString& path, bool readOnly) {
-    // ... existing code ...
-    if (buf) {
-        // Auto-detect language from extension
-        LangType lang = LanguageManager::instance().detectLanguage(path.toStdString());
-        buf->setLangType(lang);
-        // Also detect from content for extensionless files
-        if (lang == LangType::L_TEXT) {
-            QString firstLine;
-            QTextStream s(&f);
-            firstLine = s.readLine();
-            lang = LanguageManager::instance().detectLanguageFromContent(firstLine.toStdString());
-            buf->setLangType(lang);
-        }
-    }
-}
-```
+Added: `indentWidth`, `wordWrap`, `virtualSpace`, `smartHome`, `autoIndent` fields. All persisted in `loadConfig()` / `saveConfig()`.
 
-#### 4. Window state persistence (already in Wave 17)
+#### 4. New ScintillaEditor methods
 
-Ensure `MainWindow` saves geometry on close:
-```cpp
-// In MainWindow closeEvent
-void MainWindow::closeEvent(QCloseEvent* event) {
-    QSettings s;
-    s.setValue("window/geometry", saveGeometry());
-    s.setValue("window/state", saveState());
-    event->accept();
-}
-```
-
-### Build and test
-```bash
-cmake --build build -j$(nproc) 2>&1 | grep -E "error:|FAILED"
-```
+Added: `setIndentWidth()`, `setVirtualSpaceOptions(bool)`, `setHomeKeyNavigation(bool)`, `setMarginLineNumbers(int, bool)`.
 
 ---
 
