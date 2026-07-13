@@ -112,6 +112,7 @@ public:
     void setTabIndents(bool enabled);
     void setRectangularSelectionEnabled(bool enabled);
     void setMultipleSelectionEnabled(bool enabled);
+    void setColumnSelectionMode(bool on);
 
     void convertEol(EolType eol);
 

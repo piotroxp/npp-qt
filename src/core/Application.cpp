@@ -78,6 +78,13 @@ Application::Application() : QObject(qApp) {
 }
 
 Application::~Application() {
+    // Stop auto-save timer
+    if (_autoSaveTimer) {
+        _autoSaveTimer->stop();
+        delete _autoSaveTimer;
+        _autoSaveTimer = nullptr;
+    }
+
     // Delete owned objects BEFORE _mainWindow.
     // NOTE: panels and dialogs are parented to _mainWindow, so Qt will cascade-delete
     // them when _mainWindow is destroyed. We must NOT delete them again here.
@@ -144,6 +151,21 @@ bool Application::initialize() {
 
         _state = AppState::Ready;
         logInfo("Initialization complete");
+
+        // Auto-save timer
+        if (_options.autoSave) {
+            _autoSaveTimer = new QTimer(this);
+            connect(_autoSaveTimer, &QTimer::timeout, this, [this]() {
+                if (_options.autoSaveCurrentOnly) {
+                    BufferID buf = getActiveBuffer();
+                    if (buf && isBufferModified(buf)) saveFile(buf);
+                } else {
+                    saveAllFiles();
+                }
+            });
+            _autoSaveTimer->start(_options.autoSaveInterval * 60 * 1000);
+        }
+
         return true;
     } catch (const std::exception& e) {
         _lastError = e.what();
@@ -820,6 +842,14 @@ void Application::onMenuCommand(const QString& cmd) {
     else if (cmd == "settings.commandPalette") { onShowCommandPalette(); }
     // Help
     else if (cmd == "help.about") { onShowAbout(); }
+    // Macro
+    else if (cmd == "macro.record") { onMacroStartRecording(); }
+    else if (cmd == "macro.stop") { onMacroStopRecording(); }
+    else if (cmd == "macro.playback") { onMacroPlaybackLast(); }
+    // Column selection
+    else if (cmd == "edit.columnSelect") {
+        if (auto* ed = getActiveEditor()) ed->setColumnSelectionMode(true);
+    }
     else {
         qDebug() << "[onMenuCommand] Unknown command:" << cmd;
     }

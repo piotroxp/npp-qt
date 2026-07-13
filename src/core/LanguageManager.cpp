@@ -288,6 +288,10 @@ LangType LanguageManager::mapStringToLang(const QString& name) {
 
 // Create a QsciLexer for the given language (nullptr for L_TEXT/unknown)
 QsciLexer* LanguageManager::getLexer(LangType lang) const {
+    return createLexer(lang);
+}
+
+QsciLexer* LanguageManager::createLexer(LangType lang) {
     switch (lang) {
         case LangType::L_CPP:
         case LangType::L_C:        return new QsciLexerCPP;

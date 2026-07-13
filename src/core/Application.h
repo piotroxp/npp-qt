@@ -9,6 +9,7 @@
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QString>
+#include <QTimer>
 #include <memory>
 #include <vector>
 #include <unordered_map>
@@ -404,6 +405,9 @@ private:
     // Clipboard
     std::vector<std::string> _clipboardHistory;
     static constexpr size_t MAX_CLIPBOARD_HISTORY = 50;
+
+    // Auto-save
+    QTimer* _autoSaveTimer = nullptr;
 
     // Observers
     Observer<BufferNotification> _bufferObserver;
