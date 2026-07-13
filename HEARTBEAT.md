@@ -12,9 +12,9 @@
 | 15 | ✅ | `d81f8a5` | CI, CMake install, CONTRIBUTING/CHANGELOG, `v0.2.0` tag |
 | 16 | ✅ | `13cb157` | Code folding, auto-indent, bracket highlight, current line |
 | 17 | ✅ | `4c39dad` | Session geometry, bookmarks, incremental search |
-| 18 | ✅ | `d81f8a5` | Session geometry, bookmarks, incremental search |
+| 18 | ✅ | `2e099f6` | Virtual space, drag-drop files, whitespace dots, gutter polish, rect selection |
 | 19 | ✅ | `6a51c77` | Large file handling, async loading, partial load status bar |
-| 20 | ⏳ | — | Planned: virtual space, drag-drop, preferences |
+| 20 | ⏳ | — | Planned: preferences, command palette improvements |
 
 **Binary:** `build/NotepadMinusMinusQt` (clean build)
 **Source:** 75+ .cpp files
