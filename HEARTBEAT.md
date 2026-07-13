@@ -74,5 +74,20 @@
 **Commit:** `e731db8` — "fix: resolve stash merge conflicts, update HEARTBEAT state"
 **Binary:** `build/NotepadMinusMinusQt` (pre-Jul-13 state)
 
+**2026-07-13T14:42 UTC — WAVE DEPLOY (waves 5-10 running)**
+
+**Agent sessions running:**
+- wave-5 (e4de0717): Menu routing + StatusBar finalization → menuCommand dispatcher + StatusBar wiring
+- wave-6 (eeee05e0): Editor-tab integration → each tab owns Buffer+ScintillaEditor, lifecycle, context menu
+- wave-7 (9e0c8a90): File I/O UTF-16 + encoding + EOL → BOM, detect, convert, wire
+- wave-8 (56b8323c): Syntax highlighting + theme → LangType→QsciLexer map, ThemeManager, dark mode
+
+**To deploy when slots free:**
+- wave-9: Auto-save, SessionManager JSON, MacroManager recording/playback, clipboard history, column mode
+- wave-10: Final build verification, Win32 sweep, README rewrite, ctest, tag v0.1.0-semantic-lift
+
+**Binary:** `build/NotepadMinusMinusQt` (31MB, clean build)
+**Source:** `/home/node/.openclaw/workspace/src/` — 95 source files, 0 Win32 remnants
+
 **Last gate run:** 2026-07-05T09:21:48 UTC | report: `/home/node/jaisiu/skills/codebase-translate/build/npp-qt/translation_report.json`
 <!-- semantic-lift:end -->
