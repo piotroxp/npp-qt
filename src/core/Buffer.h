@@ -46,6 +46,9 @@ struct MapPosition {
 // ============================================================================
 // Main Buffer class - represents a document in the editor
 // ============================================================================
+class Buffer;
+class Application;
+
 class Buffer : public QObject {
     Q_OBJECT
 
@@ -345,8 +348,9 @@ signals:
     // File system events
     void fileDeleted();
     void fileCreated();
-    void fileExternallyModified();
+    void fileExternallyModified(const QString& path);
 
+    friend class Application;
 private:
     // ========================================================================
     // Private helpers

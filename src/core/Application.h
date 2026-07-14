@@ -159,6 +159,7 @@ public:
     BufferID openFiles(const std::vector<std::string>& paths);
     bool saveFile(BufferID buffer, const std::string& path = "");
     bool saveAllFiles();
+    bool reloadFile(BufferID buffer);
     bool closeFile(BufferID buffer, bool force = false);
     bool closeAllFiles();
     BufferID newFile(const std::string& encoding = "");
@@ -168,6 +169,7 @@ public:
     // Buffer management
     BufferID getActiveBuffer() const;
     BufferID getBufferAt(int index, int view = 0) const;
+    BufferID getBufferForPath(const std::string& path) const;
     int getBufferCount() const;
     void setActiveBuffer(BufferID buffer);
     bool isBufferModified(BufferID buffer) const;

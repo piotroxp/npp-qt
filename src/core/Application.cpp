@@ -1,5 +1,6 @@
 // Application.cpp - Main application controller implementation
 #include "Application.h"
+#include <QFile>
 #include "FileManager.h"
 #include "Buffer.h"
 #include "EncodingDetector.h"
@@ -577,6 +578,24 @@ BufferID Application::openFiles(const std::vector<std::string>& paths) {
 bool Application::saveFile(BufferID buffer, const std::string& path) {
     return _fileManager->saveFile(buffer, path.empty() ? QString() : QString::fromStdString(path));
 }
+bool Application::reloadFile(BufferID buffer) {
+    if (!buffer) return false;
+    auto fname = getFileName(buffer);
+    if (!fname || fname->empty()) return false;
+    // Read file from disk
+    QFile file(QString::fromStdString(*fname));
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return false;
+    QByteArray data = file.readAll();
+    file.close();
+    // Update editor with fresh content
+    ScintillaEditor* ed = getActiveEditor();
+    if (ed) {
+        ed->setText(QString::fromUtf8(data));
+        ed->setModified(false);
+    }
+    return true;
+}
+
 
 bool Application::saveAllFiles() {
     return _fileManager->saveAllFiles();
@@ -639,6 +658,17 @@ int Application::getBufferCount() const {
 void Application::setActiveBuffer(BufferID buffer) {
     _fileManager->setActiveBuffer(buffer);
     emit bufferActivated(buffer);
+}
+
+
+BufferID Application::getBufferForPath(const std::string& path) const {
+    for (int i = 0; i < getBufferCount(); ++i) {
+        BufferID buf = getBufferAt(i);
+        auto fname = getFileName(buf);
+        if (fname && *fname == path)
+            return buf;
+    }
+    return BUFFER_INVALID;
 }
 
 bool Application::isBufferModified(BufferID buffer) const {

@@ -1021,7 +1021,7 @@ void MainWindow::onBufferOpened(BufferID buffer) {
     });
     // Watch for external file changes
     connect(buffer, &Buffer::fileExternallyModified,
-            this, [this, buffer]() { onFileExternallyModified(buffer); });
+            this, [this](const QString& path) { onFileExternallyModified(path); });
     connect(editor, &ScintillaEditor::cursorPositionChanged, _statusBarWidget, [this](int line, int col) {
         _statusBarWidget->setPosition(line, col);
     });
@@ -1042,23 +1042,21 @@ void MainWindow::onBufferOpened(BufferID buffer) {
     app().setActiveEditor(editor);
 }
 
-void MainWindow::onFileExternallyModified(BufferID buffer) {
-    QString name;
-    auto fname = app().getFileName(buffer);
-    if (fname) name = QString::fromStdString(*fname);
-    
-    FileReloadDialog::Action action = FileReloadDialog::prompt(
-        name.isEmpty() ? "This file" : name, this);
+void MainWindow::onFileExternallyModified(const QString& filePath) {
+    FileReloadDialog::Action action = FileReloadDialog::prompt(filePath, this);
     
     if (action == FileReloadDialog::Action::Reload) {
-        app().reloadFile(buffer);
-        ScintillaEditor* ed = app().getActiveEditor();
-        if (ed) {
-            ed->setText(QString::fromStdString(app().getBufferText(buffer)));
-            ed->setModified(false);
+        BufferID buf = app().getBufferForPath(filePath.toStdString());
+        if (buf) {
+            app().reloadFile(buf);
+            ScintillaEditor* ed = app().getActiveEditor();
+            if (ed) {
+                ed->setText(QString::fromStdString(app().getBufferText(buf)));
+                ed->setModified(false);
+            }
         }
     }
-    // KeepDisk and DoNothing: leave editor as-is (user keeps current content, marked dirty)
+    // KeepDisk and DoNothing: leave editor as-is
 }
 
 void MainWindow::onBufferActivated(BufferID buffer) {

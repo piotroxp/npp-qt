@@ -363,7 +363,7 @@ bool Buffer::checkFileState() {
             mask |= static_cast<int>(BufferStatusInfo::BufferChangeTimestamp);
             _currentStatus = DocFileStatus::DOC_MODIFIED;
             changed = true;
-            emit fileExternallyModified();
+            emit fileExternallyModified(_fullPathName);
         }
 
         if (changed) {
