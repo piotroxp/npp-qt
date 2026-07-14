@@ -60,6 +60,7 @@ set(SOURCES
     src/core/WorkspaceManager.cpp
     src/core/UdlManager.cpp
     src/editor/ScintillaEditor.cpp
+    src/editor/ScintillaEditView.cpp
     src/editor/SyntaxHighlighter.cpp
     src/ui/MainWindow.cpp
     src/ui/TabBar.cpp
@@ -78,6 +79,12 @@ set(SOURCES
     src/dialogs/LargeFileWarningDialog.cpp
     src/dialogs/FileReloadDialog.cpp
     src/dialogs/IncrementalSearchDialog.cpp
+    src/dialogs/Printer.cpp
+    src/dialogs/ColumnEditorDialog.cpp
+    src/dialogs/UserDefineDialog.cpp
+    src/dialogs/AnsiCharPanel.cpp
+    src/editor/DocTabView.cpp
+    src/editor/ScintillaCtrls.cpp
     src/workers/FileLoaderWorker.cpp
     src/panels/DocumentMapPanel.cpp
     src/panels/FunctionListPanel.cpp
@@ -104,6 +111,7 @@ set(HEADERS
     src/core/WorkspaceManager.h
     src/core/UdlManager.h
     src/editor/ScintillaEditor.h
+    src/editor/ScintillaEditView.h
     src/editor/SyntaxHighlighter.h
     src/ui/MainWindow.h
     src/ui/TabBar.h
@@ -120,6 +128,12 @@ set(HEADERS
     src/dialogs/LargeFileWarningDialog.h
     src/dialogs/FileReloadDialog.h
     src/dialogs/IncrementalSearchDialog.h
+    src/dialogs/Printer.h
+    src/dialogs/ColumnEditorDialog.h
+    src/dialogs/UserDefineDialog.h
+    src/dialogs/AnsiCharPanel.h
+    src/editor/DocTabView.h
+    src/editor/ScintillaCtrls.h
     src/panels/DocumentMapPanel.h
     src/panels/FunctionListPanel.h
     src/panels/FileBrowserPanel.h
