@@ -817,6 +817,10 @@ void Application::setActiveEditor(ScintillaEditor* editor) {
     if (editor) {
         emit activeEditorChanged(editor);
     }
+    // Keep incremental search dialog in sync with the active editor
+    if (_incrementalSearch) {
+        _incrementalSearch->setEditor(editor);
+    }
 }
 
 // ============================================================================
@@ -1033,7 +1037,10 @@ void Application::onMenuCommand(const QString& cmd) {
     else if (cmd == "search.markAll") { onMarkAll(); }
     else if (cmd == "search.findInFiles") { onFindInFiles(); }
     else if (cmd == "search.incremental") {
-        if (_incrementalSearch) _incrementalSearch->showAtTop();
+        if (_incrementalSearch) {
+            _incrementalSearch->setEditor(_activeEditor);
+            _incrementalSearch->showAtTop();
+        }
     }
     // Bookmarks
     else if (cmd == "bookmark.toggle") {

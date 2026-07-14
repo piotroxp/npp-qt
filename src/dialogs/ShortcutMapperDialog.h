@@ -58,6 +58,8 @@ protected:
             if (!_combo.isEmpty()) {
                 _display->setText(_combo);
                 _done = true;
+                // Auto-close dialog when a valid combo is captured
+                watched->event(event);
             }
             return true;
         }
@@ -88,7 +90,9 @@ private slots:
 
 private:
     void populateShortcuts(const QString& category);
+    bool validateAndSave();
     void saveShortcuts();
+    void checkAndWarnConflict(const QString& changedCmd, const QString& newShortcut);
     QString grabKeyCombo();
 
     QListWidget* _categoryList = nullptr;
