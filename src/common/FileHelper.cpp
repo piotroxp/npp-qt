@@ -2,6 +2,12 @@
 #include "FileHelper.h"
 #include "Constants.h"
 #include "StringHelper.h"
+#include <QFile>
+#include <QTextStream>
+#include <QDir>
+#include <QFileInfo>
+#include <QCryptographicHash>
+#include <QDebug>
 #include <fstream>
 #include <sstream>
 #include <cstdio>
@@ -434,6 +440,276 @@ void MemoryMappedFile::flush() {
 #else
     if (_data) msync(_data, _size, MS_SYNC);
 #endif
+}
+
+// ============================================================================
+// Qt-style text/binary file operations
+// ============================================================================
+QString readTextFile(const QString& path, const QString& encoding, QString* error) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        if (error) *error = QString("Failed to open file for reading: %1").arg(file.errorString());
+        return QString();
+    }
+    QTextStream stream(&file);
+    stream.setEncoding(encoding == "UTF-8" ? QTextStream::Encoding::QtUTF8 :
+                       encoding == "System" ? QTextStream::Encoding::Locale :
+                       QTextStream::Encoding::QtUTF8);
+    QString content = stream.readAll();
+    file.close();
+    return content;
+}
+
+bool writeTextFile(const QString& path, const QString& content, const QString& encoding, QString* error) {
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        if (error) *error = QString("Failed to open file for writing: %1").arg(file.errorString());
+        return false;
+    }
+    QTextStream stream(&file);
+    stream.setEncoding(encoding == "UTF-8" ? QTextStream::Encoding::QtUTF8 :
+                       encoding == "System" ? QTextStream::Encoding::Locale :
+                       QTextStream::Encoding::QtUTF8);
+    stream << content;
+    stream.flush();
+    bool success = file.flush();
+    if (!success && error) {
+        *error = QString("Failed to write file: %1").arg(file.errorString());
+    }
+    file.close();
+    return success;
+}
+
+QByteArray readBinaryFile(const QString& path, QString* error) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (error) *error = QString("Failed to open file for reading: %1").arg(file.errorString());
+        return QByteArray();
+    }
+    QByteArray data = file.readAll();
+    file.close();
+    return data;
+}
+
+bool writeBinaryFile(const QString& path, const QByteArray& data, QString* error) {
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) {
+        if (error) *error = QString("Failed to open file for writing: %1").arg(file.errorString());
+        return false;
+    }
+    qint64 written = file.write(data);
+    if (written != data.size()) {
+        if (error) *error = QString("Failed to write complete file: %1").arg(file.errorString());
+        file.close();
+        return false;
+    }
+    file.close();
+    return true;
+}
+
+// ============================================================================
+// File info helpers
+// ============================================================================
+qint64 getFileSize(const QString& path) {
+    QFileInfo info(path);
+    return info.size();
+}
+
+QDateTime getCreationTime(const QString& path) {
+    QFileInfo info(path);
+#if defined(_WIN32) || defined(_WIN64)
+    return info.birthTime();
+#else
+    return info.created();
+#endif
+}
+
+QDateTime getModificationTime(const QString& path) {
+    QFileInfo info(path);
+    return info.lastModified();
+}
+
+bool setModificationTime(const QString& path, const QDateTime& time) {
+#if defined(_WIN32) || defined(_WIN64)
+    HANDLE hFile = CreateFileW((LPCWSTR)path.utf16(), FILE_WRITE_ATTRIBUTES, 0, nullptr,
+                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) return false;
+    FILETIME ft;
+    SYSTEMTIME st = time.toUTC().toMSecsSinceEpoch() / 1000;
+    TzSpecificLocalTimeToSystemTime(nullptr, &st, &st);
+    SystemTimeToFileTime(&st, &ft);
+    SetFileTime(hFile, nullptr, nullptr, &ft);
+    CloseHandle(hFile);
+    return true;
+#else
+    struct utimbuf ut;
+    ut.modtime = time.toSecsSinceEpoch();
+    ut.actime = time.toSecsSinceEpoch();
+    return utime(path.toUtf8().constData(), &ut) == 0;
+#endif
+}
+
+// ============================================================================
+// Qt-style temp file/directory
+// ============================================================================
+QString getTempFileName(const QString& prefix) {
+    QString templateName = QDir::temp().filePath(prefix + "XXXXXX");
+    QString result = templateName;
+    int fd = mkstemp(result.data());
+    if (fd >= 0) {
+        close(fd);
+        ::remove(result.toUtf8().constData()); // Remove the created file, return the path
+    } else {
+        result.clear();
+    }
+    return result;
+}
+
+QString getTempDir() {
+    return QDir::tempPath();
+}
+
+// ============================================================================
+// Qt-style directory listing
+// ============================================================================
+QStringList listFiles(const QString& dir, const QString& filter, bool recursive) {
+    QStringList result;
+    QDir qdir(dir);
+    if (!qdir.exists()) return result;
+
+    QDir::Filters filterFlags = QDir::Files;
+    if (recursive) filterFlags |= QDir::Recursive;
+
+    QFileInfoList entries = qdir.entryInfoList(QStringList(filter), filterFlags);
+    for (const QFileInfo& info : entries) {
+        if (info.isFile()) {
+            result.append(info.absoluteFilePath());
+        }
+    }
+    return result;
+}
+
+QStringList listDirs(const QString& dir, const QString& filter, bool recursive) {
+    QStringList result;
+    QDir qdir(dir);
+    if (!qdir.exists()) return result;
+
+    QDir::Filters filterFlags = QDir::Dirs | QDir::NoDotAndDotDot;
+    if (recursive) filterFlags |= QDir::Recursive;
+
+    QFileInfoList entries = qdir.entryInfoList(QStringList(filter), filterFlags);
+    for (const QFileInfo& info : entries) {
+        if (info.isDir()) {
+            result.append(info.absoluteFilePath());
+        }
+    }
+    return result;
+}
+
+// ============================================================================
+// Recursive copy/remove
+// ============================================================================
+bool copyRecursive(const QString& src, const QString& dst, QString* error) {
+    QFileInfo srcInfo(src);
+    if (srcInfo.isDir()) {
+        QDir dstDir(dst);
+        if (!dstDir.exists()) {
+            if (!dstDir.mkpath(".")) {
+                if (error) *error = QString("Failed to create directory: %1").arg(dst);
+                return false;
+            }
+        }
+        QDir srcDir(src);
+        for (const QFileInfo& info : srcDir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot)) {
+            QString srcPath = info.absoluteFilePath();
+            QString dstPath = dstDir.filePath(info.fileName());
+            if (info.isDir()) {
+                if (!copyRecursive(srcPath, dstPath, error)) return false;
+            } else {
+                if (!QFile::copy(srcPath, dstPath)) {
+                    if (error) *error = QString("Failed to copy file: %1 -> %2").arg(srcPath, dstPath);
+                    return false;
+                }
+            }
+        }
+        return true;
+    } else {
+        if (!QFile::copy(src, dst)) {
+            if (error) *error = QString("Failed to copy file: %1 -> %2").arg(src, dst);
+            return false;
+        }
+        return true;
+    }
+}
+
+bool removeRecursive(const QString& path, QString* error) {
+    QFileInfo info(path);
+    if (info.isDir()) {
+        QDir dir(path);
+        for (const QFileInfo& entry : dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot)) {
+            QString entryPath = entry.absoluteFilePath();
+            if (entry.isDir()) {
+                if (!removeRecursive(entryPath, error)) return false;
+            } else {
+                if (!QFile::remove(entryPath)) {
+                    if (error) *error = QString("Failed to remove file: %1").arg(entryPath);
+                    return false;
+                }
+            }
+        }
+        if (!dir.rmdir(path)) {
+            if (error) *error = QString("Failed to remove directory: %1").arg(path);
+            return false;
+        }
+        return true;
+    } else {
+        if (!QFile::remove(path)) {
+            if (error) *error = QString("Failed to remove file: %1").arg(path);
+            return false;
+        }
+        return true;
+    }
+}
+
+// ============================================================================
+// Hash computation
+// ============================================================================
+QString computeMD5(const QString& path) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return QString();
+    QCryptographicHash hash(QCryptographicHash::Md5);
+    hash.addData(&file);
+    file.close();
+    return QString::fromLatin1(hash.result().toHex());
+}
+
+QString computeSHA256(const QString& path) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return QString();
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    hash.addData(&file);
+    file.close();
+    return QString::fromLatin1(hash.result().toHex());
+}
+
+// ============================================================================
+// Binary file detection
+// ============================================================================
+bool isBinaryFile(const QString& path, int checkBytes) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return false;
+
+    QByteArray data = file.read(checkBytes);
+    file.close();
+
+    for (char byte : data) {
+        // Check for null bytes or other control characters that indicate binary
+        unsigned char c = static_cast<unsigned char>(byte);
+        if (c == 0 || (c < 32 && c != 9 && c != 10 && c != 13)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace FileHelper

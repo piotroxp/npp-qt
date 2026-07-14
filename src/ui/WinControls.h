@@ -30,6 +30,9 @@
 #include <QCheckBox>
 #include <QFontComboBox>
 
+// Forward declaration
+class DpiManager;
+
 // ClipboardHistoryPanel — shows recent clipboard entries, like Notepad++
 class ClipboardHistoryPanel : public QWidget {
     Q_OBJECT
@@ -42,6 +45,7 @@ Q_SIGNALS:
 private Q_SLOTS:
     void onClipboardChanged();
 private:
+    void applyDpiScaling();
     QListWidget* m_list = nullptr;
     static constexpr int MaxEntries = 100;
 };
@@ -57,6 +61,7 @@ Q_SIGNALS:
     void colorSelected(const QColor& c);
 private:
     void setupPalette();
+    void applyDpiScaling();
     QColor m_current = Qt::white;
     QVector<QColor> m_palette;
     QLabel* m_preview = nullptr;
@@ -71,6 +76,7 @@ Q_SIGNALS:
     void styleChanged(int id, const QString& prop, const QVariant& val);
 private:
     void setupUi();
+    void applyDpiScaling();
     QComboBox* m_langCombo = nullptr;
     QComboBox* m_styleCombo = nullptr;
     ColourPicker* m_fgPicker = nullptr;
@@ -89,10 +95,12 @@ public:
     explicit ToolTipButton(QWidget* parent = nullptr);
     void setTip(const QString& t) { setToolTip(t); }
     void setTip2(const QString& t) { m_tip2 = t; }
+    void setDpiManager(DpiManager* dm) { m_dpiManager = dm; }
 protected:
     bool event(QEvent* e) override;
 private:
     QString m_tip2;
+    DpiManager* m_dpiManager = nullptr;
 };
 
 // NativeListBox — list box wrapper (Win32 LB_* → Qt)
@@ -105,4 +113,44 @@ public:
     int getCurSel() const { return currentRow(); }
     void resetContent() { clear(); }
     QString getText(int i) const;
+};
+
+// EditableLabel — clickable label that becomes editable
+class EditableLabel : public QWidget {
+    Q_OBJECT
+public:
+    explicit EditableLabel(QWidget* parent = nullptr);
+    QString text() const { return m_label->text(); }
+    void setText(const QString& text);
+Q_SIGNALS:
+    void editingFinished(const QString& text);
+    void clicked();
+private Q_SLOTS:
+    void startEditing();
+    void finishEditing();
+private:
+    QLabel* m_label = nullptr;
+    QLineEdit* m_lineEdit = nullptr;
+};
+
+// ProgressIndicator — animated progress indicator for status bar
+class ProgressIndicator : public QWidget {
+    Q_OBJECT
+public:
+    explicit ProgressIndicator(QWidget* parent = nullptr);
+    void setProgress(int value, int maximum = 100);
+    void startAnimation();
+    void stopAnimation();
+    void setText(const QString& text);
+    int value() const { return m_value; }
+    int maximum() const { return m_maximum; }
+    bool isAnimating() const { return m_animating; }
+Q_SIGNALS:
+    void cancelled();
+private:
+    void paintEvent(QPaintEvent* event) override;
+    int m_value = 0;
+    int m_maximum = 100;
+    bool m_animating = false;
+    QString m_text;
 };

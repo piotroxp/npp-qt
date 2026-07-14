@@ -27,12 +27,31 @@ set(CTEST_ENVIRONMENT "QT_QPA_PLATFORM=offscreen;LD_LIBRARY_PATH=/usr/lib/x86_64
 #   src/common/FileHelper.cpp
 #   src/uchardet/*.cpp
 
+# Check for uchardet sources — build system sets USE_UCHARDET if real uchardet is available
+set(UCHARDET_SOURCES "")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../src/uchardet/CharsetDetector.cpp")
+    set(UCHARDET_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/../src/uchardet/CharsetDetector.cpp
+    )
+    # When uchardet is available, try to find the system uchardet library
+    find_library(UCHARDET_LIBRARY NAMES uchardet)
+    if(UCHARDET_LIBRARY)
+        set(USE_UCHARDET TRUE)
+        add_definitions(-DUSE_UCHARDET)
+        message(STATUS "Using system uchardet library: ${UCHARDET_LIBRARY}")
+    else()
+        message(STATUS "uchardet sources found but library not found; using Qt fallback")
+    endif()
+else()
+    message(STATUS "uchardet directory not found; charset detection will use Qt fallback only")
+endif()
+
 add_library(npp-qt-test-lib STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/EncodingDetector.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/StringHelper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/FileHelper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/Util.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/uchardet/*.cpp
+    ${UCHARDET_SOURCES}
 )
 target_link_libraries(npp-qt-test-lib PRIVATE Qt6::Core Qt6::Xml)
 target_include_directories(npp-qt-test-lib PRIVATE

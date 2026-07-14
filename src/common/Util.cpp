@@ -4,6 +4,8 @@
 #include "StringHelper.h"
 #include "FileHelper.h"
 #include <QString>
+#include <QFile>
+#include <QProcess>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -22,7 +24,22 @@
 #include <string.h>
 #include <QByteArray>
 #include <QCryptographicHash>
-#include <QFile>
+
+#if defined(__linux__)
+#include <sys/sysinfo.h>
+#include <pwd.h>
+#endif
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#include <shlobj.h>
+#include <shellapi.h>
+#endif
+
+#if defined(__APPLE__)
+#include <sys/sysctl.h>
+#include <mach/mach_time.h>
+#endif
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
@@ -176,10 +193,24 @@ int IniParser::getInt(const std::string& section, const std::string& key, int de
 }
 
 bool IniParser::getBool(const std::string& section, const std::string& key, bool defaultVal) const {
-    auto val = get(section, "");
+    std::string val = get(section, key, "");
     if (val.empty()) return defaultVal;
-    return val == "1" || StringHelper::equalsIgnoreCase(val, "true") ||
-           StringHelper::equalsIgnoreCase(val, "yes");
+
+    // Handle numeric representations
+    if (val == "1" || val == "0") {
+        return val == "1";
+    }
+
+    // Handle string representations (case-insensitive)
+    QString qval = QString::fromUtf8(val.c_str()).toLower();
+    if (qval == "true" || qval == "yes" || qval == "on" || qval == "enabled") {
+        return true;
+    }
+    if (qval == "false" || qval == "no" || qval == "off" || qval == "disabled") {
+        return false;
+    }
+
+    return defaultVal;
 }
 
 void IniParser::set(const std::string& section, const std::string& key, const std::string& val) {
@@ -508,5 +539,211 @@ std::string generateRandomString(size_t length) {
     result.reserve(length);
     for (size_t i = 0; i < length; ++i)
         result += charset[dist(gen)];
+    return result;
+}
+
+// ============================================================================
+// Duration formatting
+// ============================================================================
+QString formatDuration(int64_t ms) {
+    if (ms < 0) return QString("0s");
+
+    int64_t seconds = ms / 1000;
+    int64_t minutes = seconds / 60;
+    int64_t hours = minutes / 60;
+    int64_t days = hours / 24;
+
+    if (days > 0) {
+        return QString("%1d %2h").arg(days).arg(hours % 24);
+    }
+    if (hours > 0) {
+        return QString("%1h %2m").arg(hours).arg(minutes % 60);
+    }
+    if (minutes > 0) {
+        return QString("%1m %2s").arg(minutes).arg(seconds % 60);
+    }
+    return QString("%1s").arg(seconds);
+}
+
+// ============================================================================
+// System utilities
+// ============================================================================
+int64_t getSystemUptime() {
+#if defined(_WIN32) || defined(_WIN64)
+    HANDLE hTimer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+    if (!hTimer) return -1;
+    LARGE_INTEGER dueTime;
+    dueTime.QuadPart = -1; // 100-nanosecond intervals, negative = relative
+    SetWaitableTimer(hTimer, &dueTime, 0, nullptr, nullptr, TRUE);
+    // GetTickCount64 returns milliseconds since boot
+    int64_t uptime = GetTickCount64() / 1000;
+    CancelWaitableTimer(hTimer);
+    CloseHandle(hTimer);
+    return uptime;
+#elif defined(__linux__)
+    struct sysinfo si;
+    if (sysinfo(&si) == 0) {
+        return static_cast<int64_t>(si.uptime);
+    }
+    return -1;
+#elif defined(__APPLE__)
+    struct timeval boottime;
+    size_t size = sizeof(boottime);
+    int mib[2] = { CTL_KERN, KERN_BOOTTIME };
+    if (sysctl(mib, 2, &boottime, &size, nullptr, 0) != -1) {
+        struct timeval now;
+        gettimeofday(&now, nullptr);
+        return now.tv_sec - boottime.tv_sec;
+    }
+    return -1;
+#else
+    return -1;
+#endif
+}
+
+QString getDesktopEnvironment() {
+#if defined(__linux__)
+    // Check common XDG desktop session variables
+    const char* xdgDe = getenv("XDG_CURRENT_DESKTOP");
+    if (xdgDe) {
+        QString de = QString(xdgDe).toLower();
+        if (de.contains("kde")) return "KDE";
+        if (de.contains("gnome")) return "GNOME";
+        if (de.contains("xfce")) return "XFCE";
+        if (de.contains("lxde")) return "LXDE";
+        if (de.contains("lxqt")) return "LXQt";
+        if (de.contains("mate")) return "MATE";
+        if (de.contains("cinnamon")) return "Cinnamon";
+        if (de.contains("unity")) return "Unity";
+        if (de.contains("budgie")) return "Budgie";
+        if (de.contains("deepin")) return "Deepin";
+        if (de.contains("pantheon")) return "Pantheon";
+        return QString(xdgDe);
+    }
+
+    // Fallback: check DESKTOP_SESSION
+    const char* session = getenv("DESKTOP_SESSION");
+    if (session) {
+        QString de = QString(session).toLower();
+        if (de.contains("kde") || de.contains("plasma")) return "KDE";
+        if (de.contains("gnome")) return "GNOME";
+        if (de.contains("xfce")) return "XFCE";
+        if (de.contains("lxde")) return "LXDE";
+        if (de.contains("lxqt")) return "LXQt";
+        if (de.contains("mate")) return "MATE";
+        if (de.contains("cinnamon")) return "Cinnamon";
+        return QString(session);
+    }
+
+    // Fallback: check KDE/GNOME-specific variables
+    if (getenv("KDE_FULL_SESSION") || getenv("KDE_SESSION_VERSION")) return "KDE";
+    if (getenv("GNOME_DESKTOP_SESSION_ID")) return "GNOME";
+    if (getenv("XFCE4")) return "XFCE";
+#endif
+    return "Unknown";
+}
+
+// ============================================================================
+// Application launching
+// ============================================================================
+bool launchApplication(const QString& app, const QStringList& args, QString& error) {
+#if defined(_WIN32) || defined(_WIN64)
+    QString cmdLine = app;
+    for (const QString& arg : args) {
+        cmdLine += " \"" + arg + "\"";
+    }
+    SHELLEXECUTEINFOA sei = { sizeof(sei) };
+    sei.fMask = SEE_MASK_NOCLOSEPROCESS;
+    sei.lpFile = app.toUtf8().constData();
+    sei.lpParameters = args.join(" ").toUtf8().constData();
+    sei.nShow = SW_SHOWNORMAL;
+    if (!ShellExecuteExA(&sei)) {
+        DWORD err = GetLastError();
+        error = QString("Failed to launch application: error %1").arg(err);
+        return false;
+    }
+    if (sei.hProcess) {
+        CloseHandle(sei.hProcess);
+    }
+    return true;
+#else
+    QProcess* process = new QProcess();
+    QStringList allArgs = args;
+    allArgs.insert(0, app);
+    process->start(app, args);
+    if (!process->waitForStarted(5000)) {
+        error = QString("Failed to start process: %1").arg(process->errorString());
+        delete process;
+        return false;
+    }
+    // Process started successfully, detach to run independently
+    process->disconnect();
+    delete process;
+    return true;
+#endif
+}
+
+// ============================================================================
+// File comparison
+// ============================================================================
+bool compareFiles(const QString& a, const QString& b) {
+    QFile fa(a);
+    QFile fb(b);
+    if (!fa.open(QIODevice::ReadOnly) || !fb.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+    if (fa.size() != fb.size()) return false;
+
+    const int chunkSize = 65536;
+    QByteArray ca, cb;
+    while (!fa.atEnd() && !fb.atEnd()) {
+        ca = fa.read(chunkSize);
+        cb = fb.read(chunkSize);
+        if (ca != cb) return false;
+    }
+    return true;
+}
+
+// ============================================================================
+// File name validation
+// ============================================================================
+bool isValidFileName(const QString& name) {
+    if (name.isEmpty()) return false;
+    // Check for invalid characters
+    static const QString invalidChars = "/\\:*?\"<>|";
+    for (const QChar& c : invalidChars) {
+        if (name.contains(c)) return false;
+    }
+    // Check for reserved names (Windows)
+    static const QStringList reserved = {"CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
+    QString upperName = name.toUpper();
+    if (reserved.contains(upperName)) return false;
+    // Check for trailing dots or spaces (Windows)
+    if (name.endsWith('.') || name.endsWith(' ')) return false;
+    // Check length
+    if (name.length() > 255) return false;
+    return true;
+}
+
+// ============================================================================
+// EOL normalization
+// ============================================================================
+QString normalizeEOL(const QString& text, EolType eol) {
+    QString result = text;
+    QString eolStr;
+    switch (eol) {
+        case EolType::EOL_CRLF: eolStr = "\r\n"; break;
+        case EolType::EOL_LF: eolStr = "\n"; break;
+        case EolType::EOL_CR: eolStr = "\r"; break;
+        default: eolStr = "\n"; break;
+    }
+
+    // First, normalize all line endings to \n
+    result.replace("\r\n", "\n");
+    result.replace("\r", "\n");
+    // Then convert \n to target EOL
+    result.replace("\n", eolStr);
     return result;
 }

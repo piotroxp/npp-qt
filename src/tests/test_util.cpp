@@ -162,6 +162,123 @@ static void test_ini_parser_has_section() {
     ASSERT_FALSE(ini.hasSection("Section3"));
 }
 
+static void test_ini_parser_getBool_comprehensive() {
+    IniParser ini;
+    
+    // Test numeric values
+    ini.set("Test", "one", "1");
+    ini.set("Test", "zero", "0");
+    ASSERT_TRUE(ini.getBool("Test", "one", false));
+    ASSERT_FALSE(ini.getBool("Test", "zero", true));
+    
+    // Test string values (case insensitive)
+    ini.set("Test", "true_str", "true");
+    ini.set("Test", "True_str", "True");
+    ini.set("Test", "TRUE_str", "TRUE");
+    ini.set("Test", "false_str", "false");
+    ini.set("Test", "False_str", "False");
+    ini.set("Test", "FALSE_str", "FALSE");
+    ASSERT_TRUE(ini.getBool("Test", "true_str", false));
+    ASSERT_TRUE(ini.getBool("Test", "True_str", false));
+    ASSERT_TRUE(ini.getBool("Test", "TRUE_str", false));
+    ASSERT_FALSE(ini.getBool("Test", "false_str", true));
+    ASSERT_FALSE(ini.getBool("Test", "False_str", true));
+    ASSERT_FALSE(ini.getBool("Test", "FALSE_str", true));
+    
+    // Test yes/no
+    ini.set("Test", "yes_val", "yes");
+    ini.set("Test", "Yes_val", "Yes");
+    ini.set("Test", "no_val", "no");
+    ini.set("Test", "No_val", "No");
+    ASSERT_TRUE(ini.getBool("Test", "yes_val", false));
+    ASSERT_TRUE(ini.getBool("Test", "Yes_val", false));
+    ASSERT_FALSE(ini.getBool("Test", "no_val", true));
+    ASSERT_FALSE(ini.getBool("Test", "No_val", true));
+    
+    // Test on/off
+    ini.set("Test", "on_val", "on");
+    ini.set("Test", "off_val", "off");
+    ASSERT_TRUE(ini.getBool("Test", "on_val", false));
+    ASSERT_FALSE(ini.getBool("Test", "off_val", true));
+    
+    // Test default value for missing key
+    ASSERT_TRUE(ini.getBool("Test", "nonexistent", true));
+    ASSERT_FALSE(ini.getBool("Test", "nonexistent", false));
+}
+
+static void test_ini_parser_string_list() {
+    IniParser ini;
+    
+    QStringList list = {"item1", "item2", "item3"};
+    ini.setStringList("Test", "items", list);
+    
+    QStringList result = ini.getStringList("Test", "items", QStringList());
+    ASSERT_EQ(result.size(), 3u);
+    ASSERT_EQ(result[0], "item1");
+    ASSERT_EQ(result[1], "item2");
+    ASSERT_EQ(result[2], "item3");
+    
+    // Test default value
+    QStringList defaultList = {"default"};
+    QStringList empty = ini.getStringList("Test", "missing", defaultList);
+    ASSERT_EQ(empty.size(), 1u);
+    ASSERT_EQ(empty[0], "default");
+}
+
+static void test_ini_parser_remove_section() {
+    IniParser ini;
+    ini.set("Section1", "key1", "value1");
+    ini.set("Section2", "key2", "value2");
+    ini.set("Section3", "key3", "value3");
+    
+    ASSERT_TRUE(ini.hasSection("Section1"));
+    ASSERT_TRUE(ini.hasSection("Section2"));
+    ASSERT_TRUE(ini.hasSection("Section3"));
+    
+    ini.removeSection("Section2");
+    
+    ASSERT_TRUE(ini.hasSection("Section1"));
+    ASSERT_FALSE(ini.hasSection("Section2"));
+    ASSERT_TRUE(ini.hasSection("Section3"));
+    
+    // Section1 and Section3 should still be accessible
+    ASSERT_EQ(ini.get("Section1", "key1", ""), "value1");
+    ASSERT_EQ(ini.get("Section3", "key3", ""), "value3");
+}
+
+static void test_ini_parser_sections() {
+    IniParser ini;
+    ini.set("Section1", "key1", "value1");
+    ini.set("Section2", "key2", "value2");
+    ini.set("Section3", "key3", "value3");
+    
+    const auto& sections = ini.sections();
+    ASSERT_EQ(sections.size(), 3u);
+}
+
+static void test_ini_parser_comments() {
+    std::string path = "/tmp/test_ini_with_comments.ini";
+    
+    // Create file with comments
+    {
+        std::ofstream fout(path);
+        fout << "; This is a comment\n";
+        fout << "# This is also a comment\n";
+        fout << "[Section1]\n";
+        fout << "key1=value1\n";
+        fout << "  ; inline comment after value\n";
+        fout << "[Section2]\n";
+        fout << "key2=value2\n";
+    }
+    
+    IniParser ini;
+    ASSERT_TRUE(ini.load(path));
+    ASSERT_EQ(ini.get("Section1", "key1", ""), "value1");
+    ASSERT_EQ(ini.get("Section2", "key2", ""), "value2");
+    
+    std::filesystem::remove(path);
+}
+
 // ============================================================================
 // Version Comparison Tests
 // ============================================================================
@@ -301,6 +418,11 @@ int main() {
     std::cout << "test_ini_parser_int_bool... "; test_ini_parser_int_bool(); std::cout << "OK\n";
     std::cout << "test_ini_parser_save_load... "; test_ini_parser_save_load(); std::cout << "OK\n";
     std::cout << "test_ini_parser_has_section... "; test_ini_parser_has_section(); std::cout << "OK\n";
+    std::cout << "test_ini_parser_getBool_comprehensive... "; test_ini_parser_getBool_comprehensive(); std::cout << "OK\n";
+    std::cout << "test_ini_parser_string_list... "; test_ini_parser_string_list(); std::cout << "OK\n";
+    std::cout << "test_ini_parser_remove_section... "; test_ini_parser_remove_section(); std::cout << "OK\n";
+    std::cout << "test_ini_parser_sections... "; test_ini_parser_sections(); std::cout << "OK\n";
+    std::cout << "test_ini_parser_comments... "; test_ini_parser_comments(); std::cout << "OK\n";
 
     // Version
     std::cout << "test_version_compare... "; test_version_compare(); std::cout << "OK\n";

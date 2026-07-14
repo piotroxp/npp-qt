@@ -2,36 +2,45 @@
 #include "StringHelper.h"
 #include "Constants.h"
 #include "Types.h"
-#include <codecvt>
-#include <locale>
+#include <QTextCodec>
+#include <QByteArray>
 
 namespace StringHelper {
 
 // ============================================================================
-// Encoding conversion
+// Encoding conversion - using Qt APIs (no codecvt)
 // ============================================================================
 std::wstring toWStr(const std::string& s) {
     if (s.empty()) return {};
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> cv;
-    return cv.from_bytes(s);
+    // Use Qt's codec for UTF-8 to UTF-16 then convert to wchar_t
+    QTextCodec* codec = QTextCodec::codecForName("UTF-16");
+    if (!codec) codec = QTextCodec::codecForMib(1014); // UTF-16LE
+    if (codec) {
+        QString qstr = codec->toUnicode(QByteArray(s.data(), s.size()));
+        // Qt uses ushort (16-bit) on most platforms, which matches wchar_t on Windows
+        return std::wstring(qstr.begin(), qstr.end());
+    }
+    // Fallback: assume UTF-8 and convert
+    QString qstr = QString::fromUtf8(s.data(), s.size());
+    return std::wstring(qstr.begin(), qstr.end());
 }
 
 std::string toUtf8(const std::wstring& s) {
     if (s.empty()) return {};
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> cv;
-    return cv.to_bytes(s);
+    QString qstr(s.begin(), s.end());
+    return qstr.toUtf8().constData();
 }
 
 std::u16string toUtf16(const std::string& s) {
     if (s.empty()) return {};
-    std::wstring w = toWStr(s);
-    return std::u16string(w.begin(), w.end());
+    QString qstr = QString::fromUtf8(s.data(), s.size());
+    return std::u16string(qstr.begin(), qstr.end());
 }
 
 std::string utf16ToUtf8(const std::u16string& s) {
     if (s.empty()) return {};
-    std::wstring w(s.begin(), s.end());
-    return toUtf8(w);
+    QString qstr(s.begin(), s.end());
+    return qstr.toUtf8().constData();
 }
 
 // ============================================================================
@@ -62,6 +71,10 @@ std::string replaceAll(std::string s, const std::vector<std::pair<std::string, s
         s = replaceAll(s, from, to);
     }
     return s;
+}
+
+QString replaceAll(const QString& s, const QString& from, const QString& to) {
+    return s.replace(from, to);
 }
 
 // ============================================================================
@@ -99,6 +112,115 @@ std::string join(const std::vector<std::string>& parts, std::string_view separat
     for (size_t i = 1; i < parts.size(); ++i) {
         result += separator;
         result += parts[i];
+    }
+    return result;
+}
+
+QStringList split(const QString& s, const QString& delimiter, bool skipEmpty) {
+    if (delimiter.isEmpty()) {
+        return QStringList() << s;
+    }
+    if (skipEmpty) {
+        return s.split(delimiter, Qt::SkipEmptyParts);
+    }
+    return s.split(delimiter);
+}
+
+QString join(const QStringList& parts, const QString& separator) {
+    return parts.join(separator);
+}
+
+// ============================================================================
+// Levenshtein distance
+// ============================================================================
+int levenshteinDistance(const QString& a, const QString& b) {
+    const int m = a.length();
+    const int n = b.length();
+
+    if (m == 0) return n;
+    if (n == 0) return m;
+
+    // Use two rows instead of full matrix for memory efficiency
+    QVector<int> prevRow(n + 1);
+    QVector<int> currRow(n + 1);
+
+    // Initialize first row
+    for (int j = 0; j <= n; ++j) {
+        prevRow[j] = j;
+    }
+
+    for (int i = 1; i <= m; ++i) {
+        currRow[0] = i;
+        for (int j = 1; j <= n; ++j) {
+            int cost = (a[i - 1] == b[j - 1]) ? 0 : 1;
+            currRow[j] = std::min({
+                prevRow[j] + 1,      // deletion
+                currRow[j - 1] + 1,  // insertion
+                prevRow[j - 1] + cost // substitution
+            });
+        }
+        std::swap(prevRow, currRow);
+    }
+
+    return prevRow[n];
+}
+
+// ============================================================================
+// JSON escaping
+// ============================================================================
+QString escapeJson(const QString& s) {
+    QString result;
+    result.reserve(s.length() * 2);
+    for (QChar c : s) {
+        switch (c.unicode()) {
+            case '"':  result += "\\\""; break;
+            case '\\': result += "\\\\"; break;
+            case '\b': result += "\\b"; break;
+            case '\f': result += "\\f"; break;
+            case '\n': result += "\\n"; break;
+            case '\r': result += "\\r"; break;
+            case '\t': result += "\\t"; break;
+            default:
+                if (c.unicode() < 0x20) {
+                    result += QString("\\u%1").arg(c.unicode(), 4, 16, QChar('0'));
+                } else {
+                    result += c;
+                }
+                break;
+        }
+    }
+    return result;
+}
+
+// ============================================================================
+// Shell escaping
+// ============================================================================
+QString escapeShell(const QString& s) {
+    QString result;
+    result.reserve(s.length() * 2);
+    bool needsQuotes = false;
+
+    for (QChar c : s) {
+        if (c.isSpace() || c == '\'' || c == '"' || c == '$' ||
+            c == '`' || c == '\\' || c == '!' || c == '#' ||
+            c == '&' || c == '*' || c == '?' || c == '~' ||
+            c == '(' || c == ')' || c == '[' || c == ']' ||
+            c == '{' || c == '}' || c == '|' || c == '<' ||
+            c == '>' || c == '^' || c == ';' || c == ':') {
+            needsQuotes = true;
+            break;
+        }
+    }
+
+    if (needsQuotes) {
+        result += '\'';
+        for (QChar c : s) {
+            if (c == '\'') result += "'\\''";
+            else result += c;
+        }
+        result += '\'';
+    } else {
+        result = s;
     }
     return result;
 }

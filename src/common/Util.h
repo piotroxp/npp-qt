@@ -5,6 +5,7 @@
 #pragma once
 
 #include "Constants.h"
+#include "Types.h"
 #include <QString>
 #include <QStringList>
 #include <string>
@@ -252,3 +253,34 @@ int compareVersion(const std::string& a, const std::string& b);
 // Random
 // ============================================================================
 std::string generateRandomString(size_t length);
+
+// ============================================================================
+// Duration formatting
+// ============================================================================
+QString formatDuration(int64_t milliseconds);
+
+// ============================================================================
+// System utilities
+// ============================================================================
+int64_t getSystemUptime();  // seconds since boot
+QString getDesktopEnvironment();  // "KDE", "GNOME", "XFCE", etc.
+
+// ============================================================================
+// Application launching
+// ============================================================================
+bool launchApplication(const QString& app, const QStringList& args, QString& error);
+
+// ============================================================================
+// File comparison
+// ============================================================================
+bool compareFiles(const QString& a, const QString& b);  // content equality
+
+// ============================================================================
+// File name validation
+// ============================================================================
+bool isValidFileName(const QString& name);
+
+// ============================================================================
+// EOL normalization
+// ============================================================================
+QString normalizeEOL(const QString& text, EolType eol);

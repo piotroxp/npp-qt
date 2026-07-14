@@ -10,6 +10,10 @@
 #include <optional>
 #include <chrono>
 #include <filesystem>
+#include <QString>
+#include <QStringList>
+#include <QByteArray>
+#include <QDateTime>
 #include "Types.h"
 #include "Constants.h"
 
@@ -100,6 +104,51 @@ std::string getConfigFilePath();
 bool hasUtf8Bom(const std::string& path);
 bool hasUtf16Bom(const std::string& path);
 EncodingType detectEncoding(const std::string& path);
+
+// ============================================================================
+// Qt-style text/binary file operations
+// ============================================================================
+QString readTextFile(const QString& path, const QString& encoding = "UTF-8", QString* error = nullptr);
+bool writeTextFile(const QString& path, const QString& content, const QString& encoding = "UTF-8", QString* error = nullptr);
+QByteArray readBinaryFile(const QString& path, QString* error = nullptr);
+bool writeBinaryFile(const QString& path, const QByteArray& data, QString* error = nullptr);
+
+// ============================================================================
+// File info helpers
+// ============================================================================
+qint64 getFileSize(const QString& path);
+QDateTime getCreationTime(const QString& path);
+QDateTime getModificationTime(const QString& path);
+bool setModificationTime(const QString& path, const QDateTime& time);
+
+// ============================================================================
+// Qt-style temp file/directory
+// ============================================================================
+QString getTempFileName(const QString& prefix = "npp-");
+QString getTempDir();
+
+// ============================================================================
+// Qt-style directory listing
+// ============================================================================
+QStringList listFiles(const QString& dir, const QString& filter = "*", bool recursive = false);
+QStringList listDirs(const QString& dir, const QString& filter = "*", bool recursive = false);
+
+// ============================================================================
+// Recursive copy/remove
+// ============================================================================
+bool copyRecursive(const QString& src, const QString& dst, QString* error = nullptr);
+bool removeRecursive(const QString& path, QString* error = nullptr);
+
+// ============================================================================
+// Hash computation
+// ============================================================================
+QString computeMD5(const QString& path);
+QString computeSHA256(const QString& path);
+
+// ============================================================================
+// Binary file detection
+// ============================================================================
+bool isBinaryFile(const QString& path, int checkBytes = 8192);
 
 // ============================================================================
 // File watching
