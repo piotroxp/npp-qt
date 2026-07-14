@@ -4,14 +4,18 @@
 #include <QMenu>
 #include <QObject>
 #include <QShortcut>
-#include "../NppConstants.h"
-#include "keys.h"      // NppKeys::VK_* virtual key constants
-using namespace NppKeys;  // bare VK_* names used throughout shortcut.h
 #include <QString>
 #include <QVector>
+#include <QJsonObject>
+#include <QJsonDocument>
+#include <QJsonValue>
+
 // NppSciCompat.h defines all needed SCI_* constants as constexpr.
 // No need for Scintilla.h here — its macros would conflict with qsciscintilla.h.
 #include "NppSciCompat.h"
+// NppConstants.h provides Win32 type stubs and constants
+#include "NppConstants.h"
+#include "keys.h"      // NppKeys::VK_* virtual key constants
 #include "menuCmdID.h"
 
 class NppParameters;
@@ -72,6 +76,18 @@ public:
         return a._keyCombo._isCtrl == b._keyCombo._isCtrl && a._keyCombo._isAlt == b._keyCombo._isAlt && a._keyCombo._isShift == b._keyCombo._isShift && a._keyCombo._key == b._keyCombo._key;
     }
     friend inline bool operator!=(const Shortcut& a, const Shortcut& b) { return !(a == b); }
+
+    // Static utilities
+    static QString keyToString(quint32 key);
+    static int vkToQtKey(quint32 vk);
+    static quint32 qtKeyToVk(int qtKey);
+    static QString parseFromString(const QString& str);
+    static quint32 parseKeyName(const QString& name);
+    bool conflictsWith(const Shortcut& other) const;
+    QString canonical() const;
+    QString toJson() const;
+    bool fromJson(const QString& json);
+
 signals: void triggered();
 protected:
     KeyCombo _keyCombo;

@@ -15,9 +15,14 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QGroupBox>
+#include <QTextEdit>
+#include <QFontComboBox>
 
 class UdlManager;
 struct UdlDefinition;
+
+// Preview editor for real-time UDL testing
+class UdlPreviewEditor;
 
 class UserDefineDialog : public QDialog {
     Q_OBJECT
@@ -36,6 +41,19 @@ public:
 
     QString currentName() const { return _nameEdit->text(); }
 
+Q_SIGNALS:
+    void udlSaved(const QString& name);
+    void testUdlRequested(const QString& name);
+
+private slots:
+    void onImportClicked();
+    void onExportClicked();
+    void onTestClicked();
+    void onResetClicked();
+    void onAddKeywordClicked(int group);
+    void onValidateClicked();
+    void updatePreview();
+
 private:
     void setupUi();
     void createKeywordsTab(QTabWidget* tabs);
@@ -44,10 +62,13 @@ private:
     void createOperatorsTab(QTabWidget* tabs);
     void createDelimitersTab(QTabWidget* tabs);
     void createFoldingTab(QTabWidget* tabs);
+    void createStringsTab(QTabWidget* tabs);
+    void createPreviewTab(QTabWidget* tabs);
 
     // Keywords tab helpers
     void setupKeywordTable(QTableWidget* table, const QString& keywords);
     QString keywordsFromTable(QTableWidget* table) const;
+    void populateKeywordAutocomplete();
 
     // Operators table helpers
     void setupOperatorTable();
@@ -63,12 +84,22 @@ private:
     // Style color helpers
     QString getColorString(const QColor& c) const;
 
-    // --- Language name ---
+    // Import / Export
+    bool importFromFile(const QString& path);
+    bool exportToFile(const QString& path) const;
+
+    // Validation
+    QStringList validateUdl() const;
+
+    // --- Language name & extension ---
     QLineEdit* _nameEdit = nullptr;
     QLineEdit* _extEdit  = nullptr;
 
-    // --- Keywords tab (8 keyword groups) ---
-    QTableWidget* _keywordTables[9];  // words0..words8
+    // --- Keywords tab (9 keyword groups: 0-8) ---
+    QTableWidget* _keywordTables[9] = {nullptr};
+    QColor _keywordColors[9];
+    QPushButton* _keywordColorBtns[9] = {nullptr};
+    QLabel* _keywordColorPreviews[9] = {nullptr};
 
     // --- Comments tab ---
     QLineEdit* _lineCommentEdit = nullptr;
@@ -102,4 +133,20 @@ private:
     QLineEdit* _preprocEdit = nullptr;
     QLineEdit* _folderOpenEdit = nullptr;
     QLineEdit* _folderCloseEdit = nullptr;
+
+    // --- Strings tab ---
+    QLineEdit* _stringOpenEdit = nullptr;
+    QLineEdit* _stringCloseEdit = nullptr;
+    QCheckBox* _escapeCharCheck = nullptr;
+    QLineEdit* _escapeCharEdit = nullptr;
+    QCheckBox* _stringWordCharCheck = nullptr;
+    QLineEdit* _stringWordCharEdit = nullptr;
+
+    // --- Preview tab ---
+    UdlPreviewEditor* _previewEditor = nullptr;
+    QLabel* _previewStatusLabel = nullptr;
+
+    // Internal state
+    QString _currentUdlName;
+    QStringList _allKnownKeywords;  // for autocomplete
 };

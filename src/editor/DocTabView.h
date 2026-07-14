@@ -189,7 +189,7 @@ private:
     QMenu* _contextMenu = nullptr;
     QAction* _closeAct = nullptr;
     QAction* _closeOthersAct = nullptr;
-    _closeAllAct = nullptr;
+    QAction* _closeAllAct = nullptr;
     QAction* _closeToLeftAct = nullptr;
     QAction* _closeToRightAct = nullptr;
     QAction* _moveLeftAct = nullptr;

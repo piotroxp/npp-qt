@@ -12,6 +12,8 @@
 #include <QMimeData>
 #include <QApplication>
 #include <QDebug>
+#include <QStyle>
+#include <QStyleOptionTab>
 
 // ============================================================================
 // Construction
@@ -25,6 +27,7 @@ DocTabView::DocTabView(QWidget* parent)
     tabBar()->setTabsClosable(true);
     tabBar()->setSelectionBehaviorOnRemove(QTabBar::SelectLeftTab);
     tabBar()->setAcceptDrops(true);
+    tabBar()->setDragDropMode(QTabBar::DragDrop);
 
     // Context menu
     setContextMenuPolicy(Qt::CustomContextMenu);
@@ -39,7 +42,12 @@ DocTabView::DocTabView(QWidget* parent)
     connect(this, &QTabWidget::currentChanged,
             this, &DocTabView::onCurrentChanged);
 
+    // Tab moved (drag reorder)
+    connect(tabBar(), &QTabBar::tabMoved,
+            this, &DocTabView::onTabMovedWhileDragging);
+
     setupContextMenu();
+    setupNewTabButton();
 }
 
 DocTabView::~DocTabView() = default;
@@ -54,27 +62,30 @@ void DocTabView::setupContextMenu() {
     _closeAct = new QAction(tr("Close"), this);
     _closeOthersAct = new QAction(tr("Close Other Tabs"), this);
     _closeAllAct = new QAction(tr("Close All Tabs"), this);
+    _closeToLeftAct = new QAction(tr("Close Tabs to the Left"), this);
+    _closeToRightAct = new QAction(tr("Close Tabs to the Right"), this);
     _moveLeftAct = new QAction(tr("Move Tab Left"), this);
     _moveRightAct = new QAction(tr("Move Tab Right"), this);
     _pinAct = new QAction(tr("Pin Tab"), this);
+    _newTabAct = new QAction(tr("New Tab"), this);
 
     connect(_closeAct, &QAction::triggered, this, &DocTabView::onCloseTriggered);
     connect(_closeOthersAct, &QAction::triggered, this, &DocTabView::onCloseOthersTriggered);
     connect(_closeAllAct, &QAction::triggered, this, &DocTabView::onCloseAllTriggered);
+    connect(_closeToLeftAct, &QAction::triggered, this, &DocTabView::onCloseToLeftTriggered);
+    connect(_closeToRightAct, &QAction::triggered, this, &DocTabView::onCloseToRightTriggered);
     connect(_moveLeftAct, &QAction::triggered, this, &DocTabView::onMoveLeftTriggered);
     connect(_moveRightAct, &QAction::triggered, this, &DocTabView::onMoveRightTriggered);
-    connect(_pinAct, &QAction::triggered, this, [this] {
-        int idx = tabBar()->currentIndex();
-        if (idx >= 0) {
-            ScintillaEditor* ed = editorAt(idx);
-            // TODO: toggle pin state on buffer
-            Q_UNUSED(ed);
-        }
-    });
+    connect(_pinAct, &QAction::triggered, this, &DocTabView::onPinTabTriggered);
+    connect(_newTabAct, &QAction::triggered, this, &DocTabView::onNewTabTriggered);
 
+    _contextMenu->addAction(_newTabAct);
+    _contextMenu->addSeparator();
     _contextMenu->addAction(_closeAct);
     _contextMenu->addAction(_closeOthersAct);
     _contextMenu->addAction(_closeAllAct);
+    _contextMenu->addAction(_closeToLeftAct);
+    _contextMenu->addAction(_closeToRightAct);
     _contextMenu->addSeparator();
     _contextMenu->addAction(_moveLeftAct);
     _contextMenu->addAction(_moveRightAct);
@@ -87,11 +98,18 @@ void DocTabView::onContextMenu(const QPoint& pos) {
     if (idx < 0) idx = currentIndex();
 
     bool hasTabs = count() > 0;
+    bool hasOthers = count() > 1;
     _closeAct->setEnabled(hasTabs && idx >= 0);
-    _closeOthersAct->setEnabled(count() > 1);
+    _closeOthersAct->setEnabled(hasOthers);
     _closeAllAct->setEnabled(hasTabs);
+    _closeToLeftAct->setEnabled(idx > 0);
+    _closeToRightAct->setEnabled(idx >= 0 && idx < count() - 1);
     _moveLeftAct->setEnabled(idx > 0);
     _moveRightAct->setEnabled(idx >= 0 && idx < count() - 1);
+
+    bool pinned = (idx >= 0) ? isTabPinned(idx) : false;
+    _pinAct->setText(pinned ? tr("Unpin Tab") : tr("Pin Tab"));
+    _pinAct->setEnabled(idx >= 0);
 
     _contextMenu->popup(mapToGlobal(pos));
 }
@@ -105,18 +123,36 @@ void DocTabView::onCloseTriggered() {
 void DocTabView::onCloseOthersTriggered() {
     int keep = tabBar()->currentIndex();
     if (keep < 0) return;
-    // Close in reverse to preserve indices
     for (int i = count() - 1; i >= 0; --i) {
-        if (i != keep)
+        if (i != keep && !isTabPinned(i))
             closeTab(i);
     }
 }
 
 void DocTabView::onCloseAllTriggered() {
     for (int i = count() - 1; i >= 0; --i) {
-        closeTab(i);
+        if (!isTabPinned(i))
+            closeTab(i);
     }
     emit allTabsClosed();
+}
+
+void DocTabView::onCloseToLeftTriggered() {
+    int keep = tabBar()->currentIndex();
+    if (keep <= 0) return;
+    for (int i = keep - 1; i >= 0; --i) {
+        if (!isTabPinned(i))
+            closeTab(i);
+    }
+}
+
+void DocTabView::onCloseToRightTriggered() {
+    int keep = tabBar()->currentIndex();
+    if (keep < 0) return;
+    for (int i = count() - 1; i > keep; --i) {
+        if (!isTabPinned(i))
+            closeTab(i);
+    }
 }
 
 void DocTabView::onMoveLeftTriggered() {
@@ -129,6 +165,17 @@ void DocTabView::onMoveRightTriggered() {
     int idx = tabBar()->currentIndex();
     if (idx >= 0 && idx < count() - 1)
         moveTab(idx, idx + 1);
+}
+
+void DocTabView::onPinTabTriggered() {
+    int idx = tabBar()->currentIndex();
+    if (idx < 0) return;
+    bool pinned = isTabPinned(idx);
+    setTabPinned(idx, !pinned);
+}
+
+void DocTabView::onNewTabTriggered() {
+    emit newTabRequested();
 }
 
 // ============================================================================
@@ -144,15 +191,31 @@ int DocTabView::addTab(ScintillaEditor* editor, const QIcon& icon,
     return QTabWidget::addTab(editor, icon, title);
 }
 
+int DocTabView::insertTab(int index, ScintillaEditor* editor,
+                          const QString& title) {
+    return QTabWidget::insertTab(index, editor, title);
+}
+
+int DocTabView::insertTab(int index, ScintillaEditor* editor,
+                          const QIcon& icon, const QString& title) {
+    return QTabWidget::insertTab(index, editor, icon, title);
+}
+
 void DocTabView::closeTab(int index) {
     if (index < 0 || index >= count())
+        return;
+
+    // Pinned tabs cannot be closed
+    if (isTabPinned(index))
         return;
 
     // Notify before removal so listeners can save state
     emit tabClosed(index);
 
-    // Remove the tab; the widget (editor) is not deleted automatically
-    // Caller is responsible for the editor lifetime
+    // Remove auxiliary data
+    _tabData.remove(index);
+
+    // Remove the tab; widget is not deleted automatically
     QWidget* w = widget(index);
     removeTab(index);
 
@@ -166,6 +229,9 @@ void DocTabView::moveTab(int fromIndex, int toIndex) {
     if (fromIndex < 0 || fromIndex >= count()) return;
     if (toIndex < 0 || toIndex >= count()) return;
 
+    // Preserve auxiliary data
+    TabData data = tabData(fromIndex);
+
     QString text = tabText(fromIndex);
     QIcon icon = tabIcon(fromIndex);
     QString tooltip = tabToolTip(fromIndex);
@@ -175,10 +241,20 @@ void DocTabView::moveTab(int fromIndex, int toIndex) {
     removeTab(fromIndex);
 
     // Re-insert at destination
-    // Account for the shift when source was before destination
-    int actualTo = (fromIndex < toIndex) ? toIndex - 1 : toIndex;
+    int actualTo = (fromIndex < toIndex) ? qMax(0, toIndex - 1) : toIndex;
     insertTab(actualTo, w, icon, text);
     setTabToolTip(actualTo, tooltip);
+
+    // Restore auxiliary data
+    _tabData[actualTo] = data;
+
+    // Apply pinned appearance if needed
+    if (data.pinned)
+        updateTabPinnedAppearance(actualTo);
+
+    // Apply color if needed
+    if (data.color.isValid())
+        setTabColor(actualTo, data.color);
 
     // Set current tab to the moved tab
     setCurrentIndex(actualTo);
@@ -198,19 +274,204 @@ void DocTabView::updateTabTitle(int index, const QString& title) {
     setTabText(index, title);
 }
 
+void DocTabView::setTabIcon(int index, const QIcon& icon) {
+    if (index < 0 || index >= count())
+        return;
+    QTabWidget::setTabIcon(index, icon);
+}
+
+// ============================================================================
+// Pinned tabs
+// ============================================================================
+
+void DocTabView::setTabPinned(int index, bool pinned) {
+    if (index < 0 || index >= count())
+        return;
+    tabData(index).pinned = pinned;
+    updateTabPinnedAppearance(index);
+    emit tabPinnedChanged(index, pinned);
+}
+
+bool DocTabView::isTabPinned(int index) const {
+    if (index < 0 || index >= count())
+        return false;
+    return tabData(index).pinned;
+}
+
+void DocTabView::updateTabPinnedAppearance(int index) {
+    if (index < 0 || index >= count())
+        return;
+    QString text = tabText(index);
+    if (tabData(index).pinned && !text.startsWith(QStringLiteral("\U0001F4CC "))) {
+        // Add a pin emoji prefix to indicate pinned state
+        setTabText(index, QStringLiteral("\U0001F4CC ") + text);
+    } else if (!tabData(index).pinned && text.startsWith(QStringLiteral("\U0001F4CC "))) {
+        setTabText(index, text.mid(3));  // Remove pin emoji
+    }
+}
+
+// ============================================================================
+// Tab color indicators
+// ============================================================================
+
+void DocTabView::setTabColor(int index, const QColor& color) {
+    if (index < 0 || index >= count())
+        return;
+    tabData(index).color = color;
+    if (color.isValid()) {
+        // Set tab bar background color hint
+        tabBar()->setTabData(index, color);
+        // Repaint the tab bar
+        tabBar()->update();
+    }
+    emit tabColorChanged(index, color);
+}
+
+QColor DocTabView::tabColor(int index) const {
+    if (index < 0 || index >= count())
+        return QColor();
+    return tabData(index).color;
+}
+
+// ============================================================================
+// "New tab" button
+// ============================================================================
+
+void DocTabView::setupNewTabButton() {
+    // Create a "+" button as the corner widget (after close buttons)
+    // We use the tab bar's corner widget area
+    _newTabBtn = new QPushButton("+", this);
+    _newTabBtn->setObjectName("NewTabButton");
+    _newTabBtn->setToolTip(tr("New Tab (Ctrl+N)"));
+    _newTabBtn->setFixedSize(24, 24);
+    _newTabBtn->setFlat(true);
+    connect(_newTabBtn, &QPushButton::clicked, this, &DocTabView::onNewTabTriggered);
+    setCornerWidget(_newTabBtn, Qt::TopRightCorner);
+}
+
+void DocTabView::setNewTabButtonVisible(bool visible) {
+    if (_newTabBtn) {
+        _newTabBtn->setVisible(visible);
+        // Adjust corner widget size hint
+        setCornerWidget(visible ? _newTabBtn : nullptr, Qt::TopRightCorner);
+    }
+}
+
+// ============================================================================
+// Modified indicator
+// ============================================================================
+
+void DocTabView::setTabModified(int index, bool modified) {
+    if (index < 0 || index >= count())
+        return;
+    tabData(index).modified = modified;
+    QString text = tabText(index);
+    // Remove leading "•" if present
+    if (text.startsWith(QStringLiteral("• ")))
+        text = text.mid(2);
+    if (modified)
+        text = QStringLiteral("• ") + text;
+    setTabText(index, text);
+}
+
+bool DocTabView::isTabModified(int index) const {
+    if (index < 0 || index >= count())
+        return false;
+    return tabData(index).modified;
+}
+
+// ============================================================================
+// Buffer-to-tab synchronization
+// ============================================================================
+
+void DocTabView::setTabBufferId(int index, const QString& bufferId) {
+    if (index < 0 || index >= count())
+        return;
+    tabData(index).bufferId = bufferId;
+}
+
+QString DocTabView::tabBufferId(int index) const {
+    if (index < 0 || index >= count())
+        return QString();
+    return tabData(index).bufferId;
+}
+
+int DocTabView::findTabByBufferId(const QString& bufferId) const {
+    for (int i = 0; i < count(); ++i) {
+        if (tabData(i).bufferId == bufferId)
+            return i;
+    }
+    return -1;
+}
+
+// ============================================================================
+// Tab state persistence
+// ============================================================================
+
+QStringList DocTabView::tabOrder() const {
+    QStringList order;
+    for (int i = 0; i < count(); ++i) {
+        order.append(tabData(i).bufferId);
+    }
+    return order;
+}
+
+void DocTabView::restoreTabOrder(const QStringList& bufferIds) {
+    // This requires coordination with the document buffer manager.
+    // For now, just a hint that tabs should be ordered per bufferIds.
+    Q_UNUSED(bufferIds);
+    // Full implementation would:
+    // 1. Find each buffer ID in bufferIds in order
+    // 2. Move its tab to the matching position
+}
+
+// ============================================================================
+// Context menu customization
+// ============================================================================
+
+void DocTabView::addContextMenuAction(QAction* action) {
+    if (_contextMenu)
+        _contextMenu->addAction(action);
+}
+
+void DocTabView::addContextMenuSeparator() {
+    if (_contextMenu)
+        _contextMenu->addSeparator();
+}
+
 // ============================================================================
 // QTabWidget overrides
 // ============================================================================
 
 void DocTabView::tabRemoved(int index) {
     QTabWidget::tabRemoved(index);
-    // Tab index may be used for tracking; subclasses can hook here
+    // Remove tab data for this index and shift subsequent indices down
+    _tabData.remove(index);
+    // Re-index remaining tab data
+    QMap<int, TabData> newData;
+    for (auto it = _tabData.constBegin(); it != _tabData.constEnd(); ++it) {
+        int key = it.key();
+        if (key > index)
+            newData[key - 1] = it.value();
+        else if (key < index)
+            newData[key] = it.value();
+    }
+    _tabData = newData;
     Q_UNUSED(index);
 }
 
 void DocTabView::tabInserted(int index) {
     QTabWidget::tabInserted(index);
-    // Hook for post-insertion processing
+    // Re-index tab data for insertion
+    QMap<int, TabData> newData;
+    for (auto it = _tabData.constBegin(); it != _tabData.constEnd(); ++it) {
+        int key = it.key();
+        if (key >= index)
+            newData[key + 1] = it.value();
+        else
+            newData[key] = it.value();
+    }
+    _tabData = newData;
     Q_UNUSED(index);
 }
 
@@ -222,14 +483,18 @@ void DocTabView::onCurrentChanged(int index) {
     emit currentChanged(index);
 }
 
+void DocTabView::onTabBarClicked(int index) {
+    Q_UNUSED(index);
+}
+
 // ============================================================================
-// Mouse events — middle-click to close, drag tab between views
+// Mouse events — middle-click to close, double-click to close, drag
 // ============================================================================
 
 void DocTabView::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::MiddleButton) {
         int idx = tabBar()->tabAt(event->pos());
-        if (idx >= 0) {
+        if (idx >= 0 && !isTabPinned(idx)) {
             closeTab(idx);
             event->accept();
             return;
@@ -240,6 +505,19 @@ void DocTabView::mousePressEvent(QMouseEvent* event) {
 
 void DocTabView::mouseReleaseEvent(QMouseEvent* event) {
     QTabWidget::mouseReleaseEvent(event);
+}
+
+void DocTabView::mouseDoubleClickEvent(QMouseEvent* event) {
+    // Double-click on tab bar → close tab (unless pinned)
+    if (event->button() == Qt::LeftButton) {
+        int idx = tabBar()->tabAt(event->pos());
+        if (idx >= 0 && !isTabPinned(idx)) {
+            closeTab(idx);
+            event->accept();
+            return;
+        }
+    }
+    QTabWidget::mouseDoubleClickEvent(event);
 }
 
 // Drag & drop between tab views
@@ -268,9 +546,6 @@ void DocTabView::dropEvent(QDropEvent* event) {
         int toIdx = tabBar()->tabAt(event->pos());
         if (toIdx < 0) toIdx = count() - 1;
 
-        // Move the tab from the source DocTabView to this one
-        // This requires coordination with the source view — for now, move
-        // within the same widget
         if (fromIdx != toIdx) {
             moveTab(fromIdx, toIdx);
         }
@@ -290,7 +565,8 @@ int DocTabView::tabIndexAt(const QPoint& pos) const {
 
 void DocTabView::closeAllTabs() {
     for (int i = count() - 1; i >= 0; --i) {
-        closeTab(i);
+        if (!isTabPinned(i))
+            closeTab(i);
     }
 }
 
@@ -298,7 +574,48 @@ void DocTabView::closeOtherTabs(int keepIndex) {
     if (keepIndex < 0 || keepIndex >= count())
         return;
     for (int i = count() - 1; i >= 0; --i) {
-        if (i != keepIndex)
+        if (i != keepIndex && !isTabPinned(i))
             closeTab(i);
     }
+}
+
+void DocTabView::closeTabsToLeft(int index) {
+    if (index <= 0) return;
+    for (int i = index - 1; i >= 0; --i) {
+        if (!isTabPinned(i))
+            closeTab(i);
+    }
+}
+
+void DocTabView::closeTabsToRight(int index) {
+    if (index < 0 || index >= count())
+        return;
+    for (int i = count() - 1; i > index; --i) {
+        if (!isTabPinned(i))
+            closeTab(i);
+    }
+}
+
+// ============================================================================
+// Tab data helpers
+// ============================================================================
+
+TabData& DocTabView::tabData(int index) {
+    // Ensure an entry exists
+    if (!_tabData.contains(index))
+        _tabData[index] = TabData();
+    return _tabData[index];
+}
+
+const TabData& DocTabView::tabData(int index) const {
+    static const TabData s_empty;
+    return _tabData.value(index, s_empty);
+}
+
+void DocTabView::onTabMovedWhileDragging(int from, int to) {
+    // Re-index tab data after a move
+    Q_UNUSED(from);
+    Q_UNUSED(to);
+    // The built-in tab bar handles the move; our tab data is synced via
+    // tabInserted/tabRemoved which are called by Qt's QTabWidget.
 }
