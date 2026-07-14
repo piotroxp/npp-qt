@@ -11,29 +11,16 @@ src/tests/*.a
 # OS
 .DS_Store
 Thumbs.db
-
 # Qt
 *.autogen/
 *_autogen/
 *.moc
 *.qrc.*
-
 # Agent artifacts
 .jaisiu/
 .openclaw/
 memory/
 __pycache__/
-
-# IDE
-.vscode/
-.idea/
-
-# Agent artifacts
-.jaisiu/
-.openclaw/
-memory/
-__pycache__/
-
 # IDE
 .vscode/
 .idea/

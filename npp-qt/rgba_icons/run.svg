@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <!-- Run / terminal icon -->
-  <rect fill="#0078D4" x="3" y="4" width="18" height="16" rx="2"/>
-  <polyline fill="#FFFFFF" points="7,10 12,14 7,18"/>
-  <line stroke="#FFFFFF" stroke-width="1.5" x1="12" y1="10" x2="18" y2="10"/>
-  <line stroke="#FFFFFF" stroke-width="1.5" x1="12" y1="13" x2="16" y2="13"/>
-  <line stroke="#FFFFFF" stroke-width="1.5" x1="12" y1="16" x2="14" y2="16"/>
-</svg>

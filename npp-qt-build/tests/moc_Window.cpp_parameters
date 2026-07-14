@@ -1,5 +1,0 @@
--I/home/piotro/.openclaw/workspace/npp-qt/tests
--I/home/piotro/.openclaw/workspace/npp-qt-build/tests
--o
-/home/piotro/.openclaw/workspace/npp-qt-build/tests/moc_Window.cpp
-/home/piotro/.openclaw/workspace/npp-qt/src/WinControls/Window.h

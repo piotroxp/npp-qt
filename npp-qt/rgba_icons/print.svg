@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <!-- Printer -->
-  <rect fill="#0078D4" x="6" y="14" width="12" height="6" rx="1"/>
-  <path fill="none" stroke="#0078D4" stroke-width="1.5"
-    d="M18 14V8a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v6"/>
-  <rect fill="#FFFFFF" x="8" y="4" width="8" height="5" rx="1"/>
-  <line stroke="#FFFFFF" stroke-width="1.5" x1="9" y1="17" x2="15" y2="17"/>
-</svg>

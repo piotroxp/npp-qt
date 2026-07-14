@@ -1,8 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/piotro/.openclaw/workspace/npp-qt-build/cmake_install.cmake",
-		"/home/piotro/.openclaw/workspace/npp-qt-build/tests/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
