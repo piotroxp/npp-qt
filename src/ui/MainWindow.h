@@ -24,6 +24,7 @@ class ToolBar;
 class StatusBar;
 class TabBar;
 class FindReplaceDialog;
+class IncrementalSearchDialog;
 class PreferenceDialog;
 class AboutDialog;
 
@@ -131,6 +132,7 @@ private:
     QDockWidget* _docMapDock = nullptr;
     QDockWidget* _funcListDock = nullptr;
     QDockWidget* _fileBrowserDock = nullptr;
+    IncrementalSearchDialog* _incrementalSearch = nullptr;
 
     QMap<QString, QAction*> _actions;
     QString _lastOpenedDirectory;

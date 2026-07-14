@@ -175,6 +175,11 @@ void MenuBar::buildMenus() {
     findInFilesAction->setData("search.findInFiles");
     _searchMenu->addAction(findInFilesAction);
     
+    QAction* incSearchAction = new QAction("&Incremental Search", this);
+    incSearchAction->setShortcut(QKeySequence("Ctrl+I"));
+    incSearchAction->setData("search.incrementalSearch");
+    _searchMenu->addAction(incSearchAction);
+    
     _searchMenu->addSeparator();
     
     QAction* countAction = new QAction("&Count", this);

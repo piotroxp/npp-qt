@@ -12,6 +12,7 @@
 #include "../core/FileManager.h"
 #include "../core/LanguageManager.h"
 #include "../dialogs/FindReplaceDialog.h"
+#include "../dialogs/IncrementalSearchDialog.h"
 #include "../dialogs/GoToLineDialog.h"
 #include "../dialogs/PreferenceDialog.h"
 #include <Qsci/qsciscintilla.h>
@@ -100,9 +101,26 @@ MainWindow::MainWindow()
     _tabWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(_tabWidget, &QWidget::customContextMenuRequested, this, &MainWindow::onTabContextMenu);
 
-    // Ctrl+I for incremental search
+    // Incremental Search dialog
+    _incrementalSearch = new IncrementalSearchDialog(this);
+    _incrementalSearch->setWindowFlags(Qt::Tool | Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
+
+    // Wire Ctrl+I for incremental search
     connect(new QShortcut(QKeySequence("Ctrl+I"), this), &QShortcut::activated,
-        this, []() { Application::instance().onMenuCommand("search.incremental"); });
+        this, [this]() {
+            if (!_incrementalSearch) return;
+            ScintillaEditor* ed = app().getActiveEditor();
+            if (!ed) return;
+            _incrementalSearch->showAtTop();
+        });
+
+    // Wire incremental search signals to the active editor
+    connect(_incrementalSearch, &IncrementalSearchDialog::searchNext, this, [this](const QString& text) {
+        if (auto* ed = app().getActiveEditor()) ed->findNext(text, {});
+    });
+    connect(_incrementalSearch, &IncrementalSearchDialog::searchPrev, this, [this](const QString& text) {
+        if (auto* ed = app().getActiveEditor()) ed->findPrevious(text, {});
+    });
 }
 
 MainWindow::~MainWindow() = default;
@@ -437,6 +455,11 @@ void MainWindow::dispatchCommand(const QString& cmd) {
         onFindNext();
     } else if (cmd == "search.findPrev") {
         onFindPrevious();
+    } else if (cmd == "search.incrementalSearch") {
+        if (!_incrementalSearch) return;
+        ScintillaEditor* ed = app().getActiveEditor();
+        if (!ed) return;
+        _incrementalSearch->showAtTop();
     } else if (cmd == "search.findInFiles") {
         app().onFindInFiles();
     } else if (cmd == "search.count") {
