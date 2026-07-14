@@ -16,6 +16,8 @@ struct MatchedCharInserted {
 
 class InsertedMatchedChars {
 public:
+    explicit InsertedMatchedChars(ScintillaComponent* pEditView = nullptr)
+        : _pEditView(pEditView) {}
     void init(ScintillaComponent* pEditView) { _pEditView = pEditView; }
     void add(MatchedCharInserted mci);
     bool isEmpty() const { return _insertedMatchedChars.empty(); }
