@@ -187,7 +187,7 @@ void UserDefineDialog::createCommentsTab(QTabWidget* tabs) {
     _enableCommentFold = new QCheckBox(tr("Enable folder (folding) in comments"), page);
     layout->addRow(QString(), _enableCommentFold);
 
-    layout->addStretch();
+    layout->addStretch(1);
     tabs->addTab(page, tr("Comments"));
 }
 

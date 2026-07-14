@@ -104,11 +104,11 @@ void IncrementalSearchDialog::clearHighlight() {
     if (!_editor) return;
     // Clear any previous incremental search highlights (indicator 0)
     _editor->send(QsciScintillaBase::SCI_SETSEARCHFLAGS, 0);
-    _editor->send(QsciScintillaBase::SCI_ANNOTATION_CLEARALL);
+    _editor->send(SCI_ANNOTATION_CLEARALL);
     // Clear indicator 0 highlights across the whole document
     int lines = _editor->lineCount();
     _editor->clearIndicatorRange(0, 0, lines, 0, 0);
-    _editor->send(QsciScintillaBase::SCI_ANCHOR);
+    _editor->send(SCI_ANCHOR);
 }
 
 void IncrementalSearchDialog::onTextChanged(const QString& text) {

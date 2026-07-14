@@ -182,7 +182,8 @@ void ColumnEditorDialog::applyContent() {
 
         // Replace selection with the numeric sequence
         QByteArray repUtf8 = replacement.toUtf8();
-        sci->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0, repUtf8.constData());
+        sci->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+                            reinterpret_cast<intptr_t>(repUtf8.constData()));
 
     } else {
         // Character mode
@@ -202,6 +203,7 @@ void ColumnEditorDialog::applyContent() {
 
         // Insert the repeated character into the selection
         QByteArray repUtf8 = repeated.toUtf8();
-        sci->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0, repUtf8.constData());
+        sci->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+                            reinterpret_cast<intptr_t>(repUtf8.constData()));
     }
 }

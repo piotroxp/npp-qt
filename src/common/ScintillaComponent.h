@@ -6,6 +6,7 @@
 
 #include <QByteArray>
 #include <QtGlobal>  // qMax
+#include "NppSciCompat.h"  // SCI_GETSELECTION, SCI_GETTEXTRANGE, etc.
 
 // Scintilla API integer types (compatible with Scintilla.h / QsciScintilla)
 using Sci_Position = long;

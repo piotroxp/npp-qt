@@ -72,6 +72,7 @@ protected:
 
 private slots:
     void onTabCloseRequested(int index);
+    void onCurrentChanged(int index);
     void onContextMenu(const QPoint& pos);
     void onCloseTriggered();
     void onCloseOthersTriggered();

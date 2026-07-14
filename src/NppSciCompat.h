@@ -1,3 +1,5 @@
+// BUILD_FIX_2026_07_14_marker_DO_NOT_REMOVE
+
 // NppSciCompat.h — Scintilla/QScintilla compatibility constants
 //
 // Defines SCI_*, SC_MARK_*, INDIC_*, CARETSTYLE_*, SCLEX_* constants
@@ -8,20 +10,17 @@
 // so bare names (e.g. SCI_GETCURRENTPOS) compile without qualification.
 //
 // Sci_Position / Sci_PositionCR must be defined before Sci_CharacterRangeFull which uses them.
-// This header may be included before Scintilla.h (via the NppConstants.h -> ScintillaEditBase.h
-// -> qsciscintillabase.h chain), so we define Sci_CharacterRangeFull here and guard it so
-// Scintilla.h's own definition is skipped via SCI_CHARACTERRANGEFULL_DEFINED.
-#include "Sci_Position.h"
-#ifndef SCI_CHARACTERRANGEFULL_DEFINED
-#define SCI_CHARACTERRANGEFULL_DEFINED
+#ifndef Sci_Position_defined
+#define Sci_Position_defined
+using Sci_Position = long;
+using Sci_PositionCR = long;
+#endif
+
 struct Sci_CharacterRangeFull {
     Sci_Position cpMin;
     Sci_Position cpMax;
 };
-#endif
 
-// Include this in any file that uses bare SCI_* constants.
-#pragma once
 
 // NOTE: We include qsciscintillabase.h to verify QScintilla is available.
 // DO NOT use `using QsciScintillaBase::SCI_*` here — those enum values conflict
@@ -69,6 +68,19 @@ namespace npp_sci {
     constexpr int SCI_GETSTYLEAT            = 2010;
     constexpr int SCI_GETLENGTH             = 2006;
     constexpr int SCI_GETTEXTRANGE          = 2162;
+    constexpr int SCI_GETTEXT               = 2001;
+    constexpr int SCI_SETTEXT               = 2002;
+    constexpr int SCI_GETCURLINE            = 2012;
+    constexpr int SCI_CONVERTEOLS           = 2030;
+    constexpr int SCI_LINESSPLIT            = 2289;
+    constexpr int SCI_LOWERCASE             = 2342;
+    constexpr int SCI_UPPERCASE             = 2343;
+    constexpr int SCI_TITLECASE             = 2344;
+    constexpr int SCI_SORTLINES             = 2169;
+    constexpr int SC_SORT_NUMERIC           = 1;
+    constexpr int SC_SORT_CASEINSENSITIVE   = 2;
+    constexpr int SC_SORT_PERCENTAGE        = 3;
+    constexpr int SC_SORT_REVERSE           = 0x100;
     constexpr int SCI_LINEFROMPOSITION       = 2166;
     constexpr int SCI_POSITIONFROMLINE       = 2167;
     constexpr int SCI_GETLINEENDPOSITION     = 2136;
@@ -103,6 +115,10 @@ namespace npp_sci {
     // INDIC_* values NOT in QScintilla
     constexpr int INDIC_HYPERLINK              = 5;
     constexpr int INDIC_SPELL                  = 8;
+
+    // ==== Annotation and anchor (needed by IncrementalSearchDialog) ====
+    constexpr int SCI_ANNOTATION_CLEARALL      = 2128;  // clear all annotations
+    constexpr int SCI_ANCHOR                   = 2023;  // anchor position
 
     // CARETSTYLE_* NOT in QScintilla
     constexpr int CARETSTYLE_LINE_1            = 0x101;
@@ -244,7 +260,11 @@ namespace npp_sci {
     constexpr int SCI_AUTOCGETSEPARATOR     = 2108;   // auto-completion separator
     constexpr int SCI_GETFIRSTVISIBLELINE  = 2152;   // SmartHighlighter.cpp
     constexpr int SCI_SETSEARCHFLAGS        = 2198;   // FindReplaceDlg.cpp
-    // SC_CP_UTF8 defined globally in ScintillaComponent.h — no duplicate here
+    constexpr int SCI_FINDTEXT              = 2150;   // SmartHighlighter.cpp — search in document
+    constexpr int SCI_INDICATORSTYLE        = 2080;   // SmartHighlighter.cpp — set indicator style
+    constexpr int SCI_INDICSETFORE          = 2082;   // SmartHighlighter.cpp — indicator foreground color
+    constexpr int SCI_INDICSETBACK          = 2083;   // SmartHighlighter.cpp — indicator background color
+    // INDIC_ROUNDBOX, SC_INDICATOR_*, SC_CP_UTF8, SCI_GETSELECTION already in HEAD
 
     // ==== Additional SCI_* constants needed by Parameters.cpp ====
     constexpr int SCI_SELECTALL              = 2013;
@@ -378,6 +398,7 @@ namespace npp_sci {
     constexpr int SCI_LINEENDWRAP              = 2451;
 
     // Additional Scintilla/QScintilla constants
+    constexpr int SCI_GETSELECTION          = 2140;  // get full selection range (cpMin, cpMax)
     constexpr int SCI_GETSELECTIONSTART                                   = 2143;
     constexpr int SCI_GETSELECTIONEND                                     = 2145;
     constexpr int SCI_GETSELECTIONNSTART                                  = 2585;
@@ -402,6 +423,7 @@ namespace npp_sci {
     constexpr int SCI_GETANCHOR              = 2009;
     constexpr int SCI_GETSELECTIONS           = 2570;
     constexpr int SCI_GETSELECTIONMODE       = 2423;
+    constexpr int SCI_SETSELECTIONMODE        = 2579;
     constexpr int SC_SEL_RECTANGLE           = 1;
     constexpr int SC_SEL_THIN                = 4;
     constexpr int SC_SEL_LINES               = 2;
@@ -563,6 +585,8 @@ inline int _wcsicmp(const wchar_t* a, const wchar_t* b) {
 using npp_sci::SCI_ADDREFDOCUMENT;
 using npp_sci::SCI_ANNOTATIONGETMOUSENOTIFICATION;
 using npp_sci::SCI_ANNOTATIONSETMOUSENOTIFICATION;
+using npp_sci::SCI_ANNOTATION_CLEARALL;
+using npp_sci::SCI_ANCHOR;
 using npp_sci::SCI_APPENDTEXT;
 using npp_sci::SCI_AUTOCCANCEL;
 using npp_sci::SCI_AUTOCGETSEPARATOR;
@@ -609,6 +633,7 @@ using npp_sci::SCI_ENDUNDOACTION;
 using npp_sci::SCI_ENSUREVISIBLE;
 using npp_sci::SCI_FOLDDISPLAYTEXTSTYLE;
 using npp_sci::SCI_FORMFEED;
+using npp_sci::SCI_FINDTEXT;
 using npp_sci::SCI_GETANCHOR;
 using npp_sci::SCI_GETCHANGEHISTORY;
 using npp_sci::SCI_GETCHARACTERPOINTER;
@@ -628,10 +653,12 @@ using npp_sci::SCI_GETMOUSESELECTIONRECTANGULARPROBABILITYTHRESHOLD;
 using npp_sci::SCI_GETPOSITIONCACHESIZE;
 using npp_sci::SCI_GETREADONLY;
 using npp_sci::SCI_GETSELBACK;
+using npp_sci::SCI_GETSELECTION;
 using npp_sci::SCI_GETSELECTIONEMPTY;
 using npp_sci::SCI_GETSELECTIONEND;
 using npp_sci::SCI_GETSELECTIONLAYER;
 using npp_sci::SCI_GETSELECTIONMODE;
+using npp_sci::SCI_SETSELECTIONMODE;
 using npp_sci::SCI_GETSELECTIONNEND;
 using npp_sci::SCI_GETSELECTIONNSTART;
 using npp_sci::SCI_GETSELECTIONS;
@@ -640,8 +667,22 @@ using npp_sci::SCI_GETSELTEXT;
 using npp_sci::SCI_GETSTYLEAT;
 using npp_sci::SCI_GETTARGETEND;
 using npp_sci::SCI_GETTARGETSTART;
+using npp_sci::SCI_GETTEXT;
+using npp_sci::SCI_SETTEXT;
+using npp_sci::SCI_GETTEXTLENGTH;
 using npp_sci::SCI_GETTEXTDIRECTION;
 using npp_sci::SCI_GETTEXTRANGE;
+using npp_sci::SCI_GETCURLINE;
+using npp_sci::SCI_CONVERTEOLS;
+using npp_sci::SCI_LINESSPLIT;
+using npp_sci::SCI_LOWERCASE;
+using npp_sci::SCI_UPPERCASE;
+using npp_sci::SCI_TITLECASE;
+using npp_sci::SCI_SORTLINES;
+using npp_sci::SC_SORT_NUMERIC;
+using npp_sci::SC_SORT_CASEINSENSITIVE;
+using npp_sci::SC_SORT_PERCENTAGE;
+using npp_sci::SC_SORT_REVERSE;
 using npp_sci::SCI_GETWRAPINDENTMODE;
 using npp_sci::SCI_GETZOOM;
 using npp_sci::SCI_GOTOLINE;
@@ -655,6 +696,11 @@ using npp_sci::SCI_HOMEWRAP;
 using npp_sci::SCI_HOMEWRAPEXTEND;
 using npp_sci::SCI_INDICATORCLEARRANGE;
 using npp_sci::SCI_INDICATORFILLRANGE;
+using npp_sci::SCI_INDICATORSTYLE;
+using npp_sci::SCI_INDICSETSTYLE;
+using npp_sci::SCI_INDICSETFORE;
+using npp_sci::SCI_INDICSETBACK;
+using npp_sci::SCI_INDICSETALPHA;
 using npp_sci::SCI_INSERTLINE;
 using npp_sci::SCI_INSERTTEXT;
 using npp_sci::SCI_LINECOPY;
@@ -781,6 +827,7 @@ using npp_sci::SCFIND_REGEXP;
 using npp_sci::SCFIND_POSIX;
 using npp_sci::SCFIND_REGEXP_DOTMATCHESNL;
 using npp_sci::SCFIND_WORDSTART;
+using npp_sci::SC_SEL_STREAM;
 using npp_sci::SC_SEL_RECTANGLE;
 using npp_sci::SC_SEL_THIN;
 // Additional using declarations for newly added npp_sci:: constants
@@ -824,3 +871,5 @@ using npp_sci::SC_MARKNUM_HISTORY_MODIFIED;
 using npp_sci::SC_MARKNUM_HISTORY_REVERTED_TO_MODIFIED;
 using npp_sci::SC_UNDO_SELECTION_HISTORY_ENABLED;
 using npp_sci::SC_UNDO_SELECTION_HISTORY_SCROLL;
+
+#pragma once

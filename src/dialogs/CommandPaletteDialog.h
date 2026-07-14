@@ -26,6 +26,7 @@ private slots:
 
 private:
     void populateAll();
+    void buildCommandRegistry();
     void filterCommands(const QString& text);
     QString executeCommand(const QString& cmd);
 

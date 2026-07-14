@@ -159,7 +159,7 @@ QString AnsiCharPanel::charLabel(int code) const {
     }
     // Try to display using current code page
     QChar ch(code);
-    if (ch.isPrintable())
+    if (ch.isPrint())
         return QString(ch);
     // Extended — show hex
     return QString("%1").arg(code, 2, 16, QChar('0')).toUpper();
@@ -216,9 +216,8 @@ void AnsiCharPanel::onCharDoubleClicked(int row, int col) {
 void AnsiCharPanel::onCharClicked(int code) {
     // Insert the character into the current editor
     ScintillaEditor* editor = nullptr;
-    Application* app = Application::instance();
-    if (app)
-        editor = app->getActiveEditor();
+    Application& app = Application::instance();
+    editor = app.getActiveEditor();
 
     if (editor) {
         // Insert character at cursor position

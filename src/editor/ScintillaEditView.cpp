@@ -40,7 +40,7 @@ intptr_t ScintillaEditView::send(int message, int wParam, intptr_t lParam) {
 // Direct SCI wrapper
 // ---------------------------------------------------------------------------
 
-intptr_t ScintillaEditView::sendCommand(int message, uptr_t wParam, sptr_t lParam) {
+intptr_t ScintillaEditView::sendCommand(int message, uptr_t wParam, sptr_t lParam) const {
     if (!_widget) return 0;
     // QsciScintilla::SendScintilla accepts (int, uintptr_t, intptr_t) on Qt6
     return _widget->SendScintilla(static_cast<int>(message),
@@ -116,7 +116,7 @@ QByteArray ScintillaEditView::getTextRange(int start, int end) const {
 void ScintillaEditView::replaceSel(const QString& text) {
     if (!_widget) return;
     QByteArray utf8 = text.toUtf8();
-    sendCommand(SCI_REPLACESEL, 0, utf8.constData());
+    sendCommand(SCI_REPLACESEL, 0, reinterpret_cast<sptr_t>(utf8.constData()));
 }
 
 int ScintillaEditView::lineCount() const {

@@ -29,6 +29,7 @@ private slots:
     void onCellClicked(int row, int col);
     void onCodePageChanged(int index);
     void onCharDoubleClicked(int row, int col);
+    void onCharClicked(int code);
 
 private:
     void setupUi();

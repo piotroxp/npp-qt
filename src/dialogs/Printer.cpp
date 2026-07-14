@@ -231,20 +231,28 @@ void Printer::drawHeader(QPainter* painter, QPrinter* printer,
 
     // Left: document title or filename
     QString leftText = _documentTitle.isEmpty() ? "Notepad--Qt" : _documentTitle;
-    painter->drawText(pageRect.left() + LeftMarginPt, y,
-                      Qt::AlignLeft | Qt::AlignBottom, leftText);
+    QRectF leftRect(pageRect.left() + LeftMarginPt, y - HeaderHeightPt,
+                    pageRect.width() / 3, HeaderHeightPt);
+    painter->drawText(leftRect, Qt::AlignLeft | Qt::AlignBottom, leftText);
 
     // Center: "(No Title)" or first line of document as header
     if (editor && !editor->text().isEmpty()) {
         QString firstLine = editor->text().section('\n', 0, 0);
         if (firstLine.length() > 60) firstLine = firstLine.left(60) + "...";
-        painter->drawText(pageRect, Qt::AlignHCenter | Qt::AlignBottom, firstLine);
+        QRectF centerRect(pageRect.left() + pageRect.width() / 3,
+                          y - HeaderHeightPt,
+                          pageRect.width() / 3,
+                          HeaderHeightPt);
+        painter->drawText(centerRect, Qt::AlignHCenter | Qt::AlignBottom, firstLine);
     }
 
     // Right: page number label
     QString rightText = QString("Page %1").arg(pageNum);
-    painter->drawText(pageRect.right() - RightMarginPt, y,
-                      Qt::AlignRight | Qt::AlignBottom, rightText);
+    QRectF rightRect(pageRect.right() - pageRect.width() / 3 - RightMarginPt,
+                     y - HeaderHeightPt,
+                     pageRect.width() / 3,
+                     HeaderHeightPt);
+    painter->drawText(rightRect, Qt::AlignRight | Qt::AlignBottom, rightText);
 
     // Separator line under header
     painter->setPen(QColor(180, 180, 180));
@@ -273,6 +281,7 @@ void Printer::drawFooter(QPainter* painter, QPrinter* printer, int pageNum, int 
     // Footer text: right-aligned page X of Y
     qreal y = pageRect.bottom() - BottomMarginPt;
     QString footer = QString("Page %1 of %2").arg(pageNum).arg(totalPages);
-    painter->drawText(pageRect.right() - RightMarginPt, y,
-                      Qt::AlignRight | Qt::AlignTop, footer);
+    QRectF footerRect(pageRect.left() + LeftMarginPt, y - FooterHeightPt,
+                      pageRect.width() - LeftMarginPt - RightMarginPt, FooterHeightPt);
+    painter->drawText(footerRect, Qt::AlignRight | Qt::AlignTop, footer);
 }

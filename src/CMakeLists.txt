@@ -177,8 +177,13 @@ set(SCINTILLA_INCLUDE "/home/piotro/.openclaw/workspace/notepad-plus-plus-transl
 set(LEXILLA_INCLUDE "/home/piotro/.openclaw/workspace/notepad-plus-plus-translation/lexilla/include")
 
 target_include_directories(npp-qt PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/MISC/Common
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/MISC/Common
+    ${CMAKE_SOURCE_DIR}/src/core
+    ${CMAKE_SOURCE_DIR}/src/editor
+    ${CMAKE_SOURCE_DIR}/src/dialogs
+    ${CMAKE_SOURCE_DIR}/src/panels
+    ${CMAKE_SOURCE_DIR}/src/ui
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}/npp-qt_autogen  # WORKAROUND: AUTOMOC mocs_compilation.cpp includes "SUBDIR/moc_Foo.cpp"
     /usr/include/x86_64-linux-gnu/qt6/QtPrintSupport

@@ -13,34 +13,8 @@
 #include <QFont>
 #include <QColor>
 
-// Scintilla message constants (mirrored from Scintilla.h / SciDefines.h)
-constexpr int SCI_GETTEXT            = 2001;
-constexpr int SCI_SETTEXT            = 2002;
-constexpr int SCI_GETLINE            = 2003;
-constexpr int SCI_GETLINECOUNT       = 2004;
-constexpr int SCI_GETSELECTIONSTART  = 2411;
-constexpr int SCI_GETSELECTIONEND    = 2412;
-constexpr int SCI_SETSELECTIONSTART  = 2413;
-constexpr int SCI_SETSELECTIONEND    = 2414;
-constexpr int SCI_REPLACESEL         = 2170;
-constexpr int SCI_GETCURLINE         = 2012;
-constexpr int SCI_GETTEXTLENGTH      = 2006;
-constexpr int SCI_CONVERTEOLS        = 2030;
-constexpr int SCI_LINESJOIN          = 2288;
-constexpr int SCI_LINESSPLIT         = 2289;
-constexpr int SCI_LOWERCASE          = 2342;
-constexpr int SCI_UPPERCASE          = 2343;
-constexpr int SCI_TITLECASE           = 2344;
-constexpr int SCI_SORTLINES           = 2169;
-constexpr int SCI_SETSELECTIONMODE    = 2579;
-constexpr int SCI_GETSELECTIONMODE    = 2580;
-constexpr int SC_SEL_STREAM           = 0;
-constexpr int SC_SEL_RECTANGLE        = 1;
-constexpr int SC_SEL_LINES            = 2;
-constexpr int SC_SORT_NUMERIC         = 1;
-constexpr int SC_SORT_CASEINSENSITIVE = 2;
-constexpr int SC_SORT_PERCENTAGE       = 3;
-constexpr int SC_SORT_REVERSE          = 0x100;
+// Scintilla message constants are inherited from NppSciCompat.h via ScintillaComponent.h.
+// Duplicate definitions removed to avoid ODR conflicts.
 
 class ScintillaEditView : public ScintillaComponent {
 public:
@@ -53,7 +27,7 @@ public:
     // ---- Direct SCI wrapper ----
 
     /// Send an arbitrary SCI message with typed parameters
-    intptr_t sendCommand(int message, uptr_t wParam = 0, sptr_t lParam = 0);
+    intptr_t sendCommand(int message, uptr_t wParam = 0, sptr_t lParam = 0) const;
 
     /// Get the entire document text as a QString
     QString getText() const;

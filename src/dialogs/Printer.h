@@ -10,7 +10,6 @@
 #include <QPainter>
 #include <QPrintDialog>
 #include <QPrintPreviewDialog>
-#include <QPointer>
 
 class ScintillaEditor;
 
@@ -30,6 +29,9 @@ public:
     /// Show print-preview dialog (render pages without committing to paper)
     void printPreview(ScintillaEditor* editor);
 
+    /// Internal: render the entire document to a QPrinter
+    void renderDocument(ScintillaEditor* editor, QPrinter* printer);
+
 Q_SIGNALS:
     /// Emitted after a print job completes successfully
     void printCompleted();
@@ -42,6 +44,7 @@ private:
     void renderPage(QPainter* painter, QPrinter* printer, ScintillaEditor* editor);
     void drawHeader(QPainter* painter, QPrinter* printer, ScintillaEditor* editor, int pageNum);
     void drawFooter(QPainter* painter, QPrinter* printer, int pageNum, int totalPages);
+    void renderPage(QPainter* painter, QPrinter* printer, ScintillaEditor* editor, int pageNum);
 
     /// Convert page rect to usable content rect (subtract margins + header/footer)
     QRectF contentRect(QPrinter* printer) const;
@@ -52,7 +55,7 @@ private:
     /// First visible line on a given page (1-indexed page)
     int firstLineOnPage(int page, ScintillaEditor* editor, QPrinter* printer) const;
 
-    QPointer<QPrinter> _printer;
+    QPrinter* _printer = nullptr;
     QString _documentTitle;
     QFont _printFont;
     static constexpr int HeaderHeightPt = 20;

@@ -150,7 +150,7 @@ set(HEADERS
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
 # Include directories
-target_include_directories(${PROJECT_NAME} PRIVATE src src/common src/dialogs src/ui src/panels)
+target_include_directories(${PROJECT_NAME} PRIVATE src src/common src/dialogs src/ui src/panels src/core src/editor)
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE

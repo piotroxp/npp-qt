@@ -10,6 +10,7 @@
 #include <QHeaderView>
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
+#include <QLabel>
 #include <QDebug>
 #include <algorithm>
 
@@ -344,12 +345,10 @@ void FunctionListPanel::parsePython(const QStringList& lines) {
 void FunctionListPanel::parseJavaScript(const QStringList& lines) {
     // JavaScript/TypeScript: function, class, arrow functions, const/let/var assignments
     QRegularExpression funcRe(
-        R"(^\s*(?:(export|default|async)\s+)?"
-        R"((?:(function)\s+(\w+)|"
+        R"(^\s*(?:(export|default|async)\s+)?((?:(function)\s+(\w+)|"
         R"((class)\s+(\w+)(?:\s+extends\s+\w+)?)|"
         R"((?:(const|let|var)\s+)?(\w+)\s*=\s*(?:async\s+)?(?:function\s*)?"
-        R"((?:\([^)]*\)|[\w]+)\s*(?:=>|{|\s*function)))"
-        R"|(constructor)\s*\()",
+        R"((?:\([^)]*\)|[\w]+)\s*(?:=>|{|\s*function)))))",
         QRegularExpression::MultilineOption);
 
     for (int i = 0; i < lines.size(); ++i) {

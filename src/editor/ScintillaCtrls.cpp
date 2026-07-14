@@ -8,6 +8,14 @@
 #include <QClipboard>
 #include <Qsci/qsciscintilla.h>
 
+// Helper: get full text of a line (including trailing newline)
+static QString _getLineText(QsciScintilla* qsci, int line) {
+    int start = qsci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, line);
+    int end   = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, line);
+    if (end <= start) return QString();
+    return qsci->text(start, end);
+}
+
 // ============================================================================
 // wrapSelection — wrap selected text with before/after strings
 // ============================================================================
@@ -23,7 +31,6 @@ void ScintillaCtrls::wrapSelection(ScintillaEditor* editor,
     if (selected.isEmpty()) {
         // No selection — insert wrapper pair and position cursor between
         qsci->insert(before + after);
-        // Move cursor back by `after` length
         int curLine, curCol;
         qsci->getCursorPosition(&curLine, &curCol);
         int newCol = qMax(0, curCol - after.length());
@@ -55,9 +62,8 @@ void ScintillaCtrls::indentBlock(ScintillaEditor* editor, int spaces) {
     if (spaces >= 0) {
         // Indent: prepend spaces to each line
         QString indent = QString(spaces, ' ');
-        for (int line = startLine; line <= endLine; ++line) {
+        for (int line = startLine; line <= endLine; ++line)
             qsci->insertAt(indent, line, 0);
-        }
     } else {
         // Dedent: remove up to |spaces| spaces/tabs from each line
         int remove = -spaces;
@@ -75,7 +81,7 @@ void ScintillaCtrls::indentBlock(ScintillaEditor* editor, int spaces) {
             }
             if (removed > 0) {
                 int posStart = qsci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, line);
-                qsci->setSelection(posStart, posStart + removed);
+                qsci->SendScintilla(QsciScintilla::SCI_SETSELECTION, posStart, posStart + removed);
                 qsci->removeSelectedText();
             }
         }
@@ -105,29 +111,15 @@ void ScintillaCtrls::duplicateLine(ScintillaEditor* editor) {
 
     if (startLine == endLine && startCol == endCol) {
         // No selection — duplicate the current line
-        int lineStartPos = qsci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, startLine);
-        int lineEndPos = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, startLine);
-        int lineLen = lineEndPos - lineStartPos;
-        QString lineText;
-        if (lineLen > 0) {
-            QByteArray raw = qsci->SendScintilla(QsciScintilla::SCI_GETRANGEPOINTER,
-                                                   lineStartPos, lineLen).toByteArray();
-            lineText = QString::fromUtf8(raw);
-        }
-        qsci->insertAt(lineText + "\n", startLine + 1, 0);
+        QString lineText = _getLineText(qsci, startLine);
+        qsci->insertAt(lineText, startLine + 1, 0);
     } else {
         // Duplicate selected lines
         QString block;
         for (int line = startLine; line <= endLine; ++line) {
-            int lineStartPos = qsci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, line);
-            int lineEndPos = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, line);
-            int lineLen = lineEndPos - lineStartPos;
-            if (lineLen > 0) {
-                QByteArray raw = qsci->SendScintilla(QsciScintilla::SCI_GETRANGEPOINTER,
-                                                       lineStartPos, lineLen).toByteArray();
-                block += QString::fromUtf8(raw);
-            }
-            block += "\n";
+            if (!block.isEmpty())
+                block += "\n";
+            block += _getLineText(qsci, line);
         }
         qsci->insertAt(block, endLine + 1, 0);
     }
@@ -150,17 +142,15 @@ void ScintillaCtrls::joinLines(ScintillaEditor* editor) {
     if (startLine == endLine) return;  // Nothing to join
 
     int startPos = qsci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, startLine);
-    int endPos = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, endLine);
+    int endPos   = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, endLine);
 
     QString replacement;
     for (int line = startLine; line <= endLine; ++line) {
-        int lineStartPos = qsci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, line);
-        int lineEndPos = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, line);
-        int lineLen = lineEndPos - lineStartPos;
-        if (lineLen > 0) {
-            QByteArray raw = qsci->SendScintilla(QsciScintilla::SCI_GETRANGEPOINTER,
-                                                   lineStartPos, lineLen).toByteArray();
-            QString lineText = QString::fromUtf8(raw).trimmed();
+        int sp  = qsci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, line);
+        int ep  = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, line);
+        int len = ep - sp;
+        if (ep > sp) {
+            QString lineText = qsci->text(sp, ep).trimmed();
             if (!replacement.isEmpty())
                 replacement += " ";
             replacement += lineText;
@@ -168,7 +158,7 @@ void ScintillaCtrls::joinLines(ScintillaEditor* editor) {
     }
 
     qsci->beginUndoAction();
-    qsci->setSelection(startPos, endPos);
+    qsci->SendScintilla(QsciScintilla::SCI_SETSELECTION, startPos, endPos);
     qsci->replaceSelectedText(replacement);
     qsci->endUndoAction();
 }
@@ -201,68 +191,54 @@ void ScintillaCtrls::moveLines(ScintillaEditor* editor, bool up) {
     }
 }
 
-static QString _getLineText(QsciScintilla* qsci, int line) {
-    int lineStartPos = qsci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, line);
-    int lineEndPos = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, line);
-    int lineLen = lineEndPos - lineStartPos;
-    if (lineLen <= 0) return QString();
-    QByteArray raw = qsci->SendScintilla(QsciScintilla::SCI_GETRANGEPOINTER,
-                                           lineStartPos, lineLen).toByteArray();
-    return QString::fromUtf8(raw);
-}
-
 void ScintillaCtrls::_moveBlockUp(QsciScintilla* qsci, int startLine, int endLine) {
-    // Collect block lines
     QStringList block;
     for (int line = startLine; line <= endLine; ++line)
         block.append(_getLineText(qsci, line));
 
-    // Target is the line above the block
-    int targetLine = startLine - 1;
-    QString targetText = _getLineText(qsci, targetLine);
+    QString targetText = _getLineText(qsci, startLine - 1);
 
     qsci->beginUndoAction();
 
     int blockStartPos = qsci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, startLine);
-    int afterEndLine = qMin(endLine + 1, qsci->lines() - 1);
-    int blockEndPos = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, afterEndLine);
+    int afterEndLine  = qMin(endLine + 1, qsci->lines() - 1);
+    int blockEndPos   = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, afterEndLine);
 
-    // Replace block range with target line
+    // "target line" (startLine-1) ends at end of that line; add \n to bring next line
+    int targetEndPos = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, startLine - 1);
+    bool hasNext = (startLine <= qsci->lines() - 1);
+
     QString replacement = targetText;
-    if (endLine < qsci->lines() - 1)
+    if (hasNext)
         replacement += "\n";
     replacement += block.join("\n");
-    if (targetLine < qsci->lines() - 1)
+    if (hasNext)
         replacement += "\n";
 
-    qsci->setSelection(blockStartPos, blockEndPos);
+    qsci->SendScintilla(QsciScintilla::SCI_SETSELECTION, blockStartPos, blockEndPos);
     qsci->replaceSelectedText(replacement);
 
     qsci->endUndoAction();
 }
 
 void ScintillaCtrls::_moveBlockDown(QsciScintilla* qsci, int startLine, int endLine) {
-    // Collect block lines
     QStringList block;
     for (int line = startLine; line <= endLine; ++line)
         block.append(_getLineText(qsci, line));
 
-    // Target is the line below the block
-    int targetLine = endLine + 1;
-    QString targetText = _getLineText(qsci, targetLine);
+    QString targetText = _getLineText(qsci, endLine + 1);
 
     qsci->beginUndoAction();
 
     int blockStartPos = qsci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, startLine);
-    int afterEndLine = qMin(endLine + 1, qsci->lines() - 1);
-    int blockEndPos = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, afterEndLine);
+    int afterEndLine  = qMin(endLine + 1, qsci->lines() - 1);
+    int blockEndPos   = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, afterEndLine);
 
-    // Replace block range with target line
     QString replacement = block.join("\n") + "\n" + targetText;
     if (endLine < qsci->lines() - 1)
         replacement += "\n";
 
-    qsci->setSelection(blockStartPos, blockEndPos);
+    qsci->SendScintilla(QsciScintilla::SCI_SETSELECTION, blockStartPos, blockEndPos);
     qsci->replaceSelectedText(replacement);
 
     qsci->endUndoAction();
@@ -281,13 +257,12 @@ void ScintillaCtrls::deleteLine(ScintillaEditor* editor, int line) {
     if (line < 0 || line >= lineCount) return;
 
     int lineStartPos = qsci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, line);
-    int lineEndPos = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, line);
-    int deleteEndPos = lineEndPos;
+    int deleteEndPos = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, line);
     if (line < lineCount - 1)
         deleteEndPos = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, line + 1);
 
     qsci->beginUndoAction();
-    qsci->setSelection(lineStartPos, deleteEndPos);
+    qsci->SendScintilla(QsciScintilla::SCI_SETSELECTION, lineStartPos, deleteEndPos);
     qsci->removeSelectedText();
     qsci->endUndoAction();
 }
