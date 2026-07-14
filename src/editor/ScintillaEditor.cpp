@@ -57,6 +57,7 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     _editor->setIndentationsUseTabs(false);
     _editor->setAutoIndent(true);
     _editor->setCaretLineVisible(true);
+    _editor->setCaretLineBackgroundColor(QColor("#2c313a"));  // One Dark default
     _editor->setIndentationGuides(true);
     _editor->setTabIndents(true);
     _editor->setBackspaceUnindents(true);

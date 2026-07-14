@@ -431,6 +431,10 @@ void MainWindow::dispatchCommand(const QString& cmd) {
         onShowStatusBar(_actions["view.showStatusBar"]->isChecked());
     } else if (cmd == "view.showToolBar") {
         onShowToolBar(_actions["view.showToolBar"]->isChecked());
+    } else if (cmd == "view.darkMode") {
+        onThemeChanged("dark");
+    } else if (cmd == "view.lightMode") {
+        onThemeChanged("light");
     }
     // Encoding commands
     else if (cmd == "encoding.utf8") {
@@ -593,8 +597,7 @@ void MainWindow::onNewFile() {
 
     // Create editor
     ScintillaEditor* editor = new ScintillaEditor(_tabWidget);
-
-    // Wire cursor position to status bar
+    editor->applyTheme(ThemeManager::instance().currentTheme());  // apply current theme to status bar
     connect(editor, &ScintillaEditor::cursorPositionChanged,
              _statusBarWidget, [this](int line, int col) {
         _statusBarWidget->setPosition(line, col);
@@ -1034,15 +1037,16 @@ void MainWindow::onBufferChanged() {
 
 // Theme
 void MainWindow::onThemeChanged(const QString& theme) {
-    // Apply theme to toolbar and status bar
-    if (_toolBar) {
-        QString qss = QString("QToolBar { background: palette(window); }");
-        _toolBar->setStyleSheet(qss);
-    }
-    if (_statusBarWidget) {
-        QString qss = QString("QStatusBar { background: palette(window); }");
-        _statusBarWidget->setStyleSheet(qss);
-    }
+    ThemeManager::instance().loadTheme(theme);
+    // Apply dark/light QSS to all chrome elements
+    setStyleSheet(ThemeManager::instance().getThemeQss(theme, "main"));
+    if (_toolBar)
+        _toolBar->setStyleSheet(ThemeManager::instance().getThemeQss(theme, "toolbar"));
+    if (_statusBarWidget)
+        _statusBarWidget->setStyleSheet(ThemeManager::instance().getThemeQss(theme, "statusbar"));
+    if (_menuBar)
+        _menuBar->setStyleSheet(ThemeManager::instance().getThemeQss(theme, "menu"));
+    _tabWidget->setStyleSheet(ThemeManager::instance().getThemeQss(theme, "tabs"));
     // Reload current theme resource
     app().loadTheme(theme.toStdString());
 }

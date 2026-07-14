@@ -188,6 +188,26 @@ void MenuBar::buildMenus() {
     // View menu
     _viewMenu = addMenu("&View");
     
+    QAction* darkModeAction = new QAction("&Dark Mode", this);
+    darkModeAction->setCheckable(true);
+    darkModeAction->setChecked(true);  // default dark
+    darkModeAction->setData("view.darkMode");
+    _viewMenu->addAction(darkModeAction);
+    
+    QAction* lightModeAction = new QAction("&Light Mode", this);
+    lightModeAction->setCheckable(true);
+    lightModeAction->setChecked(false);
+    lightModeAction->setData("view.lightMode");
+    _viewMenu->addAction(lightModeAction);
+    
+    // Make dark/light mutually exclusive
+    QObject::connect(darkModeAction, &QAction::toggled,
+                     lightModeAction, &QAction::setChecked, Qt::UniqueConnection);
+    QObject::connect(lightModeAction, &QAction::toggled,
+                     darkModeAction, &QAction::setChecked, Qt::UniqueConnection);
+    
+    _viewMenu->addSeparator();
+    
     QAction* fullScreenAction = new QAction("Toggle F&ull Screen", this);
     fullScreenAction->setShortcut(QKeySequence("F11"));
     fullScreenAction->setData("view.fullScreen");
