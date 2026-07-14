@@ -340,7 +340,7 @@ bool Application::saveConfig(const std::string& path) {
     ini.set("Backup", "AutoSaveInterval",      _options.autoSaveInterval);
     ini.set("Backup", "AutoSaveCurrentOnly",   _options.autoSaveCurrentOnly);
     ini.set("Backup", "AutoSaveInBackground", _options.autoSaveInBackground);
-    ini.set("Backup", "BackupDir",            _options.backupDir);
+    ini.set("Backup", "BackupDir",            _options.backupDir.toStdString());
     ini.set("Backup", "BackupStyle",          _options.backupStyle);
     ini.set("Backup", "MaxBackups",           _options.maxBackups);
 
