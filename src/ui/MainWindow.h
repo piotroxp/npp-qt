@@ -91,6 +91,7 @@ public slots:
     void onBufferActivated(BufferID buffer);
     void onBufferClosed(BufferID buffer);
     void onBufferModified(BufferID buffer, bool modified);
+    void onFileExternallyModified(BufferID buffer);
 
     // Theme
     void onThemeChanged(const QString& theme);

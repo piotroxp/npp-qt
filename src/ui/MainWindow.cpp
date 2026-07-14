@@ -30,6 +30,10 @@
 #include <QStyle>
 #include <Qsci/qscilexercustom.h>
 #include "../panels/DocumentMapPanel.h"
+#include "../panels/FileBrowserPanel.h"
+#include "../panels/FunctionListPanel.h"
+#include "../core/Buffer.h"
+#include "../dialogs/FileReloadDialog.h"
 #include <QApplication>
 #include <QClipboard>
 #include <QDesktopServices>
@@ -226,6 +230,21 @@ void MainWindow::createActions() {
     showToolBarAction->setChecked(true);
     _actions["view.showToolBar"] = showToolBarAction;
     
+    QAction* fileBrowserAction = new QAction("&File Browser", this);
+    fileBrowserAction->setCheckable(true);
+    fileBrowserAction->setChecked(true);
+    _actions["view.fileBrowser"] = fileBrowserAction;
+    
+    QAction* funcListAction = new QAction("F&unction List", this);
+    funcListAction->setCheckable(true);
+    funcListAction->setChecked(true);
+    _actions["view.functionList"] = funcListAction;
+    
+    QAction* docMapAction = new QAction("&Document Map", this);
+    docMapAction->setCheckable(true);
+    docMapAction->setChecked(true);
+    _actions["view.documentMap"] = docMapAction;
+    
     // Encoding actions
     QAction* convUtf8Action = new QAction("Convert to &UTF-8", this);
     _actions["encoding.utf8"] = convUtf8Action;
@@ -298,7 +317,29 @@ void MainWindow::createStatusBar() {
 }
 
 void MainWindow::createPanels() {
-    // Panels are disabled for now - can be enabled later
+    // File Browser panel (left dock)
+    _fileBrowserDock = new QDockWidget("File Browser", this);
+    _fileBrowserDock->setWidget(app().fileBrowserPanel());
+    _fileBrowserDock->setObjectName("FileBrowserDock");
+    addDockWidget(Qt::LeftDockWidgetArea, _fileBrowserDock);
+    connect(_fileBrowserDock, &QDockWidget::visibilityChanged,
+            this, [this](bool v){ if(v) _fileBrowserDock->setFocus(); });
+    connect(app().fileBrowserPanel(), &FileBrowserPanel::fileDoubleClicked,
+            this, [this](const QString& path){ openFileInTab(path); });
+
+    // Function List panel (right dock)
+    _funcListDock = new QDockWidget("Function List", this);
+    _funcListDock->setWidget(app().functionListPanel());
+    _funcListDock->setObjectName("FunctionListDock");
+    addDockWidget(Qt::RightDockWidgetArea, _funcListDock);
+
+    // Document Map panel (right dock, tabified with Function List)
+    if (app().documentMapPanel()) {
+        QDockWidget* docMapDock = app().documentMapPanel();
+        addDockWidget(Qt::RightDockWidgetArea, docMapDock);
+        tabifyDockWidget(_funcListDock, docMapDock);
+    }
+    _funcListDock->raise();
 }
 
 void MainWindow::setupConnections() {
@@ -430,6 +471,12 @@ void MainWindow::dispatchCommand(const QString& cmd) {
         onShowStatusBar(_actions["view.showStatusBar"]->isChecked());
     } else if (cmd == "view.showToolBar") {
         onShowToolBar(_actions["view.showToolBar"]->isChecked());
+    } else if (cmd == "view.fileBrowser") {
+        _fileBrowserDock->setVisible(_actions["view.fileBrowser"]->isChecked());
+    } else if (cmd == "view.functionList") {
+        _funcListDock->setVisible(_actions["view.functionList"]->isChecked());
+    } else if (cmd == "view.documentMap") {
+        app().documentMapPanel()->setVisible(_actions["view.documentMap"]->isChecked());
     } else if (cmd == "view.darkMode") {
         onThemeChanged("dark");
     } else if (cmd == "view.lightMode") {
@@ -709,6 +756,11 @@ void MainWindow::openFileInTab(const QString& path) {
     _tabWidget->setCurrentIndex(idx);
     updateTabBar();
     updateTitleBar();
+
+    // Connect Function List panel to the new editor
+    if (app().functionListPanel()) {
+        app().functionListPanel()->setEditor(editor);
+    }
 }
 
 void MainWindow::updateTabTitle(BufferID buf, bool dirty) {
@@ -967,6 +1019,9 @@ void MainWindow::onBufferOpened(BufferID buffer) {
         onBufferModified(buffer, modified);
         emit Application::instance().bufferModifiedChanged(buffer);
     });
+    // Watch for external file changes
+    connect(buffer, &Buffer::fileExternallyModified,
+            this, [this, buffer]() { onFileExternallyModified(buffer); });
     connect(editor, &ScintillaEditor::cursorPositionChanged, _statusBarWidget, [this](int line, int col) {
         _statusBarWidget->setPosition(line, col);
     });
@@ -985,6 +1040,25 @@ void MainWindow::onBufferOpened(BufferID buffer) {
 
     // Register this editor as the active one
     app().setActiveEditor(editor);
+}
+
+void MainWindow::onFileExternallyModified(BufferID buffer) {
+    QString name;
+    auto fname = app().getFileName(buffer);
+    if (fname) name = QString::fromStdString(*fname);
+    
+    FileReloadDialog::Action action = FileReloadDialog::prompt(
+        name.isEmpty() ? "This file" : name, this);
+    
+    if (action == FileReloadDialog::Action::Reload) {
+        app().reloadFile(buffer);
+        ScintillaEditor* ed = app().getActiveEditor();
+        if (ed) {
+            ed->setText(QString::fromStdString(app().getBufferText(buffer)));
+            ed->setModified(false);
+        }
+    }
+    // KeepDisk and DoNothing: leave editor as-is (user keeps current content, marked dirty)
 }
 
 void MainWindow::onBufferActivated(BufferID buffer) {

@@ -238,6 +238,26 @@ void MenuBar::buildMenus() {
     showToolBarAction->setData("view.showToolBar");
     _viewMenu->addAction(showToolBarAction);
     
+    _viewMenu->addSeparator();
+    
+    QAction* fileBrowserAction = new QAction("&File Browser", this);
+    fileBrowserAction->setCheckable(true);
+    fileBrowserAction->setChecked(true);
+    fileBrowserAction->setData("view.fileBrowser");
+    _viewMenu->addAction(fileBrowserAction);
+    
+    QAction* funcListAction = new QAction("F&unction List", this);
+    funcListAction->setCheckable(true);
+    funcListAction->setChecked(true);
+    funcListAction->setData("view.functionList");
+    _viewMenu->addAction(funcListAction);
+    
+    QAction* docMapAction = new QAction("&Document Map", this);
+    docMapAction->setCheckable(true);
+    docMapAction->setChecked(true);
+    docMapAction->setData("view.documentMap");
+    _viewMenu->addAction(docMapAction);
+    
     // Encoding menu
     _encodingMenu = addMenu("&Encoding");
     
