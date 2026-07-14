@@ -42,6 +42,7 @@ private:
     QPushButton* licenseBtn = nullptr;
     QPushButton* websiteBtn = nullptr;
     QPushButton* closeBtn = nullptr;
+    QPushButton* infoBtn = nullptr;
     QStackedWidget* tabStack = nullptr;
     QTextBrowser* creditsBrowser = nullptr;
     QTextBrowser* licenseBrowser = nullptr;

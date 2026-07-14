@@ -1,4 +1,4 @@
-// TabBar.h - Tab bar for file tabs with full Notepad++ functionality
+// TabBar.h - Modern tab bar for file tabs with full Notepad++ functionality
 // Copyright (C) 2026 Agent Army
 // GPL v3
 
@@ -9,6 +9,9 @@
 #include <QMap>
 #include <QSet>
 #include <QString>
+#include <QToolButton>
+#include <QPropertyAnimation>
+#include <QParallelAnimationGroup>
 
 class QTabWidget;
 class QDrag;
@@ -16,7 +19,17 @@ class QMimeData;
 
 class TabBar : public QTabBar {
     Q_OBJECT
+    Q_PROPERTY(CloseButtonVisibility closeButtonVisibility READ closeButtonVisibility WRITE setCloseButtonVisibility)
+    Q_PROPERTY(TabBarStyle tabBarStyle READ tabBarStyle WRITE setTabBarStyle)
+    Q_PROPERTY(bool scrollable READ isScrollable WRITE setScrollable)
+    Q_PROPERTY(bool elasticScroll READ hasElasticScroll WRITE setElasticScroll)
+    Q_PROPERTY(bool addTabButtonVisible READ isAddTabButtonVisible WRITE setAddTabButtonVisible)
+
 public:
+    // Enums for close button visibility and tab bar style
+    enum class CloseButtonVisibility { Always, Hover, Never };
+    enum class TabBarStyle { Classic, Modern, Compact };
+
     explicit TabBar(QWidget* parent = nullptr);
     ~TabBar() override;
 
@@ -39,6 +52,8 @@ public:
     bool isTabModified(int index) const;
     void setTabReadOnly(int index, bool readOnly);
     bool isTabReadOnly(int index) const;
+    void setTabToolTip(int index, const QString& tip);
+    QString tabToolTipText(int index) const;
     
     // Drag and drop
     void setExternalDropEnabled(bool enabled);
@@ -48,6 +63,35 @@ public:
     void setScrollEnabled(bool enabled);
     bool isScrollEnabled() const { return m_scrollEnabled; }
     void scrollToTab(int index);
+    
+    // Close button visibility
+    void setCloseButtonVisibility(CloseButtonVisibility visibility);
+    CloseButtonVisibility closeButtonVisibility() const { return closeBtnVisibility; }
+    
+    // Tab bar style
+    void setTabBarStyle(TabBarStyle style);
+    TabBarStyle tabBarStyle() const { return tabStyle; }
+    
+    // Scrollable property
+    void setScrollable(bool scrollable);
+    bool isScrollable() const { return scrollable; }
+    
+    // Elastic scroll property
+    void setElasticScroll(bool elastic);
+    bool hasElasticScroll() const { return elasticScroll; }
+    
+    // Add tab button property
+    void setAddTabButtonVisible(bool visible);
+    bool isAddTabButtonVisible() const { return addTabBtnVisible; }
+    
+    // Tab visibility
+    void ensureTabVisible(int index);
+    
+    // Tab reordering
+    void moveTab(int from, int to);
+    
+    // Tab at position
+    int tabAt(const QPoint& pos) const;
     
     // Tab list dropdown
     void showTabListMenu();
@@ -69,6 +113,14 @@ Q_SIGNALS:
     void closeAllTabsRequested();
     void tabDroppedOutside(int index, const QPoint& pos);
     void tabReordered(int from, int to);
+    
+    // New signals per requirements
+    void tabMoved(int from, int to);
+    void tabCloseRequested(int index);
+    void tabDoubleClicked(int index);
+    void middleMouseClicked(int index);
+    void tabBarDoubleClicked();
+    void tabBarContextMenuRequested(const QPoint& pos);
 
 public slots:
     void onTabCloseRequested(int index);
@@ -87,6 +139,9 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     bool event(QEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
+    QSize minimumTabSizeHint(int index) const override;
+    QSize minimumSizeHint() const override;
 
 private slots:
     void onScrollTimer();
@@ -98,9 +153,17 @@ private slots:
     void onLockTab();
     void onDuplicateTab();
     void onOpenInNewWindow();
+    void onAddTabClicked();
+    void onScrollLeft();
+    void onScrollRight();
+    void onElasticScrollFinished();
+    void updateCloseButtons();
+    void onTabInserted(int index);
+    void onTabRemoved(int index);
 
 private:
     void setupTabs();
+    void setupAddTabButton();
     void updateTabAppearance(int index);
     void startDrag(int tabIndex);
     void performDrag();
@@ -111,8 +174,28 @@ private:
     void animateTabClose(int index);
     void highlightDropTarget(int index);
     void clearDropHighlight();
+    void updateTabColors();
+    QRect closeButtonRect(int index) const;
+    bool isCloseButtonAt(const QPoint& pos, int tabIndex) const;
+    void animateElasticScroll(int delta);
+    
+    // Close button visibility mode
+    CloseButtonVisibility closeBtnVisibility = CloseButtonVisibility::Hover;
+    
+    // Tab bar style
+    TabBarStyle tabStyle = TabBarStyle::Modern;
+    
+    // Scrollable tabs
+    bool scrollable = true;
+    bool elasticScroll = true;
+    
+    // Add tab button
+    bool addTabBtnVisible = true;
+    QToolButton* addTabButton = nullptr;
     
     // Drag state
+    QPoint dragStartPos;
+    int dragTabIndex = -1;
     int m_dragStartTab = -1;
     QPoint m_dragStartPos;
     bool m_isDragging = false;
@@ -133,6 +216,7 @@ private:
     QSet<int> m_lockedTabs;
     QSet<int> m_modifiedTabs;
     QSet<int> m_readOnlyTabs;
+    QMap<int, QString> m_tabToolTips;
     
     // Close button hover
     int m_closeButtonHoverTab = -1;
@@ -144,8 +228,21 @@ private:
     bool m_showCloseButtons = true;
     QRect m_dropIndicatorRect;
     
+    // Animation
+    QPropertyAnimation* m_elasticAnim = nullptr;
+    qreal m_scrollOffset = 0;
+    qreal m_targetScrollOffset = 0;
+    
+    // Hover tracking
+    int m_hoveredTab = -1;
+    
+    // Scroll buttons
+    QToolButton* m_scrollLeftBtn = nullptr;
+    QToolButton* m_scrollRightBtn = nullptr;
+    
     // Constants
     static constexpr int ScrollAmount = 20;
     static constexpr int ScrollInterval = 50;
     static constexpr int DragScrollThreshold = 30;
+    static constexpr int TabTransitionDuration = 200;
 };
