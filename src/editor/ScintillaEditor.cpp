@@ -84,10 +84,9 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     // Also show eol markers
     _editor->setEolMode(QsciScintilla::EolUnix);
 
-    // Thin line numbers — auto-width
+    // Thin line numbers — dynamic width based on line count
     _editor->setMarginType(0, QsciScintilla::NumberMargin);
-    _editor->setMarginWidth(0, "0");
-    _editor->setMarginLineNumbers(0, true);
+    updateLineNumberMargin();
 
     // Drag & drop file support
     setFileDropEnabled(true);
@@ -382,10 +381,15 @@ void ScintillaEditor::setHomeKeyNavigation(bool) {
 void ScintillaEditor::setMarginLineNumbers(int margin, bool on) {
     if (on) {
         _editor->setMarginType(margin, QsciScintilla::NumberMargin);
-        _editor->setMarginWidth(margin, "00000");
+        updateLineNumberMargin();
     } else {
         _editor->setMarginWidth(margin, 0);
     }
+}
+
+void ScintillaEditor::updateLineNumberMargin() {
+    int digits = qMax(3, QString::number(_editor->lines()).length());
+    _editor->setMarginWidth(0, QString("0").repeated(digits));
 }
 
 void ScintillaEditor::setLineNumberingEnabled(bool enabled) {

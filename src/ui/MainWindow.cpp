@@ -634,25 +634,11 @@ void MainWindow::onNewFile() {
     updateTitleBar();
     editor->setFocus();
 }
-
 void MainWindow::onOpenFile() {
-    qDebug() << "[onOpenFile] START";
     QString file = QFileDialog::getOpenFileName(this, "Open File", _lastOpenedDirectory);
-    qDebug() << "[onOpenFile] file selected:" << file;
     if (!file.isEmpty()) {
         _lastOpenedDirectory = QFileInfo(file).absolutePath();
-        qDebug() << "[onOpenFile] calling openFile";
-        BufferID buffer = app().openFile(file.toStdString());
-        qDebug() << "[onOpenFile] openFile returned:" << buffer;
-        if (buffer) {
-            qDebug() << "[onOpenFile] emitting bufferOpened";
-            emit app().bufferOpened(buffer);
-            qDebug() << "[onOpenFile] adding to recent";
-            app().addToRecentFiles(file.toStdString());
-            qDebug() << "[onOpenFile] updating menu";
-            updateRecentFilesMenu();
-            qDebug() << "[onOpenFile] DONE";
-        }
+        openFileInTab(file);
     }
 }
 

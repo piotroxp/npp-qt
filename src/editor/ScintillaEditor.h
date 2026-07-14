@@ -81,6 +81,7 @@ public:
     void setLineNumberingEnabled(bool enabled);
     bool isLineNumberingEnabled() const;
     void setMarginLineNumbers(int margin, bool on);
+    void updateLineNumberMargin();  // recomputes margin width from line count
 
     void setWhitespaceVisibility(bool visible);
 
