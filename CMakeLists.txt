@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # Find Qt
-find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core Sql Network Xml PrintSupport)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core Sql Network Xml PrintSupport WebEngineWidgets)
 
 # QScintilla detection (no CMake configs on Arch Linux)
 find_package(QScintilla6 QUIET)
@@ -62,6 +62,8 @@ set(SOURCES
     src/editor/ScintillaEditor.cpp
     src/editor/ScintillaEditView.cpp
     src/editor/SyntaxHighlighter.cpp
+    src/editor/WebBrowserView.cpp
+    src/editor/WebBrowserViewFactory.cpp
     src/ui/MainWindow.cpp
     src/ui/TabBar.cpp
     src/ui/StatusBar.cpp
@@ -113,6 +115,8 @@ set(HEADERS
     src/editor/ScintillaEditor.h
     src/editor/ScintillaEditView.h
     src/editor/SyntaxHighlighter.h
+    src/editor/WebBrowserView.h
+    src/editor/WebBrowserViewFactory.h
     src/ui/MainWindow.h
     src/ui/TabBar.h
     src/ui/StatusBar.h
@@ -161,6 +165,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Network
     Qt6::Xml
     Qt6::PrintSupport
+    Qt6::WebEngineWidgets
     ${QSCINTILLA_LIBRARIES}
 )
 
