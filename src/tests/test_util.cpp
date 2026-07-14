@@ -15,8 +15,6 @@
 #include <fstream>
 #include <filesystem>
 
-#define TEST(name) void name()
-#define RUN(name) do { std::cout << #name "... "; name(); std::cout << "OK\n"; } while(0)
 #define ASSERT_EQ(a, b) do { if ((a) != (b)) { std::cerr << "FAILED: " << #a << " != " << #b << "\n"; exit(1); } } while(0)
 #define ASSERT_TRUE(x) do { if (!(x)) { std::cerr << "FAILED: " << #x << "\n"; exit(1); } } while(0)
 #define ASSERT_FALSE(x) do { if (x) { std::cerr << "FAILED: " << #x << " is not false\n"; exit(1); } } while(0)
@@ -24,7 +22,7 @@
 // ============================================================================
 // CircularBuffer Tests
 // ============================================================================
-TEST(test_circular_buffer_push_pop) {
+static void test_circular_buffer_push_pop() {
     CircularBuffer<int, 4> buf;
 
     ASSERT_TRUE(buf.empty());
@@ -49,7 +47,7 @@ TEST(test_circular_buffer_push_pop) {
     ASSERT_TRUE(buf.empty());
 }
 
-TEST(test_circular_buffer_overwrite) {
+static void test_circular_buffer_overwrite() {
     CircularBuffer<int, 3> buf;
 
     buf.push(1);
@@ -68,7 +66,7 @@ TEST(test_circular_buffer_overwrite) {
     ASSERT_EQ(val, 2);  // 1 was overwritten
 }
 
-TEST(test_circular_buffer_clear) {
+static void test_circular_buffer_clear() {
     CircularBuffer<int, 5> buf;
     buf.push(1);
     buf.push(2);
@@ -83,7 +81,7 @@ TEST(test_circular_buffer_clear) {
 // ============================================================================
 // AtomicCounter Tests
 // ============================================================================
-TEST(test_atomic_counter_increment) {
+static void test_atomic_counter_increment() {
     AtomicCounter<int> counter(0);
     ASSERT_EQ(counter.get(), 0);
     ASSERT_EQ(counter.increment(), 1);
@@ -92,14 +90,14 @@ TEST(test_atomic_counter_increment) {
     ASSERT_EQ(counter.get(), 2);
 }
 
-TEST(test_atomic_counter_decrement) {
+static void test_atomic_counter_decrement() {
     AtomicCounter<int> counter(5);
     ASSERT_EQ(counter.decrement(), 4);
     ASSERT_EQ(counter.decrement(), 3);
     ASSERT_EQ(counter.get(), 3);
 }
 
-TEST(test_atomic_counter_set) {
+static void test_atomic_counter_set() {
     AtomicCounter<int> counter(0);
     counter.set(42);
     ASSERT_EQ(counter.get(), 42);
@@ -108,7 +106,7 @@ TEST(test_atomic_counter_set) {
 // ============================================================================
 // IniParser Tests
 // ============================================================================
-TEST(test_ini_parser_basic) {
+static void test_ini_parser_basic() {
     IniParser ini;
 
     ini.set("Section1", "key1", "value1");
@@ -121,7 +119,7 @@ TEST(test_ini_parser_basic) {
     ASSERT_EQ(ini.get("Section1", "missing", "default"), "default");
 }
 
-TEST(test_ini_parser_int_bool) {
+static void test_ini_parser_int_bool() {
     IniParser ini;
 
     ini.set("Settings", "count", 42);
@@ -133,7 +131,7 @@ TEST(test_ini_parser_int_bool) {
     ASSERT_FALSE(ini.getBool("Settings", "disabled", true));
 }
 
-TEST(test_ini_parser_save_load) {
+static void test_ini_parser_save_load() {
     std::string path = "/tmp/test_ini_parser.ini";
 
     // Create and save
@@ -154,7 +152,7 @@ TEST(test_ini_parser_save_load) {
     std::filesystem::remove(path);
 }
 
-TEST(test_ini_parser_has_section) {
+static void test_ini_parser_has_section() {
     IniParser ini;
     ini.set("Section1", "key", "value");
     ini.set("Section2", "key", "value");
@@ -167,7 +165,7 @@ TEST(test_ini_parser_has_section) {
 // ============================================================================
 // Version Comparison Tests
 // ============================================================================
-TEST(test_version_compare) {
+static void test_version_compare() {
     ASSERT_EQ(compareVersion("1.0.0", "1.0.0"), 0);
     ASSERT_TRUE(compareVersion("2.0.0", "1.0.0") > 0);
     ASSERT_TRUE(compareVersion("1.1.0", "1.0.0") > 0);
@@ -180,7 +178,7 @@ TEST(test_version_compare) {
 // ============================================================================
 // String/Path Helper Tests
 // ============================================================================
-TEST(test_string_helper_trim) {
+static void test_string_helper_trim() {
     using namespace StringHelper;
 
     ASSERT_EQ(trim("  hello  "), "hello");
@@ -190,7 +188,7 @@ TEST(test_string_helper_trim) {
     ASSERT_EQ(trim("   "), "");
 }
 
-TEST(test_string_helper_split) {
+static void test_string_helper_split() {
     using namespace StringHelper;
 
     auto parts = split("a,b,c", ",");
@@ -209,7 +207,7 @@ TEST(test_string_helper_split) {
     ASSERT_EQ(parts4.size(), 4u);  // include empty
 }
 
-TEST(test_string_helper_replace) {
+static void test_string_helper_replace() {
     using namespace StringHelper;
 
     ASSERT_EQ(replaceAll("hello world", "world", "there"), "hello there");
@@ -217,7 +215,7 @@ TEST(test_string_helper_replace) {
     ASSERT_EQ(replaceAll("hello", "x", "y"), "hello");  // no change
 }
 
-TEST(test_string_helper_starts_ends) {
+static void test_string_helper_starts_ends() {
     using namespace StringHelper;
 
     ASSERT_TRUE(startsWith("hello world", "hello"));
@@ -226,14 +224,14 @@ TEST(test_string_helper_starts_ends) {
     ASSERT_FALSE(endsWith("hello world", "hello"));
 }
 
-TEST(test_string_helper_contains) {
+static void test_string_helper_contains() {
     using namespace StringHelper;
 
     ASSERT_TRUE(contains("hello world", "world"));
     ASSERT_FALSE(contains("hello world", "foo"));
 }
 
-TEST(test_string_helper_to_int) {
+static void test_string_helper_to_int() {
     using namespace StringHelper;
 
     ASSERT_EQ(toInt("42"), 42);
@@ -242,7 +240,7 @@ TEST(test_string_helper_to_int) {
     ASSERT_EQ(toInt("3.14", 0), 3);  // stops at decimal
 }
 
-TEST(test_string_helper_join) {
+static void test_string_helper_join() {
     using namespace StringHelper;
 
     std::vector<std::string> parts = {"a", "b", "c"};
@@ -253,12 +251,12 @@ TEST(test_string_helper_join) {
 // ============================================================================
 // FileHelper Tests
 // ============================================================================
-TEST(test_file_helper_exists) {
+static void test_file_helper_exists() {
     ASSERT_TRUE(FileHelper::exists("/tmp"));
     ASSERT_FALSE(FileHelper::exists("/nonexistent_path_12345"));
 }
 
-TEST(test_file_helper_file_operations) {
+static void test_file_helper_file_operations() {
     std::string path = "/tmp/test_util_file.txt";
 
     // Write
@@ -289,37 +287,38 @@ int main() {
     std::cout << "=== test_util.cpp ===\n";
 
     // CircularBuffer
-    RUN(test_circular_buffer_push_pop);
-    RUN(test_circular_buffer_overwrite);
-    RUN(test_circular_buffer_clear);
+    std::cout << "test_circular_buffer_push_pop... "; test_circular_buffer_push_pop(); std::cout << "OK\n";
+    std::cout << "test_circular_buffer_overwrite... "; test_circular_buffer_overwrite(); std::cout << "OK\n";
+    std::cout << "test_circular_buffer_clear... "; test_circular_buffer_clear(); std::cout << "OK\n";
 
     // AtomicCounter
-    RUN(test_atomic_counter_increment);
-    RUN(test_atomic_counter_decrement);
-    RUN(test_atomic_counter_set);
+    std::cout << "test_atomic_counter_increment... "; test_atomic_counter_increment(); std::cout << "OK\n";
+    std::cout << "test_atomic_counter_decrement... "; test_atomic_counter_decrement(); std::cout << "OK\n";
+    std::cout << "test_atomic_counter_set... "; test_atomic_counter_set(); std::cout << "OK\n";
 
     // IniParser
-    RUN(test_ini_parser_basic);
-    RUN(test_ini_parser_int_bool);
-    RUN(test_ini_parser_save_load);
-    RUN(test_ini_parser_has_section);
+    std::cout << "test_ini_parser_basic... "; test_ini_parser_basic(); std::cout << "OK\n";
+    std::cout << "test_ini_parser_int_bool... "; test_ini_parser_int_bool(); std::cout << "OK\n";
+    std::cout << "test_ini_parser_save_load... "; test_ini_parser_save_load(); std::cout << "OK\n";
+    std::cout << "test_ini_parser_has_section... "; test_ini_parser_has_section(); std::cout << "OK\n";
 
     // Version
-    RUN(test_version_compare);
+    std::cout << "test_version_compare... "; test_version_compare(); std::cout << "OK\n";
 
     // StringHelper
-    RUN(test_string_helper_trim);
-    RUN(test_string_helper_split);
-    RUN(test_string_helper_replace);
-    RUN(test_string_helper_starts_ends);
-    RUN(test_string_helper_contains);
-    RUN(test_string_helper_to_int);
-    RUN(test_string_helper_join);
+    std::cout << "test_string_helper_trim... "; test_string_helper_trim(); std::cout << "OK\n";
+    std::cout << "test_string_helper_split... "; test_string_helper_split(); std::cout << "OK\n";
+    std::cout << "test_string_helper_replace... "; test_string_helper_replace(); std::cout << "OK\n";
+    std::cout << "test_string_helper_starts_ends... "; test_string_helper_starts_ends(); std::cout << "OK\n";
+    std::cout << "test_string_helper_contains... "; test_string_helper_contains(); std::cout << "OK\n";
+    std::cout << "test_string_helper_to_int... "; test_string_helper_to_int(); std::cout << "OK\n";
+    std::cout << "test_string_helper_join... "; test_string_helper_join(); std::cout << "OK\n";
 
     // FileHelper
-    RUN(test_file_helper_exists);
-    RUN(test_file_helper_file_operations);
+    std::cout << "test_file_helper_exists... "; test_file_helper_exists(); std::cout << "OK\n";
+    std::cout << "test_file_helper_file_operations... "; test_file_helper_file_operations(); std::cout << "OK\n";
 
-    std::cout << "\nAll tests passed.\n";
+    std::cout << "\nAll tests passed.\n" << std::flush;
     return 0;
 }
+

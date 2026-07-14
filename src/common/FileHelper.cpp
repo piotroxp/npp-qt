@@ -368,7 +368,7 @@ void releaseDocument(ScintillaDocument doc) {
 // ============================================================================
 // Memory mapped file
 // ============================================================================
-MemoryMappedFile::MemoryMappedFile(const std::string& path, bool readOnly) : _path(path), _readOnly(readOnly) {
+MemoryMappedFile::MemoryMappedFile(const std::string& path, bool readOnly) : _readOnly(readOnly), _path(path) {
 #if defined(_WIN32) || defined(_WIN64)
     _fileHandle = CreateFileA(path.c_str(),
         readOnly ? GENERIC_READ : (GENERIC_READ | GENERIC_WRITE),

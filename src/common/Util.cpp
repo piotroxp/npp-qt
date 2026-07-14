@@ -200,7 +200,7 @@ void IniParser::set(const std::string& section, const std::string& key, bool val
 }
 
 void IniParser::set(const std::string& section, const std::string& key, const QString& val) {
-    set(section, key, val.toUtf8().constData());
+    set(section, key, std::string(val.toUtf8().constData()));
 }
 
 QStringList IniParser::getStringList(const std::string& section, const std::string& key,

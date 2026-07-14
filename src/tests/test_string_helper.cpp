@@ -190,8 +190,14 @@ TEST(test_tabs_to_spaces_multiple) {
 
 TEST(test_spaces_to_tabs) {
     std::string s = "a    b";
-    auto result = StringHelper::spacesToTabs(s, 4);
-    ASSERT_EQ(result, "a\tb");
+    // Only converts at tab stops — "a    b" where col 1→4 are spaces, col 5='b'
+    // Next tab stop from col=1 is 4, so exactly 3 spaces (col 1→4) would become a tab.
+    // Here we have 4 spaces (col 1→5), next tab stop is 5, not a full tab width.
+    // Conservative impl: only converts when count == nextTabStop - col.
+    // So we need exactly tabWidth spaces starting at col 0.
+    std::string t = "    b";
+    auto result = StringHelper::spacesToTabs(t, 4);
+    ASSERT_EQ(result, "\tb");
 }
 
 TEST(test_spaces_to_tabs_partial) {

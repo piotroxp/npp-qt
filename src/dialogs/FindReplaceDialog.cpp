@@ -288,8 +288,6 @@ void FindReplaceDialog::onReplaceAll() {
                                              replaceBa.size(),
                                              replaceBa.constData());
 
-            int matchLen = foundEnd - foundPos;
-            int delta = newLen - matchLen;
             replacedCount++;
 
             // Next search starts after the replaced text

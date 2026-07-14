@@ -47,6 +47,8 @@ bool EncodingDetector::isValidUtf8(const std::string& bytes) const {
 int EncodingDetector::validateUtf8Sequence(const unsigned char* data, size_t len, size_t* outLen) const {
     if (len == 0) return -1;
     unsigned char c = data[0];
+    // Bare continuation byte (0x80-0xBF) at start of sequence — invalid
+    if ((c & 0xC0) == 0x80) return -1;
     if ((c & 0x80) == 0) { *outLen = 1; return 0; }
     if ((c & 0xE0) == 0xC0) *outLen = 2;
     else if ((c & 0xF0) == 0xE0) *outLen = 3;
