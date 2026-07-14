@@ -35,3 +35,9 @@ __pycache__/
 *.deb
 *.rpm
 *.pkg.tar.zst
+build2/
+
+# Agent cleanup artifacts
+delete_duplicates.sh
+deleted_files.log
+sessions/
