@@ -18,6 +18,7 @@ add_library(test_core STATIC
     ${CMAKE_SOURCE_DIR}/src/common/Util.cpp
     ${CMAKE_SOURCE_DIR}/src/common/StringHelper.cpp
     ${CMAKE_SOURCE_DIR}/src/common/FileHelper.cpp
+    ${CMAKE_SOURCE_DIR}/src/dialogs/LargeFileWarningDialog.cpp
 )
 target_include_directories(test_core PUBLIC ${TEST_INC})
 target_link_libraries(test_core PUBLIC

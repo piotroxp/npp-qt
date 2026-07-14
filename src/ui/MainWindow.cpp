@@ -397,8 +397,7 @@ void MainWindow::dispatchCommand(const QString& cmd) {
     } else if (cmd == "search.findPrev") {
         onFindPrevious();
     } else if (cmd == "search.findInFiles") {
-        // Find in files dialog
-        onFind();
+        app().onFindInFiles();
     } else if (cmd == "search.count") {
         if (auto* dlg = app().findReplaceDialog()) {
             QString text = dlg->lastSearchText();

@@ -8,6 +8,7 @@
 #include "EncodingDetector.h"
 #include "LanguageManager.h"
 #include "common/Util.h"
+#include "../dialogs/LargeFileWarningDialog.h"
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
@@ -320,6 +321,20 @@ BufferID FileManager::openFile(const QString& path, bool readOnly) {
     qint64 fileSize = fileInfo.size();
     QByteArray raw = file.readAll();
     file.close();
+
+    // Large file warning: prompt user for files > 10MB
+    constexpr qint64 LARGE_FILE_THRESHOLD = 10 * 1024 * 1024; // 10MB
+    if (fileSize > LARGE_FILE_THRESHOLD) {
+        LargeFileWarningDialog::OpenMode mode = LargeFileWarningDialog::prompt(
+            path, fileSize, nullptr);
+        if (mode == LargeFileWarningDialog::OpenMode::Cancel) {
+            delete buf;
+            return BUFFER_INVALID;
+        }
+        if (mode == LargeFileWarningDialog::OpenMode::ReadOnly) {
+            readOnly = true;
+        }
+    }
 
     // Large file handling: partial load for very large files (>100MB)
     constexpr qint64 VERY_LARGE = 100 * 1024 * 1024; // 100MB
