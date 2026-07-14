@@ -1,6 +1,6 @@
 # Build artifacts
-npp-qt-build/
 build/
+npp-qt-build/
 npp-qt-tests-build/
 src/tests/*.o
 src/tests/*.a
@@ -11,16 +11,27 @@ src/tests/*.a
 # OS
 .DS_Store
 Thumbs.db
+
 # Qt
 *.autogen/
 *_autogen/
 *.moc
 *.qrc.*
-# Agent artifacts
+*.uic/
+*.qsb
+
+# Agent / runtime artifacts
 .jaisiu/
 .openclaw/
 memory/
 __pycache__/
+*.pyc
+
 # IDE
 .vscode/
 .idea/
+
+# Installer / packaging
+*.deb
+*.rpm
+*.pkg.tar.zst
