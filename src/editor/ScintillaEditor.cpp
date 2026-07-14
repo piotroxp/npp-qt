@@ -156,6 +156,10 @@ ScintillaEditor::~ScintillaEditor() {
     _editor = nullptr;
 }
 
+intptr_t ScintillaEditor::send(int message, int wParam, intptr_t lParam) {
+    return _editor->SendScintilla(message, wParam, lParam);
+}
+
 void ScintillaEditor::setText(const QString& text) { _editor->setText(text); }
 QString ScintillaEditor::text() const { return _editor->text(); }
 void ScintillaEditor::setPlainText(const QString& text) { _editor->setText(text); }

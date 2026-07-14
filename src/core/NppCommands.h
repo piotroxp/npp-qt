@@ -7,6 +7,7 @@
 #include "common/Types.h"
 
 class Application;
+class ScintillaEditor;
 
 // Entry point: routes integer command IDs to handler methods.
 // NppBigSwitch dispatches by ID → calls NppCommands::command(int).

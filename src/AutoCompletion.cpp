@@ -8,7 +8,7 @@
 //   - Matched char insertion (auto-close brackets)
 
 #include "AutoCompletion.h"
-#include "ScintillaComponent.h"
+#include "common/ScintillaComponent.h"
 #include "Parameters.h"
 #include <QFile>
 #include <QDir>

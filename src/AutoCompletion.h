@@ -4,7 +4,7 @@
 #include <QString>
 #include <vector>
 #include <string>
-#include "ScintillaComponent.h"
+#include "common/ScintillaComponent.h"
 
 struct MatchedCharInserted {
     MatchedCharInserted() = delete;

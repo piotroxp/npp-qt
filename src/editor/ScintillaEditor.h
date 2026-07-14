@@ -12,12 +12,13 @@
 #include <Qsci/qsciscintilla.h>
 #include "../common/Types.h"
 #include "common/NonCopyable.h"
+#include "common/ScintillaComponent.h"
 #include "../core/ThemeManager.h"
 
 class SyntaxHighlighter;
 class Buffer;
 
-class ScintillaEditor : public QFrame {
+class ScintillaEditor : public QFrame, public ScintillaComponent {
     Q_OBJECT
 
 public:
@@ -128,6 +129,9 @@ public:
     void toggleFold(int line);
 
     SyntaxHighlighter* highlighter() const { return _highlighter; }
+
+    // ScintillaComponent interface — delegates to wrapped QsciScintilla
+    intptr_t send(int message, int wParam = 0, intptr_t lParam = 0) override;
 
     // Bookmarks
     void toggleBookmark(int line);

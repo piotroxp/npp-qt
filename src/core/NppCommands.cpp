@@ -4,6 +4,8 @@
 #include "NppCommands.h"
 #include "Application.h"
 #include "core/FileManager.h"
+#include "dialogs/GoToLineDialog.h"
+#include "ui/MainWindow.h"
 #include <QApplication>
 #include <QClipboard>
 #include <QFileDialog>
@@ -165,9 +167,12 @@ void NppCommands::findPrevious(){ if (m_app) m_app->onFindPrev(); }
 
 void NppCommands::goToLine() {
     if (!m_app) return;
-    bool ok;
-    int line = QInputDialog::getInt(nullptr, "Go to Line", "Line:", 1, 1, 9999999, 1, &ok);
-    if (ok) m_app->onMenuCommand("goto:" + QString::number(line));
+    ScintillaEditor* editor = m_app->getActiveEditor();
+    if (!editor) return;
+
+    GoToLineDialog dlg(static_cast<QWidget*>(m_app->mainWindow()));
+    dlg.setEditor(editor);
+    dlg.exec();
 }
 
 void NppCommands::markAll(const QString& text, int styleId) {
