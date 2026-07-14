@@ -273,6 +273,31 @@ bool Application::loadConfig() {
     _options.themeProfile       = ini.get("General", "Theme", "default");
     _currentTheme               = _options.themeProfile;
 
+    // Appearance
+    _options.showLineNumbers    = ini.getBool("Margins", "ShowLineNumbers", true);
+    _options.lineNumberWidth    = ini.getInt("Margins", "LineNumberWidth", 4);
+    _options.showSymbols        = ini.getBool("Margins", "ShowSymbols", false);
+    _options.showFolderMargin   = ini.getBool("Margins", "ShowFolderMargin", true);
+    _options.symbolMarginWidth  = ini.getInt("Margins", "SymbolMarginWidth", 1);
+    _options.highlightCurrentLine = ini.getBool("Margins", "HighlightCurrentLine", true);
+    _options.showEdgeLine       = ini.getBool("Margins", "ShowEdgeLine", false);
+    _options.edgeColumn         = ini.getInt("Margins", "EdgeColumn", 80);
+
+    // File Associations
+    _options.fileAssociations   = ini.getStringList("General", "FileAssociations", {});
+
+    // Shortcut Mapper
+    _options.warnOnShortcutConflict = ini.getBool("ShortcutMapper", "WarnOnConflict", true);
+
+    // Backup / Auto-Save
+    _options.autoSave           = ini.getBool("Backup", "AutoSave", false);
+    _options.autoSaveInterval   = ini.getInt("Backup", "AutoSaveInterval", 5);
+    _options.autoSaveCurrentOnly = ini.getBool("Backup", "AutoSaveCurrentOnly", false);
+    _options.autoSaveInBackground = ini.getBool("Backup", "AutoSaveInBackground", true);
+    _options.backupDir          = QString::fromUtf8(ini.get("Backup", "BackupDir", "").c_str());
+    _options.backupStyle        = ini.getInt("Backup", "BackupStyle", 0);
+    _options.maxBackups         = ini.getInt("Backup", "MaxBackups", 10);
+
     return true;
 }
 
@@ -293,6 +318,32 @@ bool Application::saveConfig(const std::string& path) {
     ini.set("Editor",  "VirtualSpace",       _options.virtualSpace);
     ini.set("Editor",  "SmartHome",         _options.smartHome);
     ini.set("Editor",  "AutoIndent",         _options.autoIndent);
+
+    // Appearance
+    ini.set("Margins", "ShowLineNumbers",     _options.showLineNumbers);
+    ini.set("Margins", "LineNumberWidth",     _options.lineNumberWidth);
+    ini.set("Margins", "ShowSymbols",         _options.showSymbols);
+    ini.set("Margins", "ShowFolderMargin",    _options.showFolderMargin);
+    ini.set("Margins", "SymbolMarginWidth",   _options.symbolMarginWidth);
+    ini.set("Margins", "HighlightCurrentLine",_options.highlightCurrentLine);
+    ini.set("Margins", "ShowEdgeLine",       _options.showEdgeLine);
+    ini.set("Margins", "EdgeColumn",          _options.edgeColumn);
+
+    // File Associations
+    ini.setStringList("General", "FileAssociations", _options.fileAssociations);
+
+    // Shortcut Mapper
+    ini.set("ShortcutMapper", "WarnOnConflict", _options.warnOnShortcutConflict);
+
+    // Backup / Auto-Save
+    ini.set("Backup", "AutoSave",              _options.autoSave);
+    ini.set("Backup", "AutoSaveInterval",      _options.autoSaveInterval);
+    ini.set("Backup", "AutoSaveCurrentOnly",   _options.autoSaveCurrentOnly);
+    ini.set("Backup", "AutoSaveInBackground", _options.autoSaveInBackground);
+    ini.set("Backup", "BackupDir",            _options.backupDir);
+    ini.set("Backup", "BackupStyle",          _options.backupStyle);
+    ini.set("Backup", "MaxBackups",           _options.maxBackups);
+
     return ini.save(FileHelper::getConfigFilePath());
 }
 

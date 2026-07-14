@@ -706,7 +706,8 @@ void PreferenceDialog::applySettings() {
     }
 
     // Load theme if changed
-    if (opts.themeProfile != _originalSettings.theme.toUtf8().constData()) {
+    QString newTheme = _cmbTheme->currentData().toString();
+    if (newTheme != _originalSettings.theme) {
         app().loadTheme(opts.themeProfile);
     }
 
@@ -758,22 +759,8 @@ void PreferenceDialog::accept() {
 }
 
 void PreferenceDialog::reject() {
-    // Revert to original values
-    AppOptions& opts = app().options();
-
-    opts.singleInstance = _originalSettings.singleInstance;
-    opts.rememberSession = _originalSettings.rememberSession;
-    opts.maxRecentFiles = _originalSettings.maxRecentFiles;
-    opts.defaultTabWidth = _originalSettings.tabWidth;
-    opts.defaultTabAsSpaces = _originalSettings.tabAsSpaces;
-    opts.defaultEolType = static_cast<EolType>(_originalSettings.eolMode);
-    opts.defaultEncoding = static_cast<EncodingType>(_originalSettings.defaultEncoding);
-    opts.wrapWithQuotes = _originalSettings.wrapWithQuotes;
-    opts.themeProfile = _originalSettings.theme.toUtf8().constData();
-    opts.showToolBar = _originalSettings.showToolbar;
-    opts.showTabBar = _originalSettings.showTabbar;
-    opts.showStatusBar = _originalSettings.showStatusbar;
-    opts.showMenuBar = _originalSettings.showMenubar;
-
+    // Revert to original values — no need to write back to config since
+    // settings were never persisted (only stored in memory during the dialog).
+    // The active editor and UI will revert on next buffer activation.
     QDialog::reject();
 }

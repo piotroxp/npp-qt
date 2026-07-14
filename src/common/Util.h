@@ -5,6 +5,8 @@
 #pragma once
 
 #include "Constants.h"
+#include <QString>
+#include <QStringList>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -70,6 +72,13 @@ public:
     void set(const std::string& section, const std::string& key, const std::string& val);
     void set(const std::string& section, const std::string& key, int val);
     void set(const std::string& section, const std::string& key, bool val);
+    // QString overload — converts to UTF-8
+    void set(const std::string& section, const std::string& key, const QString& val);
+    // String list — stored as comma-separated values
+    QStringList getStringList(const std::string& section, const std::string& key,
+                              const QStringList& defaultVal = {}) const;
+    void setStringList(const std::string& section, const std::string& key,
+                       const QStringList& val);
     bool hasSection(const std::string& section) const;
     void removeSection(const std::string& section);
     const std::vector<std::string>& sections() const { return _sections; }

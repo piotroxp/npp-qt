@@ -3,6 +3,7 @@
 #include "Constants.h"
 #include "StringHelper.h"
 #include "FileHelper.h"
+#include <QString>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -196,6 +197,27 @@ void IniParser::set(const std::string& section, const std::string& key, int val)
 
 void IniParser::set(const std::string& section, const std::string& key, bool val) {
     set(section, key, val ? "1" : "0");
+}
+
+void IniParser::set(const std::string& section, const std::string& key, const QString& val) {
+    set(section, key, val.toUtf8().constData());
+}
+
+QStringList IniParser::getStringList(const std::string& section, const std::string& key,
+                                     const QStringList& defaultVal) const {
+    std::string raw = get(section, key, "");
+    if (raw.empty()) return defaultVal;
+    QStringList out;
+    for (const QString& s : QString::fromUtf8(raw.c_str()).split(',')) {
+        QString trimmed = s.trimmed();
+        if (!trimmed.isEmpty()) out.append(trimmed);
+    }
+    return out;
+}
+
+void IniParser::setStringList(const std::string& section, const std::string& key,
+                              const QStringList& val) {
+    set(section, key, val.join(",").toUtf8().constData());
 }
 
 bool IniParser::hasSection(const std::string& section) const {
