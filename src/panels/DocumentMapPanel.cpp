@@ -12,6 +12,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QDebug>
+#include <QApplication>
 #include <Qsci/qsciscintilla.h>
 #include <Qsci/qscilexercustom.h>
 
@@ -20,6 +21,7 @@
 // -----------------------------------------------------------------------------
 MapTextView::MapTextView(QWidget* parent)
     : QsciScintilla(parent)
+    , _dragging(false)
 {
     setReadOnly(true);
     setCaretLineVisible(false);
@@ -37,13 +39,33 @@ MapTextView::MapTextView(QWidget* parent)
     setContextMenuPolicy(Qt::NoContextMenu);
     setFrameShape(QFrame::NoFrame);
     viewport()->setAutoFillBackground(false);
+    setMouseTracking(true);
 }
 
 void MapTextView::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
-        emit clicked(event->position().toPoint());
+        _dragStart = event->position().toPoint();
+        _dragging = true;
+        viewport()->setCursor(Qt::PointingHandCursor);
     }
     QsciScintilla::mousePressEvent(event);
+}
+
+void MapTextView::mouseReleaseEvent(QMouseEvent* event) {
+    if (event->button() == Qt::LeftButton && _dragging) {
+        _dragging = false;
+        viewport()->unsetCursor();
+        QPoint pos = event->position().toPoint();
+        if ((pos - _dragStart).manhattanLength() < QApplication::startDragDistance()) {
+            emit viewportClicked(pos);
+        }
+    }
+    QsciScintilla::mouseReleaseEvent(event);
+}
+
+void MapTextView::wheelEvent(QWheelEvent* event) {
+    // Absorb wheel events so they don't scroll the map independently.
+    event->accept();
 }
 
 // -----------------------------------------------------------------------------
@@ -54,11 +76,14 @@ DocumentMapPanel::DocumentMapPanel(QWidget* parent)
     , _editor(nullptr)
     , _content(nullptr)
     , _mapEditor(nullptr)
-    , _viewZone(nullptr)
-    , _scrollBar(nullptr)
-    , _updateTimer(nullptr)
+    , _viewportTimer(nullptr)
+    , _debounceTimer(nullptr)
     , _syncing(false)
-    , _lastKnownFirstLine(-1)
+    , _lastEditorFirstLine(-1)
+    , _lastEditorLines(-1)
+    , _viewportOverlay(nullptr)
+    , _overlayTop(0)
+    , _overlayHeight(0)
 {
     setObjectName("DocumentMapPanel");
     setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
@@ -69,27 +94,31 @@ DocumentMapPanel::DocumentMapPanel(QWidget* parent)
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
-    // Minimap on the left, scrollbar on the right
+    // The minimap — drives its own scrollbar which syncs to the main editor
     _mapEditor = new MapTextView(_content);
     layout->addWidget(_mapEditor, 1);
 
-    _scrollBar = new QScrollBar(Qt::Vertical, _content);
-    _scrollBar->setMinimum(0);
-    _scrollBar->setMaximum(100);
-    _scrollBar->setPageStep(10);
-    layout->addWidget(_scrollBar);
+    // Thin spacer to simulate scrollbar presence
+    QWidget* spacer = new QWidget(_content);
+    spacer->setFixedWidth(4);
+    spacer->setStyleSheet("background: palette(shadow);");
+    layout->addWidget(spacer);
 
-    // View-zone overlay (highlight current viewport)
-    _viewZone = new QRubberBand(QRubberBand::Rectangle, _mapEditor);
-    _viewZone->setStyleSheet(
-        "QRubberBand { background-color: rgba(80, 120, 255, 70); "
-        "border: 1px solid rgba(40, 80, 200, 180); }");
+    // Overlay widget painted on top of the map to show the viewport region
+    _viewportOverlay = new QWidget(_mapEditor);
+    _viewportOverlay->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+    _viewportOverlay->raise();
 
-    // Debounce minimap repaints (SCN_PAINTED-equivalent)
-    _updateTimer = new QTimer(this);
-    _updateTimer->setInterval(50);
-    _updateTimer->setSingleShot(true);
-    connect(_updateTimer, &QTimer::timeout, this, &DocumentMapPanel::renderMinimap);
+    // Debounce minimap text refresh on text changes
+    _debounceTimer = new QTimer(this);
+    _debounceTimer->setInterval(80);
+    _debounceTimer->setSingleShot(true);
+    connect(_debounceTimer, &QTimer::timeout, this, &DocumentMapPanel::scheduleMinimapUpdate);
+
+    // Timer-driven viewport overlay refresh (~20 fps)
+    _viewportTimer = new QTimer(this);
+    _viewportTimer->setInterval(50);
+    connect(_viewportTimer, &QTimer::timeout, this, &DocumentMapPanel::onViewportTimer);
 
     setWidget(_content);
 }
@@ -100,26 +129,30 @@ DocumentMapPanel::~DocumentMapPanel() = default;
 // setEditor — wire up all signals between main editor and minimap
 // -----------------------------------------------------------------------------
 void DocumentMapPanel::setEditor(ScintillaEditor* editor) {
+    // Tear down previous connections
     if (_editor) {
         QsciScintilla* qs = _editor->qsciEditor();
-        QScrollBar* mainScroll = qs->verticalScrollBar();
-        disconnect(mainScroll, &QScrollBar::valueChanged, this, nullptr);
-        disconnect(qs, &QsciScintilla::linesChanged, this, nullptr);
-        disconnect(qs, &QsciScintilla::textChanged, this, nullptr);
-        disconnect(qs, &QsciScintilla::cursorPositionChanged, this, nullptr);
-        disconnect(qs, &QsciScintilla::modificationChanged, this, nullptr);
+        if (qs) {
+            QScrollBar* mainScroll = qs->verticalScrollBar();
+            disconnect(mainScroll, &QScrollBar::valueChanged, this, nullptr);
+            disconnect(qs, &QsciScintilla::linesChanged, this, nullptr);
+            disconnect(qs, &QsciScintilla::textChanged, this, nullptr);
+            disconnect(qs, &QsciScintilla::cursorPositionChanged, this, nullptr);
+            disconnect(qs, &QsciScintilla::modificationChanged, this, nullptr);
+        }
     }
 
     _editor = editor;
-    _lastKnownFirstLine = -1;
+    _lastEditorFirstLine = -1;
+    _lastEditorLines = -1;
 
     if (!_editor) {
         if (_mapEditor) {
             _mapEditor->setText({});
-            _scrollBar->setValue(0);
-            _scrollBar->setMaximum(0);
+            _mapEditor->SendScintilla(QsciScintillaBase::SCI_SETFIRSTVISIBLELINE, 0);
         }
-        _viewZone->hide();
+        _viewportTimer->stop();
+        _viewportOverlay->hide();
         return;
     }
 
@@ -129,26 +162,39 @@ void DocumentMapPanel::setEditor(ScintillaEditor* editor) {
     QScrollBar* mainScroll = qs->verticalScrollBar();
 
     // ---- Editor → minimap sync ----
-    // Drive minimap from the main editor's scrollbar (SCN_UPDATEUI equivalent)
+    // Drive minimap scrollbar from the main editor's scrollbar
     connect(mainScroll, &QScrollBar::valueChanged,
-            this, &DocumentMapPanel::syncFromEditor);
+            this, &DocumentMapPanel::onEditorScroll);
 
-    // Text changes (including on buffer switch)
-    connect(qs, &QsciScintilla::textChanged,
-            this, &DocumentMapPanel::scheduleMinimapUpdate);
+    // Text changes → debounced minimap text refresh
+    connect(qs, &QsciScintilla::textChanged, this, [this]() {
+        if (_debounceTimer && !_debounceTimer->isActive())
+            _debounceTimer->start();
+    });
+
+    // Line count changes (e.g., file loaded)
+    connect(qs, &QsciScintilla::linesChanged,
+            this, &DocumentMapPanel::onLinesChanged);
+
+    // Cursor position → highlight in minimap
+    connect(qs, &QsciScintilla::cursorPositionChanged,
+            this, &DocumentMapPanel::onCursorPositionChanged);
 
     // ---- Minimap → editor sync ----
-    // Dragging the scrollbar thumb
-    connect(_scrollBar, &QScrollBar::valueChanged,
-            this, &DocumentMapPanel::syncToEditor);
+    // Map scrollbar drives the main editor
+    connect(_mapEditor->verticalScrollBar(), &QScrollBar::valueChanged,
+            this, &DocumentMapPanel::onMiniMapScroll);
 
-    // Clicking in the minimap view
-    connect(_mapEditor, &MapTextView::clicked,
-            this, [this](const QPoint&) { syncToEditor(_scrollBar->value()); });
+    // Click in minimap → jump to line
+    connect(_mapEditor, &MapTextView::viewportClicked,
+            this, &DocumentMapPanel::onMiniMapClicked);
 
-    // Initial populate
-    _mapEditor->setText(_editor->toPlainText());
-    updateViewZone();
+    // Initial population
+    _mapEditor->setText(qs->text());
+
+    _viewportTimer->start();
+    updateViewportOverlay();
+    updateCursorMarker();
 }
 
 // -----------------------------------------------------------------------------
@@ -156,40 +202,72 @@ void DocumentMapPanel::setEditor(ScintillaEditor* editor) {
 // -----------------------------------------------------------------------------
 void DocumentMapPanel::onBufferChanged() {
     if (!_editor) return;
-    // Reload minimap content with the new buffer text
-    _mapEditor->setText(_editor->toPlainText());
 
-    // Copy lexer from main editor so colours match
     QsciScintilla* qs = _editor->qsciEditor();
+
+    // Reload minimap content with the new buffer text
+    _mapEditor->setText(qs->text());
+
+    // Share the same lexer so colours match the main editor
     if (qs->lexer()) {
         _mapEditor->setLexer(qs->lexer());
     }
 
-    // Reset scroll state
-    _lastKnownFirstLine = -1;
-    updateViewZone();
+    _lastEditorFirstLine = -1;
+    _lastEditorLines = -1;
+    updateViewportOverlay();
     scheduleMinimapUpdate();
 }
 
 // -----------------------------------------------------------------------------
-// scheduleMinimapUpdate — debounced minimap text refresh
+// scheduleMinimapUpdate — called by debounce timer; refreshes minimap text
 // -----------------------------------------------------------------------------
 void DocumentMapPanel::scheduleMinimapUpdate() {
-    if (_updateTimer && !_updateTimer->isActive()) {
-        _updateTimer->start();
+    if (!_editor || !_mapEditor) return;
+
+    QsciScintilla* qs = _editor->qsciEditor();
+    if (_mapEditor->text() != qs->text()) {
+        _mapEditor->setText(qs->text());
     }
+
+    // Re-sync scroll position in case line count changed
+    syncMapToEditor();
+    updateViewportOverlay();
 }
 
 // -----------------------------------------------------------------------------
-// renderMinimap — repaint the minimap with a tiny font
+// onLinesChanged — react to line count changes
 // -----------------------------------------------------------------------------
-void DocumentMapPanel::renderMinimap() {
+void DocumentMapPanel::onLinesChanged() {
     if (!_editor || !_mapEditor) return;
+    QsciScintilla* qs = _editor->qsciEditor();
+    _lastEditorLines = qs->lines();
+    _mapEditor->setText(qs->text());
+    syncMapToEditor();
+    updateViewportOverlay();
+}
 
-    // Sync text (lightweight — avoids full re-highlight on every keystroke)
-    if (_mapEditor->text() != _editor->toPlainText()) {
-        _mapEditor->setText(_editor->toPlainText());
-    }
+// -----------------------------------------------------------------------------
+// onCursorPositionChanged — sync cursor position highlight in the minimap
+// -----------------------------------------------------------------------------
+void DocumentMapPanel::onCursorPositionChanged(int line, int col) {
+    Q_UNUSED(col);
+    updateCursorMarker();
+    Q_UNUSED(line);
+}
+
+void DocumentMapPanel::updateCursorMarker() {
+    if (!_editor || !_mapEditor) return;
+    QsciScintilla* qs = _editor->qsciEditor();
+
+    // Get current cursor line from main editor
+    int cursorLine = 0;
+    qs->getCursorPosition(&cursorLine, nullptr);
+    cursorLine = qBound(0, cursorLine, _mapEditor->lines() - 1);
+
+    // Position the caret in the minimap to match — the caret line highlight
+    // will show the current position in the map view
+    _mapEditor->setCursorPosition(cursorLine, 0);
 }
 
 // -----------------------------------------------------------------------------
@@ -200,133 +278,229 @@ void DocumentMapPanel::setupMiniMap() {
 
     QsciScintilla* mainQsci = _editor->qsciEditor();
 
-    // Use a tiny font for the minimap
+    // Use a tiny monospace font for the minimap
     QFont tinyFont = mainQsci->font();
-    tinyFont.setPointSizeF(tinyFont.pointSizeF() * 0.35f);
+    tinyFont.setPointSizeF(tinyFont.pointSizeF() * 0.38f);
     tinyFont.setPointSize(qMax(3, tinyFont.pointSize()));
     _mapEditor->setFont(tinyFont);
 
-    // Share the same lexer family so colours match the main editor
+    // Zoom out significantly so the minimap shows many lines
+    _mapEditor->zoomTo(-5);
+
+    // Share the lexer from the main editor so colours match
     if (mainQsci->lexer()) {
-        // Note: we share the same lexer instance. This is safe for colour-only
-        // sharing; the minimap text is read-only so there are no conflicts.
         _mapEditor->setLexer(mainQsci->lexer());
     }
 
-    // Copy editor settings
+    // Match display settings
     _mapEditor->setIndentationGuides(mainQsci->indentationGuides());
     _mapEditor->setTabWidth(mainQsci->tabWidth());
     _mapEditor->setEolMode(mainQsci->eolMode());
     _mapEditor->setMarginsFont(tinyFont);
 
-    // Set initial text
+    // Hide all margins
+    _mapEditor->setMarginWidth(0, 0);
+    _mapEditor->setMarginWidth(1, 0);
+    _mapEditor->setMarginWidth(2, 0);
+    _mapEditor->SendScintilla(QsciScintillaBase::SCI_SETMARGINS, 0);
+
+    // Initial text
     _mapEditor->setText(mainQsci->text());
+    _lastEditorLines = mainQsci->lines();
 }
 
 // -----------------------------------------------------------------------------
-// syncFromEditor — called when the main editor scrolls or the cursor moves
+// onEditorScroll — editor scrolled → drive the minimap scrollbar
 // -----------------------------------------------------------------------------
-void DocumentMapPanel::syncFromEditor() {
+void DocumentMapPanel::onEditorScroll(int newValue) {
+    if (!_editor || !_mapEditor || _syncing) return;
+
+    QsciScintilla* qs = _editor->qsciEditor();
+    QScrollBar* mainScroll = qs->verticalScrollBar();
+
+    int mainMax = mainScroll->maximum();
+    if (mainMax <= 0) return;
+
+    // Proportionally map main scroll position → minimap scroll position
+    int miniMax = _mapEditor->verticalScrollBar()->maximum();
+    int miniVal = qBound(0, (newValue * miniMax) / mainMax, miniMax);
+
+    _syncing = true;
+    _mapEditor->verticalScrollBar()->setValue(miniVal);
+    _syncing = false;
+
+    _lastEditorFirstLine = qs->firstVisibleLine();
+    updateViewportOverlay();
+}
+
+// -----------------------------------------------------------------------------
+// onMiniMapScroll — minimap scrollbar dragged → drive the main editor
+// -----------------------------------------------------------------------------
+void DocumentMapPanel::onMiniMapScroll(int miniVal) {
     if (!_editor || _syncing) return;
 
     QsciScintilla* qs = _editor->qsciEditor();
     QScrollBar* mainScroll = qs->verticalScrollBar();
 
     int mainMax = mainScroll->maximum();
-    int mainVal = mainScroll->value();
-    int mainPage = mainScroll->pageStep();
+    if (mainMax <= 0) return;
 
-    // Proportionally drive the minimap's standalone scrollbar
-    if (mainMax > 0) {
-        int miniMax = _scrollBar->maximum();
-        int miniVal = qBound(0, (mainVal * miniMax) / mainMax, miniMax);
+    int miniMax = _mapEditor->verticalScrollBar()->maximum();
+    if (miniMax <= 0) return;
+
+    // Map minimap scroll position → main editor scroll position
+    int mainVal = qBound(0, (miniVal * mainMax) / miniMax, mainMax);
+
+    _syncing = true;
+    mainScroll->setValue(mainVal);
+    _syncing = false;
+}
+
+// -----------------------------------------------------------------------------
+// onMiniMapClicked — minimap clicked → jump to the clicked line in the editor
+// -----------------------------------------------------------------------------
+void DocumentMapPanel::onMiniMapClicked(const QPoint& pos) {
+    if (!_editor || !_mapEditor) return;
+
+    int miniTotalLines = _mapEditor->lines();
+    int miniVisibleLines = _mapEditor->SendScintilla(QsciScintillaBase::SCI_LINESONSCREEN);
+    int miniFirstLine = _mapEditor->firstVisibleLine();
+
+    if (miniTotalLines <= 0 || miniVisibleLines <= 0) return;
+
+    // Map click y-coordinate → line number in minimap
+    int clickLineInDoc = miniFirstLine;
+    int lineHeight = _mapEditor->SendScintilla(QsciScintillaBase::SCI_TEXTHEIGHT, 0);
+    if (lineHeight > 0) {
+        clickLineInDoc = miniFirstLine + (pos.y() / lineHeight);
+    } else {
+        int viewHeight = _mapEditor->viewport()->height();
+        clickLineInDoc = miniFirstLine + (pos.y() * miniVisibleLines) / qMax(1, viewHeight);
+    }
+    clickLineInDoc = qBound(0, clickLineInDoc, miniTotalLines - 1);
+
+    // Jump the main editor to that line
+    QsciScintilla* qs = _editor->qsciEditor();
+    _syncing = true;
+    qs->setFirstVisibleLine(clickLineInDoc);
+    qs->setCursorPosition(clickLineInDoc, 0);
+    _syncing = false;
+
+    syncMapToEditor();
+    updateViewportOverlay();
+}
+
+// -----------------------------------------------------------------------------
+// syncMapToEditor — make the minimap's scrollbar match the main editor's
+// -----------------------------------------------------------------------------
+void DocumentMapPanel::syncMapToEditor() {
+    if (!_editor || !_mapEditor || _syncing) return;
+
+    QsciScintilla* qs = _editor->qsciEditor();
+    QScrollBar* mainScroll = qs->verticalScrollBar();
+
+    int mainMax = mainScroll->maximum();
+    if (mainMax <= 0) return;
+
+    int miniMax = _mapEditor->verticalScrollBar()->maximum();
+    if (miniMax <= 0) return;
+
+    int miniVal = _mapEditor->verticalScrollBar()->value();
+    int mainVal = mainScroll->value();
+
+    int expectedMini = qBound(0, (mainVal * miniMax) / mainMax, miniMax);
+    if (miniVal != expectedMini) {
         _syncing = true;
-        _scrollBar->setValue(miniVal);
+        _mapEditor->verticalScrollBar()->setValue(expectedMini);
         _syncing = false;
     }
 
-    updateViewZone();
+    _lastEditorFirstLine = qs->firstVisibleLine();
 }
 
 // -----------------------------------------------------------------------------
-// syncToEditor — called when the minimap scrollbar thumb is dragged
+// syncEditorToMapFirstLine — scroll the main editor to match minimap first line
 // -----------------------------------------------------------------------------
-void DocumentMapPanel::syncToEditor(int sliderValue) {
-    if (!_editor || _syncing) return;
-
-    QsciScintilla* qs = _editor->qsciEditor();
-    QScrollBar* mainScroll = qs->verticalScrollBar();
-    int mainMax = mainScroll->maximum();
-
-    if (mainMax <= 0) return;
-
-    int miniMax = _scrollBar->maximum();
-    if (miniMax <= 0) return;
-
-    _syncing = true;
-    int mainVal = qBound(0, (sliderValue * mainMax) / miniMax, mainMax);
-    mainScroll->setValue(mainVal);
-    _syncing = false;
-
-    updateViewZone();
-}
-
-// -----------------------------------------------------------------------------
-// updateViewZone — position the translucent viewport overlay on the minimap
-// -----------------------------------------------------------------------------
-void DocumentMapPanel::updateViewZone() {
-    if (!_editor || !_mapEditor || !_viewZone) return;
-
-    QsciScintilla* qs = _editor->qsciEditor();
-    QScrollBar* mainScroll = qs->verticalScrollBar();
-
-    int totalLines = qs->lines();
-    int mainMax = mainScroll->maximum();
-    int mainVal = mainScroll->value();
-    int mainPage = mainScroll->pageStep();
-
-    if (totalLines <= 0 || mainMax <= 0) {
-        _viewZone->hide();
-        return;
-    }
-
-    // Map editor height → proportional slices
-    int viewHeight = _mapEditor->viewport()->height();
-    int miniMax = _scrollBar->maximum();
-    if (miniMax <= 0) {
-        _viewZone->hide();
-        return;
-    }
-
-    // Convert main editor scroll position to minimap pixel position
-    // The minimap scrollbar represents totalLines worth of "virtual scroll units"
-    int scrollRange = mainMax + mainPage;
-    int visibleStart = (mainVal * viewHeight) / qMax(1, scrollRange);
-    int visibleEnd   = ((mainVal + mainPage) * viewHeight) / qMax(1, scrollRange);
-
-    int zoneTop    = qMax(0, visibleStart);
-    int zoneHeight = qMin(viewHeight - zoneTop, visibleEnd - visibleStart);
-    zoneHeight = qMax(4, zoneHeight);
-
-    QRect zoneRect(0, zoneTop, _mapEditor->viewport()->width(), zoneHeight);
-    _viewZone->setGeometry(zoneRect);
-    _viewZone->show();
-}
-
-// -----------------------------------------------------------------------------
-// computeEditorFirstVisibleLine — translate scrollbar → first visible line
-// -----------------------------------------------------------------------------
-int DocumentMapPanel::computeEditorFirstVisibleLine() const {
-    if (!_editor) return 0;
-    QsciScintilla* qs = _editor->qsciEditor();
-    return qs->firstVisibleLine();
-}
-
-// -----------------------------------------------------------------------------
-// applyEditorFirstVisibleLine — scroll the main editor to a given first line
-// -----------------------------------------------------------------------------
-void DocumentMapPanel::applyEditorFirstVisibleLine(int line) {
+void DocumentMapPanel::syncEditorToMapFirstLine(int miniFirstLine) {
     if (!_editor) return;
     QsciScintilla* qs = _editor->qsciEditor();
-    qs->setFirstVisibleLine(line);
+
+    int mainMax = qs->verticalScrollBar()->maximum();
+    int miniMax = _mapEditor->verticalScrollBar()->maximum();
+    if (mainMax <= 0 || miniMax <= 0) return;
+
+    int mainFirstLine = qBound(0, (miniFirstLine * mainMax) / miniMax, mainMax);
+    _syncing = true;
+    qs->SendScintilla(QsciScintillaBase::SCI_SETFIRSTVISIBLELINE, mainFirstLine);
+    _syncing = false;
+}
+
+// -----------------------------------------------------------------------------
+// onViewportTimer — periodically update the viewport overlay
+// -----------------------------------------------------------------------------
+void DocumentMapPanel::onViewportTimer() {
+    if (!_editor || !_mapEditor) return;
+    updateViewportOverlay();
+}
+
+// -----------------------------------------------------------------------------
+// updateViewportOverlay — paint the translucent viewport region on the minimap
+// -----------------------------------------------------------------------------
+void DocumentMapPanel::updateViewportOverlay() {
+    if (!_editor || !_mapEditor) return;
+
+    QsciScintilla* qs = _editor->qsciEditor();
+    int totalLines = qs->lines();
+    if (totalLines <= 0) {
+        _viewportOverlay->hide();
+        return;
+    }
+
+    int miniTotalLines = _mapEditor->lines();
+    int miniVisibleLines = _mapEditor->SendScintilla(QsciScintillaBase::SCI_LINESONSCREEN);
+    int miniFirstLine = _mapEditor->firstVisibleLine();
+
+    if (miniTotalLines <= 0 || miniVisibleLines <= 0) {
+        _viewportOverlay->hide();
+        return;
+    }
+
+    // Compute minimap line height
+    int lineHeight = _mapEditor->SendScintilla(QsciScintillaBase::SCI_TEXTHEIGHT, 0);
+    if (lineHeight <= 0) lineHeight = 14;
+
+    int mapHeight = _mapEditor->viewport()->height();
+
+    // Calculate what portion of the document the main editor shows
+    int mainVisibleLines = qs->SendScintilla(QsciScintillaBase::SCI_LINESONSCREEN);
+    if (mainVisibleLines <= 0) mainVisibleLines = 1;
+
+    float docFraction = float(mainVisibleLines) / float(qMax(1, totalLines));
+    int miniVisibleRegion = qMax(1, int(docFraction * miniTotalLines));
+
+    // Position the overlay based on minimap scroll ratio
+    int visibleRange = qMax(1, miniTotalLines - miniVisibleRegion);
+    float scrollRatio = float(miniFirstLine) / float(visibleRange);
+    int overlayY = int(scrollRatio * mapHeight);
+    overlayY = qBound(0, overlayY, mapHeight - 1);
+
+    int overlayH = qMax(4, miniVisibleRegion * lineHeight);
+    overlayH = qMin(overlayH, mapHeight - overlayY);
+
+    QRect newRect(0, overlayY, _mapEditor->viewport()->width(), overlayH);
+    if (_viewportOverlay->geometry() != newRect) {
+        _viewportOverlay->setGeometry(newRect);
+        _viewportOverlay->show();
+    }
+
+    // Paint semi-transparent fill with border
+    QPainter painter(_viewportOverlay);
+    painter.fillRect(_viewportOverlay->rect(), QColor(80, 120, 255, 50));
+    QPen pen(QColor(40, 80, 200, 180));
+    pen.setWidth(1);
+    painter.setPen(pen);
+    painter.drawRect(_viewportOverlay->rect().adjusted(0, 0, -1, -1));
+
+    _overlayTop = overlayY;
+    _overlayHeight = overlayH;
 }

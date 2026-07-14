@@ -6,11 +6,11 @@
 
 #include <QDockWidget>
 #include <QWidget>
-#include <QRubberBand>
-#include <QScrollBar>
 #include <QPainter>
 #include <QTimer>
 #include <QMouseEvent>
+#include <QResizeEvent>
+#include <QPen>
 #include <Qsci/qsciscintilla.h>
 
 class ScintillaEditor;
@@ -24,10 +24,17 @@ public:
     explicit MapTextView(QWidget* parent = nullptr);
 
 signals:
-    void clicked(const QPoint& pos);
+    // Emitted on left-click with the click position in viewport coordinates
+    void viewportClicked(const QPoint& pos);
 
 protected:
     void mousePressEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void wheelEvent(QWheelEvent* event) override;
+
+private:
+    QPoint _dragStart;
+    bool _dragging = false;
 };
 
 class DocumentMapPanel : public QDockWidget {
@@ -43,23 +50,45 @@ public:
     void onBufferChanged();
 
 public slots:
-    void syncFromEditor();
-    void syncToEditor(int sliderValue);
     void scheduleMinimapUpdate();
 
+private slots:
+    // Editor → minimap sync
+    void onEditorScroll(int newValue);
+    // Minimap → editor sync
+    void onMiniMapScroll(int sliderValue);
+    // Minimap click → jump
+    void onMiniMapClicked(const QPoint& pos);
+    // Periodic viewport overlay refresh
+    void onViewportTimer();
+    // Document line count changed
+    void onLinesChanged();
+    // Cursor moved → highlight in minimap
+    void onCursorPositionChanged(int line, int col);
+
 private:
-    void setupMiniMap();
+    // Legacy slots kept for API compatibility (wired up by callers)
+    void syncFromEditor();
+    void syncToEditor(int sliderValue);
     void updateViewZone();
-    void renderMinimap();
-    int computeEditorFirstVisibleLine() const;
-    void applyEditorFirstVisibleLine(int line);
+
+    void setupMiniMap();
+    void updateViewportOverlay();
+    void updateCursorMarker();
+    void syncMapToEditor();
+    void syncEditorToMapFirstLine(int miniFirstLine);
 
     ScintillaEditor* _editor = nullptr;
     QWidget* _content = nullptr;
     MapTextView* _mapEditor = nullptr;
-    QRubberBand* _viewZone = nullptr;
-    QScrollBar* _scrollBar = nullptr;
-    QTimer* _updateTimer = nullptr;
+    QTimer* _viewportTimer = nullptr;
+    QTimer* _debounceTimer = nullptr;
     bool _syncing = false;
-    int _lastKnownFirstLine = -1;
+    int _lastEditorFirstLine = -1;
+    int _lastEditorLines = -1;
+
+    // Overlay widget painted on top of the minimap showing viewport region
+    QWidget* _viewportOverlay = nullptr;
+    int _overlayTop = 0;
+    int _overlayHeight = 0;
 };
