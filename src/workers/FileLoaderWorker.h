@@ -8,23 +8,7 @@
 #include <QCryptographicHash>
 #include <QMutex>
 #include <QWaitCondition>
-
-// File encoding types
-enum class EncodingType {
-    Unknown,
-    ASCII,
-    UTF8,
-    UTF8BOM,
-    UTF16LE,
-    UTF16BE,
-    UTF16LEBOM,
-    UTF16BEBOM,
-    UTF32LE,
-    UTF32BE,
-    ISO88591,
-    Windows1252,
-    Other
-};
+#include "../common/Types.h"
 
 // Large file handling
 struct FileLoadOptions {

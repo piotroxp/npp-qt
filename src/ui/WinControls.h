@@ -33,23 +33,6 @@
 // Forward declaration
 class DpiManager;
 
-// ClipboardHistoryPanel — shows recent clipboard entries, like Notepad++
-class ClipboardHistoryPanel : public QWidget {
-    Q_OBJECT
-public:
-    explicit ClipboardHistoryPanel(QWidget* parent = nullptr);
-    void addEntry(const QString& text);
-    void clear();
-Q_SIGNALS:
-    void pasteRequested(int index);
-private Q_SLOTS:
-    void onClipboardChanged();
-private:
-    void applyDpiScaling();
-    QListWidget* m_list = nullptr;
-    static constexpr int MaxEntries = 100;
-};
-
 // ColourPicker — colour palette with custom colour picker
 class ColourPicker : public QWidget {
     Q_OBJECT
