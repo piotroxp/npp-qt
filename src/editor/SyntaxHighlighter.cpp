@@ -886,7 +886,7 @@ void SyntaxHighlighter::setupXml() {
 
     // Attribute values
     rule = {}; rule.pattern = QRegularExpression(
-        R"((?:=\s*)"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')");
+        R"%((?:=\s*)"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')%");
     rule.format = _stringFormat; _rules.append(rule);
 
     // XML Declaration
@@ -1937,7 +1937,7 @@ void SyntaxHighlighter::setupMakefile() {
     rule.format = _typeFormat; _rules.append(rule);
 
     // Automatic variables
-    rule = {}; rule.pattern = QRegularExpression(R"(\$@|\$<|\$^\|\$+|\$\?|\$\*|\$|)"));
+    rule = {}; rule.pattern = QRegularExpression(R"%(\$@|\$<|\$^\|\$+|\$\?|\$\*|\$|)%");
     rule.format = _attributeFormat; _rules.append(rule);
 
     // Keywords
@@ -2540,7 +2540,7 @@ void SyntaxHighlighter::setupBatch() {
     rule.format = _attributeFormat; _rules.append(rule);
 
     // Strings
-    rule = {}; rule.pattern = QRegularExpression(R"("(?:[^"]*)")");
+    rule = {}; rule.pattern = QRegularExpression(R"%("(?:[^"]*)")%");
     rule.format = _stringFormat; _rules.append(rule);
 
     // Numbers

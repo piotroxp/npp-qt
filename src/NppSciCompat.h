@@ -507,6 +507,15 @@ namespace npp_sci {
     constexpr int SCI_SETCHANGEHISTORY       = 2689;
     constexpr int SC_CHANGE_HISTORY_DISABLED = 0;
 
+    // ==== Missing Scintilla constants for Qt6/QScintilla ====
+    constexpr int SCI_CLEARSELECTIONS         = 2577;
+    constexpr int SCI_ADDSELECTION           = 2573;
+    constexpr int SCI_GETVIRTUALSPACEOPTIONS = 2596;
+    constexpr int SCI_SETFIRSTVISIBLELINE   = 2613;
+    constexpr int SCI_HIGHLIGHTBRACES        = 2659;
+    constexpr int SC_FOLDACTION_EXPAND       = 0;
+    constexpr int SC_FOLDACTION_CONTRACT     = 2;
+
     // ==== SC_MARKNUM_HISTORY_* — for change history markers ====
     constexpr int SC_MARKNUM_HISTORY_REVERTED_TO_ORIGIN     = 21;
     constexpr int SC_MARKNUM_HISTORY_SAVED                  = 22;
@@ -830,6 +839,13 @@ using npp_sci::SCFIND_WORDSTART;
 using npp_sci::SC_SEL_STREAM;
 using npp_sci::SC_SEL_RECTANGLE;
 using npp_sci::SC_SEL_THIN;
+using npp_sci::SCI_CLEARSELECTIONS;
+using npp_sci::SCI_ADDSELECTION;
+using npp_sci::SCI_GETVIRTUALSPACEOPTIONS;
+using npp_sci::SCI_SETFIRSTVISIBLELINE;
+using npp_sci::SCI_HIGHLIGHTBRACES;
+using npp_sci::SC_FOLDACTION_EXPAND;
+using npp_sci::SC_FOLDACTION_CONTRACT;
 // Additional using declarations for newly added npp_sci:: constants
 using npp_sci::SCI_GETCODEPAGE;
 using npp_sci::SCI_GETTABWIDTH;
