@@ -44,26 +44,75 @@ Notepad--Qt is a semantic lift of Notepad++ from Win32/C++ to Qt6/C++. The archi
 
 | Class | Responsibility |
 |-------|---------------|
-| `FunctionListPanel` | `QDockWidget`. Parses buffer text with regex per language, builds a collapsible tree, supports "go to function". |
-| `FileBrowserPanel` | `QDockWidget`. Recursive directory tree with `QFileSystemWatcher` for live updates. Context menu for open/delete/rename. |
+| `FunctionListPanel` | `QDockWidget`. Parses buffer text with regex per language, builds a collapsible tree (functions/classes/structs), supports "go to function" on double-click. |
+| `FileBrowserPanel` | `QDockWidget`. Recursive directory tree with `QFileSystemWatcher` for live updates. Supports filtering, context menu for open/delete/rename. |
 | `DocumentMapPanel` | `QDockWidget`. Scaled-down `QsciScintilla` minimap, bidirectionally scroll-synced with the active editor. |
+| `ClipboardHistoryPanel` | `QDockWidget`. Persistent clipboard history stack, re-paste any entry, clear history. |
 
 ### `src/editor/`
 
 | Class | Responsibility |
 |-------|---------------|
 | `ScintillaEditor` | `QFrame` wrapping `QsciScintilla`. Provides the text widget with lexer, margin, annotation, and marker APIs. Exposes `executeCommand(cmd, arg)` for all Scintilla messages. |
-| `SyntaxHighlighter` | `QSyntaxHighlighter` for non-Scintilla highlighters (future). |
+| `ScintillaEditView` | Per-buffer editing view: owns a `ScintillaEditor` widget, syncs with `Buffer` state, handles split-view (clone). |
+| `ScintillaCtrls` | Factory/manager for creating `QsciScintilla` instances with shared settings (margins, caret, selection colours). |
+| `LexerConfig` | Central lexer configuration: maps `LexerMode` → `QsciLexer*` instance, applies theme colours. |
+| `SyntaxHighlighter` | 54 language definitions via `setup*()` methods: `setupCpp()`, `setupPython()`, `setupJavaScript()`, `setupSql()`, `setupXml()`, `setupMarkdown()`, `setupRust()`, `setupGo()`, `setupLua()`, `setupRuby()`, `setupPhp()`, `setupPerl()`, `setupBash()`, `setupMakefile()`, `setupJson()`, `setupYaml()`, `setupToml()`, `setupIni()`, `setupDiff()`, `setupNfo()`, `setupPascal()`, `setupFortran()`, `setupLisp()`, `setupHaskell()`, `setupScala()`, `setupKotlin()`, `setupSwift()`, `setupDart()`, `setupR()`, `setupMatlab()`, `setupOctave()`, `setupJulia()`, `setupTex()`, `setupLaTeX()`, `setupMarkdown()`, `setupProperties()`, `setupNsis()`, `setupInnoSetup()`, `setupBatch()`, `setupPowerShell()`, `setupDockerfile()`, `setupCMake()`, `setupVim()`, `setupASM()`, `setupVerilog()`, `setupVHDL()`, `setupTCL()`, `setupCOBOL()`, `setupAda()`, `setupEiffel()`, `setupErlang()`, `setupClojure()`, `setupFSharp()`, `setupOCaml()`, `setupForth()`, `setupBrainfuck()`, `setupWhitespace()`, and `setupDefault()`. |
+| `DocTabView` | `QTabWidget` adapter holding `ScintillaEditView` pages, bidirectionally synced with `FileManager`'s buffer list. |
+| `WebBrowserView` | `QWebEngineView` panel for previewing rendered HTML/Markdown. Supports zoom, navigation, back/forward. |
+| `WebBrowserViewFactory` | Factory creating `WebBrowserView` instances per buffer on demand. |
 
 ### `src/dialogs/`
 
 | Class | Responsibility |
 |-------|---------------|
 | `FindReplaceDialog` | Modeless `QDialog`. Supports regex, whole-word, in-selection, counter (Find Next/Previous), Replace/Replace All, Mark. |
-| `GoToLineDialog` | Simple `QDialog` with line number input. |
+| `GoToLineDialog` | Simple `QDialog` with line number input and offset mode (absolute/relative/percentage). |
 | `PreferenceDialog` | Tabbed `QDialog`. 7 categories: General, Editing, Language, Search, Backup, Print, Advanced. |
-| `AboutDialog` | Static `QDialog` with app info and license. |
-| `RunDlgDialog` | `QDialog` for shell command execution. |
+| `AboutDialog` | Static `QDialog` with app info, credits, license, and build info. |
+| `CommandPaletteDialog` | `QDialog` triggered by Ctrl+Shift+P. Fuzzy search over all registered commands. |
+| `UserDefineDialog` | `QDialog` for User Defined Language (UDL) editing — keywords, operators, comment styles, colour schemes. |
+| `FunctionCallTip` | `QWidget` overlay showing function signatures, parameter highlighting, and overload navigation (↑/↓). |
+| `AutoCompletion` | `QDialog` for word and API auto-completion popup. |
+| `ClipboardHistoryPanel` | `QDialog` / docked panel showing clipboard stack with re-paste support. |
+| `FindInFilesWorker` | Background worker for recursive search across directories with progress reporting. |
+| `Printer` | Print preview and print-to-PDF via `QPrinter`. |
+| `ShortcutMapperDialog` | `QDialog` for binding key combinations to command IDs. |
+| `SmartHighlighter` | `QDialog` for multi-keyword markup (search result highlighting). |
+| `IncrementalSearchDialog` | Lightweight inline search bar (Ctrl+I style). |
+| `ColumnEditorDialog` | `QDialog` for inserting sequential numbers or character sequences column-wise. |
+| `LargeFileWarningDialog` | `QDialog` shown before loading files >5 MB with partial-load option. |
+| `FileReloadDialog` | `QDialog` shown when an open file is modified externally. |
+| `AnsiCharPanel` | `QDialog` for inserting special ANSI characters by code point. |
+
+### `src/workers/`
+
+| Class | Responsibility |
+|-------|---------------|
+| `FileLoaderWorker` | `QThread` worker for async file I/O. Streams large files in chunks, reports progress, handles cancellation. Detects files >5 MB and triggers `LargeFileWarningDialog`. |
+
+### `src/plugins/`
+
+| Class | Responsibility |
+|-------|---------------|
+| `PluginManager` | Loads/symbol-lookups plugin DLLs, forwards `NppMenuCmd` IDs, manages plugin on/off state. |
+| `PluginInterface` | Header-only interface matching Notepad++ plugin API (DLL export macros, `setInfo`/`getFuncs`). |
+
+### `src/core/` (extended)
+
+| Class | Responsibility |
+|-------|---------------|
+| `NppBigSwitch` | Central switch-case mapping `NppMenuCmd` enum → human-readable name strings + debug logging. |
+| `NppCommands` | Concrete implementations for menu commands not delegated to `EditorCommandManager`. |
+| `NppIO` | All file read/write: encoding-aware `QTextStream` wrapping, BOM insertion, atomic writes. |
+| `RecentFilesManager` | Manages the recent files list, persisted to `QSettings`. |
+| `MacroManager` | Records/replays `MacroAction` sequences (keystrokes + commands) stored as JSON. |
+| `MacroAction` | Represents a single recorded action (type, position, text, optional string arg). |
+| `Parameters` | Global `QSettings` access wrapper — reads/writes all preference keys. |
+| `ShortcutManager` | Maps `QKeySequence` → `NppMenuCmd` IDs; resolves conflicts. |
+| `ThemeManager` | Loads/switches between dark and light theme palettes, applies to all widgets. |
+| `UdlManager` | Persists User Defined Language definitions to/from XML. |
+| `WorkspaceManager` | Manages workspace/project files (`.workspace` JSON) grouping open files. |
 
 ### `src/common/`
 
