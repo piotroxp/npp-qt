@@ -1,6 +1,8 @@
 FROM archlinux:base-devel
 
-RUN pacman -Sy --noconfirm qt6-base qt6-tools qscintilla-qt6 cmake ninja gcc pkgconf && \
+RUN pacman -Sy --noconfirm \
+        qt6-base qt6-tools qt6-webengine qscintilla-qt6 \
+        cmake ninja gcc pkgconf && \
     pacman -Scc --noconfirm
 
 WORKDIR /build

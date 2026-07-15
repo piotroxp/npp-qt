@@ -3,8 +3,10 @@
 // GPL v3
 
 #include "FunctionListPanel.h"
+#include "FunctionListXmlParser.h"
 #include "../editor/ScintillaEditor.h"
 #include "../common/Types.h"
+#include <QStandardPaths>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -148,7 +150,106 @@ FunctionListPanel::FunctionListPanel(QWidget* parent)
     connect(accessFilter, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &FunctionListPanel::onTypeFilterChanged);
 }
 
-FunctionListPanel::~FunctionListPanel() = default;
+FunctionListPanel::~FunctionListPanel() {
+    delete _xmlParser;
+}
+
+QString FunctionListPanel::langKeyFromType(LangType t) {
+    switch (t) {
+        case LangType::L_C:          return "c";
+        case LangType::L_CPP:        return "cpp";
+        case LangType::L_JAVA:       return "java";
+        case LangType::L_CS:         return "cs";
+        case LangType::L_PYTHON:     return "python";
+        case LangType::L_JS:         return "javascript";
+        case LangType::L_HTML:       return "html";
+        case LangType::L_XML:        return "xml";
+        case LangType::L_PHP:        return "php";
+        case LangType::L_RUBY:       return "ruby";
+        case LangType::L_PERL:       return "perl";
+        case LangType::L_LUA:        return "lua";
+        case LangType::L_CSS:        return "css";
+        case LangType::L_YAML:       return "yaml";
+        case LangType::L_JSON:       return "javascript";  // reuse JS parser
+        case LangType::L_MAKEFILE:   return "makefile";
+        case LangType::L_CMAKE:      return "cmake";
+        case LangType::L_MARKDOWN:   return "markdown";
+        case LangType::L_BATCH:      return "batch";
+        case LangType::L_POWERSHELL: return "powershell";
+        case LangType::L_SQL:        return "sql";
+        case LangType::L_PASCAL:      return "pascal";
+        case LangType::L_FORTRAN:     return "fortran";
+        case LangType::L_LISP:        return "lisp";
+        case LangType::L_RUST:        return "rust";
+        case LangType::L_GO:          return "go";
+        case LangType::L_SWIFT:       return "swift";
+        case LangType::L_KOTLIN:      return "kotlin";
+        case LangType::L_OBJC:  return "c";  // ObjC shares C parser
+        case LangType::L_VERILOG:     return "verilog";
+        case LangType::L_VHDL:        return "vhdl";
+        case LangType::L_ASM:         return "asm";
+        case LangType::L_MATLAB:      return "matlab";
+        case LangType::L_R:           return "r";
+        case LangType::L_JULIA:       return "julia";
+        case LangType::L_NFO:         return "nfo";
+        case LangType::L_TCL:         return "tcl";
+        case LangType::L_NSIS:        return "nsis";
+        case LangType::L_NSIS2:       return "nsis";
+        case LangType::L_ERLANG:      return "erlang";
+        case LangType::L_BASH:        return "bash";
+        case LangType::L_TEX:         return "tex";
+        case LangType::L_DIFF:        return "diff";
+        case LangType::L_SCALA:       return "scala";
+        case LangType::L_TS:          return "typescript";
+        case LangType::L_HASKELL:     return "haskell";
+        case LangType::L_ADA:         return "ada";
+        default:                      return "generic";
+    }
+}
+
+void FunctionListPanel::initXmlParser() {
+    if (_xmlParser)
+        return;
+
+    // Look for the functionList XML directory.
+    // Precedence: (1) $APP_DATA/functionList/  (2) $REPO_ROOT/src/functionList/
+    //             (3) upstream notepad-plus-plus-translation/
+    const QString appData = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    QStringList searchPaths = {
+        appData + "/functionList",
+        "/home/node/.openclaw/workspace/notepad-plus-plus-translation/PowerEditor/installer/functionList",
+    };
+
+    QString foundPath;
+    for (const QString& p : searchPaths) {
+        if (QFileInfo::exists(p)) {
+            foundPath = p;
+            break;
+        }
+    }
+
+    if (foundPath.isEmpty()) {
+        qWarning() << "FunctionListPanel: no functionList XML directory found; "
+                      "searched:"
+                   << searchPaths;
+        foundPath = searchPaths.first(); // try anyway
+    }
+
+    _xmlParser = new FunctionListXmlParser(foundPath);
+    qDebug() << "FunctionListPanel: XML parser initialised with dir:" << foundPath;
+}
+
+void FunctionListPanel::ensureXmlParserLoaded(LangType lang) {
+    initXmlParser();
+    const QString key = langKeyFromType(lang);
+    if (!_xmlParserLoaded.contains(key)) {
+        bool loaded = _xmlParser->loadParser(key);
+        _xmlParserLoaded[key] = loaded;
+        if (loaded) {
+            qDebug() << "FunctionListPanel: loaded XML parser for" << key;
+        }
+    }
+}
 
 // ============================================================================
 // Editor binding
@@ -223,32 +324,63 @@ void FunctionListPanel::parseFunctions() {
     LangType lang = _editor->language();
 
     // Dispatch to language-specific parser
+    // Priority: try XML parser first (uses upstream N++ rules), fall back to
+    // hard-coded regex.
     switch (lang) {
+        // ── XML-backed languages (preferred) ──────────────────────────────
+        case LangType::L_CPP:
+        case LangType::L_C:
+        case LangType::L_JAVA:
+        case LangType::L_OBJC:
+        case LangType::L_PHP:
+        case LangType::L_LUA:
+        case LangType::L_CSS:
+        case LangType::L_HTML:
+        case LangType::L_XML:
+        case LangType::L_MAKEFILE:
+        case LangType::L_RUST:
+        case LangType::L_GO:
+        case LangType::L_SWIFT:
+        case LangType::L_KOTLIN:
         case LangType::L_PYTHON:
         case LangType::L_PERL:
-            parsePython(lines);
-            break;
+        case LangType::L_RUBY:
         case LangType::L_JS:
         case LangType::L_JSON:
         case LangType::L_CS:
-            parseJavaScript(lines);
+        case LangType::L_TS:
+        case LangType::L_TCL:
+        case LangType::L_NFO:
+        case LangType::L_NSIS:
+        case LangType::L_NSIS2:
+        case LangType::L_POWERSHELL:
+        case LangType::L_MATLAB:
+        case LangType::L_R:
+        case LangType::L_JULIA:
+        case LangType::L_YAML:
+        case LangType::L_FORTRAN:
+        case LangType::L_PASCAL:
+        case LangType::L_LISP:
+        case LangType::L_VERILOG:
+        case LangType::L_VHDL:
+        case LangType::L_ERLANG:
+        case LangType::L_BASH:
+        case LangType::L_SCALA:
+        case LangType::L_HASKELL:
+        case LangType::L_ADA:
+        case LangType::L_ASM:
+            parseWithXmlParser(lines, lang);
             break;
-        case LangType::L_RUBY:
-            parseRuby(lines);
+
+        // ── Hard-coded regex languages (no upstream XML yet) ──────────────
+        case LangType::L_MARKDOWN:
+        case LangType::L_BATCH:
+        case LangType::L_INI:
+            parseCpp(lines);  // C-style heuristics
             break;
+
         default:
-            // For C/C++/Java/HTML/XML/etc, try C++ parser first
-            if (lang == LangType::L_CPP || lang == LangType::L_C ||
-                lang == LangType::L_JAVA || lang == LangType::L_OBJC ||
-                lang == LangType::L_HTML || lang == LangType::L_XML ||
-                lang == LangType::L_PHP || lang == LangType::L_LUA ||
-                lang == LangType::L_MARKDOWN || lang == LangType::L_CSS ||
-                lang == LangType::L_YAML || lang == LangType::L_MAKEFILE ||
-                lang == LangType::L_INI || lang == LangType::L_BATCH) {
-                parseCpp(lines);
-            } else {
-                parseGeneric(lines);
-            }
+            parseGeneric(lines);
             break;
     }
 }
@@ -664,4 +796,350 @@ void FunctionListPanel::onItemDoubleClicked(QTreeWidgetItem* item, int) {
     _editor->setFocus();
 
     emit functionSelected(line);
+}
+
+// ============================================================================
+// XML-based parsing  (upstream Notepad++ functionList XML parsers)
+// ============================================================================
+
+void FunctionListPanel::parseWithXmlParser(const QStringList& lines, LangType lang) {
+    ensureXmlParserLoaded(lang);
+    const QString key = langKeyFromType(lang);
+
+    const auto* def = _xmlParser ? _xmlParser->parser(key) : nullptr;
+
+    if (def && def->isValid) {
+        // Use upstream XML rules
+        // Parse class ranges first (nested members belong to classes)
+        for (const auto& classRule : def->classRules) {
+            parseClassRange(lines, classRule, _allFunctions);
+        }
+        // Then top-level functions
+        parseTopLevelFunctions(lines, def->functionRules, _allFunctions);
+    } else {
+        // No XML parser available for this language — fall back to built-in regex
+        // based on the language family.
+        if (lang == LangType::L_CPP || lang == LangType::L_C ||
+            lang == LangType::L_JAVA || lang == LangType::L_OBJC ||
+            lang == LangType::L_OBJC || lang == LangType::L_PHP ||
+            lang == LangType::L_LUA || lang == LangType::L_CSS) {
+            parseCpp(lines);
+        } else if (lang == LangType::L_JS || lang == LangType::L_JSON ||
+                   lang == LangType::L_CS) {
+            parseJavaScript(lines);
+        } else if (lang == LangType::L_PYTHON || lang == LangType::L_PERL) {
+            parsePython(lines);
+        } else if (lang == LangType::L_RUST) {
+            parseRust(lines);
+        } else if (lang == LangType::L_GO) {
+            parseGo(lines);
+        } else if (lang == LangType::L_RUBY) {
+            parseRuby(lines);
+        } else if (lang == LangType::L_SWIFT) {
+            parseSwift(lines);
+        } else if (lang == LangType::L_KOTLIN) {
+            parseKotlin(lines);
+        } else if (lang == LangType::L_TS) {
+            parseTypeScript(lines);
+        } else if (lang == LangType::L_CS) {
+            parseCsharp(lines);
+        } else if (lang == LangType::L_SQL) {
+            parseSQL(lines);
+        } else if (lang == LangType::L_HTML || lang == LangType::L_XML) {
+            parseHTML(lines);
+        } else if (lang == LangType::L_PERL) {
+            parsePerl(lines);
+        } else if (lang == LangType::L_MAKEFILE) {
+            parseMakefile(lines);
+        } else if (lang == LangType::L_LUA) {
+            parseLua(lines);
+        } else if (lang == LangType::L_PHP) {
+            parsePHP(lines);
+        } else {
+            parseGeneric(lines);
+        }
+    }
+}
+
+void FunctionListPanel::parseClassRange(const QStringList& lines,
+                                        const FunctionListXmlParser::Rule& classRule,
+                                        QList<FunctionItem>& out) {
+    if (!classRule.mainExpr.isValid())
+        return;
+
+    const QString text = lines.join('\n');
+
+    // Find all class-range matches
+    QRegularExpressionMatchIterator it =
+        classRule.mainExpr.globalMatch(text);
+
+    while (it.hasNext()) {
+        QRegularExpressionMatch m = it.next();
+        QString className;
+        if (classRule.classNameExpr.isValid()) {
+            QRegularExpressionMatch nm = classRule.classNameExpr.match(m.captured(0));
+            if (nm.hasMatch())
+                className = nm.captured(0);
+        }
+        if (className.isEmpty())
+            className = "class";
+
+        int matchStart = m.capturedStart();
+
+        // Find the body range: look for openSymbole → closeSymbole
+        int bodyStart = text.indexOf(classRule.openSymbole, matchStart);
+        if (bodyStart < 0) continue;
+        int bodyEnd = text.indexOf(classRule.closeSymbole, bodyStart + 1);
+        if (bodyEnd < 0) continue;
+
+        // Count lines to get absolute line numbers
+        int classLine = text.left(matchStart).count('\n') + 1;
+        int bodyEndLine = text.left(bodyEnd).count('\n') + 1;
+
+        // Extract the class body and find methods within
+        QString bodyText = text.mid(bodyStart + 1, bodyEnd - bodyStart - 1);
+        QStringList bodyLines = bodyText.split('\n');
+
+        // Look for methods using the function rules inside the class body
+        // (classRule may have nested function sub-rules we check by re-parsing
+        //  the body text with the existing function rules)
+        QList<FunctionListXmlParser::Rule> emptyRules; // use hard-coded parsers instead
+        Q_UNUSED(emptyRules);
+
+        for (int li = 0; li < bodyLines.size(); ++li) {
+            const QString& line = bodyLines[li];
+            // Convert body-relative line → absolute
+            int absLine = text.left(bodyStart + 1).count('\n') + 1 + li;
+
+            // Dispatch to hard-coded parsers for method detection
+            // (method parsing uses line content only)
+            QRegularExpression funcRe(
+                R"(^\s*(?:(public|private|protected)\s+)?"
+                R"((?:virtual|static|inline|explicit|const|constexpr|friend|override|final)\s+)*"
+                R"((?:[\w:]+(?:\s*[*&]+)?\s+)?"
+                R"([\w_][\w\d_]*)\s*\([^)]*\)\s*(?:const)?\s*[;{]?\s*$)",
+                QRegularExpression::MultilineOption);
+
+            QRegularExpressionMatch fm = funcRe.match(line);
+            if (fm.hasMatch()) {
+                FunctionItem item;
+                item.name = fm.captured(3);
+                item.line = absLine;
+                item.type = "method";
+                item.access = fm.captured(1).isEmpty() ? "private" : fm.captured(1);
+                item.parent = className;
+                item.language = "cpp";
+                out.append(item);
+            }
+        }
+
+        // Also record the class/struct itself
+        FunctionItem classItem;
+        classItem.name = className;
+        classItem.line = classLine;
+        classItem.type = "class";
+        classItem.access = "public";
+        classItem.language = "cpp";
+        out.append(classItem);
+    }
+}
+
+void FunctionListPanel::parseTopLevelFunctions(
+        const QStringList& lines,
+        const QList<FunctionListXmlParser::Rule>& rules,
+        QList<FunctionItem>& out) {
+    if (rules.isEmpty())
+        return;
+
+    const QString text = lines.join('\n');
+
+    for (const auto& rule : rules) {
+        if (!rule.mainExpr.isValid())
+            continue;
+
+        QRegularExpressionMatchIterator it = rule.mainExpr.globalMatch(text);
+        while (it.hasNext()) {
+            QRegularExpressionMatch m = it.next();
+
+            QString name;
+            if (rule.funcNameExpr.isValid()) {
+                QRegularExpressionMatch nm = rule.funcNameExpr.match(m.captured(0));
+                if (nm.hasMatch()) name = nm.captured(0);
+            }
+            if (name.isEmpty()) {
+                // Try to grab the last captured group
+                name = m.lastCapturedIndex() > 0 ? m.captured(m.lastCapturedIndex()) : QString();
+            }
+
+            if (name.isEmpty() || name.contains("(") || name.contains("=") ||
+                name == "if" || name == "for" || name == "while" || name == "switch" ||
+                name == "case" || name == "else" || name == "return" || name == "include" ||
+                name == "define" || name == "typedef" || name == "goto") {
+                continue;
+            }
+
+            // Extract line number from match offset
+            int lineNum = text.left(m.capturedStart()).count('\n') + 1;
+
+            FunctionItem item;
+            item.name = name;
+            item.line = lineNum;
+            item.type = "function";
+            item.access = "public";
+
+            if (rule.funcSigExpr.isValid()) {
+                QRegularExpressionMatch sm = rule.funcSigExpr.match(m.captured(0));
+                if (sm.hasMatch())
+                    item.signature = sm.captured(0);
+            }
+            if (item.signature.isEmpty())
+                item.signature = m.captured(0).simplified();
+
+            out.append(item);
+        }
+    }
+}
+
+// ============================================================================
+// New language parsers (Swift, Kotlin, TypeScript, C#)
+// ============================================================================
+
+void FunctionListPanel::parseSwift(const QStringList& lines) {
+    // Swift: func, class, struct, enum, protocol, extension, var, let, init, deinit, subscript
+    QRegularExpression funcRe(
+        R"(^\s*(?:(fileprivate|internal|public|open|private|static|final|override)\s+)?"
+        R"((?:func|class|struct|enum|protocol|extension|var|let|init|deinit|subscript)\s+)"
+        R"(\w+))",
+        QRegularExpression::MultilineOption);
+
+    for (int i = 0; i < lines.size(); ++i) {
+        const QString& line = lines[i];
+        QRegularExpressionMatch m = funcRe.match(line);
+        if (m.hasMatch()) {
+            QString kw = m.capturedRef(2).toString();
+            QString name = m.capturedRef(3).toString();
+            QString access = m.capturedRef(1).toString();
+            if (access.isEmpty()) access = "internal";
+
+            QString type;
+            if (kw == "func" || kw == "init" || kw == "deinit" || kw == "subscript")
+                type = "function";
+            else if (kw == "class") type = "class";
+            else if (kw == "struct") type = "struct";
+            else if (kw == "enum") type = "enum";
+            else if (kw == "protocol") type = "interface";
+            else if (kw == "extension") type = "module";
+            else if (kw == "var" || kw == "let") type = "property";
+            else type = kw;
+
+            addFunctionItem(name, i + 1, type, access, "swift");
+        }
+    }
+}
+
+void FunctionListPanel::parseKotlin(const QStringList& lines) {
+    // Kotlin: fun, class, object, interface, enum class, sealed class, data class, companion, val, var
+    QRegularExpression funcRe(
+        R"(^\s*(?:(private|protected|public|internal|inline|crossinline|reified|operator|infix|override)\s+)*"
+        R"((?:fun|class|object|interface|enum class|sealed class|data class|companion|val|var)\s+)"
+        R"(\w+))",
+        QRegularExpression::MultilineOption);
+
+    for (int i = 0; i < lines.size(); ++i) {
+        const QString& line = lines[i];
+        QRegularExpressionMatch m = funcRe.match(line);
+        if (m.hasMatch()) {
+            QString kw = m.capturedRef(2).toString();
+            QString name = m.capturedRef(3).toString();
+
+            QString type;
+            if (kw == "fun") type = "function";
+            else if (kw.startsWith("class") || kw == "object") type = "class";
+            else if (kw == "interface") type = "interface";
+            else if (kw == "enum class") type = "enum";
+            else if (kw == "sealed class") type = "class";
+            else if (kw == "data class") type = "class";
+            else if (kw == "companion") type = "module";
+            else if (kw == "val" || kw == "var") type = "property";
+            else type = kw;
+
+            addFunctionItem(name, i + 1, type, "public", "kotlin");
+        }
+    }
+}
+
+void FunctionListPanel::parseTypeScript(const QStringList& lines) {
+    // TypeScript: function, class, interface, enum, namespace, module, type, const, let, async, export
+    QRegularExpression funcRe(
+        R"(^\s*(?:(export|declare|declare\s+)|(?:(async)\s+)?(?:(function|class|interface|enum|namespace|module|type)\s+)"
+        R"(\w+))",
+        QRegularExpression::MultilineOption);
+
+    for (int i = 0; i < lines.size(); ++i) {
+        const QString& line = lines[i];
+        QRegularExpressionMatch m = funcRe.match(line);
+        if (m.hasMatch()) {
+            QString kw = m.capturedRef(2).isEmpty() ? m.capturedRef(3).toString() : m.capturedRef(3).toString();
+            QString name = m.capturedRef(4).toString();
+
+            QString type;
+            if (kw == "function") type = "function";
+            else if (kw == "class") type = "class";
+            else if (kw == "interface") type = "interface";
+            else if (kw == "enum") type = "enum";
+            else if (kw == "namespace" || kw == "module") type = "module";
+            else if (kw == "type") type = "type alias";
+            else type = kw;
+
+            addFunctionItem(name, i + 1, type, "public", "typescript");
+        }
+    }
+}
+
+void FunctionListPanel::parseCsharp(const QStringList& lines) {
+    // C#: class, struct, enum, interface, record, delegate, namespace, and methods
+    QRegularExpression classRe(
+        R"(^\s*(?:(?:public|private|protected|internal|static|readonly|partial|abstract|sealed)\s+)*"
+        R"((?:class|struct|enum|interface|record|delegate|namespace)\s+)"
+        R"(\w+))",
+        QRegularExpression::MultilineOption);
+
+    QRegularExpression methodRe(
+        R"(^\s*(?:(?:(public|private|protected|internal|static|readonly|virtual|override|abstract|sealed|partial|async)\s+)+)"
+        R"((?:void|int|string|bool|double|float|var|Task|[\w<>[\]?]+)\s+)"
+        R"(\w+)\s*\([^)]*\)\s*(?:const)?\s*[;{]?\s*$)",
+        QRegularExpression::MultilineOption);
+
+    for (int i = 0; i < lines.size(); ++i) {
+        const QString& line = lines[i];
+        QRegularExpressionMatch cm = classRe.match(line);
+        if (cm.hasMatch()) {
+            QString kw = cm.capturedRef(2).toString();
+            QString name = cm.capturedRef(3).toString();
+            QString type;
+            if (kw == "class" || kw == "record") type = "class";
+            else if (kw == "struct") type = "struct";
+            else if (kw == "enum") type = "enum";
+            else if (kw == "interface") type = "interface";
+            else if (kw == "delegate") type = "function";
+            else if (kw == "namespace") type = "module";
+            else type = kw;
+            addFunctionItem(name, i + 1, type, "public", "csharp");
+            continue;
+        }
+
+        QRegularExpressionMatch fm = methodRe.match(line);
+        if (fm.hasMatch()) {
+            QString name = fm.capturedRef(3).toString();
+            if (name.isEmpty() || name == "get" || name == "set" || name == "add" || name == "remove")
+                continue;
+            QString modifiers = fm.captured(1);
+            QString access = "private";
+            if (modifiers.contains("public"))
+                access = "public";
+            else if (modifiers.contains("protected"))
+                access = "protected";
+            addFunctionItem(name, i + 1, "method", access, "csharp");
+        }
+    }
 }

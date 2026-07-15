@@ -2,8 +2,7 @@
 #include "StringHelper.h"
 #include "Constants.h"
 #include "Types.h"
-#include <QTextCodec>
-#include <QByteArray>
+#include <QString>
 
 namespace StringHelper {
 
@@ -12,16 +11,8 @@ namespace StringHelper {
 // ============================================================================
 std::wstring toWStr(const std::string& s) {
     if (s.empty()) return {};
-    // Use Qt's codec for UTF-8 to UTF-16 then convert to wchar_t
-    QTextCodec* codec = QTextCodec::codecForName("UTF-16");
-    if (!codec) codec = QTextCodec::codecForMib(1014); // UTF-16LE
-    if (codec) {
-        QString qstr = codec->toUnicode(QByteArray(s.data(), s.size()));
-        // Qt uses ushort (16-bit) on most platforms, which matches wchar_t on Windows
-        return std::wstring(qstr.begin(), qstr.end());
-    }
-    // Fallback: assume UTF-8 and convert
-    QString qstr = QString::fromUtf8(s.data(), s.size());
+    // Qt6: QString handles UTF-8 natively
+    QString qstr = QString::fromUtf8(s.data(), static_cast<int>(s.size()));
     return std::wstring(qstr.begin(), qstr.end());
 }
 

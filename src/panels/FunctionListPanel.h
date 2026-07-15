@@ -17,6 +17,7 @@
 #include <QMenu>
 
 class ScintillaEditor;
+class FunctionListXmlParser;
 
 class FunctionListPanel : public QDockWidget {
     Q_OBJECT
@@ -82,7 +83,23 @@ private:
     void parseShell(const QStringList& lines);
     void parseMakefile(const QStringList& lines);
     void parseJava(const QStringList& lines);
+    void parseSwift(const QStringList& lines);
+    void parseKotlin(const QStringList& lines);
+    void parseTypeScript(const QStringList& lines);
+    void parseCsharp(const QStringList& lines);
     void parseGeneric(const QStringList& lines);
+
+    // XML-based parsing (uses upstream functionList XML parsers)
+    void parseWithXmlParser(const QStringList& lines, LangType lang);
+    void parseClassRange(const QStringList& lines,
+                         const FunctionListXmlParser::Rule& classRule,
+                         QList<FunctionItem>& out);
+    void parseTopLevelFunctions(const QStringList& lines,
+                                const QList<FunctionListXmlParser::Rule>& rules,
+                                QList<FunctionItem>& out);
+
+    // Load XML parser on demand for the current language
+    void ensureXmlParserLoaded(LangType lang);
 
     // Item data
     struct FunctionItem {
@@ -123,4 +140,10 @@ private:
           _iconMethod, _iconNamespace;
 
     void loadIcons();
+
+    // XML parser (shared, lazily initialised)
+    FunctionListXmlParser* _xmlParser = nullptr;
+    QHash<QString, bool> _xmlParserLoaded; // lang key → "loaded (any parser found)"
+    void initXmlParser();
+    static QString langKeyFromType(LangType t);
 };

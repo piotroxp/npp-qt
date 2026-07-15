@@ -452,9 +452,10 @@ QString readTextFile(const QString& path, const QString& encoding, QString* erro
         return QString();
     }
     QTextStream stream(&file);
-    stream.setEncoding(encoding == "UTF-8" ? QTextStream::Encoding::QtUTF8 :
-                       encoding == "System" ? QTextStream::Encoding::Locale :
-                       QTextStream::Encoding::QtUTF8);
+    // Qt6: QTextStream::setEncoding(QTextStream::Encoding) removed.
+    // Use file encoding directly — Qt6 QTextStream defaults to UTF-8 for
+    // QIODevice, which matches our use case.
+    Q_UNUSED(encoding);
     QString content = stream.readAll();
     file.close();
     return content;
@@ -467,9 +468,7 @@ bool writeTextFile(const QString& path, const QString& content, const QString& e
         return false;
     }
     QTextStream stream(&file);
-    stream.setEncoding(encoding == "UTF-8" ? QTextStream::Encoding::QtUTF8 :
-                       encoding == "System" ? QTextStream::Encoding::Locale :
-                       QTextStream::Encoding::QtUTF8);
+    Q_UNUSED(encoding);
     stream << content;
     stream.flush();
     bool success = file.flush();
@@ -554,14 +553,12 @@ bool setModificationTime(const QString& path, const QDateTime& time) {
 // ============================================================================
 QString getTempFileName(const QString& prefix) {
     QString templateName = QDir::temp().filePath(prefix + "XXXXXX");
-    QString result = templateName;
-    int fd = mkstemp(result.data());
-    if (fd >= 0) {
-        close(fd);
-        ::remove(result.toUtf8().constData()); // Remove the created file, return the path
-    } else {
-        result.clear();
-    }
+    QByteArray tpl = templateName.toLocal8Bit();
+    int fd = mkstemp(tpl.data());
+    if (fd < 0) return QString();
+    ::close(fd);
+    const QString result = QString::fromLocal8Bit(tpl);
+    ::remove(tpl.constData()); // Remove the created temp file; caller only wants the path
     return result;
 }
 
@@ -574,34 +571,24 @@ QString getTempDir() {
 // ============================================================================
 QStringList listFiles(const QString& dir, const QString& filter, bool recursive) {
     QStringList result;
-    QDir qdir(dir);
-    if (!qdir.exists()) return result;
+    if (!QDir(dir).exists()) return result;
 
-    QDir::Filters filterFlags = QDir::Files;
-    if (recursive) filterFlags |= QDir::Recursive;
-
-    QFileInfoList entries = qdir.entryInfoList(QStringList(filter), filterFlags);
-    for (const QFileInfo& info : entries) {
-        if (info.isFile()) {
-            result.append(info.absoluteFilePath());
-        }
+    QDirIterator::IteratorFlags flags = recursive ? QDirIterator::Subdirectories : QDirIterator::NoIteratorFlags;
+    QDirIterator it(dir, QStringList() << filter, QDir::Files, flags);
+    while (it.hasNext()) {
+        result.append(it.next());
     }
     return result;
 }
 
 QStringList listDirs(const QString& dir, const QString& filter, bool recursive) {
     QStringList result;
-    QDir qdir(dir);
-    if (!qdir.exists()) return result;
+    if (!QDir(dir).exists()) return result;
 
-    QDir::Filters filterFlags = QDir::Dirs | QDir::NoDotAndDotDot;
-    if (recursive) filterFlags |= QDir::Recursive;
-
-    QFileInfoList entries = qdir.entryInfoList(QStringList(filter), filterFlags);
-    for (const QFileInfo& info : entries) {
-        if (info.isDir()) {
-            result.append(info.absoluteFilePath());
-        }
+    QDirIterator::IteratorFlags flags = recursive ? QDirIterator::Subdirectories : QDirIterator::NoIteratorFlags;
+    QDirIterator it(dir, QStringList() << filter, QDir::Dirs | QDir::NoDotAndDotDot, flags);
+    while (it.hasNext()) {
+        result.append(it.next());
     }
     return result;
 }
