@@ -98,13 +98,13 @@ void NppBigSwitch::init() {
     reg(IDM_FILE_SAVEALL,           [this]() { m_app->onSaveAll(); });
     reg(IDM_FILE_CLOSE,             [this]() { m_app->onCloseFile(); });
     reg(IDM_FILE_CLOSEALL,          [this]() { m_app->onCloseAll(); });
-    reg(IDM_FILE_CLOSEALL_BUT_CURRENT,[this]() { m_app->onCloseAllButCurrent(); });
+    reg(IDM_FILE_CLOSEALL_BUT_CURRENT,[this]() { m_app->closeAllBuffersExcept(m_app->getActiveBuffer()); });
     reg(IDM_FILE_RELOAD,            [this]() { m_app->onReloadFile(); });
     reg(IDM_FILE_DELETE,            [this]() { m_app->onDeleteFile(); });
     reg(IDM_FILE_RENAME,           [this]() { m_app->onRenameFile(); });
     reg(IDM_FILE_PRINT,             [this]() { m_app->onPrint(); });
-    reg(IDM_FILE_LOADSESSION,       [this]() { m_app->loadSession(QString()); });
-    reg(IDM_FILE_SAVESESSION,      [this]() { m_app->saveSession(QString()); });
+    reg(IDM_FILE_LOADSESSION,       [this]() { m_app->loadSession(""); });
+    reg(IDM_FILE_SAVESESSION,      [this]() { m_app->saveSession(""); });
 
     // ── Edit commands ─────────────────────────────────────────────────────────
     reg(IDM_EDIT_UNDO,              [this]() { m_app->onUndo(); });
@@ -149,18 +149,18 @@ void NppBigSwitch::init() {
     reg(IDM_VIEW_FULLSCREEN,        [this]() { m_app->toggleFullScreen(); });
     reg(IDM_VIEW_SWITCH_MAIN,       [this]() { m_app->switchToView(0); });
     reg(IDM_VIEW_SWITCH_SUB,        [this]() { m_app->switchToView(1); });
-    reg(IDM_VIEW_CLONE,             [this]() { m_app->onCloneToOtherView(); });
-    reg(IDM_VIEW_MOVETO_SUB,        [this]() { m_app->onMoveToSubView(); });
+    reg(IDM_VIEW_CLONE,             [this]() { m_app->cloneToOtherView(m_app->getActiveBuffer()); });
+    reg(IDM_VIEW_MOVETO_SUB,        [this]() { m_app->moveToSubView(m_app->getActiveBuffer()); });
 
     // ── Encoding commands ────────────────────────────────────────────────────
-    reg(IDM_ENCODING_ANSI,          [this]() { m_app->onConvertEncoding(0); });
-    reg(IDM_ENCODING_UTF8,          [this]() { m_app->onConvertEncoding(1); });
-    reg(IDM_ENCODING_UTF16,         [this]() { m_app->onConvertEncoding(2); });
+    reg(IDM_ENCODING_ANSI,          [this]() { m_app->onConvertEncoding(EncodingType::ISO88591); });
+    reg(IDM_ENCODING_UTF8,          [this]() { m_app->onConvertEncoding(EncodingType::UTF8); });
+    reg(IDM_ENCODING_UTF16,         [this]() { m_app->onConvertEncoding(EncodingType::UTF16LE); });
 
     // ── EOL commands ────────────────────────────────────────────────────────
-    reg(IDM_EOL_CRLF,              [this]() { m_app->onSetEol(0); });
-    reg(IDM_EOL_LF,                [this]() { m_app->onSetEol(1); });
-    reg(IDM_EOL_CR,                [this]() { m_app->onSetEol(2); });
+    reg(IDM_EOL_CRLF,              [this]() { m_app->onSetEol(EolType::CRLF); });
+    reg(IDM_EOL_LF,                [this]() { m_app->onSetEol(EolType::LF); });
+    reg(IDM_EOL_CR,                [this]() { m_app->onSetEol(EolType::CR); });
 
     // ── Language commands ────────────────────────────────────────────────────
     reg(IDM_LANG_MANAGE_UDL,       [this]() { m_app->onManageUserLanguages(); });

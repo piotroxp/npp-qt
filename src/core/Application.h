@@ -162,6 +162,40 @@ public:
     bool reloadFile(BufferID buffer);
     bool closeFile(BufferID buffer, bool force = false);
     bool closeAllFiles();
+    void closeAllButCurrent();              // IDM_FILE_CLOSEALL_BUT_CURRENT
+
+    // File operations
+    bool deleteFile(BufferID buffer);       // IDM_FILE_DELETE
+    bool renameFile(BufferID buffer, const QString& newName = QString()); // IDM_FILE_RENAME
+
+    // View/editor operations
+    void cloneToOtherView(BufferID buffer);   // IDM_VIEW_CLONE_TO_OTHER_VIEW
+    void moveToSubView(BufferID buffer);      // IDM_VIEW_MOVETO_SUBVIEW
+    void zoomIn();                            // IDM_VIEW_ZOOMIN
+    void zoomOut();                           // IDM_VIEW_ZOOMOUT
+    void zoomRestore();                       // IDM_VIEW_ZOOMRESTORE
+    void toggleWordWrap();                    // IDM_VIEW_WORDWRAP
+    void toggleEolVisibility();              // IDM_VIEW_EOL
+    void showAllCharacters();                  // IDM_VIEW_SHOW_ALL_CHARS
+    void toggleDocMap();                      // IDM_VIEW_DOCMAP
+    void toggleFunctionList();                // IDM_VIEW_FUNC_LIST
+    void toggleFileBrowser();                  // IDM_VIEW_FILEBROWSER
+    void toggleClipboardHistory();            // IDM_VIEW_CLIPBOARDHISTORY
+
+    // Edit operations
+    void deleteLine();                       // IDM_EDIT_DELETELINE
+    void joinLines();                        // IDM_EDIT_JOINLINES
+    void trimTrailing();                     // IDM_EDIT_TRIM_TRAILING
+    void trimLeading();                       // IDM_EDIT_TRIM_LEADING
+    void sortAscending();                    // IDM_EDIT_SORT_ASC
+    void sortDescending();                    // IDM_EDIT_SORT_DESC
+    void sortIntAscending();                  // IDM_EDIT_SORT_INT_ASC
+    void sortIntDescending();                 // IDM_EDIT_SORT_INT_DESC
+    void sortReverse();                       // IDM_EDIT_SORT_REVERSE
+    void unmarkAll();                        // IDM_EDIT_UNMARK_ALL
+    void openContainingFolder(BufferID buffer); // IDM_FILE_OPEN_CONTAINING_FOLDER
+    void searchOnInternet();                  // IDM_EDIT_SEARCHONINTERNET
+
     BufferID newFile(const std::string& encoding = "");
     BufferID duplicateBuffer(BufferID buffer);
     std::optional<std::string> getFileName(BufferID buffer) const;
@@ -289,8 +323,11 @@ public slots:
     void onSaveAll();
     void onCloseFile();
     void onCloseAll();
+    void onCloseAllButCurrent();
     void onExit();
     void onClearRecentFiles();
+    void onDeleteFile();
+    void onRenameFile();
 
     // Edit commands
     void onUndo();
@@ -300,6 +337,17 @@ public slots:
     void onPaste();
     void onDelete();
     void onSelectAll();
+    void onDeleteLine();
+    void onJoinLines();
+    void onTrimTrailing();
+    void onTrimLeading();
+    void onSortAscending();
+    void onSortDescending();
+    void onSortIntAscending();
+    void onSortIntDescending();
+    void onSortReverse();
+    void onOpenContainingFolder();
+    void onSearchOnInternet();
     void onFind();
     void onReplace();
     void onGotoLine();
@@ -310,6 +358,7 @@ public slots:
     void onFindInFiles();
     void onCount();
     void onMarkAll();
+    void onUnmarkAll();
     void showFindInFilesResults(const QList<FindResult>& results);
 
     // View commands
@@ -318,11 +367,26 @@ public slots:
     void onToggleTabBar();
     void onToggleStatusBar();
     void onToggleToolBar();
+    void onZoomIn();
+    void onZoomOut();
+    void onZoomRestore();
+    void onToggleWordWrap();
+    void onToggleEolVisibility();
+    void onShowAllCharacters();
+    void onToggleDocMap();
+    void onToggleFunctionList();
+    void onToggleFileBrowser();
+    void onCloneToOtherView();
+    void onMoveToSubView();
 
     // Macro commands
     void onMacroStartRecording();
     void onMacroStopRecording();
     void onMacroPlaybackLast();
+    void onMacroRecord();
+    void onMacroStop();
+    void onMacroPlayback();
+    void onMacroSave();
     void onPrint();
 
     // Import/Export (Notepad++ compatibility)
@@ -335,18 +399,24 @@ public slots:
     bool loadUdlsFromNpp();
 
     // Encoding commands
-    void onConvertEncoding(EncodingType enc);
     void onConvertToCharset(const QString& charsetName);
     void onEolConversion(const QString& eolCmd);
 
     // Language commands
     void onSetLanguage(LangType lang);
+    void onManageUserLanguages();
 
     // Settings commands
     void onShowPreferences();
     void onShowShortcutMapper();
     void onReloadFile();
     void onShowCommandPalette();
+
+    // Workspace commands
+    void openFolderAsWorkspace(const std::string& dir);
+
+    // Run commands
+    void onRun();
 
     // Help commands
     void onShowAbout();
@@ -443,3 +513,33 @@ private:
 // Inline singleton accessor
 // ============================================================================
 inline Application& app() { return Application::instance(); }
+    // ── Aliases for NppBigSwitch compatibility ───────────────────────────────
+    void onCloseAllButCurrent() { closeAllButCurrent(); }
+    bool onDeleteFile() { return deleteFile(getActiveBuffer()); }
+    bool onRenameFile() { return renameFile(getActiveBuffer(), {}); }
+    void onDeleteLine() { deleteLine(); }
+    void onJoinLines() { joinLines(); }
+    void onTrimTrailing() { trimTrailing(); }
+    void onTrimLeading() { trimLeading(); }
+    void onSortAscending() { sortAscending(); }
+    void onSortDescending() { sortDescending(); }
+    void onSortIntAscending() { sortIntAscending(); }
+    void onSortIntDescending() { sortIntDescending(); }
+    void onSortReverse() { sortReverse(); }
+    void onOpenContainingFolder() { openContainingFolder(getActiveBuffer()); }
+    void onSearchOnInternet() { searchOnInternet(); }
+    void onUnmarkAll() { unmarkAll(); }
+    void onZoomIn() { zoomIn(); }
+    void onZoomOut() { zoomOut(); }
+    void onZoomRestore() { zoomRestore(); }
+    void onToggleWordWrap() { toggleWordWrap(); }
+    void onToggleEolVisibility() { toggleEolVisibility(); }
+    void onShowAllCharacters() { showAllCharacters(); }
+    void onToggleDocMap() { toggleDocMap(); }
+    void onToggleFunctionList() { toggleFunctionList(); }
+    void onToggleFileBrowser() { toggleFileBrowser(); }
+    void onToggleClipboardHistory() { toggleClipboardHistory(); }
+    void onCloneToOtherView() { cloneToOtherView(getActiveBuffer()); }
+    void onMoveToSubView() { moveToSubView(getActiveBuffer()); }
+    bool onConvertEncoding(EncodingType enc) { return setBufferEncoding(getActiveBuffer(), enc); }
+    bool onSetEol(EolType eol) { return setBufferEol(getActiveBuffer(), eol); }

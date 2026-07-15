@@ -9,7 +9,6 @@
 #include <QWebEngineSettings>
 #include <QFile>
 #include <QFileInfo>
-#include <QTextCodec>
 #include <QRegularExpression>
 #include <QMessageLogger>
 #include <QtDebug>
