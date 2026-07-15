@@ -1,17 +1,10 @@
-FROM archlinux:base
+FROM archlinux:base-devel
 
-RUN pacman -Sy --noconfirm && \
-    pacman -S --noconfirm --needed \
-        base-devel \
-        cmake \
-        ninja \
-        gcc \
-        pkgconf \
-        qt6-base \
-        qt6-tools \
-        qt6-webengine \
-        qscintilla-qt6 && \
-    pacman -Scc --noconfirm
+# Pre-select providers: jack=jack2, ttf-font=noto-fonts; avoid all interactive prompts
+RUN echo -e "1\n2\n" | pacman -Sy --noconfirm \
+        qt6-base qt6-tools qt6-webengine qscintilla-qt6 \
+        cmake ninja gcc pkgconf && \
+    rm -rf /var/cache/pacman/pkg
 
 WORKDIR /build
 COPY . /build
