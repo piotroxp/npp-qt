@@ -147,6 +147,16 @@ private:
     void setupCMake();
     void setupJulia();
     void setupMatlab();
+    void setupC();
+    void setupGroovy();
+    void setupScala();
+    void setupErlang();
+    void setupElixir();
+    void setupFSharp();
+    void setupClojure();
+    void setupNfo();
+    void setupProperties();
+    void setupWebAssembly();
 
     // Utility methods
     void applyFormat(int start, int length, const QTextCharFormat& format);
