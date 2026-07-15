@@ -22,6 +22,7 @@
 #else
 #include <sys/mman.h>
 #include <fcntl.h>
+#include <utime.h>      // utimbuf, utime()
 #endif
 
 namespace fs = std::filesystem;
@@ -280,7 +281,7 @@ std::string getTempFileName(const std::string& prefix) {
 }
 
 std::string getTempPath() {
-    return getTempFileName("npp_XXXXXX");
+    return getTempFileName(std::string("npp_XXXXXX"));
 }
 
 // ============================================================================
@@ -516,11 +517,8 @@ qint64 getFileSize(const QString& path) {
 
 QDateTime getCreationTime(const QString& path) {
     QFileInfo info(path);
-#if defined(_WIN32) || defined(_WIN64)
+    // Qt6: birthTime() works on all platforms (Linux >= 4.11 / glibc >= 2.12)
     return info.birthTime();
-#else
-    return info.created();
-#endif
 }
 
 QDateTime getModificationTime(const QString& path) {
@@ -557,9 +555,9 @@ QString getTempFileName(const QString& prefix) {
     int fd = mkstemp(tpl.data());
     if (fd < 0) return QString();
     ::close(fd);
-    const QString result = QString::fromLocal8Bit(tpl);
+    const QString resultPath = QString::fromLocal8Bit(tpl);
     ::remove(tpl.constData()); // Remove the created temp file; caller only wants the path
-    return result;
+    return resultPath;
 }
 
 QString getTempDir() {

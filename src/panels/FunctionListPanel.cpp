@@ -862,7 +862,7 @@ void FunctionListPanel::parseWithXmlParser(const QStringList& lines, LangType la
 }
 
 void FunctionListPanel::parseClassRange(const QStringList& lines,
-                                        const FunctionListXmlParser::Rule& classRule,
+                                        const FunctionListRule& classRule,
                                         QList<FunctionItem>& out) {
     if (!classRule.mainExpr.isValid())
         return;
@@ -903,7 +903,7 @@ void FunctionListPanel::parseClassRange(const QStringList& lines,
         // Look for methods using the function rules inside the class body
         // (classRule may have nested function sub-rules we check by re-parsing
         //  the body text with the existing function rules)
-        QList<FunctionListXmlParser::Rule> emptyRules; // use hard-coded parsers instead
+        QList<FunctionListRule> emptyRules; // use hard-coded parsers instead
         Q_UNUSED(emptyRules);
 
         for (int li = 0; li < bodyLines.size(); ++li) {
@@ -946,7 +946,7 @@ void FunctionListPanel::parseClassRange(const QStringList& lines,
 
 void FunctionListPanel::parseTopLevelFunctions(
         const QStringList& lines,
-        const QList<FunctionListXmlParser::Rule>& rules,
+        const QList<FunctionListRule>& rules,
         QList<FunctionItem>& out) {
     if (rules.isEmpty())
         return;

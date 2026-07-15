@@ -13,6 +13,7 @@
 #include <QString>
 #include <QStringList>
 #include <QByteArray>
+#include <QDirIterator>
 #include <QDateTime>
 #include "Types.h"
 #include "Constants.h"

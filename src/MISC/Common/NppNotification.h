@@ -387,7 +387,7 @@ private:
 
     mutable QReadWriteLock _observersLock;
     mutable QReadWriteLock _filterLock;
-    mutable QReadWriterLock _statsLock;
+    mutable QReadWriteLock _statsLock;
     mutable QMutex _historyMutex;
     mutable QMutex _enabledMutex;
     mutable QMutex _aggregationMutex;

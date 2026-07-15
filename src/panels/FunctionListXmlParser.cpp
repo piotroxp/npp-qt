@@ -155,13 +155,13 @@ void FunctionListXmlParser::parseParserElement(QXmlStreamReader& xml, ParserDef&
             break;
         if (xml.isStartElement()) {
             if (xml.name() == "classRange") {
-                Rule rule;
+                FunctionListRule rule;
                 rule.name = "classRange";
                 parseClassRangeElement(xml, rule);
                 if (rule.isValid)
                     def.classRules.append(rule);
             } else if (xml.name() == "function") {
-                Rule rule;
+                FunctionListRule rule;
                 rule.name = "function";
                 parseFunctionElement(xml, rule);
                 if (rule.isValid)
@@ -174,7 +174,7 @@ void FunctionListXmlParser::parseParserElement(QXmlStreamReader& xml, ParserDef&
     }
 }
 
-void FunctionListXmlParser::parseClassRangeElement(QXmlStreamReader& xml, Rule& rule) {
+void FunctionListXmlParser::parseClassRangeElement(QXmlStreamReader& xml, FunctionListRule& rule) {
     rule.openSymbole  = xml.attributes().value("openSymbole").toString("{");
     rule.closeSymbole = xml.attributes().value("closeSymbole").toString("}");
 
@@ -193,7 +193,7 @@ void FunctionListXmlParser::parseClassRangeElement(QXmlStreamReader& xml, Rule& 
                 if (!expr.isEmpty())
                     convertPattern(expr, rule.classNameExpr);
             } else if (localName == "function") {
-                Rule funcRule;
+                FunctionListRule funcRule;
                 funcRule.name = "function";
                 parseFunctionElement(xml, funcRule);
                 // Attach to the parent classRange implicitly (line range from classRange)
@@ -206,7 +206,7 @@ void FunctionListXmlParser::parseClassRangeElement(QXmlStreamReader& xml, Rule& 
     rule.isValid = rule.mainExpr.isValid();
 }
 
-void FunctionListXmlParser::parseFunctionElement(QXmlStreamReader& xml, Rule& rule) {
+void FunctionListXmlParser::parseFunctionElement(QXmlStreamReader& xml, FunctionListRule& rule) {
     const QString mainExprStr = xml.attributes().value("mainExpr").toString();
     if (!mainExprStr.isEmpty())
         convertPattern(mainExprStr, rule.mainExpr);

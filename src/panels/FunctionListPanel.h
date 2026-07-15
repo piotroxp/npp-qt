@@ -17,7 +17,7 @@
 #include <QMenu>
 
 class ScintillaEditor;
-class FunctionListXmlParser;
+#include "FunctionListXmlParser.h"
 
 class FunctionListPanel : public QDockWidget {
     Q_OBJECT
@@ -92,10 +92,10 @@ private:
     // XML-based parsing (uses upstream functionList XML parsers)
     void parseWithXmlParser(const QStringList& lines, LangType lang);
     void parseClassRange(const QStringList& lines,
-                         const FunctionListXmlParser::Rule& classRule,
+                         const FunctionListRule& classRule,
                          QList<FunctionItem>& out);
     void parseTopLevelFunctions(const QStringList& lines,
-                                const QList<FunctionListXmlParser::Rule>& rules,
+                                const QList<FunctionListRule>& rules,
                                 QList<FunctionItem>& out);
 
     // Load XML parser on demand for the current language

@@ -39,6 +39,27 @@
 #include <QXmlStreamReader>
 #include <QDebug>
 
+// Forward-declare for the Rule struct below
+class FunctionListXmlParser;
+
+// ─── Rule — shared between FunctionListXmlParser and its consumers ───────────
+// Declared here so FunctionListPanel.h can use QList<Rule> without including
+// the full FunctionListXmlParser.cpp (avoids pulling QDomDocument into the
+// header's transitive includes).
+
+struct FunctionListRule {
+    QString name;                 // "function" | "classRange"
+    QRegularExpression mainExpr; // compiled pattern (empty if skipped)
+    QString openSymbole;         // "{" etc.
+    QString closeSymbole;        // "}" etc.
+    QRegularExpression classNameExpr;
+    QRegularExpression funcNameExpr;
+    QRegularExpression funcSigExpr;
+    QRegularExpression funcDisplayExpr;
+    QRegularExpression accessibilityExpr;
+    bool isValid = false;
+};
+
 class FunctionListXmlParser {
 
 public:
