@@ -18,19 +18,22 @@ std::wstring toWStr(const std::string& s) {
 
 std::string toUtf8(const std::wstring& s) {
     if (s.empty()) return {};
-    QString qstr(s.begin(), s.end());
+    // Qt6: use QStringView for iterator-pair construction
+    QString qstr = QString::fromUtf16(
+        reinterpret_cast<const char16_t*>(s.data()), static_cast<int>(s.size()));
     return qstr.toUtf8().constData();
 }
 
 std::u16string toUtf16(const std::string& s) {
     if (s.empty()) return {};
-    QString qstr = QString::fromUtf8(s.data(), s.size());
-    return std::u16string(qstr.begin(), qstr.end());
+    QString qstr = QString::fromUtf8(s.data(), static_cast<int>(s.size()));
+    return std::u16string(reinterpret_cast<const char16_t*>(qstr.utf16()),
+                           static_cast<size_t>(qstr.size()));
 }
 
 std::string utf16ToUtf8(const std::u16string& s) {
     if (s.empty()) return {};
-    QString qstr(s.begin(), s.end());
+    QString qstr = QString::fromUtf16(s.data(), static_cast<int>(s.size()));
     return qstr.toUtf8().constData();
 }
 
@@ -173,7 +176,7 @@ QString escapeJson(const QString& s) {
             case '\t': result += "\\t"; break;
             default:
                 if (c.unicode() < 0x20) {
-                    result += QString("\\u%1").arg(c.unicode(), 4, 16, QChar('0'));
+                    result += QString("\\u%1").arg(static_cast<int>(c.unicode()), 4, 16, QChar('0'));
                 } else {
                     result += c;
                 }

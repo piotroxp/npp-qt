@@ -73,7 +73,7 @@ public:
     // --- Visibility ---
     void showMinimizedOrFocus(); // show if hidden, or bring to front and focus
 
-Q signals:
+Q_SIGNALS:
     void findNextRequested(const QString& text, FindOption options);
     void findPrevRequested(const QString& text, FindOption options);
     void replaceRequested(const QString& find, const QString& replace, FindOption options);
