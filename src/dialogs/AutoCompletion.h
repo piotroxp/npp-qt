@@ -72,6 +72,12 @@ public:
     };
     Q_DECLARE_FLAGS(CompletionTypes, CompletionType)
 
+    // Bitwise operators for scoped enum (Q_DECLARE_OPERATORS_FOR_FLAGS doesn't work with enum class)
+    friend constexpr CompletionTypes operator|(CompletionType a, CompletionType b) noexcept
+        { return CompletionTypes(a) | CompletionTypes(b); }
+    friend constexpr CompletionTypes operator~(CompletionType a) noexcept
+        { return ~CompletionTypes(a); }
+
     enum class SortMode {
         Alphabetical,   // A→Z
         ByFrequency,    // most-used first
@@ -226,6 +232,3 @@ private:
     QStringList _cachedEnvVars;
     bool _envVarCacheValid = false;
 };
-
-// ── Flag operators ─────────────────────────────────────────────────────────────
-Q_DECLARE_OPERATORS_FOR_FLAGS(AutoCompletion::CompletionTypes)
