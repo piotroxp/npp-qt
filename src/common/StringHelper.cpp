@@ -13,7 +13,13 @@ std::wstring toWStr(const std::string& s) {
     if (s.empty()) return {};
     // Qt6: QString handles UTF-8 natively
     QString qstr = QString::fromUtf8(s.data(), static_cast<int>(s.size()));
-    return std::wstring(qstr.begin(), qstr.end());
+    // GCC 16: QChar iterators cannot directly construct wstring; use explicit conversion
+    std::wstring result;
+    result.reserve(qstr.size());
+    for (const QChar& c : qstr) {
+        result.push_back(static_cast<wchar_t>(c.unicode()));
+    }
+    return result;
 }
 
 std::string toUtf8(const std::wstring& s) {

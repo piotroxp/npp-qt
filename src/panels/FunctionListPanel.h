@@ -16,6 +16,8 @@
 #include <QToolTip>
 #include <QMenu>
 
+#include "FunctionListXmlParser.h"
+
 class ScintillaEditor;
 #include "FunctionListXmlParser.h"
 
@@ -89,28 +91,28 @@ private:
     void parseCsharp(const QStringList& lines);
     void parseGeneric(const QStringList& lines);
 
-    // XML-based parsing (uses upstream functionList XML parsers)
-    void parseWithXmlParser(const QStringList& lines, LangType lang);
-    void parseClassRange(const QStringList& lines,
-                         const FunctionListRule& classRule,
-                         QList<FunctionItem>& out);
-    void parseTopLevelFunctions(const QStringList& lines,
-                                const QList<FunctionListRule>& rules,
-                                QList<FunctionItem>& out);
-
-    // Load XML parser on demand for the current language
-    void ensureXmlParserLoaded(LangType lang);
-
     // Item data
     struct FunctionItem {
         QString name;
         int line;
-        QString type;       // "function", "class", "method", "struct", "enum", "macro", "interface", "trait", "module", "signal", "slot", "property"
-        QString access;     // "public", "private", "protected", "package", "internal"
-        QString language;   // "cpp", "python", "js", "rust", "go", "ruby", "php", "lua", "perl", "sql", "css", "html", "shell", "make", "java", "generic"
-        QString signature;   // full signature line
-        QString parent;     // parent container name (class/namespace/module)
+        QString type;
+        QString access;
+        QString language;
+        QString signature;
+        QString parent;
     };
+
+    // XML-based parsing (uses upstream functionList XML parsers)
+    void parseWithXmlParser(const QStringList& lines, LangType lang);
+    void parseClassRange(const QStringList& lines,
+                         const FunctionListXmlParser::Rule& classRule,
+                         QList<FunctionItem>& out);
+    void parseTopLevelFunctions(const QStringList& lines,
+                                const QList<FunctionListXmlParser::Rule>& rules,
+                                QList<FunctionItem>& out);
+
+    // Load XML parser on demand for the current language
+    void ensureXmlParserLoaded(LangType lang);
 
     QList<FunctionItem> _allFunctions;
     QList<FunctionItem> _filteredFunctions;

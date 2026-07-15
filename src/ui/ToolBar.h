@@ -29,7 +29,6 @@ public:
     ToolBarStyle toolBarStyle() const { return m_style; }
     
     // Action management
-    void addAction(QAction* action) override;
     QAction* actionForCommand(const QString& command) const;
     
     // Enable/disable actions

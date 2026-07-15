@@ -21,13 +21,15 @@ endif()
 # ─── QScintilla (no CMake configs on Arch Linux) ────────────────────────────
 find_package(QScintilla6 QUIET)
 if(NOT QScintilla6_FOUND)
-    find_library(QSCINTILLA_LIBRARY NAMES qscintilla2_qt6 qscintilla2)
-    find_path(QSCINTILLA_INCLUDE_DIR NAMES Qsci/qsciscintilla.h
-              PATHS /usr/include/qt6 /usr/include /usr/include/x86_64-linux-gnu/qt6)
+    # Ubuntu /usr/include/x86_64-linux-gnu/qt6 layout — no CMake config
+    find_library(QSCINTILLA_LIBRARY qscintilla2_qt6 PATHS /usr/lib/x86_64-linux-gnu)
+    find_path(QSCINTILLA_INCLUDE_DIR Qsci/qsciscintilla.h
+              PATHS /usr/include/x86_64-linux-gnu/qt6 /usr/include /usr/include/qt6)
     if(QSCINTILLA_LIBRARY AND QSCINTILLA_INCLUDE_DIR)
         set(QScintilla6_FOUND TRUE)
         set(QSCINTILLA_LIBRARIES ${QSCINTILLA_LIBRARY})
         set(QSCINTILLA_INCLUDE_DIRS ${QSCINTILLA_INCLUDE_DIR})
+        message(STATUS "QScintilla6 found via fallback: ${QSCINTILLA_LIBRARY}")
     endif()
 endif()
 if(NOT QScintilla6_FOUND)
@@ -188,6 +190,12 @@ set(HEADERS
 
 # ─── Executable ───────────────────────────────────────────────────────────────
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+
+# Suppress RPATH warning with Ninja generator
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    BUILD_WITH_INSTALL_RPATH TRUE
+    INSTALL_RPATH "$ORIGIN/../lib"
+)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     src
