@@ -11,15 +11,8 @@ namespace StringHelper {
 // ============================================================================
 std::wstring toWStr(const std::string& s) {
     if (s.empty()) return {};
-    // Qt6: QString handles UTF-8 natively
-    QString qstr = QString::fromUtf8(s.data(), static_cast<int>(s.size()));
-    // GCC 16: QChar iterators cannot directly construct wstring; use explicit conversion
-    std::wstring result;
-    result.reserve(qstr.size());
-    for (const QChar& c : qstr) {
-        result.push_back(static_cast<wchar_t>(c.unicode()));
-    }
-    return result;
+    // Qt6: QString::toStdWString() handles UTF-8 → wchar_t correctly on all platforms
+    return QString::fromUtf8(s.data(), static_cast<int>(s.size())).toStdWString();
 }
 
 std::string toUtf8(const std::wstring& s) {
@@ -74,7 +67,9 @@ std::string replaceAll(std::string s, const std::vector<std::pair<std::string, s
 }
 
 QString replaceAll(const QString& s, const QString& from, const QString& to) {
-    return s.replace(from, to);
+    QString result = s;
+    result.replace(from, to);
+    return result;
 }
 
 // ============================================================================

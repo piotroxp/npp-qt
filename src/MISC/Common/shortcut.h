@@ -60,7 +60,7 @@ public:
     virtual bool isValid() const {
         if (_keyCombo._key == 0) return true;
         quint32 k = _keyCombo._key;
-        if ((k >= 'A' && k <= 'Z') || (k >= '0' && k <= '9') || k == VK_SPACE || k == VK_CAPITAL || k == VK_BACK || k == VK_RETURN)
+        if ((k >= 'A' && k <= 'Z') || (k >= '0' && k <= '9') || k == NppKeys::VK_SPACE || k == NppKeys::VK_CAPITAL || k == NppKeys::VK_BACK || k == NppKeys::VK_RETURN)
             return _keyCombo._isCtrl || _keyCombo._isAlt;
         return true;
     }
