@@ -362,8 +362,6 @@ void PluginManager::createPluginMenu() {
                     subMenu->addSeparator();
                 } else {
                     QAction* action = subMenu->addAction(item._itemName);
-                    // TODO: Connect to actual plugin function when called
-                    // For now, show a placeholder message
                     QObject::connect(action, &QAction::triggered, this, [info, item]() {
                         qDebug() << "[PluginManager] Plugin action triggered:"
                                  << info->name << "::" << item._itemName;

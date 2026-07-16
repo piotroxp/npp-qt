@@ -709,3 +709,10 @@ void ToolBar::onActionTriggered() {
     emit toolBarCommand(cmd);
 }
 
+void ToolBar::updateForDpi() {
+    DpiManager& dpi = DpiManager::instance();
+    // Rescale icon size for the new DPI
+    int scaledSize = dpi.iconSize();
+    setIconSize(scaledSize);
+}
+

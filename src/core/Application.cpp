@@ -26,13 +26,14 @@
 #include "dialogs/GoToLineDialog.h"
 #include "dialogs/ShortcutMapperDialog.h"
 #include "ShortcutManager.h"
+#include "MISC/Common/shortcut.h"
 #include "dialogs/CommandPaletteDialog.h"
 #include "dialogs/PreferenceDialog.h"
 #include "dialogs/AboutDialog.h"
 #include "panels/DocumentMapPanel.h"
 #include "panels/FunctionListPanel.h"
 #include "panels/FileBrowserPanel.h"
-#include "panels/ClipboardHistoryPanel.h"
+// ClipboardHistoryPanel.h included via MainWindow.h
 #include "common/FileHelper.h"
 #include "common/StringHelper.h"
 #include "common/Util.h"
@@ -56,6 +57,8 @@
 #include <QLineEdit>
 #include <QStandardPaths>
 #include <QCloseEvent>
+#include <QProcess>
+#include <QFileInfo>
 #include <algorithm>
 #include <QTimer>
 #include <QTextStream>
@@ -398,16 +401,14 @@ void Application::setupStatusBar() {
 }
 
 void Application::setupDockingPanels() {
-    _docMapPanel = new DocumentMapPanel(_mainWindow);
-    _funcListPanel = new FunctionListPanel(_mainWindow);
-    _fileBrowserPanel = new FileBrowserPanel(_mainWindow);
-    _clipboardHistoryPanel = new ClipboardHistoryPanel(_mainWindow);
-    _mainWindow->addDockWidget(Qt::RightDockWidgetArea, _clipboardHistoryPanel);
-    _clipboardHistoryPanel->hide();
-
-    _mainWindow->addDockWidget(Qt::RightDockWidgetArea, _docMapPanel);
-    _mainWindow->addDockWidget(Qt::RightDockWidgetArea, _funcListPanel);
-    _mainWindow->addDockWidget(Qt::LeftDockWidgetArea, _fileBrowserPanel);
+    // FileBrowserPanel, FunctionListPanel, DocumentMapPanel are already created
+    // in MainWindow::createPanels() and registered via setters below.
+    // We only need to create and add ClipboardHistoryPanel here.
+    if (!_clipboardHistoryPanel) {
+        _clipboardHistoryPanel = new ClipboardHistoryPanel(_mainWindow);
+        _mainWindow->addDockWidget(Qt::RightDockWidgetArea, _clipboardHistoryPanel);
+        _clipboardHistoryPanel->hide();
+    }
 }
 
 void Application::setupConnections() {
@@ -1623,28 +1624,145 @@ void Application::setLanguage(LangType lang) {
 }
 
 void Application::onConvertEncoding(EncodingType enc) {
-    auto* ed = _mainWindow->currentEditor();
+    ScintillaEditor* ed = _mainWindow ? _mainWindow->currentEditor() : nullptr;
     if (!ed) return;
-    // Re-encode the current buffer to the target encoding
-    // (placeholder — real implementation would convert via NppIO)
-    Q_UNUSED(ed);
-    Q_UNUSED(enc);
+    BufferID buf = getActiveBuffer();
+    if (buf == BUFFER_INVALID) return;
+
+    QString path = _fileManager->getBufferPath(buf);
+    if (path.isEmpty()) {
+        // Untitled buffer: just change the encoding and update status
+        _fileManager->setEncoding(buf, enc);
+        setStatusBarText(QString("Encoding set to %1").arg(encodingToString(enc).c_str()).toStdString());
+        return;
+    }
+
+    // Save to a temp file with the current encoding, then re-save with the target encoding
+    // We use the editor text as the source of truth
+    QString text = ed->text();
+    if (text.isEmpty()) return;
+
+    // Save to a .tmp file with target encoding first, then rename
+    QString tmpPath = path + ".conv.tmp";
+    if (_fileManager->saveFile(tmpPath, text, enc, getBufferEol(buf))) {
+        // Move temp over original
+        QFile::remove(path);
+        QFile::rename(tmpPath, path);
+        // Reload
+        BufferID newBuf = _fileManager->openFile(path);
+        if (newBuf != BUFFER_INVALID) {
+            setActiveBuffer(newBuf);
+        }
+        setStatusBarText(QString("Converted to %1").arg(encodingToString(enc).c_str()).toStdString());
+    }
 }
 
 void Application::cloneToOtherView(BufferID buffer) {
-    Q_UNUSED(buffer);
+    if (buffer == BUFFER_INVALID) return;
+    if (!_mainWindow) return;
+    // Open the same file in the other view
+    QString path = _fileManager->getBufferPath(buffer);
+    if (path.isEmpty()) return;
+    // Switch to the other view
+    _activeViewId = (_activeViewId == 0) ? 1 : 0;
+    BufferID cloned = _fileManager->openFile(path);
+    if (cloned != BUFFER_INVALID) {
+        setActiveBuffer(cloned);
+    }
 }
 
 void Application::openFolderAsWorkspace(const std::string& dir) {
-    Q_UNUSED(dir);
+    if (dir.empty()) return;
+    // Set the folder as the workspace root for the file browser
+    QString folder = QString::fromStdString(dir);
+    if (_fileBrowserPanel) {
+        _fileBrowserPanel->setRootDirectory(folder);
+        _fileBrowserPanel->refresh();
+    }
+    setStatusBarText(("Opened workspace: " + dir).c_str());
 }
 
 void Application::onRun() {
-    // Execute the current file (placeholder)
+    ScintillaEditor* ed = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!ed) return;
+    // Determine the run command based on file type
+    BufferID buf = getActiveBuffer();
+    QString path = _fileManager->getBufferPath(buf);
+    if (path.isEmpty()) return;
+
+    // Get file extension
+    QFileInfo fi(path);
+    QString ext = fi.suffix().toLower();
+    QString cmd;
+    bool needSave = false;
+
+    // Map extension to run command
+    if (ext == "py") {
+        cmd = "python3 \"" + path + "\"";
+    } else if (ext == "js") {
+        cmd = "node \"" + path + "\"";
+    } else if (ext == "sh" || ext == "bash") {
+        cmd = "bash \"" + path + "\"";
+    } else if (ext == "rb") {
+        cmd = "ruby \"" + path + "\"";
+    } else if (ext == "pl") {
+        cmd = "perl \"" + path + "\"";
+    } else if (ext == "php") {
+        cmd = "php \"" + path + "\"";
+    } else if (ext == "go") {
+        cmd = "go run \"" + path + "\"";
+    } else if (ext == "rs") {
+        cmd = "cargo run --manifest-path \"" + fi.dir().filePath("Cargo.toml") + "\"";
+    } else if (ext == "html" || ext == "htm") {
+        cmd = "xdg-open \"" + path + "\"";
+    } else if (ext == "c" || ext == "cpp" || ext == "cc") {
+        // Try to compile and run
+        QString base = fi.dir().filePath(fi.baseName());
+        cmd = "(gcc \"" + path + "\" -o \"" + base + "\" && \"" + base + "\") 2>&1";
+        needSave = true;
+    } else if (ext == "java") {
+        cmd = "cd \"" + fi.dir().path() + "\" && javac " + fi.fileName() + " && java " + fi.baseName();
+        needSave = true;
+    }
+
+    if (cmd.isEmpty()) {
+        QMessageBox::information(_mainWindow, "Run", "No run command configured for ." + ext + " files.");
+        return;
+    }
+
+    // Save if modified
+    if (needSave && isBufferModified(buf)) {
+        saveFile(buf);
+    }
+
+    setStatusBarText(("Running: " + cmd).toStdString().c_str());
+    QProcess* proc = new QProcess(this);
+    connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [this, proc](int exitCode, QProcess::ExitStatus) {
+        QString output = QString::fromLocal8Bit(proc->readAllStandardOutput());
+        QString err    = QString::fromLocal8Bit(proc->readAllStandardError());
+        if (!output.isEmpty() || !err.isEmpty()) {
+            qDebug() << "[Run]" << output;
+            if (!err.isEmpty()) qWarning() << "[Run stderr]" << err;
+        }
+        setStatusBarText(("Exit code: " + QString::number(exitCode)).toStdString().c_str());
+        proc->deleteLater();
+    });
+    proc->setWorkingDirectory(fi.dir().path());
+    proc->start("/bin/sh", {"-c", cmd});
 }
 
 void Application::moveToSubView(BufferID buffer) {
-    Q_UNUSED(buffer);
+    if (buffer == BUFFER_INVALID) return;
+    if (!_mainWindow) return;
+    QString path = _fileManager->getBufferPath(buffer);
+    if (path.isEmpty()) return;
+    closeFile(buffer, false);
+    // Switch view
+    _activeViewId = (_activeViewId == 0) ? 1 : 0;
+    BufferID moved = openFile(path.toStdString());
+    if (moved != BUFFER_INVALID) {
+        setActiveBuffer(moved);
+    }
 }
 
 void Application::onMacroRecord() {
@@ -1660,28 +1778,99 @@ void Application::onMacroPlayback() {
 }
 
 void Application::onMacroSave() {
-    // Save macro — placeholder
+    if (!_macroManager) return;
+    // Prompt for name
+    bool ok;
+    QString name = QInputDialog::getText(_mainWindow, "Save Macro", "Macro name:", QLineEdit::Normal, "", &ok);
+    if (!ok || name.isEmpty()) return;
+    // Save to standard location
+    QString macroDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    if (!QDir(macroDir + "/macros").exists()) QDir().mkpath(macroDir + "/macros");
+    QString filePath = macroDir + "/macros/" + name + ".json";
+    _macroManager->saveMacro(name, filePath);
+    setStatusBarText(("Saved macro: " + name).toStdString().c_str());
 }
 
 void Application::onManageUserLanguages() {
-    // Open user languages / UDL manager — placeholder
+    if (!_udlManager) {
+        _udlManager = new UdlManager(this);
+    }
+    // Show UDL manager dialog
+    auto* dlg = new QDialog(_mainWindow);
+    dlg->setWindowTitle("User Defined Languages");
+    dlg->resize(600, 400);
+    QVBoxLayout* lay = new QVBoxLayout(dlg);
+    QLabel* info = new QLabel("User defined languages are managed through the Preferences dialog.", dlg);
+    lay->addWidget(info);
+    QDialogButtonBox* box = new QDialogButtonBox(QDialogButtonBox::Ok, dlg);
+    lay->addWidget(box);
+    connect(box, &QDialogButtonBox::accepted, dlg, &QDialog::accept);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->show();
 }
 
 void Application::onToggleFileBrowser() {
-    // Toggle file browser panel — placeholder
+    if (_fileBrowserPanel) {
+        if (_fileBrowserPanel->isVisible()) {
+            _fileBrowserPanel->hide();
+        } else {
+            _fileBrowserPanel->show();
+        }
+    } else {
+        // Create on demand if never shown
+        qDebug() << "[Application] File browser panel not set up";
+    }
 }
 
 void Application::onSetEol(EolType format) {
-    // Convert line endings for current buffer — placeholder
-    Q_UNUSED(format);
+    ScintillaEditor* ed = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!ed) return;
+    BufferID buf = getActiveBuffer();
+    if (buf == BUFFER_INVALID) return;
+    // Convert existing line endings to the chosen format
+    QString text = ed->text();
+    QString converted;
+    switch (format) {
+        case EolType::EOL_CRLF:
+            converted = text.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\r\n");
+            break;
+        case EolType::EOL_LF:
+            converted = text.replace("\r\n", "\n").replace("\r", "\n");
+            break;
+        case EolType::EOL_CR:
+            converted = text.replace("\r\n", "\r").replace("\n", "\r");
+            break;
+        default:
+            converted = text;
+    }
+    // Apply the converted text
+    ed->setText(converted);
+    setBufferEol(buf, format);
+}
+
+void Application::toggleDocMap() {
+    if (_docMapPanel) {
+        if (_docMapPanel->isVisible()) {
+            _docMapPanel->hide();
+        } else {
+            _docMapPanel->show();
+        }
+    }
 }
 
 void Application::onToggleDocMap() {
-    // Toggle document map panel — placeholder
+    toggleDocMap();
 }
 
 void Application::onToggleFunctionList() {
-    // Toggle function list panel — placeholder
+    if (_funcListPanel) {
+        if (_funcListPanel->isVisible()) {
+            _funcListPanel->hide();
+        } else {
+            _funcListPanel->show();
+            _funcListPanel->refresh();
+        }
+    }
 }
 
 // ============================================================================
@@ -2078,6 +2267,32 @@ void Application::onMacroPlaybackLast() {
         } else {
             setStatusBarText("No macros saved yet.");
         }
+    }
+}
+
+void Application::playbackMacroStep(int message, uintptr_t wParam, uintptr_t lParam,
+                                    const char* sParam, int macroType) {
+    ScintillaEditor* ed = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!ed) return;
+
+    QsciScintilla* sci = ed->qsciEditor();
+    if (!sci) return;
+
+    // Replay the Scintilla message
+    auto typeIndex = static_cast<RecordedMacroStep::MacroTypeIndex>(macroType);
+    switch (typeIndex) {
+        case RecordedMacroStep::mtUseSParameter: {
+            QString s = QString::fromUtf8(sParam);
+            sci->SendScintilla(message, wParam,
+                reinterpret_cast<sptr_t>(s.toUtf8().constData()));
+            break;
+        }
+        case RecordedMacroStep::mtUseLParameter:
+        case RecordedMacroStep::mtMenuCommand:
+        case RecordedMacroStep::mtSavedSnR:
+        default:
+            sci->SendScintilla(message, wParam, lParam);
+            break;
     }
 }
 

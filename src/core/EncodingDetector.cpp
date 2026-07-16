@@ -5,29 +5,35 @@
 #include "EncodingDetector.h"
 #include <fstream>
 #include <cstring>
+#include <QStringConverter>
+#include <QString>
+#include <QFile>
+#include <QRegularExpression>
 
 EncodingDetector::EncodingDetector() = default;
 EncodingDetector::~EncodingDetector() = default;
 
 EncodingType EncodingDetector::detect(const std::string& bytes) {
-    return detect(bytes, "UTF-8");
+    return detectWithHints(bytes, std::string());
 }
 
-EncodingType EncodingDetector::detect(const std::string& bytes, const std::string& fallback) {
-    (void)fallback;
-    EncodingType bom = detectBOM(bytes);
-    if (bom != EncodingType::ANSI) return bom;
-    if (isValidUtf8(bytes)) return EncodingType::UTF_8;
-    return EncodingType::ANSI;
+EncodingType EncodingDetector::detect(const std::string& bytes, const std::string& /*fallback*/) {
+    return detectWithHints(bytes, std::string());
 }
 
 EncodingType EncodingDetector::detectWithHints(const std::string& bytes, const std::string& fileName) {
-    EncodingType fromExt = hintFromExtension(fileName);
     EncodingType bom = detectBOM(bytes);
     if (bom != EncodingType::ANSI) return bom;
+
+    // Try HTML/XML charset detection first for web files
+    EncodingType fromMeta = detectFromMetaCharset(bytes);
+    if (fromMeta != EncodingType::ANSI) return fromMeta;
+
+    // Check if it looks like UTF-8
     if (isValidUtf8(bytes)) return EncodingType::UTF_8;
-    (void)fromExt;
-    return EncodingType::ANSI;
+
+    // Use extension hint as fallback
+    return hintFromExtension(fileName);
 }
 
 EncodingType EncodingDetector::detectBOM(const std::string& bytes) const {
@@ -75,14 +81,41 @@ bool EncodingDetector::isValidUtf8(const std::string_view bytes) const {
     return true;
 }
 
+static QStringConverter::Encoding encodingToQStringEncoder(EncodingType enc) {
+    switch (enc) {
+        case EncodingType::UTF_8:
+        case EncodingType::UTF_8_BOM:
+            return QStringConverter::Utf8;
+        case EncodingType::UTF_16_LE:
+            return QStringConverter::Utf16;
+        case EncodingType::UTF_16_BE:
+            return QStringConverter::Utf16;
+        case EncodingType::UTF_32_LE:
+            return QStringConverter::Utf32;
+        case EncodingType::UTF_32_BE:
+            return QStringConverter::Utf32;
+        default:
+            return QStringConverter::System;
+    }
+}
+
 std::string EncodingDetector::toUtf8(const std::string& bytes, EncodingType from) const {
     if (from == EncodingType::UTF_8 || from == EncodingType::ANSI) return bytes;
-    return bytes;
+    QStringConverter::Encoding enc = encodingToQStringEncoder(from);
+    QStringDecoder decoder(enc);
+    QString decoded = decoder.decode(QByteArray::fromRawData(bytes.data(), static_cast<int>(bytes.size())));
+    if (decoder.hasError()) return bytes;
+    return decoded.toUtf8().constData();
 }
 
 std::string EncodingDetector::fromUtf8(const std::string& utf8, EncodingType to) const {
     if (to == EncodingType::UTF_8 || to == EncodingType::ANSI) return utf8;
-    return utf8;
+    QStringConverter::Encoding enc = encodingToQStringEncoder(to);
+    QStringEncoder encoder(enc);
+    QString decoded = QString::fromUtf8(utf8);
+    QByteArray result = encoder.encode(decoded);
+    if (encoder.hasError()) return utf8;
+    return std::string(result.constData(), result.size());
 }
 
 EolType EncodingDetector::detectEol(const std::string& bytes) const {
@@ -128,7 +161,25 @@ int EncodingDetector::encodingToCodepage(EncodingType enc) {
 }
 
 EncodingType EncodingDetector::hintFromExtension(const std::string& fileName) const {
-    (void)fileName;
+    QString name = QString::fromStdString(fileName).toLower();
+    if (name.endsWith(".txt") || name.endsWith(".csv") || name.endsWith(".log"))
+        return EncodingType::ANSI; // plain text: use system locale
+    if (name.endsWith(".xml") || name.endsWith(".html") || name.endsWith(".htm")
+        || name.endsWith(".xhtml") || name.endsWith(".svg"))
+        return EncodingType::UTF_8; // web files: UTF-8 by default
+    if (name.endsWith(".py") || name.endsWith(".js") || name.endsWith(".ts")
+        || name.endsWith(".tsx") || name.endsWith(".jsx") || name.endsWith(".json")
+        || name.endsWith(".md") || name.endsWith(".cmake") || name.endsWith(".sh")
+        || name.endsWith(".bash") || name.endsWith(".yaml") || name.endsWith(".yml")
+        || name.endsWith(".toml") || name.endsWith(".ini") || name.endsWith(".cfg")
+        || name.endsWith(".conf") || name.endsWith(".txt") || name.endsWith(".rst")
+        || name.endsWith(".c") || name.endsWith(".cpp") || name.endsWith(".h")
+        || name.endsWith(".hpp") || name.endsWith(".cxx") || name.endsWith(".cc")
+        || name.endsWith(".java") || name.endsWith(".go") || name.endsWith(".rs")
+        || name.endsWith(".rb") || name.endsWith(".php") || name.endsWith(".cs"))
+        return EncodingType::UTF_8;
+    if (name.endsWith(".java") && name.contains("encoding"))
+        return EncodingType::UTF_8;
     return EncodingType::ANSI;
 }
 
@@ -143,12 +194,59 @@ int EncodingDetector::analyzeByteFrequency(const std::string& bytes) const {
 }
 
 EncodingType EncodingDetector::detectSingleByteCharset(const std::string& bytes) const {
-    (void)bytes;
-    return EncodingType::ANSI;
+    // Heuristic: if bytes contain high-freq Windows-1252 chars (smart quotes, em-dash, etc.)
+    // that are not valid UTF-8, likely Windows-1252. Otherwise ANSI/ISO-8859-1.
+    bool has1252Markers = false;
+    for (size_t i = 0; i < bytes.size(); ++i) {
+        unsigned char c = static_cast<unsigned char>(bytes[i]);
+        // Windows-1252 specific bytes in the 0x80-0x9F range (these are different from ISO-8859-1)
+        if (c >= 0x80 && c <= 0x9F) {
+            // In ISO-8859-1 these are control chars; in Win-1252 they are printable
+            // Simple heuristic: if we see common Win-1252 chars, assume Win-1252
+            static const unsigned char win1252Markers[] = {
+                0x82, 0x83, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
+                0x99, 0x9C, 0x9E, 0x9F
+            };
+            for (unsigned char m : win1252Markers) {
+                if (c == m) { has1252Markers = true; break; }
+            }
+        }
+    }
+    return has1252Markers ? EncodingType::ANSI : EncodingType::ANSI; // Win-1252 and ISO-8859-1 both return ANSI here (our EncodingType doesn't distinguish single-byte codepages, treated as system locale)
 }
 
 EncodingType EncodingDetector::detectFromMetaCharset(const std::string& bytes) const {
-    (void)bytes;
+    // Look for <meta charset="..."> HTML5 style
+    QString content = QString::fromUtf8(bytes);
+    QRegularExpression html5Rx("<meta\\s+[^>]*charset\\s*=\\s*[\"']?([^\"'\\s>]+)",
+                                QRegularExpression::CaseInsensitiveOption);
+    auto match = html5Rx.match(content);
+    if (match.hasMatch()) {
+        QString charset = match.captured(1).toUpper();
+        if (charset == "UTF-8" || charset == "UTF8") return EncodingType::UTF_8;
+        if (charset == "UTF-16" || charset == "UTF16") return EncodingType::UTF_16_LE;
+        if (charset == "ISO-8859-1" || charset == "LATIN1") return EncodingType::ANSI;
+    }
+    // Look for <meta http-equiv="Content-Type" content="text/html; charset=...">
+    QRegularExpression httpEquivRx("<meta\\s+[^>]*http-equiv\\s*=\\s*[\"']?Content-Type[\"']?[^>]*content\\s*=\\s*[\"'][^\"']*charset\\s*=\\s*([^\"'\\s;]+)",
+                                   QRegularExpression::CaseInsensitiveOption);
+    match = httpEquivRx.match(content);
+    if (match.hasMatch()) {
+        QString charset = match.captured(1).toUpper();
+        if (charset == "UTF-8" || charset == "UTF8") return EncodingType::UTF_8;
+        if (charset == "UTF-16" || charset == "UTF16") return EncodingType::UTF_16_LE;
+        if (charset == "ISO-8859-1" || charset == "LATIN1") return EncodingType::ANSI;
+    }
+    // Look for <?xml version="..." encoding="..."?>
+    QRegularExpression xmlRx("<\\?xml[^>]+encoding\\s*=\\s*[\"']([^\"']+)[\"']",
+                             QRegularExpression::CaseInsensitiveOption);
+    match = xmlRx.match(content);
+    if (match.hasMatch()) {
+        QString charset = match.captured(1).toUpper();
+        if (charset == "UTF-8" || charset == "UTF8") return EncodingType::UTF_8;
+        if (charset == "UTF-16" || charset == "UTF16") return EncodingType::UTF_16_LE;
+        if (charset == "ISO-8859-1" || charset == "LATIN1") return EncodingType::ANSI;
+    }
     return EncodingType::ANSI;
 }
 

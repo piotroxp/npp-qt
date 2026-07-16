@@ -327,3 +327,44 @@ void ShortcutManager::saveToJson(const QString& path) const {
         file.close();
     }
 }
+
+// ============================================================================
+// Macro shortcuts
+// ============================================================================
+void ShortcutManager::bindMacro(int macroIndex, const QString& shortcut) {
+    int key = _makeKey(shortcut);
+    _macroShortcutMap[key] = macroIndex;
+    emit allShortcutsChanged();
+}
+
+void ShortcutManager::unbindMacro(const QString& shortcut) {
+    int key = _makeKey(shortcut);
+    _macroShortcutMap.remove(key);
+    emit allShortcutsChanged();
+}
+
+int ShortcutManager::getMacroForShortcut(const QString& shortcut) const {
+    int key = _makeKey(shortcut);
+    auto it = _macroShortcutMap.find(key);
+    return (it != _macroShortcutMap.end()) ? it.value() : -1;
+}
+
+QString ShortcutManager::makeShortcutText(int keyCode, int modifiers) const {
+    return _makeShortcutText(keyCode, modifiers);
+}
+
+// ============================================================================
+// Macro command registration
+// ============================================================================
+void ShortcutManager::registerMacroCommand(const QString& command, const QString& macroName) {
+    macroCommands_[command] = macroName;
+}
+
+bool ShortcutManager::resolveMacroBinding(const QString& command, QString& outMacroName) const {
+    auto it = macroCommands_.find(command);
+    if (it != macroCommands_.end()) {
+        outMacroName = it.value();
+        return true;
+    }
+    return false;
+}

@@ -167,6 +167,9 @@ public:
     void zoomReset();
     int zoomLevel() const;
 
+    // DPI — rescale fonts when screen DPI changes
+    void updateFontForDpi();
+
     void print(QPrinter* printer);
 
 signals:

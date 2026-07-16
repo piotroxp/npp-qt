@@ -1,8 +1,10 @@
 // Ported to Qt6: Keyboard shortcut implementation
 #include "shortcut.h"
 #include "NppNotification.h"
+#include "core/MacroManager.h"
 #include <QWidget>
 #include <QMenu>
+
 #include <QAction>
 #include <QDebug>
 #include <QMap>
@@ -148,11 +150,8 @@ RecordedMacroStep::RecordedMacroStep(int iMessage, uintptr_t wParam, uintptr_t l
     : _message(iMessage), _wParameter(wParam), _lParameter(lParam),
       _sParameter(QString::fromLatin1(sParam)), _macroType(static_cast<MacroTypeIndex>(type)) {}
 
-void RecordedMacroStep::playBack() {
-    // Macro playback is handled by the macro manager
-    // This is a placeholder - actual implementation depends on Scintilla interface
-    qDebug() << "Macro step playback:" << _message << _wParameter << _lParameter
-             << "string:" << _sParameter;
+void MacroShortcut::onTrigger() {
+    MacroManager::instance().playback();
 }
 
 // =============================================================================

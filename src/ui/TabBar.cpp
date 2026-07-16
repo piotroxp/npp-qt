@@ -985,3 +985,59 @@ void TabBar::paintEvent(QPaintEvent* event) {
     }
 }
 
+QString TabBar::tabToolTipText(int index) const {
+    if (index < 0 || index >= count()) return QString();
+    if (m_tabToolTips.contains(index)) return m_tabToolTips[index];
+    return tabText(index);  // fallback: show tab text
+}
+
+QRect TabBar::closeButtonRect(int index) const {
+    if (index < 0 || index >= count()) return QRect();
+    QRect tab = tabRect(index);
+    const int btnSize = 16;
+    const int margin = 4;
+    // Close button sits at the right edge of the tab
+    return QRect(tab.right() - btnSize - margin,
+                 tab.center().y() - btnSize / 2,
+                 btnSize, btnSize);
+}
+
+bool TabBar::isCloseButtonAt(const QPoint& pos, int tabIndex) const {
+    if (tabIndex < 0 || tabIndex >= count()) return false;
+    QRect closeRect = closeButtonRect(tabIndex);
+    return closeRect.contains(pos);
+}
+
+void TabBar::updateTabColors() {
+    // Refresh color for all tabs — repaint if style changes
+    for (int i = 0; i < count(); ++i) {
+        updateTabAppearance(i);
+    }
+}
+
+void TabBar::animateElasticScroll(int delta) {
+    // Elastic bounce: animate scroll with easing when the user overscrolls.
+    // Uses the scroll bar's animation to smoothly return to bounds.
+    QScrollBar* scrollBar = this->findChild<QScrollBar*>();
+    if (!scrollBar) return;
+    int target = qBound(scrollBar->minimum(), scrollBar->value() + delta, scrollBar->maximum());
+    if (m_elasticAnim) {
+        m_elasticAnim->stop();
+        m_elasticAnim->deleteLater();
+    }
+    m_elasticAnim = new QPropertyAnimation(scrollBar, "value", this);
+    m_elasticAnim->setDuration(200);
+    m_elasticAnim->setEasingCurve(QEasingCurve::OutCubic);
+    m_elasticAnim->setStartValue(scrollBar->value());
+    m_elasticAnim->setEndValue(target);
+    m_elasticAnim->start(QAbstractAnimation::DeleteWhenStopped);
+}
+
+void TabBar::updateForDpi() {
+    // Rescale tab heights and fonts using DpiManager
+    DpiManager& dpi = DpiManager::instance();
+    setStyleSheet(QString());  // clear cached stylesheet so the next repaint recomputes sizes
+    // Force a resize to trigger minimumSizeHint recalculation
+    update();
+}
+

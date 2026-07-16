@@ -101,6 +101,9 @@ public:
     void saveTabOrder(QSettings& settings) const;
     void restoreTabOrder(const QSettings& settings);
 
+    // DPI
+    void updateForDpi();
+
 Q_SIGNALS:
     void tabMovedSignal(int from, int to);
     void tabClosed(int index);

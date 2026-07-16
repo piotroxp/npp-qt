@@ -53,6 +53,9 @@ public:
     void setDarkTheme(bool dark);
     void applyTheme();
 
+    // DPI
+    void updateForDpi();
+
 Q_SIGNALS:
     void positionClicked();
     void encodingClicked();

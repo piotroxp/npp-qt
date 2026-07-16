@@ -44,6 +44,9 @@ public:
     void setDragHandleVisible(bool visible);
     bool isDragHandleVisible() const { return m_dragHandleVisible; }
 
+    // DPI
+    void updateForDpi();
+
 Q_SIGNALS:
     void toolBarCommand(const QString& cmd);
     void toolBarStyleChanged(ToolBarStyle style);

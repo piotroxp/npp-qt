@@ -400,3 +400,7 @@ void StatusBar::onAutoRefreshTimeout() {
     // Auto-refresh any dynamic content
     update();
 }
+
+void StatusBar::updateForDpi() {
+    applyDpiScaling();
+}

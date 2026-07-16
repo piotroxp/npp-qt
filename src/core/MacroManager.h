@@ -20,6 +20,7 @@ public:
     // Playback
     void playback();
     void playback(int macroIndex);
+    void playback(const QString& macroName);
 
     // Storage
     void saveMacro(const QString& name);

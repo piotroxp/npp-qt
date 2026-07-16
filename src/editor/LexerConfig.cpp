@@ -584,9 +584,28 @@ QVector<UDLPattern> LexerConfig::loadUDL(const QString& configPath) {
 
 void LexerConfig::registerUDLLexer(const QString& name,
                                     const QVector<UDLPattern>& patterns) {
-    // In a full implementation, this would register the UDL with the
-    // LanguageManager and create a QsciLexerCustom for it.
-    // For now, this is a placeholder.
-    Q_UNUSED(name);
-    Q_UNUSED(patterns);
+    // Register a UDL lexer: create a lexer config entry from the patterns
+    // and store it so ScintillaEditor can apply it.
+    LexerDef def;
+    def.name = name;
+    def.langId = LanguageManager::userDefinedLangId(name);
+    def.extensions = {};  // UDL files use their own association
+    def.lexer = "udl";    // Special marker for user-defined lexer
+
+    // Build keyword sets from patterns
+    QStringList kwList[UDL_KEYWORD_SETS];
+    for (const UDLPattern& pat : patterns) {
+        if (pat.styleIndex < UDL_KEYWORD_SETS) {
+            kwList[pat.styleIndex].append(pat.pattern);
+        }
+    }
+    for (int i = 0; i < UDL_KEYWORD_SETS; ++i) {
+        def.keywords[i] = kwList[i].join(" ");
+    }
+
+    // Store the UDL patterns for later use by the editor
+    _udlPatterns[name] = patterns;
+
+    // Register with the global config
+    instance()._lexers[name.toLower()] = def;
 }

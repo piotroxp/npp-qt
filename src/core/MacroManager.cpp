@@ -69,6 +69,15 @@ void MacroManager::playback(int macroIndex) {
     emit playbackFinished();
 }
 
+void MacroManager::playback(const QString& macroName) {
+    for (int i = 0; i < m_savedMacros.size(); ++i) {
+        if (m_savedMacros[i].first == macroName) {
+            playback(i);
+            return;
+        }
+    }
+}
+
 // ============================================================================
 // Storage
 // ============================================================================

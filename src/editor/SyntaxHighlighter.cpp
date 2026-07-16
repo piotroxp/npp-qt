@@ -264,11 +264,11 @@ void SyntaxHighlighter::setupC() {
 
     // Function definitions
     rule = {}; rule.pattern = QRegularExpression(
-        R"(\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\())");
+        R"(\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\())");
     rule.format = _functionFormat; _rules.append(rule);
 
     // Labels
-    rule = {}; rule.pattern = QRegularExpression(R"(\b[a-zA-Z_][a-zA-Z0-9_]*\s*:)");
+    rule = {}; rule.pattern = QRegularExpression(R"(\b[a-zA-Z_$][a-zA-Z0-9_$]*\s*:)");
     rule.format = _labelFormat; _rules.append(rule);
 
     // Operators
@@ -312,11 +312,11 @@ void SyntaxHighlighter::setupCpp() {
 
     // Function definitions
     rule = {}; rule.pattern = QRegularExpression(
-        R"(\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\())");
+        R"(\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\())");
     rule.format = _functionFormat; _rules.append(rule);
 
     // Labels
-    rule = {}; rule.pattern = QRegularExpression(R"(\b[a-zA-Z_][a-zA-Z0-9_]*\s*:)");
+    rule = {}; rule.pattern = QRegularExpression(R"(\b[a-zA-Z_$][a-zA-Z0-9_$]*\s*:)");
     rule.format = _labelFormat; _rules.append(rule);
 
     // Operators
@@ -400,7 +400,7 @@ void SyntaxHighlighter::setupCSharp() {
 
     // Function definitions
     rule = {}; rule.pattern = QRegularExpression(
-        R"(\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\())");
+        R"(\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\())");
     rule.format = _functionFormat; _rules.append(rule);
 
     // Operators
@@ -444,7 +444,7 @@ void SyntaxHighlighter::setupJava() {
 
     // Function definitions
     rule = {}; rule.pattern = QRegularExpression(
-        R"(\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\())");
+        R"(\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\())");
     rule.format = _functionFormat; _rules.append(rule);
 
     // Operators
@@ -492,10 +492,10 @@ void SyntaxHighlighter::setupKotlin() {
 
     // Function definitions
     rule = {}; rule.pattern = QRegularExpression(
-        R"(\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\<[A-Za-z_])");
+        R"(\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\<[A-Za-z_$])");
     rule.format = _functionFormat; _rules.append(rule);
     rule = {}; rule.pattern = QRegularExpression(
-        R"(\b([a-zA-Z_][a-zA-Z0-9_]*)\s*(?=\([^)]*\)\s*(?::|:|$|\{))");
+        R"(\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\([^)]*\)\s*(?::|:|$|\{))");
     rule.format = _functionFormat; _rules.append(rule);
 
     // Operators
@@ -543,7 +543,7 @@ void SyntaxHighlighter::setupScala() {
 
     // Function definitions
     rule = {}; rule.pattern = QRegularExpression(
-        R"(\b([a-zA-Z_][a-zA-Z0-9_`]*)\s*(?=\(|:|$))");
+        R"(\b([a-zA-Z_$][a-zA-Z0-9_`]*)\s*(?=\(|:|$))");
     rule.format = _functionFormat; _rules.append(rule);
 
     // Operators
@@ -823,7 +823,7 @@ void SyntaxHighlighter::setupLua() {
     rule.format = _functionFormat; _rules.append(rule);
 
     // Table field access
-    rule = {}; rule.pattern = QRegularExpression(R"(\.[a-zA-Z_][a-zA-Z0-9_]*)");
+    rule = {}; rule.pattern = QRegularExpression(R"(\.[a-zA-Z_$][a-zA-Z0-9_$]*)");
     rule.format = _attributeFormat; _rules.append(rule);
 
     // Operators
@@ -962,7 +962,7 @@ void SyntaxHighlighter::setupCss() {
 
     // Functions
     rule = {}; rule.pattern = QRegularExpression(
-        R"([a-zA-Z_][a-zA-Z0-9_]*(?=\())");
+        R"([a-zA-Z_$][a-zA-Z0-9_$]*(?=\())");
     rule.format = _functionFormat; _rules.append(rule);
 }
 
@@ -1219,7 +1219,7 @@ void SyntaxHighlighter::setupRust() {
     rule.format = _attributeFormat; _rules.append(rule);
 
     // Macros
-    rule = {}; rule.pattern = QRegularExpression(R"([a-z_][a-zA-Z0-9_]*!)");
+    rule = {}; rule.pattern = QRegularExpression(R"([a-z_$][a-zA-Z0-9_$]*!)");
     rule.format = _functionFormat; _rules.append(rule);
 
     // Turbofish
@@ -1267,7 +1267,7 @@ void SyntaxHighlighter::setupSwift() {
     rule.format = _stringFormat; _rules.append(rule);
 
     // Interpolation
-    rule = {}; rule.pattern = QRegularExpression(R"(\$\{[a-zA-Z_][a-zA-Z0-9_]*\})");
+    rule = {}; rule.pattern = QRegularExpression(R"(\$\{[a-zA-Z_$][a-zA-Z0-9_$]*\})");
     rule.format = _attributeFormat; _rules.append(rule);
 
     // Numbers
@@ -1463,7 +1463,7 @@ void SyntaxHighlighter::setupLisp() {
     rule.format = _numberFormat; _rules.append(rule);
 
     // Keywords
-    rule = {}; rule.pattern = QRegularExpression(R"(:[a-zA-Z_][a-zA-Z0-9_?!-]*)");
+    rule = {}; rule.pattern = QRegularExpression(R"(:[a-zA-Z_$][a-zA-Z0-9_?!-]*)");
     rule.format = _attributeFormat; _rules.append(rule);
 
     // Function/macro definitions
@@ -1507,7 +1507,7 @@ void SyntaxHighlighter::setupClojure() {
     rule.format = _numberFormat; _rules.append(rule);
 
     // Keywords
-    rule = {}; rule.pattern = QRegularExpression(R"(:[a-zA-Z_][a-zA-Z0-9_?!-]*)");
+    rule = {}; rule.pattern = QRegularExpression(R"(:[a-zA-Z_$][a-zA-Z0-9_?!-]*)");
     rule.format = _attributeFormat; _rules.append(rule);
 
     // Reader macros
@@ -1614,7 +1614,7 @@ void SyntaxHighlighter::setupVerilog() {
     rule.format = _attributeFormat; _rules.append(rule);
 
     // Module names (uppercase)
-    rule = {}; rule.pattern = QRegularExpression(R"(\b[A-Z][A-Za-z0-9_]*)");
+    rule = {}; rule.pattern = QRegularExpression(R"(\b[A-Z$][A-Za-z0-9_$]*)");
     rule.format = _functionFormat; _rules.append(rule);
 
     // Operators
@@ -1681,7 +1681,7 @@ void SyntaxHighlighter::setupAsm() {
     rule.format = _preprocessorFormat; _rules.append(rule);
 
     // Labels
-    rule = {}; rule.pattern = QRegularExpression(R"(\b[a-zA-Z_][a-zA-Z0-9_.]*:)");
+    rule = {}; rule.pattern = QRegularExpression(R"(\b[a-zA-Z_$][a-zA-Z0-9_$.]*:)");
     rule.format = _functionFormat; _rules.append(rule);
 
     // Local labels (.L)

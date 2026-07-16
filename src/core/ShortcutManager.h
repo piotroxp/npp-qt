@@ -62,6 +62,16 @@ public:
     void saveToJson(const QString& path) const;
     QString defaultConfigPath() const;
 
+    // Macro shortcut binding
+    void bindMacro(int macroIndex, const QString& shortcut);
+    void unbindMacro(const QString& shortcut);
+    int getMacroForShortcut(const QString& shortcut) const;
+    QString makeShortcutText(int keyCode, int modifiers) const;
+
+    // Macro command registration (command string → macro name mapping)
+    void registerMacroCommand(const QString& command, const QString& macroName);
+    bool resolveMacroBinding(const QString& command, QString& outMacroName) const;
+
     // Accessors
     QVector<KeyBinding> allBindings() const { return _globalBindings; }
     void clear();
@@ -73,6 +83,8 @@ Q_SIGNALS:
     void shortcutChanged(const QString& shortcut, int commandId);
     void conflictDetected(const QString& shortcut, int cmd1, int cmd2);
     void allShortcutsChanged();
+    void macroTriggered(int macroIndex);
+    void macroCommandRequested(const QString& macroName);
 
 private:
     friend class Application;
@@ -86,4 +98,6 @@ private:
     QVector<KeyBinding> _globalBindings;
     QMap<int, int> _globalShortcutMap;  // key → commandId
     QMap<QString, KeyBinding> _localBindings;  // "bufferId:shortcut" → binding
+    QMap<int, int> _macroShortcutMap;  // key → macroIndex
+    QMap<QString, QString> macroCommands_;  // command string → macro name
 };

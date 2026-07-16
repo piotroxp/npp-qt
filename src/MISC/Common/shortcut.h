@@ -94,6 +94,8 @@ public:
     bool fromJson(const QString& json);
 
 signals: void triggered();
+public slots:
+    virtual void onTrigger() {}
 protected:
     KeyCombo _keyCombo;
     QString _name;
@@ -147,13 +149,13 @@ struct RecordedMacroStep {
     uintptr_t _lParameter = 0;
     QString _sParameter;
     MacroTypeIndex _macroType = mtMenuCommand;
+    RecordedMacroStep() = default;
     RecordedMacroStep(int iMessage, uintptr_t wParam, uintptr_t lParam);
     explicit RecordedMacroStep(int iCommandID);
     RecordedMacroStep(int iMessage, uintptr_t wParam, uintptr_t lParam, const QString& sParam, int type);
     RecordedMacroStep(int iMessage, uintptr_t wParam, uintptr_t lParam, const char* sParam, int type);
     bool isScintillaMacro() const { return _macroType <= mtMenuCommand; }
     bool isMacroable() const { return true; }
-    void playBack();
 };
 
 using Macro = QVector<RecordedMacroStep>;
@@ -163,6 +165,10 @@ class MacroShortcut : public CommandShortcut {
 public:
     MacroShortcut(const Shortcut& sc, const Macro& macro, int id, QObject* parent = nullptr);
     Macro& getMacro() { return _macro; }
+
+public slots:
+    void onTrigger() override;
+
 private:
     Macro _macro;
 };

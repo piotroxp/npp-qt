@@ -51,6 +51,7 @@ class AboutDialog;
 class DocumentMapPanel;
 class FunctionListPanel;
 class FileBrowserPanel;
+class ClipboardHistoryPanel;
 class MenuBar;
 class ToolBar;
 
@@ -250,6 +251,11 @@ public:
     FileBrowserPanel* fileBrowserPanel() const { return _fileBrowserPanel; }
     class ClipboardHistoryPanel* clipboardHistoryPanel() const { return _clipboardHistoryPanel; }
 
+    void setFileBrowserPanel(FileBrowserPanel* p) { _fileBrowserPanel = p; }
+    void setFunctionListPanel(FunctionListPanel* p) { _funcListPanel = p; }
+    void setDocumentMapPanel(DocumentMapPanel* p) { _docMapPanel = p; }
+    void setClipboardHistoryPanel(ClipboardHistoryPanel* p) { _clipboardHistoryPanel = p; }
+
     // Editors
     ScintillaEditor* getEditor(int viewId = -1) const;
     ScintillaEditor* getActiveEditor() const;
@@ -391,6 +397,8 @@ public slots:
     void onMacroStop();
     void onMacroPlayback();
     void onMacroSave();
+    void playbackMacroStep(int message, uintptr_t wParam, uintptr_t lParam,
+                           const char* sParam, int macroType);
     void onPrint();
 
     // Import/Export (Notepad++ compatibility)

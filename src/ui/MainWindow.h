@@ -12,7 +12,12 @@
 #include <QSignalMapper>
 #include <QMap>
 #include <QString>
+#include <QKeyEvent>
 #include "../common/Types.h"
+#include "../panels/FileBrowserPanel.h"
+#include "../dialogs/ClipboardHistoryPanel.h"
+#include "../panels/FunctionListPanel.h"
+#include "../panels/DocumentMapPanel.h"
 
 class ScintillaEditor;
 class QMenu;
@@ -97,10 +102,14 @@ public slots:
     // Theme
     void onThemeChanged(const QString& theme);
 
+    // DPI
+    void onDpiChanged(int dpi);
+
 protected:
     void closeEvent(QCloseEvent* event) override;
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dropEvent(QDropEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
 
 private slots:
     void onTabChanged(int index);
@@ -108,6 +117,7 @@ private slots:
     void onBufferChanged();
     void onRecentFileSelected(const QString& file);
     void onTabContextMenu(const QPoint& pos);
+    void onMacroCommand(const QString& macroName);
 
 private:
     void setupUi();
@@ -122,6 +132,8 @@ private:
     void onShortcutMapper();
     void onCommandPalette();
 
+    friend class ShortcutManager;
+
     QTabWidget* _tabWidget = nullptr;
     BufferID bufferAtTabIndex(int tabIndex) const;
     TabBar* _tabBar = nullptr;
@@ -132,6 +144,10 @@ private:
     QDockWidget* _docMapDock = nullptr;
     QDockWidget* _funcListDock = nullptr;
     QDockWidget* _fileBrowserDock = nullptr;
+    FileBrowserPanel* _fileBrowserPanel = nullptr;
+    ClipboardHistoryPanel* _clipboardHistoryPanel = nullptr;
+    FunctionListPanel* _funcListPanel = nullptr;
+    DocumentMapPanel* _docMapPanel = nullptr;
     IncrementalSearchDialog* _incrementalSearch = nullptr;
 
     QMap<QString, QAction*> _actions;

@@ -15,6 +15,10 @@
 #include "../dialogs/IncrementalSearchDialog.h"
 #include "../dialogs/GoToLineDialog.h"
 #include "../dialogs/PreferenceDialog.h"
+#include "../core/ShortcutManager.h"
+#include "../core/EditorCommandManager.h"
+#include "../core/MacroManager.h"
+#include "../common/DpiManager.h"
 #include <Qsci/qsciscintilla.h>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -54,6 +58,10 @@ MainWindow::MainWindow()
     // MenuBar
     _menuBar = new MenuBar(this);
     setMenuBar(_menuBar);
+
+    // Connect macro command signal from ShortcutManager
+    connect(&ShortcutManager::instance(), &ShortcutManager::macroCommandRequested,
+            this, &MainWindow::onMacroCommand);
     
     // Toolbar  
     _toolBar = new ToolBar(this);
@@ -122,6 +130,9 @@ MainWindow::MainWindow()
     connect(_incrementalSearch, &IncrementalSearchDialog::searchPrev, this, [this](const QString& text) {
         if (auto* ed = app().getActiveEditor()) ed->findPrevious(text, {});
     });
+
+    // Connect DPI changes to UI refresh
+    connect(&DpiManager::instance(), &DpiManager::dpiChanged, this, &MainWindow::onDpiChanged);
 }
 
 MainWindow::~MainWindow() = default;
@@ -337,32 +348,38 @@ void MainWindow::createStatusBar() {
 
 void MainWindow::createPanels() {
     fprintf(stderr, "DEBUG: createPanels() start\n"); fflush(stderr);
-    // File Browser panel (left dock)
+
+    // File Browser panel (left dock) — created HERE so panels exist during construction
+    _fileBrowserPanel = new FileBrowserPanel(this);
     _fileBrowserDock = new QDockWidget("File Browser", this);
-    fprintf(stderr, "DEBUG: after QDockWidget FileBrowser\n"); fflush(stderr);
-    _fileBrowserDock->setWidget(app().fileBrowserPanel());
-    fprintf(stderr, "DEBUG: after setWidget FileBrowser\n"); fflush(stderr);
-    fprintf(stderr, "DEBUG: createPanels() after setWidget FileBrowser\n"); fflush(stderr);
+    _fileBrowserDock->setWidget(_fileBrowserPanel);
     _fileBrowserDock->setObjectName("FileBrowserDock");
     addDockWidget(Qt::LeftDockWidgetArea, _fileBrowserDock);
     connect(_fileBrowserDock, &QDockWidget::visibilityChanged,
             this, [this](bool v){ if(v) _fileBrowserDock->setFocus(); });
-    connect(app().fileBrowserPanel(), &FileBrowserPanel::fileDoubleClicked,
+    connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
             this, [this](const QString& path){ openFileInTab(path); });
 
     // Function List panel (right dock)
+    _funcListPanel = new FunctionListPanel(this);
     _funcListDock = new QDockWidget("Function List", this);
-    _funcListDock->setWidget(app().functionListPanel());
+    _funcListDock->setWidget(_funcListPanel);
     _funcListDock->setObjectName("FunctionListDock");
     addDockWidget(Qt::RightDockWidgetArea, _funcListDock);
 
     // Document Map panel (right dock, tabified with Function List)
-    if (app().documentMapPanel()) {
-        QDockWidget* docMapDock = app().documentMapPanel();
-        addDockWidget(Qt::RightDockWidgetArea, docMapDock);
-        tabifyDockWidget(_funcListDock, docMapDock);
-    }
+    _docMapPanel = new DocumentMapPanel(this);
+    QDockWidget* docMapDock = new QDockWidget("Document Map", this);
+    docMapDock->setWidget(_docMapPanel);
+    addDockWidget(Qt::RightDockWidgetArea, docMapDock);
+    tabifyDockWidget(_funcListDock, docMapDock);
     _funcListDock->raise();
+
+    // Sync pointers to Application so both sides reference the same objects
+    Application::instance().setFileBrowserPanel(_fileBrowserPanel);
+    Application::instance().setFunctionListPanel(_funcListPanel);
+    Application::instance().setDocumentMapPanel(_docMapPanel);
+    fprintf(stderr, "DEBUG: createPanels() done\n"); fflush(stderr);
 }
 
 void MainWindow::setupConnections() {
@@ -1004,6 +1021,10 @@ void MainWindow::onCommandPalette() {
     app().onShowCommandPalette();
 }
 
+void MainWindow::onMacroCommand(const QString& macroName) {
+    app().macroManager()->playback(macroName);
+}
+
 // Buffer notifications
 void MainWindow::onBufferOpened(BufferID buffer) {
     if (!buffer) return;
@@ -1148,6 +1169,44 @@ void MainWindow::onThemeChanged(const QString& theme) {
     _tabWidget->setStyleSheet(ThemeManager::instance().getThemeQss(theme, "tabs"));
     // Reload current theme resource
     app().loadTheme(theme.toStdString());
+}
+
+// DPI
+void MainWindow::onDpiChanged(int dpi) {
+    qDebug() << "DPI changed to" << dpi;
+
+    // Reload the current theme's stylesheet with scaled sizes
+    QString theme = QString::fromStdString(app().currentTheme());
+    setStyleSheet(ThemeManager::instance().getThemeQss(theme, "main"));
+    if (_toolBar)
+        _toolBar->setStyleSheet(ThemeManager::instance().getThemeQss(theme, "toolbar"));
+    if (_statusBarWidget)
+        _statusBarWidget->setStyleSheet(ThemeManager::instance().getThemeQss(theme, "statusbar"));
+    if (_menuBar)
+        _menuBar->setStyleSheet(ThemeManager::instance().getThemeQss(theme, "menu"));
+    _tabWidget->setStyleSheet(ThemeManager::instance().getThemeQss(theme, "tabs"));
+
+    // Update all open editors' fonts to the new DPI-scaled size
+    for (int i = 0; i < _tabWidget->count(); ++i) {
+        if (auto* editor = editorAt(i)) {
+            editor->updateFontForDpi();
+        }
+    }
+
+    // Rescale toolbar icons
+    if (_toolBar) {
+        _toolBar->updateForDpi();
+    }
+
+    // Rescale tab bar
+    if (_tabBar) {
+        _tabBar->updateForDpi();
+    }
+
+    // Rescale status bar
+    if (_statusBarWidget) {
+        _statusBarWidget->updateForDpi();
+    }
 }
 // Tab events
 void MainWindow::onTabChanged(int index) {
@@ -1316,4 +1375,80 @@ void MainWindow::dropEvent(QDropEvent* event) {
         }
     }
     event->acceptProposedAction();
+}
+
+void MainWindow::keyPressEvent(QKeyEvent* event) {
+    // Resolve the key combination through ShortcutManager
+    int key = event->key();
+    int mods = event->modifiers();
+
+    // Skip modifier-only events and unknown keys
+    if (key == Qt::Key_unknown || key == Qt::Key_Shift
+        || key == Qt::Key_Control || key == Qt::Key_Alt || key == Qt::Key_Meta)
+    {
+        QMainWindow::keyPressEvent(event);
+        return;
+    }
+
+    // Build shortcut string
+    QStringList parts;
+    if (mods & Qt::ControlModifier) parts.append("Ctrl");
+    if (mods & Qt::AltModifier)     parts.append("Alt");
+    if (mods & Qt::ShiftModifier)   parts.append("Shift");
+    if (mods & Qt::MetaModifier)   parts.append("Meta");
+
+    // Convert key code to string
+    int keyChar = 0;
+    if (key >= Qt::Key_Space && key <= Qt::Key_AsciiTilde)
+        keyChar = key;
+    else if (key >= Qt::Key_A && key <= Qt::Key_Z)
+        keyChar = key;
+    else if (key >= Qt::Key_0 && key <= Qt::Key_9)
+        keyChar = key;
+
+    if (keyChar)
+        parts.append(QString(QChar(keyChar)));
+    else
+        parts.append(QKeySequence(key).toString());
+
+    QString shortcutStr = parts.join("+");
+
+    // Resolve through ShortcutManager using the public API
+    bool triggered = false;
+    int cmdId = ShortcutManager::instance().resolveBinding(key, mods, nullptr);
+
+    if (cmdId >= 0) {
+        // Check if this command is a macro shortcut first
+        QString shortcutStr = ShortcutManager::instance().makeShortcutText(key, mods);
+        int macroIndex = ShortcutManager::instance().getMacroForShortcut(shortcutStr);
+        if (macroIndex >= 0) {
+            MacroManager::instance().playback(macroIndex);
+            event->accept();
+            return;
+        }
+        QString cmd = QString::fromStdString(EditorCommandManager::instance().getCommandName(cmdId));
+        if (!cmd.isEmpty()) {
+            dispatchCommand(cmd);
+            triggered = true;
+        }
+    }
+
+    // If no command was triggered, check if the resolved command maps to a macro
+    if (!triggered) {
+        QString cmd = (cmdId >= 0)
+            ? QString::fromStdString(EditorCommandManager::instance().getCommandName(cmdId))
+            : QString();
+        QString macroName;
+        if (!cmd.isEmpty() && ShortcutManager::instance().resolveMacroBinding(cmd, macroName)) {
+            app().macroManager()->playback(macroName);
+            triggered = true;
+        }
+    }
+
+    if (triggered) {
+        event->accept();
+        return;
+    }
+
+    QMainWindow::keyPressEvent(event);
 }

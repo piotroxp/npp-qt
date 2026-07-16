@@ -16,6 +16,8 @@
 #include <QDialogButtonBox>
 #include <QMessageBox>
 #include <QSignalBlocker>
+#include <QSettings>
+#include <QLineEdit>
 
 FindReplaceDialog::FindReplaceDialog(QWidget* parent)
     : QDialog(parent)
@@ -126,8 +128,40 @@ void FindReplaceDialog::setupUi() {
             this, &FindReplaceDialog::onSearchTextChanged);
 }
 
-void FindReplaceDialog::readSettings() { }
-void FindReplaceDialog::writeSettings() { }
+void FindReplaceDialog::readSettings() {
+    QSettings settings;
+    settings.beginGroup(SETTINGS_GROUP);
+    restoreGeometry(settings.value(SETTINGS_GEOMETRY).toByteArray());
+    _matchCaseCheck->setChecked(settings.value(SETTINGS_MATCH_CASE, false).toBool());
+    _wholeWordCheck->setChecked(settings.value(SETTINGS_WHOLE_WORD, false).toBool());
+    _wrapCheck->setChecked(settings.value(SETTINGS_WRAP, true).toBool());
+    _regexCheck->setChecked(settings.value(SETTINGS_REGEX, false).toBool());
+    _highlightingCheck->setChecked(settings.value(SETTINGS_HIGHLIGHT, true).toBool());
+    _promptsCheck->setChecked(settings.value(SETTINGS_PROMPTS, true).toBool());
+    _hideDialogCheck->setChecked(settings.value(SETTINGS_HIDE_DIALOG, true).toBool());
+    int dir = settings.value(SETTINGS_DIRECTION, 0).toInt();
+    if (auto* btn = _directionGroup->button(dir)) btn->setChecked(true);
+    settings.endGroup();
+    loadSearchHistory();
+    loadReplaceHistory();
+}
+
+void FindReplaceDialog::writeSettings() {
+    QSettings settings;
+    settings.beginGroup(SETTINGS_GROUP);
+    settings.setValue(SETTINGS_GEOMETRY, saveGeometry());
+    settings.setValue(SETTINGS_MATCH_CASE, _matchCaseCheck->isChecked());
+    settings.setValue(SETTINGS_WHOLE_WORD, _wholeWordCheck->isChecked());
+    settings.setValue(SETTINGS_WRAP, _wrapCheck->isChecked());
+    settings.setValue(SETTINGS_REGEX, _regexCheck->isChecked());
+    settings.setValue(SETTINGS_HIGHLIGHT, _highlightingCheck ? _highlightingCheck->isChecked() : true);
+    settings.setValue(SETTINGS_PROMPTS, _promptsCheck ? _promptsCheck->isChecked() : true);
+    settings.setValue(SETTINGS_HIDE_DIALOG, _hideDialogCheck ? _hideDialogCheck->isChecked() : true);
+    settings.setValue(SETTINGS_DIRECTION, _directionGroup->checkedId());
+    settings.setValue(SETTINGS_RECENT_FINDS, _searchHistory);
+    settings.setValue(SETTINGS_RECENT_REPLACES, _replaceHistory);
+    settings.endGroup();
+}
 
 void FindReplaceDialog::setEditor(ScintillaEditor* editor) { _editor = editor; }
 
@@ -533,7 +567,6 @@ void FindReplaceDialog::onSelectAndFind() {
 void FindReplaceDialog::onFindInFiles() {
     QString text = _findCombo->currentText();
     emit openFindInFilesRequested(text);
-    emit openFindInFilesRequested(text);
 }
 
 void FindReplaceDialog::onReplaceInFiles() {
@@ -741,4 +774,155 @@ void FindReplaceDialog::showEvent(QShowEvent* event) {
     // Update button states
     onReplaceTextChanged(_replaceCombo->currentText());
 }
+
+// === Missing public/slot implementations ===
+
+void FindReplaceDialog::countAll() {
+    QString text = _findCombo->currentText();
+    if (text.isEmpty() || !_editor) return;
+    FindOption opts = currentOptions();
+    int count = _editor->countMatches(text, opts);
+    setMatchCount(count);
+}
+
+void FindReplaceDialog::markAll() {
+    onMarkAll();
+}
+
+void FindReplaceDialog::unmarkAll() {
+    onUnmarkAll();
+}
+
+void FindReplaceDialog::purgeMarkedLines() {
+    onPurge();
+}
+
+void FindReplaceDialog::bookmarkAllMatches() {
+    onBookmark();
+}
+
+void FindReplaceDialog::selectAndFind() {
+    onSelectAndFind();
+}
+
+void FindReplaceDialog::findNextInSelection() {
+    if (!_editor) return;
+    QString text = _findCombo->currentText();
+    if (text.isEmpty()) return;
+    int selStart = _editor->send(SCI_GETSELECTIONNSTART, 0);
+    int selEnd = _editor->send(SCI_GETSELECTIONNEND, 0);
+    if (selStart == selEnd) return;
+    _selectionAnchor = selStart;
+    _selectionCaret = selEnd;
+    FindOption opts = currentOptions();
+    _editor->findNext(text, opts);
+}
+
+void FindReplaceDialog::replaceInAllOpenDocuments() {
+    onReplaceAllInAll();
+}
+
+void FindReplaceDialog::setReplaceText(const QString& text) {
+    if (!_replaceCombo) return;
+    QSignalBlocker blocker(_replaceCombo);
+    _replaceCombo->setEditText(text);
+}
+
+void FindReplaceDialog::setOptions(FindOption opts) {
+    if (_matchCaseCheck) _matchCaseCheck->setChecked((opts & FindOption::MatchCase) != FindOption::None);
+    if (_wholeWordCheck) _wholeWordCheck->setChecked((opts & FindOption::WholeWord) != FindOption::None);
+    if (_wrapCheck) _wrapCheck->setChecked((opts & FindOption::WrapAround) != FindOption::None);
+    if (_regexCheck) _regexCheck->setChecked((opts & FindOption::Regex) != FindOption::None);
+}
+
+void FindReplaceDialog::setCurrentMatch(int current, int total) {
+    if (_matchLabel) {
+        if (total > 0)
+            _matchLabel->setText(QString("  %1 of %2").arg(current).arg(total));
+        else
+            _matchLabel->clear();
+    }
+}
+
+void FindReplaceDialog::openFindInFiles() {
+    onFindInFiles();
+}
+
+void FindReplaceDialog::openReplaceInFiles() {
+    onReplaceInFiles();
+}
+
+void FindReplaceDialog::showMinimizedOrFocus() {
+    if (!isVisible() || isMinimized()) {
+        show();
+        activateWindow();
+        raise();
+    } else {
+        activateWindow();
+        raise();
+    }
+    if (_findCombo) {
+        _findCombo->setFocus();
+        _findCombo->lineEdit()->selectAll();
+    }
+}
+
+bool FindReplaceDialog::isRegex() const {
+    return _regexCheck && _regexCheck->isChecked();
+}
+
+bool FindReplaceDialog::isWrapAround() const {
+    return _wrapCheck && _wrapCheck->isChecked();
+}
+
+bool FindReplaceDialog::isPromptsOnReplace() const {
+    return _promptsCheck && _promptsCheck->isChecked();
+}
+
+void FindReplaceDialog::syncOptionsFromUI() {
+    // currentOptions() reads UI directly; this method exists for external callers.
+}
+
+int FindReplaceDialog::performFindNext(const QString& text, FindOption opts) {
+    if (!_editor) return -1;
+    // Store options and delegate to slot which returns bool via findNext.
+    // Since findNext is void, we return 1 to indicate the search was attempted.
+    Q_UNUSED(text);
+    _lastSearchText = text;
+    _lastSearchOptions = opts;
+    _editor->findNext(text, opts);
+    return 1;
+}
+
+int FindReplaceDialog::performFindPrevious(const QString& text, FindOption opts) {
+    if (!_editor) return -1;
+    _lastSearchText = text;
+    _lastSearchOptions = opts;
+    _editor->findPrevious(text, opts);
+    return 1;
+}
+
+int FindReplaceDialog::performCount(const QString& text, FindOption opts) {
+    if (!_editor) return 0;
+    return _editor->countMatches(text, opts);
+}
+
+void FindReplaceDialog::setupShortcuts() {
+    // Shortcut registration is handled at MainWindow level via ShortcutManager.
+}
+
+// Static const definitions
+const QString FindReplaceDialog::SETTINGS_GROUP = QStringLiteral("FindReplaceDialog");
+const QString FindReplaceDialog::SETTINGS_RECENT_FINDS = QStringLiteral("recentFinds");
+const QString FindReplaceDialog::SETTINGS_RECENT_REPLACES = QStringLiteral("recentReplaces");
+const QString FindReplaceDialog::SETTINGS_MATCH_CASE = QStringLiteral("matchCase");
+const QString FindReplaceDialog::SETTINGS_WHOLE_WORD = QStringLiteral("wholeWord");
+const QString FindReplaceDialog::SETTINGS_WRAP = QStringLiteral("wrapAround");
+const QString FindReplaceDialog::SETTINGS_REGEX = QStringLiteral("regex");
+const QString FindReplaceDialog::SETTINGS_HIGHLIGHT = QStringLiteral("highlighting");
+const QString FindReplaceDialog::SETTINGS_HIDE_DIALOG = QStringLiteral("hideDialog");
+const QString FindReplaceDialog::SETTINGS_PROMPTS = QStringLiteral("promptsOnReplace");
+const QString FindReplaceDialog::SETTINGS_MARK_COLOR = QStringLiteral("markColor");
+const QString FindReplaceDialog::SETTINGS_DIRECTION = QStringLiteral("direction");
+const QString FindReplaceDialog::SETTINGS_GEOMETRY = QStringLiteral("geometry");
 

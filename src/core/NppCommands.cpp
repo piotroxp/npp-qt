@@ -60,8 +60,8 @@ void NppCommands::command(int id) {
     case 40005: saveAs(); break;
     case 40006: saveAll(); break;
     case 40007: reload(); break;
-    case 40008: /* deleteFile — not implemented */ break;
-    case 40009: /* renameFile — not implemented */ break;
+    case 40008: app()->onDeleteFile(); break;
+    case 40009: app()->onRenameFile(); break;
     case 40010: print(); break;
     case 40015: closeAll(); break;
     case 40016: closeAllButCurrent(); break;

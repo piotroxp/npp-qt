@@ -7,6 +7,7 @@
 #include "../core/ThemeManager.h"
 #include "../core/LanguageManager.h"
 #include "../core/Application.h"
+#include "../common/DpiManager.h"
 #include <Qsci/qsciscintilla.h>
 #include <Qsci/qsciscintillabase.h>
 #include <Qsci/qscilexercustom.h>
@@ -797,4 +798,19 @@ void ScintillaEditor::prevBookmark() {
 void ScintillaEditor::clearBookmarks() {
     for (int line : _bookmarks) _editor->markerDelete(line, BOOKMARK_MARKER);
     _bookmarks.clear();
+}
+
+void ScintillaEditor::updateFontForDpi() {
+    DpiManager& dpi = DpiManager::instance();
+    // Rescale the base font for the new DPI
+    QFont f = _editor->font();
+    int baseSize = 10;  // fallback if we can't determine base
+    if (f.pointSizeF() > 0) baseSize = f.pointSizeF();
+    else if (f.pixelSize() > 0) baseSize = f.pixelSize();
+    f.setPointSizeF(dpi.scaleFontSizeF(baseSize));
+    _editor->setFont(f);
+    // Reapply the theme so the lexer picks up the new font size
+    if (_editor->lexer()) {
+        applyThemeToLexer(_editor->lexer());
+    }
 }
