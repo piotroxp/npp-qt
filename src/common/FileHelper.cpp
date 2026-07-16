@@ -260,7 +260,7 @@ std::string getTempFileName(const std::string& prefix) {
     std::string templatePath = tmpDir + "/" + prefix + "XXXXXX";
     char buf[1024];
     strcpy(buf, templatePath.c_str());
-    mkstemp(buf);
+    if (mkstemp(buf) == -1) return {};
     return std::string(buf);
 }
 

@@ -131,7 +131,7 @@ public:
     void clearDups();
     friend inline bool operator==(const ScintillaKeyMap& a, const ScintillaKeyMap& b) {
         if (a._keyCombos.size() != b._keyCombos.size()) return false;
-        for (size_t i = 0; i < a._keyCombos.size(); ++i)
+        for (size_t i = 0; i < static_cast<size_t>(a._keyCombos.size()); ++i)
             if (a._keyCombos[i]._isCtrl != b._keyCombos[i]._isCtrl || a._keyCombos[i]._isAlt != b._keyCombos[i]._isAlt || a._keyCombos[i]._isShift != b._keyCombos[i]._isShift || a._keyCombos[i]._key != b._keyCombos[i]._key) return false;
         return true;
     }

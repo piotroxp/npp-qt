@@ -222,11 +222,7 @@ void ScintillaEditView::moveLineUp() {
                                                      static_cast<uptr_t>(line), 0));
     int currLineEnd = static_cast<int>(sendCommand(SCI_GETLINEENDPOSITION,
                                                    static_cast<uptr_t>(line), 0));
-    int nextLineEnd = (line + 1 < lineCount())
-        ? static_cast<int>(sendCommand(SCI_GETLINEENDPOSITION,
-                                       static_cast<uptr_t>(line + 1), 0))
-        : currLineEnd;
-
+    // nextLineEnd: available for future multi-line move operations
     int prevLen = prevLineEnd - prevLineStart;
     int currLen = currLineEnd - currLineStart;
 
@@ -302,7 +298,6 @@ void ScintillaEditView::moveLineDown() {
                 reinterpret_cast<sptr_t>(combined.constData()));
 
     // Restore cursor
-    int delta = nextLen + 1;
     int newCurPos = (curPos >= nextLineStart)
         ? (curPos - nextLen - 1)
         : (curPos + nextLen + 1);

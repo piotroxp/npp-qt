@@ -43,10 +43,10 @@ static constexpr int BINARY_NULL_THRESHOLD = 32;
 static constexpr int BINARY_SAMPLE_SIZE = 8192;
 
 FileLoaderWorker::FileLoaderWorker(const QString& path, QObject* parent)
-    : QObject(parent), _path(path), _source(LoadSource::LocalFile) {}
+    : QObject(parent), _source(LoadSource::LocalFile), _path(path) {}
 
 FileLoaderWorker::FileLoaderWorker(const QUrl& url, QObject* parent)
-    : QObject(parent), _url(url), _source(LoadSource::RemoteURL) {}
+    : QObject(parent), _source(LoadSource::RemoteURL), _url(url) {}
 
 FileLoaderWorker::FileLoaderWorker(QObject* parent)
     : QObject(parent), _source(LoadSource::Stdin), _loadFromStdin(true) {}

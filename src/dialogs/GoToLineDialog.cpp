@@ -248,7 +248,6 @@ void GoToLineDialog::validateInput() {
         return;
 
     int line = lineSpinBox->value();
-    int column = columnSpinBox->value();
     bool isOffset = offsetCheckBox->isChecked();
 
     bool valid = true;

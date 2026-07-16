@@ -174,7 +174,7 @@ void NppBigSwitch::init() {
     // ── Run commands ─────────────────────────────────────────────────────────
     reg(IDM_RUN_LAUNCH,            [this]() { m_app->onRun(); });
 
-    qDebug("[NppBigSwitch] Registered %d commands", m_dispatch.size());
+    qDebug("[NppBigSwitch] Registered %zu commands", static_cast<size_t>(m_dispatch.size()));
 }
 
 void NppBigSwitch::reg(int id, std::function<void()> handler) {

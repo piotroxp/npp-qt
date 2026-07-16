@@ -363,8 +363,8 @@ void StatusBar::contextMenuEvent(QContextMenuEvent* event) {
     QMenu menu(this);
     
     // Add context menu actions
-    QAction* copyAction = menu.addAction("Copy Status Info");
-    QAction* resetAction = menu.addAction("Reset to Defaults");
+    (void)menu.addAction("Copy Status Info");
+    (void)menu.addAction("Reset to Defaults");
     
     menu.addSeparator();
     
@@ -391,7 +391,7 @@ void StatusBar::contextMenuEvent(QContextMenuEvent* event) {
     
     menu.addSeparator();
     
-    QAction* prefsAction = menu.addAction("Preferences...");
+    (void)menu.addAction("Preferences...");
     
     menu.exec(event->globalPos());
 }

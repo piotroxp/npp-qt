@@ -162,7 +162,6 @@ void ScintillaCtrls::joinLines(ScintillaEditor* editor) {
     for (int line = startLine; line <= endLine; ++line) {
         int sp  = qsci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, line);
         int ep  = qsci->SendScintilla(QsciScintilla::SCI_GETLINEENDPOSITION, line);
-        int len = ep - sp;
         if (ep > sp) {
             QString lineText = qsci->text(sp, ep).trimmed();
             if (!replacement.isEmpty())

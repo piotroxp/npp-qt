@@ -121,6 +121,7 @@ QByteArray NppIO::readFile(const QString& filePath,
                            QString& errorMsg,
                            bool readOnlyBom) const
 {
+    (void)readOnlyBom;  // BOM handled at caller level
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
         success = false;
@@ -611,6 +612,7 @@ bool NppIO::launchElevated(const QString& programPath,
                             const QString& workingDirectory,
                             QString& errorMsg) const
 {
+    (void)errorMsg;  // TODO: propagate error to caller
     // Try pkexec first (Linux), then kdesudo, then sudo
     QStringList elevCmd = { QStringLiteral("pkexec"),
                             QStringLiteral("--disable-internal-agent"),
@@ -642,6 +644,7 @@ int NppIO::runCommand(const QString& command,
 
     QObject::connect(&proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
                      &proc, [&](int exitCode, QProcess::ExitStatus) {
+        (void)exitCode;  // TODO: report exit code to caller
         output = QString::fromLocal8Bit(proc.readAll());
     });
 

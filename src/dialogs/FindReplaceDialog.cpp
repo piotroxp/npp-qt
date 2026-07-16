@@ -116,7 +116,7 @@ void FindReplaceDialog::setupUi() {
     connect(_closeBtn, &QPushButton::clicked, this, &QDialog::hide);
     connect(_directionGroup, &QButtonGroup::idClicked, this, &FindReplaceDialog::onDirectionChanged);
 
-    // Wire search-as-you-type highlight — use textChanged on the line edit within the combobox
+    // Wire search-as-you-type highlight - use textChanged on the line edit within the combobox
     QLineEdit* findEdit = _findCombo->lineEdit();
     if (findEdit) {
         connect(findEdit, &QLineEdit::textChanged, this, &FindReplaceDialog::onSearchTextChanged);
@@ -304,7 +304,7 @@ void FindReplaceDialog::onReplaceAll() {
             sci->SendScintilla(QsciScintilla::SCI_SETTARGETSTART, targetStart);
             sci->SendScintilla(QsciScintilla::SCI_SETTARGETEND, targetEnd);
 
-            // Search in target — returns -1 if not found, or position
+            // Search in target - returns -1 if not found, or position
             QByteArray findBa = findText.toUtf8();
             int foundPos = sci->SendScintilla(QsciScintilla::SCI_SEARCHINTARGET,
                                               findBa.size(),
@@ -313,7 +313,7 @@ void FindReplaceDialog::onReplaceAll() {
             if (foundPos < 0) break;
 
             // Get the matched range
-            int foundEnd = sci->SendScintilla(QsciScintilla::SCI_GETTARGETEND);
+            (void)sci->SendScintilla(QsciScintilla::SCI_GETTARGETEND);
 
             // For backreferences, we need to retrieve matched groups.
             // SCI_GETTAG(n) returns the text of capture group n (0 = entire match).
@@ -332,7 +332,7 @@ void FindReplaceDialog::onReplaceAll() {
 
         sci->SendScintilla(QsciScintilla::SCI_ENDUNDOACTION);
     } else {
-        // Plain text replace all — use the simple loop
+        // Plain text replace all - use the simple loop
         replacedCount = _editor->replaceAll(findText, replaceText, opts);
     }
 
@@ -476,8 +476,7 @@ void FindReplaceDialog::onMarkAll() {
                        static_cast<long>(QColor(_markColor).rgb()) & 0x00FFFFFF);
 
     int count = 0;
-    int lineCount = _editor->lineCount();
-
+    
     // Use findFirst loop to walk all matches and mark each line.
     // QsciScintilla::findFirst returns true if found; keep calling
     // findFirst with the same args to advance to next match.
@@ -550,7 +549,7 @@ void FindReplaceDialog::onSelectAndFind() {
     if (!_editor) return;
     QString selected = _editor->selectedText();
     if (selected.isEmpty()) {
-        // Nothing selected — nothing to do
+        // Nothing selected - nothing to do
         return;
     }
     // Put selected text into find box and trigger search

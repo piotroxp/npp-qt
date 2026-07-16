@@ -110,9 +110,7 @@ int SmartHighlighter::findAllMatches(const QString& text, bool caseSensitive) {
 
     // Convert search text to UTF-8 for Scintilla
     QByteArray searchBytes = text.toUtf8();
-    const char* searchStr = searchBytes.constData();
     size_t searchLen = searchBytes.size();
-
     int docLen = sci->SendScintilla(QsciScintillaBase::SCI_GETLENGTH);
     if (docLen <= 0 || searchLen == 0) return 0;
 
@@ -175,6 +173,7 @@ void SmartHighlighter::goToNextMatch() {
     }
 
     QPair<int, int> match = _matchPositions[_currentMatchIndex];
+    (void)match;  // available for future scroll-to-match
 
     emit currentMatchChanged(_currentMatchIndex + 1, _matchCount);
 }
@@ -188,6 +187,6 @@ void SmartHighlighter::goToPreviousMatch() {
     }
 
     QPair<int, int> match = _matchPositions[_currentMatchIndex];
-
+    (void)match;
     emit currentMatchChanged(_currentMatchIndex + 1, _matchCount);
 }

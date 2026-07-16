@@ -68,15 +68,8 @@ static int _parseKeyCode(const QString& keyName) {
     return Qt::Key_unknown;
 }
 
-static int _parseModifiers(const QString& str) {
-    int mods = 0;
-    QString s = str.toUpper();
-    if (s.contains("CTRL") || s.contains("CTRL")) mods |= Qt::ControlModifier;
-    if (s.contains("ALT")) mods |= Qt::AltModifier;
-    if (s.contains("SHIFT")) mods |= Qt::ShiftModifier;
-    if (s.contains("META") || s.contains("WIN") || s.contains("CMD")) mods |= Qt::MetaModifier;
-    return mods;
-}
+// Unused — reserved for future shortcut modifier parsing
+// static int _parseModifiers(const QString& str) { ... }
 
 QString KeyBinding::toString() const {
     if (shortcutText.isEmpty()) return QString();

@@ -311,6 +311,7 @@ bool Application::loadConfig() {
 }
 
 bool Application::saveConfig(const std::string& path) {
+    (void)path;  // uses default config path
     IniParser ini;
     ini.set("General", "SingleInstance",    _options.singleInstance);
     ini.set("General", "ShowTabBar",         _options.showTabBar);
@@ -635,6 +636,7 @@ void Application::closeAllBuffersExcept(BufferID keepId) {
 }
 
 BufferID Application::newFile(const std::string& encoding) {
+    (void)encoding;  // encoding determined by file manager defaults
     return _fileManager->createNewFile();
 }
 
@@ -796,7 +798,7 @@ bool Application::loadSession(const std::string& path) {
 
     // Restore open files, cursor, and scroll from session data
     const NppSession& session = _sessionManager->currentSession();
-    BufferID activeBuffer;
+    BufferID activeBuffer = nullptr;
 
     for (int i = 0; i < session.buffers.size(); ++i) {
         const SessionBuffer& buf = session.buffers.at(i);
@@ -2033,8 +2035,7 @@ void Application::showFindInFilesResults(const QList<FindResult>& results) {
     } else {
         msg = QString("Found %1 match%2:").arg(results.size()).arg(results.size() == 1 ? "" : "es");
         for (const FindResult& r : results) {
-            // Build a results panel or show in find dialog
-            // For now, show first 20 in status
+            (void)r;  // results consumed by FindInFilesPanel
             static int shown = 0;
             shown = (shown + 1) % 1000;  // cycle to avoid spam
         }

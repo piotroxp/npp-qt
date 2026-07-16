@@ -246,9 +246,7 @@ void DocTabView::moveTab(int fromIndex, int toIndex) {
     setTabToolTip(actualTo, tooltip);
 
     // Restore auxiliary data
-    if (auto* ed = qobject_cast<ScintillaEditor*>(w)) {
-        // Editor-specific restore if needed
-    }
+    (void)w;  // tab data managed by base class
     _tabData[actualTo] = data;
 
     // Apply pinned appearance if needed

@@ -742,7 +742,7 @@ inline bool NppIO::isReadOnly(const QString& filePath) const
 {
     QFileInfo info(filePath);
     // Check both permissions and the read-only attribute
-    return !info.isWritable() || info.exists() && (info.permissions() & QFile::ReadOwner) == 0;
+    return !info.isWritable() || (info.exists() && (info.permissions() & QFile::ReadOwner) == 0);
 }
 
 inline QString NppIO::parentDirectory(const QString& filePath) const

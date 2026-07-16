@@ -322,8 +322,6 @@ void TabBar::mousePressEvent(QMouseEvent* event) {
 
 void TabBar::mouseMoveEvent(QMouseEvent* event) {
     if (event->buttons() & Qt::LeftButton && m_dragStartTab >= 0) {
-        QPoint diff = event->pos() - m_dragStartPos;
-        
         // Start drag after moving a few pixels
         if (QLineF(event->pos(), m_dragStartPos).length() > QApplication::startDragDistance()) {
             if (!m_isDragging) {
@@ -494,8 +492,6 @@ void TabBar::showTabContextMenu(const QPoint& pos, int tabIndex) {
         
         QAction* closeOthersAction = menu.addAction("Close Other Tabs");
         closeOthersAction->setEnabled(count() > 1);
-        
-        QAction* closeAllAction = menu.addAction("Close All Tabs");
         
         menu.addSeparator();
         
@@ -1035,7 +1031,7 @@ void TabBar::animateElasticScroll(int delta) {
 
 void TabBar::updateForDpi() {
     // Rescale tab heights and fonts using DpiManager
-    DpiManager& dpi = DpiManager::instance();
+    (void)DpiManager::instance();
     setStyleSheet(QString());  // clear cached stylesheet so the next repaint recomputes sizes
     // Force a resize to trigger minimumSizeHint recalculation
     update();

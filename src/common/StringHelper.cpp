@@ -444,7 +444,7 @@ std::string makeEolConsistent(std::string_view text, int eolMode) {
 // Indentation
 // ============================================================================
 std::string indentLines(const std::string& text, size_t spaces, const std::string& chars) {
-    std::string indent(spaces, ' ');
+    std::string indent = chars.empty() ? std::string(spaces, ' ') : std::string(spaces, chars[0]);
     std::string result;
     std::istringstream iss(text);
     std::string line;

@@ -316,12 +316,13 @@ void MainWindow::createMenus() {
     // File menu actions are already created
     if (MenuBar* mb = _menuBar) {
         QMenu* fileMenu = mb->fileMenu();
-        QMenu* editMenu = mb->editMenu();
-        QMenu* searchMenu = mb->searchMenu();
-        QMenu* viewMenu = mb->viewMenu();
-        QMenu* encodingMenu = mb->encodingMenu();
-        QMenu* settingsMenu = mb->settingsMenu();
-        QMenu* helpMenu = mb->helpMenu();
+        // Ensure submenus exist by accessing them
+        (void)mb->editMenu();
+        (void)mb->searchMenu();
+        (void)mb->viewMenu();
+        (void)mb->encodingMenu();
+        (void)mb->settingsMenu();
+        (void)mb->helpMenu();
         
         // File menu items
         if (fileMenu) {
@@ -544,7 +545,6 @@ void MainWindow::dispatchCommand(const QString& cmd) {
     else if (cmd.startsWith("language.")) {
         QString langName = cmd.mid(9);
         langName = langName.replace('_', ' ');
-        BufferID buf = app().getActiveBuffer();
         ScintillaEditor* ed = app().getActiveEditor();
         LangType lang = LangType::L_TEXT;
         if (langName == "C++") lang = LangType::L_CPP;
@@ -668,7 +668,7 @@ void MainWindow::updateStatusBar() {
 void MainWindow::updateTitleBar(const QString& fileName) {
     QString title = "Notepad--Qt";
     if (!fileName.isEmpty()) title = fileName + " - " + title;
-    else if (auto* editor = currentEditor()) {
+    else if (currentEditor()) {
         // Show current file name
         BufferID buf = app().getActiveBuffer();
         if (buf) {
