@@ -336,10 +336,13 @@ void MainWindow::createStatusBar() {
 }
 
 void MainWindow::createPanels() {
-    fprintf(stderr, "DEBUG: createPanels() start\n"); fflush(stderr);
+    fprintf(stderr, "DEBUG: createPanels() line 338\n"); fflush(stderr);
     // File Browser panel (left dock)
     _fileBrowserDock = new QDockWidget("File Browser", this);
+    fprintf(stderr, "DEBUG: createPanels() line 341\n"); fflush(stderr);
+    fprintf(stderr, "DEBUG: createPanels() after FileBrowserDock new\n"); fflush(stderr);
     _fileBrowserDock->setWidget(app().fileBrowserPanel());
+    fprintf(stderr, "DEBUG: createPanels() after setWidget FileBrowser\n"); fflush(stderr);
     _fileBrowserDock->setObjectName("FileBrowserDock");
     addDockWidget(Qt::LeftDockWidgetArea, _fileBrowserDock);
     connect(_fileBrowserDock, &QDockWidget::visibilityChanged,
