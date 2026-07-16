@@ -77,6 +77,15 @@ static QByteArray encodeUtf16(const QString& str, bool littleEndian) {
 }
 
 bool FileManager::loadFile(const QString& path, QString& outContent, EncodingType encoding) {
+    // Large file detection: warn for files > 5MB
+    static constexpr qint64 LARGE_FILE_WARNING_THRESHOLD = 5 * 1024 * 1024; // 5MB
+    QFileInfo info(path);
+    if (info.size() > LARGE_FILE_WARNING_THRESHOLD) {
+        qWarning() << "[FileManager] Large file loading:" << path
+                   << "(" << info.size() << "bytes,"
+                   << QString::number(info.size() / 1e6, 'f', 1) << "MB)";
+    }
+
     QFile file(path);
     if (!file.exists())
         return false;
