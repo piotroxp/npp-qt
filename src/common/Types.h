@@ -77,7 +77,13 @@ enum class EncodingType : int {
     UTF_32_LE  = 5,
     UTF_32_BE  = 6,
     EBCDIC     = 7,
-    OEM        = 8  // DOS code page
+    OEM        = 8,  // DOS code page
+    ASCII_7    = 9,  // ASCII (7-bit)
+    UTF_16_LE_BOM  = 10,
+    UTF_16_BE_BOM  = 11,
+    ISO88591       = 12,
+    Windows1252   = 13,
+    Other          = 14,
 };
 
 enum class NewDocDefaultSettings : int {
@@ -156,8 +162,9 @@ enum class LangType : int {
     L_MATLAB     = 51,
     L_DIFF       = 52,
     L_TEX        = 53,
-    L_REGEX      = 54,
-    L_GRAPHVIZ   = 55,
+    L_REGEX      = 55,
+    L_GRAPHVIZ   = 56,
+    L_SQL        = 57,
     L_USER       = 1000,  // User-defined languages start here
     L_EXTERNAL   = 2000,
     L_REGISTRY   = 3000

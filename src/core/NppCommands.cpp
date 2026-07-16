@@ -28,6 +28,8 @@
 #include "core/FileManager.h"
 #include "dialogs/GoToLineDialog.h"
 #include "ui/MainWindow.h"
+#include "editor/ScintillaEditor.h"
+#include "editor/ScintillaEditor.h"
 #include <QApplication>
 #include <QClipboard>
 #include <QFileDialog>
@@ -358,7 +360,7 @@ void NppCommands::goToLine() {
 
     GoToLineDialog dlg(static_cast<QWidget*>(m_app->mainWindow()));
     if (editor) {
-        dlg.setMaxLineNumber(editor->lines());
+        dlg.setMaxLineNumber(editor->lineCount());
     }
     dlg.exec();
 }

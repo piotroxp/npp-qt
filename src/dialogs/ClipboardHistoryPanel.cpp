@@ -402,7 +402,7 @@ void ClipboardHistoryPanel::onClipboardChanged()
     QClipboard* clipboard = QApplication::clipboard();
 
     // Check for image first.
-    if (clipboard->supportsImage()) {
+    if (!clipboard->image().isNull()) {
         QImage image = clipboard->image();
         if (!image.isNull() && image != _lastClipboardImage) {
             _lastClipboardImage = image;
@@ -586,18 +586,10 @@ void ClipboardHistoryPanel::showFullText()
     layout->addWidget(textEdit);
 
     QDialogButtonBox* buttons = new QDialogButtonBox(
-        QDialogButtonBox::Ok | QDialogButtonBox::Copy);
+        QDialogButtonBox::Ok);
     layout->addWidget(buttons);
 
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    connect(buttons, &QDialogButtonBox::clicked,
-            [&dialog, &item](QDialogButtonBox::ButtonRole role) {
-                if (role == QDialogButtonBox::AcceptRole) {
-                    // Copy button
-                    QClipboard* clipboard = QApplication::clipboard();
-                    clipboard->setText(item.text, QClipboard::Clipboard);
-                }
-            });
 
     dialog.exec();
 }

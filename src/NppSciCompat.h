@@ -100,6 +100,11 @@ namespace npp_sci {
     constexpr int SCI_CALLTIPACTIVE           = 2201;
     constexpr int SCI_CALLTIPCANCEL            = 2202;
     constexpr int SCI_CALLTIPSHOW              = 2203;
+    constexpr int SCI_CALLTIPSETHLT            = 2204;  // highlight Nth parameter
+    constexpr int SCI_CALLTIPSETBACK           = 2205;  // set calltip background colour
+    constexpr int SCI_CALLTIPSETFORE           = 2206;  // set calltip foreground colour
+    constexpr int SCI_CALLTIPSETFOREHLT         = 2207;  // set highlighted parameter colour
+    constexpr int SCI_CALLTIPSETOPTIONS         = 2210;  // calltip options
     constexpr int SCI_ENSUREVISIBLE            = 2232;
     constexpr int SCI_GOTOLINE                 = 2024;
     constexpr int SCI_GOTOPOS                  = 2025;
@@ -613,6 +618,11 @@ using npp_sci::SCI_BRACEHIGHLIGHT;
 using npp_sci::SCI_CALLTIPACTIVE;
 using npp_sci::SCI_CALLTIPCANCEL;
 using npp_sci::SCI_CALLTIPSHOW;
+using npp_sci::SCI_CALLTIPSETHLT;
+using npp_sci::SCI_CALLTIPSETBACK;
+using npp_sci::SCI_CALLTIPSETFORE;
+using npp_sci::SCI_CALLTIPSETFOREHLT;
+using npp_sci::SCI_CALLTIPSETOPTIONS;
 using npp_sci::SCI_CANCEL;
 using npp_sci::SCI_CHARLEFT;
 using npp_sci::SCI_CHARLEFTEXTEND;

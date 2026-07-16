@@ -20,6 +20,7 @@
 #include <QProcess>
 #include <QInputDialog>
 #include <QFileDialog>
+#include <QSettings>
 #include <QMessageBox>
 #include <QDragEnterEvent>
 #include <QMimeData>
@@ -931,8 +932,6 @@ void FileBrowserPanel::onDirectoryChanged(const QString& path) {
     });
 }
 
-void FileBrowserPanel::onFileRenamed(const QString& oldPath, const QString& newPath) {
-    Q_UNUSED(oldPath);
-    Q_UNUSED(newPath);
+void FileBrowserPanel::onFileRenamed(const QString& /*path*/) {
     refresh();
 }

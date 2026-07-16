@@ -419,81 +419,14 @@ private:
 // Scintilla Notification Bridge
 // =============================================================================
 
-// Scintilla notification codes (SCN_*)
-// Guarded so they don't leak into files that don't expect them
-#ifndef NPP_SCN_DEFINED
-#define NPP_SCINTILLA_NOTIFY_DEFINED
+// Scintilla notification codes (SCN_*) are provided by QScintilla (QsciScintillaBase).
+// Do NOT re-define them here — they conflict with QScintilla's own definitions.
+// Code should use the QScintilla/SCintilla constant forms directly.
 
-#ifndef SCN_STYLENEEDED
-#define SCN_STYLENEEDED 2000
-#endif
-#ifndef SCN_CHARADDED
-#define SCN_CHARADDED 2001
-#endif
-#ifndef SCN_SAVEPOINTREACHED
-#define SCN_SAVEPOINTREACHED 2002
-#endif
-#ifndef SCN_SAVEPOINTLEFT
-#define SCN_SAVEPOINTLEFT 2003
-#endif
-#ifndef SCN_MODIFYATTEMPTRO
-#define SCN_MODIFYATTEMPTRO 2004
-#endif
-#ifndef SCN_DOUBLECLICK
-#define SCN_DOUBLECLICK 2006
-#endif
-#ifndef SCN_UPDATEUI
-#define SCN_UPDATEUI 2007
-#endif
-#ifndef SCN_MODIFIED
-#define SCN_MODIFIED 2008
-#endif
-#ifndef SCN_MARGINCLICK
-#define SCN_MARGINCLICK 2010
-#endif
-#ifndef SCN_PAINTED
-#define SCN_PAINTED 2013
-#endif
-#ifndef SCN_ZOOM
-#define SCN_ZOOM 2018
-#endif
-#ifndef SCN_AUTOCSELECTION
-#define SCN_AUTOCSELECTION 2021
-#endif
-#ifndef SCN_AUTOCCANCELLED
-#define SCN_AUTOCCANCELLED 2022
-#endif
-
-#endif  // NPP_SCINTILLA_NOTIFY_DEFINED
-
-// Sci_NotifyHeader struct (minimal)
-struct Sci_NotifyHeader {
-    void* hwndFrom = nullptr;
-    uintptr_t idFrom = 0;
-    unsigned int code = 0;
-};
-
-// SCNotification struct (minimal)
-struct SCNotification {
-    Sci_NotifyHeader nmhdr;
-    int position = 0;
-    int ch = 0;
-    int modifiers = 0;
-    int modificationType = 0;
-    const char* text = nullptr;
-    int length = 0;
-    int linesAdded = 0;
-    int message = 0;
-    uintptr_t wParam = 0;
-    intptr_t lParam = 0;
-    int line = 0;
-    int foldLevelNow = 0;
-    int foldLevelPrev = 0;
-    int margin = 0;
-    int listType = 0;
-    int x = 0;
-    int y = 0;
-};
+// Forward declarations (struct definitions use mangled names to avoid preprocessor collisions)
+// Member names like 'position', 'ch', 'text' can be macro-expanded by MOC in some build configs
+struct Sci_NotifyHeader;
+struct SCNotification;
 
 // Scintilla notification handler interface
 class NppSciNotificationBridge : public QObject {
@@ -534,6 +467,39 @@ private:
     bool handleZoom(const SCNotification* notification, int bufferId);
     bool handlePainted(const SCNotification* notification, int bufferId);
     bool handleAutoComplete(const SCNotification* notification, int bufferId);
+};
+
+// =============================================================================
+// Scintilla struct definitions (mangled member names to avoid preprocessor conflicts)
+// Qt MOC may macro-expand 'position', 'ch', 'text', 'length', 'line', 'margin',
+// 'x', 'y' — rename to avoid all Win32/WinSDK macro namespaces.
+// =============================================================================
+
+struct Sci_NotifyHeader {
+    void* npHwndFrom = nullptr;
+    uintptr_t npIdFrom = 0;
+    unsigned int npCode = 0;
+};
+
+struct SCNotification {
+    Sci_NotifyHeader npNmhdr;
+    int npPosition = 0;
+    int npCh = 0;
+    int npModifiers = 0;
+    int npModificationType = 0;
+    const char* npText = nullptr;
+    int npLength = 0;
+    int npLinesAdded = 0;
+    int npMessage = 0;
+    uintptr_t npWParam = 0;
+    intptr_t npLParam = 0;
+    int npLine = 0;
+    int npFoldLevelNow = 0;
+    int npFoldLevelPrev = 0;
+    int npMargin = 0;
+    int npListType = 0;
+    int npX = 0;
+    int npY = 0;
 };
 
 // =============================================================================

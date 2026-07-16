@@ -77,6 +77,8 @@ public:
         bool isValid = false;        // true only if mainExpr is non-empty
     };
 
+    using FunctionListRule = Rule;
+
     // ─── One parser language (corresponds to one <parser> element) ─────────
     struct ParserDef {
         QString displayName;
@@ -112,8 +114,8 @@ private:
 
     // ─── XML parsing ─────────────────────────────────────────────────────
     void parseParserElement(QXmlStreamReader& xml, ParserDef& def);
-    void parseClassRangeElement(QXmlStreamReader& xml, Rule& rule);
-    void parseFunctionElement(QXmlStreamReader& xml, Rule& rule);
+    void parseClassRangeElement(QXmlStreamReader& xml, FunctionListRule& rule);
+    void parseFunctionElement(QXmlStreamReader& xml, FunctionListRule& rule);
 
     // ─── N++ regex → QRegularExpression conversion ────────────────────────
     // Returns true if conversion was successful.

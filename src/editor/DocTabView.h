@@ -180,7 +180,7 @@ private:
     void setupNewTabButton();
     int tabIndexAt(const QPoint& pos) const;
     TabData& tabData(int index);
-    const TabData& tabData(int index) const;
+    TabData tabData(int index) const;
     void updateTabPinnedAppearance(int index);
 
     // Drop index during drag

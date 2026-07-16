@@ -638,7 +638,7 @@ bool NppSciNotificationBridge::handleScintillaNotification(const SCNotification*
 
     emit scintillaNotification(notification, bufferId);
 
-    switch (notification->nmhdr.code) {
+    switch (notification->npNmhdr.npCode) {
         case SCN_MODIFIED:
             return handleModified(notification, bufferId);
         case SCN_SAVEPOINTREACHED:
@@ -706,7 +706,7 @@ bool NppSciNotificationBridge::handleModified(const SCNotification*, int bufferI
 }
 
 bool NppSciNotificationBridge::handleSavePoint(const SCNotification* notification, int bufferId) {
-    if (notification->nmhdr.code == SCN_SAVEPOINTLEFT) {
+    if (notification->npNmhdr.npCode == SCN_SAVEPOINTLEFT) {
         NppNotificationHandler::instance().notifyBufferModified(bufferId, true);
     } else {
         NppNotificationHandler::instance().notifyBufferModified(bufferId, false);

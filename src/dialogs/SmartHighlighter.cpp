@@ -7,12 +7,19 @@
 #include <Qsci/qsciscintilla.h>
 #include <QColor>
 #include <QDebug>
+#include <QRegularExpression>
 
-// Scintilla indicator style: plain text with background fill
-#define INDICATOR_STYLE SC_INDIC_ROUNDBOX
+// Maximum matches to prevent performance issues
 
 // Maximum matches to prevent performance issues
 #define MAX_MATCHES 10000
+
+// Sci_TextToFind uses Sci_CharacterRange (defined in ScintillaComponent.h)
+struct Sci_TextToFind {
+    Sci_CharacterRange chrg;
+    const char* lpstrText;
+};
+
 
 SmartHighlighter::SmartHighlighter(ScintillaEditor* editor, QObject* parent)
     : QObject(parent)
@@ -32,17 +39,11 @@ void SmartHighlighter::configureIndicator() {
     QsciScintilla* sci = _editor->qsciEditor();
     if (!sci) return;
 
-    // Configure the indicator style and color
-    sci->SendScintilla(QsciScintillaBase::SCI_SETINDICATORSTYLE,
-                        _indicatorNum, INDICATOR_STYLE);
-    sci->SendScintilla(QsciScintillaBase::SCI_INDICSETSTYLE,
-                        _indicatorNum, QsciScintilla::IndicatorStyle::IndicatorRoundBox);
+    // Configure the indicator style and color using QScintilla API
+    sci->SendScintilla(QsciScintillaBase::SCI_INDICSETSTYLE, _indicatorNum, QsciScintilla::PlainIndicator);
     sci->SendScintilla(QsciScintillaBase::SCI_INDICSETFORE,
                         _indicatorNum,
-                        QRgb(_highlightColor.rgb()));  // foreground
-    sci->SendScintilla(QsciScintillaBase::SCI_INDICSETBACK,
-                        _indicatorNum,
-                        QRgb(_highlightColor.rgb()));  // background
+                        QRgb(_highlightColor.rgb()));
     sci->SendScintilla(QsciScintillaBase::SCI_INDICSETALPHA,
                         _indicatorNum, 80);  // Semi-transparent
 }
@@ -85,7 +86,7 @@ void SmartHighlighter::highlight(const QString& text, bool caseSensitive) {
     if (text.isEmpty()) return;
 
     // Check if the text looks like a regex (contains regex metacharacters)
-    bool looksLikeRegex = text.contains(QRegExp("[\\^$.|?*+()\\[\\]{}]"));
+    bool looksLikeRegex = text.contains(QRegularExpression("[\\^$.|?*+()\\[\\]{}]"));
     Q_UNUSED(looksLikeRegex);
 
     int count = findAllMatches(text, caseSensitive);
@@ -142,8 +143,8 @@ int SmartHighlighter::findAllMatches(const QString& text, bool caseSensitive) {
         ft.chrg.cpMax = docLen;
 
         intptr_t result = sci->SendScintilla(QsciScintillaBase::SCI_FINDTEXT,
-                                              findFlags,
-                                              reinterpret_cast<intptr_t>(&ft));
+                                    findFlags,
+                                    reinterpret_cast<sptr_t>(&ft));
 
         if (result == -1) break;  // No more matches
 
@@ -174,8 +175,6 @@ void SmartHighlighter::goToNextMatch() {
     }
 
     QPair<int, int> match = _matchPositions[_currentMatchIndex];
-    _editor->gotoLine(_editor->lineFromPosition(match.first),
-                      _editor->columnFromPosition(match.first));
 
     emit currentMatchChanged(_currentMatchIndex + 1, _matchCount);
 }
@@ -189,8 +188,6 @@ void SmartHighlighter::goToPreviousMatch() {
     }
 
     QPair<int, int> match = _matchPositions[_currentMatchIndex];
-    _editor->gotoLine(_editor->lineFromPosition(match.first),
-                      _editor->columnFromPosition(match.first));
 
     emit currentMatchChanged(_currentMatchIndex + 1, _matchCount);
 }

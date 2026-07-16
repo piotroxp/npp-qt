@@ -98,7 +98,7 @@ bool FunctionListXmlParser::loadParser(const QString& langKey) {
 
     while (!xml.atEnd()) {
         xml.readNext();
-        if (xml.isStartElement() && xml.name() == "parser") {
+        if (xml.isStartElement() && xml.name().toString() == QStringLiteral("parser")) {
             def.displayName = xml.attributes().value("displayName").toString();
             def.id           = xml.attributes().value("id").toString();
 
@@ -151,16 +151,16 @@ bool FunctionListXmlParser::hasParser(const QString& langKey) const {
 void FunctionListXmlParser::parseParserElement(QXmlStreamReader& xml, ParserDef& def) {
     while (!xml.atEnd()) {
         xml.readNext();
-        if (xml.isEndElement() && xml.name() == "parser")
+        if (xml.isEndElement() && xml.name().toString() == QStringLiteral("parser"))
             break;
         if (xml.isStartElement()) {
-            if (xml.name() == "classRange") {
+            if (xml.name().toString() == QStringLiteral("classRange")) {
                 FunctionListRule rule;
                 rule.name = "classRange";
                 parseClassRangeElement(xml, rule);
                 if (rule.isValid)
                     def.classRules.append(rule);
-            } else if (xml.name() == "function") {
+            } else if (xml.name().toString() == QStringLiteral("function")) {
                 FunctionListRule rule;
                 rule.name = "function";
                 parseFunctionElement(xml, rule);
@@ -175,8 +175,8 @@ void FunctionListXmlParser::parseParserElement(QXmlStreamReader& xml, ParserDef&
 }
 
 void FunctionListXmlParser::parseClassRangeElement(QXmlStreamReader& xml, FunctionListRule& rule) {
-    rule.openSymbole  = xml.attributes().value("openSymbole").toString("{");
-    rule.closeSymbole = xml.attributes().value("closeSymbole").toString("}");
+    rule.openSymbole  = xml.attributes().value(QStringLiteral("openSymbole")).toString();
+    rule.closeSymbole = xml.attributes().value(QStringLiteral("closeSymbole")).toString();
 
     const QString mainExprStr = xml.attributes().value("mainExpr").toString();
     if (!mainExprStr.isEmpty())
@@ -184,7 +184,7 @@ void FunctionListXmlParser::parseClassRangeElement(QXmlStreamReader& xml, Functi
 
     while (!xml.atEnd()) {
         xml.readNext();
-        if (xml.isEndElement() && xml.name() == "classRange")
+        if (xml.isEndElement() && xml.name().toString() == QStringLiteral("classRange"))
             break;
         if (xml.isStartElement()) {
             const QString localName = xml.name().toString();
@@ -213,7 +213,7 @@ void FunctionListXmlParser::parseFunctionElement(QXmlStreamReader& xml, Function
 
     while (!xml.atEnd()) {
         xml.readNext();
-        if (xml.isEndElement() && xml.name() == "function")
+        if (xml.isEndElement() && xml.name().toString() == QStringLiteral("function"))
             break;
         if (xml.isStartElement()) {
             const QString localName = xml.name().toString();

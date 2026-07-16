@@ -97,8 +97,8 @@ void FunctionCallTip::highlightParam(int paramIndex)
     if (!_pEditView || !isVisible()) return;
 
     // Scintilla: highlight a parameter by setting its colour style.
-    // SCI_CALLTIPSETHIGHLIGHT starts highlighting at the given parameter index.
-    _pEditView->send(SCI_CALLTIPSETHIGHLIGHT, paramIndex);
+    // SCI_CALLTIPSETHLT starts highlighting at the given parameter index.
+    _pEditView->send(SCI_CALLTIPSETHLT, paramIndex);
     emit paramHighlightChanged(paramIndex);
 }
 
@@ -106,7 +106,7 @@ void FunctionCallTip::setForeground(const QColor& c)
 {
     _fgColor = c;
     if (isVisible()) {
-        _pEditView->send(SCI_CALLTIPSETFORE, qRgb(c.red(), c.green(), c.blue()));
+        _pEditView->send(SCI_CALLTIPSETFORE, 0, static_cast<int>(qRgb(c.red(), c.green(), c.blue())));
     }
 }
 
@@ -114,7 +114,7 @@ void FunctionCallTip::setBackground(const QColor& c)
 {
     _bgColor = c;
     if (isVisible()) {
-        _pEditView->send(SCI_CALLTIPSETBACK, qRgb(c.red(), c.green(), c.blue()));
+        _pEditView->send(SCI_CALLTIPSETBACK, 0, static_cast<int>(qRgb(c.red(), c.green(), c.blue())));
     }
 }
 
@@ -124,7 +124,7 @@ void FunctionCallTip::setHighlightColor(const QColor& c)
     if (isVisible()) {
         // Scintilla highlight uses a fixed colour index (2), set via
         // SCI_CALLTIPSETFOREHLT.
-        _pEditView->send(SCI_CALLTIPSETHIGHLIGHT, 2);
+        _pEditView->send(SCI_CALLTIPSETFOREHLT, 0, static_cast<int>(qRgb(c.red(), c.green(), c.blue())));
     }
 }
 
@@ -172,9 +172,9 @@ void FunctionCallTip::applyStyling()
     if (!_pEditView) return;
 
     // Set calltip appearance via Scintilla messages.
-    _pEditView->send(SCI_CALLTIPSETFORE, qRgb(_fgColor.red(), _fgColor.green(), _fgColor.blue()));
-    _pEditView->send(SCI_CALLTIPSETBACK, qRgb(_bgColor.red(),   _bgColor.green(),   _bgColor.blue()));
-    _pEditView->send(SCI_CALLTIPSETFOREHLT, qRgb(_hlColor.red(), _hlColor.green(), _hlColor.blue()));
+    _pEditView->send(SCI_CALLTIPSETFORE, 0, static_cast<int>(qRgb(_fgColor.red(), _fgColor.green(), _fgColor.blue())));
+    _pEditView->send(SCI_CALLTIPSETBACK, 0, static_cast<int>(qRgb(_bgColor.red(),   _bgColor.green(),   _bgColor.blue())));
+    _pEditView->send(SCI_CALLTIPSETFOREHLT, 0, static_cast<int>(qRgb(_hlColor.red(), _hlColor.green(), _hlColor.blue())));
 
     // Enable hover/click handling for calltips.
     _pEditView->send(SCI_CALLTIPSETOPTIONS, 0);

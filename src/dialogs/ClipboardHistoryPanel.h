@@ -11,6 +11,7 @@
 #include <QDateTime>
 #include <QPointer>
 #include <QUuid>
+#include <QLabel>
 
 class ScintillaEditor;
 

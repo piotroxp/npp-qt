@@ -391,7 +391,7 @@ void FileLoaderWorker::loadRemoteFile() {
 
     connect(_networkReply, &QNetworkReply::finished, this, &FileLoaderWorker::onNetworkFinished,
             Qt::DirectConnection);
-    connect(_networkReply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error),
+    connect(_networkReply, &QNetworkReply::errorOccurred,
             this, &FileLoaderWorker::onNetworkError, Qt::DirectConnection);
     connect(_networkReply, &QNetworkReply::downloadProgress,
             this, &FileLoaderWorker::onNetworkDownloadProgress, Qt::DirectConnection);
@@ -529,27 +529,27 @@ void FileLoaderWorker::loadFromStdinStream() {
 
 EncodingType FileLoaderWorker::detectEncoding(const QByteArray& data) const {
     if (!_options.detectEncoding || data.isEmpty()) {
-        return EncodingType::UTF8;
+        return EncodingType::UTF_8;
     }
 
     // Check for BOM first
     if (data.size() >= 3 && data.startsWith("\xef\xbb\xbf")) {
-        return EncodingType::UTF8BOM;
+        return EncodingType::UTF_8_BOM;
     }
     if (data.size() >= 2) {
         if (data.startsWith("\xff\xfe")) {
             return data.size() >= 4 && data[2] == '\x00' && data[3] == '\x00'
-                       ? EncodingType::UTF32LE : EncodingType::UTF16LEBOM;
+                       ? EncodingType::UTF_32_LE : EncodingType::UTF_16_LE_BOM;
         }
         if (data.startsWith("\xfe\xff")) {
             return data.size() >= 4 && data[2] == '\x00' && data[3] == '\x00'
-                       ? EncodingType::UTF16BE : EncodingType::UTF16BEBOM;
+                       ? EncodingType::UTF_16_BE : EncodingType::UTF_16_BE_BOM;
         }
         if (data.startsWith("\xff\xfe\x00\x00")) {
-            return EncodingType::UTF32LE;
+            return EncodingType::UTF_32_LE;
         }
         if (data.startsWith("\x00\x00\xfe\xff")) {
-            return EncodingType::UTF16BE;
+            return EncodingType::UTF_16_BE;
         }
     }
 
@@ -562,7 +562,7 @@ EncodingType FileLoaderWorker::detectEncodingFromData(const QByteArray& sample) 
 
     // Sample size for analysis
     int analysisSize = qMin(size, BINARY_SAMPLE_SIZE);
-    if (analysisSize == 0) return EncodingType::UTF8;
+    if (analysisSize == 0) return EncodingType::UTF_8;
 
     // Check for UTF-16 LE (null bytes interleaved with ASCII text)
     int utf16leScore = 0;
@@ -572,7 +572,7 @@ EncodingType FileLoaderWorker::detectEncodingFromData(const QByteArray& sample) 
         }
     }
     if (utf16leScore > analysisSize / 4) {
-        return EncodingType::UTF16LE;
+        return EncodingType::UTF_16_LE;
     }
 
     // Check for UTF-16 BE
@@ -583,7 +583,7 @@ EncodingType FileLoaderWorker::detectEncodingFromData(const QByteArray& sample) 
         }
     }
     if (utf16beScore > analysisSize / 4) {
-        return EncodingType::UTF16BE;
+        return EncodingType::UTF_16_BE;
     }
 
     // Check for valid UTF-8
@@ -625,7 +625,7 @@ EncodingType FileLoaderWorker::detectEncodingFromData(const QByteArray& sample) 
     }
 
     if (validUtf8 && nonAscii > 0) {
-        return EncodingType::UTF8;
+        return EncodingType::UTF_8;
     }
 
     // Check for high bytes that aren't valid UTF-8
@@ -639,24 +639,24 @@ EncodingType FileLoaderWorker::detectEncodingFromData(const QByteArray& sample) 
     }
 
     if (allPrintable && nonAscii == 0) {
-        return EncodingType::ASCII;
+        return EncodingType::ASCII_7;
     }
 
     // Default to system encoding
-    return EncodingType::UTF8;
+    return EncodingType::UTF_8;
 }
 
 QString FileLoaderWorker::encodingToString(EncodingType enc) const {
     switch (enc) {
-        case EncodingType::UTF8:      return QStringLiteral("UTF-8");
-        case EncodingType::UTF8BOM:   return QStringLiteral("UTF-8 BOM");
-        case EncodingType::UTF16LE:   return QStringLiteral("UTF-16 LE");
-        case EncodingType::UTF16BE:   return QStringLiteral("UTF-16 BE");
-        case EncodingType::UTF16LEBOM: return QStringLiteral("UTF-16 LE BOM");
-        case EncodingType::UTF16BEBOM: return QStringLiteral("UTF-16 BE BOM");
-        case EncodingType::UTF32LE:   return QStringLiteral("UTF-32 LE");
-        case EncodingType::UTF32BE:   return QStringLiteral("UTF-32 BE");
-        case EncodingType::ASCII:     return QStringLiteral("ASCII");
+        case EncodingType::UTF_8:      return QStringLiteral("UTF-8");
+        case EncodingType::UTF_8_BOM:   return QStringLiteral("UTF-8 BOM");
+        case EncodingType::UTF_16_LE:   return QStringLiteral("UTF-16 LE");
+        case EncodingType::UTF_16_BE:   return QStringLiteral("UTF-16 BE");
+        case EncodingType::UTF_16_LE_BOM: return QStringLiteral("UTF-16 LE BOM");
+        case EncodingType::UTF_16_BE_BOM: return QStringLiteral("UTF-16 BE BOM");
+        case EncodingType::UTF_32_LE:   return QStringLiteral("UTF-32 LE");
+        case EncodingType::UTF_32_BE:   return QStringLiteral("UTF-32 BE");
+        case EncodingType::ASCII_7:     return QStringLiteral("ASCII");
         case EncodingType::ISO88591:  return QStringLiteral("ISO-8859-1");
         case EncodingType::Windows1252: return QStringLiteral("Windows-1252");
         case EncodingType::Other:    return QStringLiteral("Other");
@@ -670,18 +670,18 @@ QString FileLoaderWorker::encodingToString(EncodingType enc) const {
 
 QString FileLoaderWorker::decodeContent(const QByteArray& data, EncodingType encoding) const {
     switch (encoding) {
-        case EncodingType::UTF8:
-        case EncodingType::UTF8BOM:
-        case EncodingType::ASCII:
+        case EncodingType::UTF_8:
+        case EncodingType::UTF_8_BOM:
+        case EncodingType::ASCII_7:
             return QString::fromUtf8(data);
 
-        case EncodingType::UTF16LE:
-        case EncodingType::UTF16LEBOM:
+        case EncodingType::UTF_16_LE:
+        case EncodingType::UTF_16_LE_BOM:
             return QString::fromUtf16(reinterpret_cast<const ushort*>(data.constData()),
-                                      data.size() / 2, QUtf8Traits::Default);
+                                      data.size() / 2);
 
-        case EncodingType::UTF16BE:
-        case EncodingType::UTF16BEBOM: {
+        case EncodingType::UTF_16_BE:
+        case EncodingType::UTF_16_BE_BOM: {
             // Swap bytes for big-endian
             QByteArray swapped = data;
             for (int i = 0; i < swapped.size() - 1; i += 2) {
@@ -693,11 +693,11 @@ QString FileLoaderWorker::decodeContent(const QByteArray& data, EncodingType enc
                                       swapped.size() / 2);
         }
 
-        case EncodingType::UTF32LE:
+        case EncodingType::UTF_32_LE:
             return QString::fromUcs4(reinterpret_cast<const uint*>(data.constData()),
                                      data.size() / 4);
 
-        case EncodingType::UTF32BE: {
+        case EncodingType::UTF_32_BE: {
             QByteArray swapped = data;
             for (int i = 0; i < swapped.size() - 3; i += 4) {
                 qSwap(swapped[i], swapped[i + 3]);

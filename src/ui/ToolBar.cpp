@@ -185,14 +185,14 @@ void ToolBar::setupActions() {
     // =========================================================================
     // MACRO ACTIONS
     // =========================================================================
-    QAction* recordMacroAction = new QAction(style()->standardIcon(QStyle::SP_MediaRecord), "Record Macro", this);
+    QAction* recordMacroAction = new QAction(QIcon::fromTheme("media-record", QIcon(":/icons/media-record")), "Record Macro", this);
     recordMacroAction->setData("macro.record");
     recordMacroAction->setToolTip("Record Macro (Ctrl+Shift+R)");
     recordMacroAction->setShortcut(QKeySequence("Ctrl+Shift+R"));
     m_actions["macro.record"] = recordMacroAction;
     addAction(recordMacroAction);
     
-    QAction* stopMacroAction = new QAction(style()->standardIcon(QStyle::SP_MediaStop), "Stop Macro", this);
+    QAction* stopMacroAction = new QAction(QIcon::fromTheme("media-stop", QIcon(":/icons/media-stop")), "Stop Macro", this);
     stopMacroAction->setData("macro.stop");
     stopMacroAction->setToolTip("Stop Recording Macro (Ctrl+Shift+R)");
     stopMacroAction->setEnabled(false);
@@ -225,7 +225,7 @@ void ToolBar::setupActions() {
     m_actions["view.showAllChars"] = showAllCharsAction;
     addAction(showAllCharsAction);
     
-    QAction* readOnlyAction = new QAction(style()->standardIcon(QStyle::SP_LockClosed), "Read Only", this);
+    QAction* readOnlyAction = new QAction(QIcon::fromTheme("lock-locked", QIcon(":/icons/lock-locked")), "Read Only", this);
     readOnlyAction->setData("view.readOnly");
     readOnlyAction->setToolTip("Toggle Read Only Mode");
     readOnlyAction->setCheckable(true);
@@ -266,14 +266,14 @@ void ToolBar::setupActions() {
     QAction* runAction = new QAction(style()->standardIcon(QStyle::SP_CommandLink), "Run", this);
     runAction->setData("tools.run");
     runAction->setToolTip("Run (F5)");
-    runAction->setShortcut(QKeySequence::F5);
+    runAction->setShortcut(QKeySequence("F5"));
     m_actions["tools.run"] = runAction;
     addAction(runAction);
     
-    QAction* printAction = new QAction(style()->standardIcon(QStyle::SP_Printer), "Print", this);
+    QAction* printAction = new QAction(QIcon::fromTheme("document-print", QIcon(":/icons/printer")), "Print", this);
     printAction->setData("tools.print");
     printAction->setToolTip("Print (Ctrl+P)");
-    printAction->setShortcut(QKeySequence::Print);
+    printAction->setShortcut(QKeySequence("Ctrl+P"));
     m_actions["tools.print"] = printAction;
     addAction(printAction);
     
@@ -424,10 +424,6 @@ void ToolBar::setToolBarStyle(ToolBarStyle style) {
     }
     
     emit toolBarStyleChanged(style);
-}
-
-void ToolBar::addAction(QAction* action) {
-    QToolBar::addAction(action);
 }
 
 QAction* ToolBar::actionForCommand(const QString& command) const {

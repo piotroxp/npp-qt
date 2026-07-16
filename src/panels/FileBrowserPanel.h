@@ -63,7 +63,7 @@ private slots:
     void followCurrentDocument();
     void onRecentDirTriggered(QAction* action);
     void onDirectoryChanged(const QString& path);
-    void onFileRenamed(const QString& oldPath, const QString& newPath);
+    void onFileRenamed(const QString& path);
 
 private:
     void setupToolbar();
@@ -113,4 +113,5 @@ private:
 
     // Internal file path tracking for follow-active-document
     QString _activeFilePath;
+    void openInFileManagerAt(const QString& path, bool selectFile = false);
 };

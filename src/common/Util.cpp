@@ -6,6 +6,9 @@
 #include <QString>
 #include <QFile>
 #include <QProcess>
+#include <QGuiApplication>
+#include <QClipboard>
+#include <QSysInfo>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -24,30 +27,8 @@
 #include <string.h>
 #include <QByteArray>
 #include <QCryptographicHash>
-
-#if defined(__linux__)
 #include <sys/sysinfo.h>
 #include <pwd.h>
-#endif
-
-#if defined(_WIN32) || defined(_WIN64)
-#include <windows.h>
-#include <shlobj.h>
-#include <shellapi.h>
-#endif
-
-#if defined(__APPLE__)
-#include <sys/sysctl.h>
-#include <mach/mach_time.h>
-#endif
-
-#if defined(_WIN32) || defined(_WIN64)
-#include <windows.h>
-#include <shlobj.h>
-#else
-#include <sys/sysinfo.h>
-#include <pwd.h>
-#endif
 
 // ============================================================================
 // Logging
@@ -104,19 +85,11 @@ void assertionFailed(const char* expr, const char* file, int line) {
     std::ostringstream oss;
     oss << "ASSERTION FAILED: " << expr << " at " << file << ":" << line;
     logError(oss.str());
-#if defined(_WIN32) || defined(_WIN64)
-    DebugBreak();
-#else
     __builtin_trap();
-#endif
 }
 
 void debugOutput(const std::string& msg) {
-#if defined(_WIN32) || defined(_WIN64)
-    OutputDebugStringA(msg.c_str());
-#else
     fputs(msg.c_str(), stderr);
-#endif
 }
 
 // ============================================================================
@@ -196,12 +169,10 @@ bool IniParser::getBool(const std::string& section, const std::string& key, bool
     std::string val = get(section, key, "");
     if (val.empty()) return defaultVal;
 
-    // Handle numeric representations
     if (val == "1" || val == "0") {
         return val == "1";
     }
 
-    // Handle string representations (case-insensitive)
     QString qval = QString::fromUtf8(val.c_str()).toLower();
     if (qval == "true" || qval == "yes" || qval == "on" || qval == "enabled") {
         return true;
@@ -267,22 +238,12 @@ void IniParser::removeSection(const std::string& section) {
 
 std::string getProcessId() {
     char buf[64];
-#if defined(_WIN32) || defined(_WIN64)
-    snprintf(buf, sizeof(buf), "%lu", GetCurrentProcessId());
-#else
     snprintf(buf, sizeof(buf), "%d", getpid());
-#endif
     return std::string(buf);
 }
 
 int getNumberOfProcessors() {
-#if defined(_WIN32) || defined(_WIN64)
-    SYSTEM_INFO si;
-    GetSystemInfo(&si);
-    return si.dwNumberOfProcessors;
-#else
     return sysconf(_SC_NPROCESSORS_ONLN);
-#endif
 }
 
 // ============================================================================
@@ -294,29 +255,14 @@ std::string getEnvironmentVariable(const std::string& name) {
 }
 
 bool setEnvironmentVariable(const std::string& name, const std::string& value) {
-#if defined(_WIN32) || defined(_WIN64)
-    return SetEnvironmentVariableA(name.c_str(), value.c_str()) != 0;
-#else
     return setenv(name.c_str(), value.c_str(), 1) == 0;
-#endif
 }
 
 std::vector<std::string> getEnvironmentVariables() {
     std::vector<std::string> result;
-#if defined(_WIN32) || defined(_WIN64)
-    char* env = GetEnvironmentStrings();
-    if (env) {
-        for (char* p = env; *p; ) {
-            result.push_back(p);
-            p += strlen(p) + 1;
-        }
-        FreeEnvironmentStrings(env);
-    }
-#else
     for (char** env = environ; *env; ++env) {
         result.push_back(*env);
     }
-#endif
     return result;
 }
 
@@ -325,13 +271,9 @@ std::vector<std::string> getEnvironmentVariables() {
 // ============================================================================
 std::string getSystemInfo() {
     std::ostringstream oss;
-#if defined(_WIN32) || defined(_WIN64)
-    oss << "Windows ";
-    OSVERSIONINFOA vi = { sizeof(vi) };
-    if (GetVersionExA(&vi))
-        oss << vi.dwMajorVersion << "." << vi.dwMinorVersion;
-#elif defined(__APPLE__)
-    oss << "macOS";
+#if defined(__APPLE__)
+    oss << "macOS ";
+    oss << QSysInfo::productVersion().toStdString();
 #elif defined(__linux__)
     oss << "Linux";
 #else
@@ -357,20 +299,13 @@ std::string getCPUInfo() {
 }
 
 int64_t getTotalPhysicalMemory() {
-#if defined(_WIN32) || defined(_WIN64)
-    MEMORYSTATUSEX mse;
-    mse.dwLength = sizeof(mse);
-    if (GlobalMemoryStatusEx(&mse)) return mse.ullTotalPhys;
-    return 0;
-#elif defined(__linux__)
     struct sysinfo si;
     if (sysinfo(&si) == 0) return (int64_t)si.totalram * si.mem_unit;
-#endif
     return 0;
 }
 
 // ============================================================================
-// Hashing (simplified - for production would use proper crypto library)
+// Hashing
 // ============================================================================
 std::string md5String(const std::string& input) {
     QByteArray data(input.c_str(), static_cast<int>(input.size()));
@@ -445,55 +380,22 @@ std::string getUrlHost(const std::string& url) {
 // Clipboard
 // ============================================================================
 std::string getClipboardText() {
-#if defined(_WIN32) || defined(_WIN64)
-    if (!OpenClipboard(nullptr)) return "";
-    HANDLE data = GetClipboardData(CF_TEXT);
-    if (!data) { CloseClipboard(); return ""; }
-    const char* text = static_cast<const char*>(GlobalLock(data));
-    std::string result(text ? text : "");
-    GlobalUnlock(data);
-    CloseClipboard();
-    return result;
-#else
-    // Use xclip or xsel or pbpaste
-    FILE* f = popen("xclip -selection clipboard -o 2>/dev/null", "r");
-    if (!f) f = popen("xsel --clipboard 2>/dev/null", "r");
-    if (!f) f = popen("pbpaste 2>/dev/null", "r");
-    if (!f) return "";
-    std::string result;
-    char buf[256];
-    while (size_t n = fread(buf, 1, sizeof(buf) - 1, f)) {
-        result.append(buf, n);
-    }
-    pclose(f);
-    return result;
-#endif
+    QClipboard* clipboard = QGuiApplication::clipboard();
+    if (!clipboard) return "";
+    return clipboard->text().toStdString();
 }
 
 bool setClipboardText(const std::string& text) {
-#if defined(_WIN32) || defined(_WIN64)
-    if (!OpenClipboard(nullptr)) return false;
-    EmptyClipboard();
-    HGLOBAL mem = GlobalAlloc(GMEM_MOVEABLE, text.size() + 1);
-    if (!mem) { CloseClipboard(); return false; }
-    memcpy(GlobalLock(mem), text.data(), text.size() + 1);
-    GlobalUnlock(mem);
-    bool ok = SetClipboardData(CF_TEXT, mem) != 0;
-    CloseClipboard();
-    return ok;
-#else
-    FILE* f = popen("xclip -selection clipboard 2>/dev/null", "w");
-    if (!f) f = popen("xsel --clipboard 2>/dev/null", "w");
-    if (!f) f = popen("pbcopy 2>/dev/null", "w");
-    if (!f) return false;
-    fwrite(text.data(), 1, text.size(), f);
-    pclose(f);
+    QClipboard* clipboard = QGuiApplication::clipboard();
+    if (!clipboard) return false;
+    clipboard->setText(QString::fromStdString(text));
     return true;
-#endif
 }
 
 bool hasClipboardText() {
-    return !getClipboardText().empty();
+    QClipboard* clipboard = QGuiApplication::clipboard();
+    if (!clipboard) return false;
+    return !clipboard->text().isEmpty();
 }
 
 // ============================================================================
@@ -569,41 +471,14 @@ QString formatDuration(int64_t ms) {
 // System utilities
 // ============================================================================
 int64_t getSystemUptime() {
-#if defined(_WIN32) || defined(_WIN64)
-    HANDLE hTimer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
-    if (!hTimer) return -1;
-    LARGE_INTEGER dueTime;
-    dueTime.QuadPart = -1; // 100-nanosecond intervals, negative = relative
-    SetWaitableTimer(hTimer, &dueTime, 0, nullptr, nullptr, TRUE);
-    // GetTickCount64 returns milliseconds since boot
-    int64_t uptime = GetTickCount64() / 1000;
-    CancelWaitableTimer(hTimer);
-    CloseHandle(hTimer);
-    return uptime;
-#elif defined(__linux__)
     struct sysinfo si;
     if (sysinfo(&si) == 0) {
         return static_cast<int64_t>(si.uptime);
     }
     return -1;
-#elif defined(__APPLE__)
-    struct timeval boottime;
-    size_t size = sizeof(boottime);
-    int mib[2] = { CTL_KERN, KERN_BOOTTIME };
-    if (sysctl(mib, 2, &boottime, &size, nullptr, 0) != -1) {
-        struct timeval now;
-        gettimeofday(&now, nullptr);
-        return now.tv_sec - boottime.tv_sec;
-    }
-    return -1;
-#else
-    return -1;
-#endif
 }
 
 QString getDesktopEnvironment() {
-#if defined(__linux__)
-    // Check common XDG desktop session variables
     const char* xdgDe = getenv("XDG_CURRENT_DESKTOP");
     if (xdgDe) {
         QString de = QString(xdgDe).toLower();
@@ -621,7 +496,6 @@ QString getDesktopEnvironment() {
         return QString(xdgDe);
     }
 
-    // Fallback: check DESKTOP_SESSION
     const char* session = getenv("DESKTOP_SESSION");
     if (session) {
         QString de = QString(session).toLower();
@@ -635,11 +509,9 @@ QString getDesktopEnvironment() {
         return QString(session);
     }
 
-    // Fallback: check KDE/GNOME-specific variables
     if (getenv("KDE_FULL_SESSION") || getenv("KDE_SESSION_VERSION")) return "KDE";
     if (getenv("GNOME_DESKTOP_SESSION_ID")) return "GNOME";
     if (getenv("XFCE4")) return "XFCE";
-#endif
     return "Unknown";
 }
 
@@ -647,40 +519,19 @@ QString getDesktopEnvironment() {
 // Application launching
 // ============================================================================
 bool launchApplication(const QString& app, const QStringList& args, QString& error) {
-#if defined(_WIN32) || defined(_WIN64)
-    QString cmdLine = app;
-    for (const QString& arg : args) {
-        cmdLine += " \"" + arg + "\"";
-    }
-    SHELLEXECUTEINFOA sei = { sizeof(sei) };
-    sei.fMask = SEE_MASK_NOCLOSEPROCESS;
-    sei.lpFile = app.toUtf8().constData();
-    sei.lpParameters = args.join(" ").toUtf8().constData();
-    sei.nShow = SW_SHOWNORMAL;
-    if (!ShellExecuteExA(&sei)) {
-        DWORD err = GetLastError();
-        error = QString("Failed to launch application: error %1").arg(err);
-        return false;
-    }
-    if (sei.hProcess) {
-        CloseHandle(sei.hProcess);
-    }
-    return true;
-#else
     QProcess* process = new QProcess();
     QStringList allArgs = args;
-    allArgs.insert(0, app);
-    process->start(app, args);
+    process->setProgram(app);
+    process->setArguments(allArgs);
+    process->start();
     if (!process->waitForStarted(5000)) {
         error = QString("Failed to start process: %1").arg(process->errorString());
         delete process;
         return false;
     }
-    // Process started successfully, detach to run independently
     process->disconnect();
     delete process;
     return true;
-#endif
 }
 
 // ============================================================================
@@ -709,20 +560,16 @@ bool compareFiles(const QString& a, const QString& b) {
 // ============================================================================
 bool isValidFileName(const QString& name) {
     if (name.isEmpty()) return false;
-    // Check for invalid characters
     static const QString invalidChars = "/\\:*?\"<>|";
     for (const QChar& c : invalidChars) {
         if (name.contains(c)) return false;
     }
-    // Check for reserved names (Windows)
     static const QStringList reserved = {"CON", "PRN", "AUX", "NUL",
         "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
         "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
     QString upperName = name.toUpper();
     if (reserved.contains(upperName)) return false;
-    // Check for trailing dots or spaces (Windows)
     if (name.endsWith('.') || name.endsWith(' ')) return false;
-    // Check length
     if (name.length() > 255) return false;
     return true;
 }
@@ -740,10 +587,8 @@ QString normalizeEOL(const QString& text, EolType eol) {
         default: eolStr = "\n"; break;
     }
 
-    // First, normalize all line endings to \n
     result.replace("\r\n", "\n");
     result.replace("\r", "\n");
-    // Then convert \n to target EOL
     result.replace("\n", eolStr);
     return result;
 }

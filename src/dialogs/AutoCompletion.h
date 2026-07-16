@@ -229,6 +229,6 @@ private:
     InsertedMatchedChars _insertedMatchedChars;
 
     // Environment variables (lazy-populated)
-    QStringList _cachedEnvVars;
-    bool _envVarCacheValid = false;
+    mutable QStringList _cachedEnvVars;
+    mutable bool _envVarCacheValid = false;
 };

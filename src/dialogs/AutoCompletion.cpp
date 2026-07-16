@@ -57,11 +57,11 @@ bool AutoCompletion::setLanguage(int language)
 
     for (const auto& [setIdx, kwString] : keywords) {
         Q_UNUSED(setIdx);
-        if (!kwString.isEmpty()) {
+        if (!kwString.empty()) {
             if (!_keyWords.empty())
                 _keyWords += ' ';
-            _keyWords += kwString.toStdString();
-            _keyWordList << kwString.split(' ', Qt::SkipEmptyParts);
+            _keyWords += kwString;
+            _keyWordList << QString::fromStdString(kwString).split(' ', Qt::SkipEmptyParts);
         }
     }
 
@@ -99,8 +99,10 @@ void AutoCompletion::applySortMode(QVector<CompletionItem>& items) const
         case SortMode::ByFrequency:
             std::sort(items.begin(), items.end(),
                       [this](const CompletionItem& a, const CompletionItem& b) {
-                          int fa = _wordFrequency.value(a.text.toLower(), 0);
-                          int fb = _wordFrequency.value(b.text.toLower(), 0);
+                          auto itFa = _wordFrequency.find(a.text.toLower());
+        int fa = (itFa != _wordFrequency.end()) ? itFa->second : 0;
+                          auto itFb = _wordFrequency.find(b.text.toLower());
+        int fb = (itFb != _wordFrequency.end()) ? itFb->second : 0;
                           if (fa != fb) return fa > fb;
                           return a.text.compare(b.text, Qt::CaseInsensitive) < 0;
                       });
@@ -296,8 +298,8 @@ bool AutoCompletion::update(int character)
     Sci_CharacterRange cr = _pEditView->getSelection();
     const int curPos = static_cast<int>(cr.cpMin);
 
-    const int wordStart = static_cast<int>(_pEditView->send(SCI_WORDSTARTPOSITION, curPos, 0));
-    const int wordEnd   = static_cast<int>(_pEditView->send(SCI_WORDENDPOSITION,   curPos, 0));
+    const int wordStart = static_cast<int>(_pEditView->send(SCI_WORDSTARTPOSITION, static_cast<intptr_t>(curPos)));
+    const int wordEnd   = static_cast<int>(_pEditView->send(SCI_WORDENDPOSITION,   static_cast<intptr_t>(curPos)));
     const int prefixLen = wordEnd - wordStart;
 
     if (prefixLen < _triggerThreshold) return false;
@@ -325,9 +327,9 @@ bool AutoCompletion::showAutoComplete(int /*autocType*/, bool /*autoInsert*/)
     // Case sensitivity.
     _pEditView->send(SCI_AUTOCSETIGNORECASE, _caseSensitive ? 0 : 1);
     // AutoInsert: automatically insert the best match when there's only one.
-    _pEditView->send(SCI_AUTOCSETFILLUPS, 0);
+    _pEditView->send(2112 /*SCI_AUTOCSETFILLUPS*/, 0);
     // Cancel on any non-identifier char.
-    _pEditView->send(SCI_AUTOCSETCANCELATSTART, 1);
+    _pEditView->send(2110 /*SCI_AUTOCSETCANCELATSTART*/, 1);
 
     _pEditView->send(SCI_AUTOCSHOW, static_cast<uptr_t>(_lastWordPrefix.length()),
                      reinterpret_cast<sptr_t>(listStr.toUtf8().constData()));
@@ -494,10 +496,11 @@ void AutoCompletion::insertMatchedChars(int /*character*/, int /*matchedPairConf
 
 void AutoCompletion::callTipClick(size_t direction)
 {
-    if (direction == 0)
-        _pEditView->send(SCI_CALLTIPUP);
-    else
-        _pEditView->send(SCI_CALLTIPTEXTTEXTCOLOUR, 0);
+    if (direction == 0) {
+        // SCI_CALLTIPUP not available in QScintilla — no-op
+    } else {
+        _pEditView->send(SCI_CALLTIPSETFORE, 0);
+    }
 }
 
 // ─── Close-tag helper (HTML/XML) ──────────────────────────────────────────────
@@ -544,7 +547,7 @@ void AutoCompletion::recordWordUsed(const QString& word)
 {
     if (word.isEmpty()) return;
     QString key = word.toLower();
-    _wordFrequency[key] = _wordFrequency.value(key, 0) + 1;
+    _wordFrequency[key] = _wordFrequency[key] + 1;
 }
 
 // ─── Status ───────────────────────────────────────────────────────────────────
@@ -552,7 +555,7 @@ void AutoCompletion::recordWordUsed(const QString& word)
 bool AutoCompletion::isActive() const
 {
     return _completionActive && _pEditView &&
-           (_pEditView->send(SCI_AUTOCACTIVE) != 0);
+           (_pEditView->send(2048 /*SCI_AUTOCACTIVE*/) != 0);
 }
 
 void AutoCompletion::close()

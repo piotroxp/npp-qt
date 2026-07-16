@@ -125,14 +125,20 @@ void UserDefineDialog::createKeywordsTab(QTabWidget* tabs) {
         QVBoxLayout* btnBox = new QVBoxLayout();
         btnBox->addWidget(addBtn);
         btnBox->addWidget(remBtn);
-        btnBox->addStretch();
+        {
+        auto* _spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        btnBox->insertItem(btnBox->count(), _spacer);
+    }
         hbox->addLayout(btnBox);
 
         layout->addWidget(group);
         _keywordTables[i] = table;
     }
 
-    layout->addStretch();
+    {
+        auto* _spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        layout->addItem(_spacer);
+    }
     tabs->addTab(page, tr("Keywords"));
 }
 
@@ -187,7 +193,10 @@ void UserDefineDialog::createCommentsTab(QTabWidget* tabs) {
     _enableCommentFold = new QCheckBox(tr("Enable folder (folding) in comments"), page);
     layout->addRow(QString(), _enableCommentFold);
 
-    layout->addStretch(1);
+    {
+        auto* _spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        layout->addItem(_spacer);
+    }
     tabs->addTab(page, tr("Comments"));
 }
 
@@ -225,7 +234,10 @@ void UserDefineDialog::createNumbersTab(QTabWidget* tabs) {
     });
     fgRow->addWidget(_numberFgPreview);
     fgRow->addWidget(_numberFgBtn);
-    fgRow->addStretch();
+    {
+        auto* _spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        fgRow->addItem(_spacer);
+    }
     styleLayout->addRow(tr("Foreground:"), fgRow);
 
     // Background color
@@ -247,7 +259,10 @@ void UserDefineDialog::createNumbersTab(QTabWidget* tabs) {
     });
     bgRow->addWidget(_numberBgPreview);
     bgRow->addWidget(_numberBgBtn);
-    bgRow->addStretch();
+    {
+        auto* _spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        bgRow->addItem(_spacer);
+    }
     styleLayout->addRow(tr("Background:"), bgRow);
 
     // Bold / Italic
@@ -256,11 +271,17 @@ void UserDefineDialog::createNumbersTab(QTabWidget* tabs) {
     _numberItalic = new QCheckBox(tr("Italic"), styleGroup);
     styleRow->addWidget(_numberBold);
     styleRow->addWidget(_numberItalic);
-    styleRow->addStretch();
+    {
+        auto* _spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        styleRow->addItem(_spacer);
+    }
     styleLayout->addRow(tr("Style:"), styleRow);
 
     layout->addWidget(styleGroup);
-    layout->addStretch();
+    {
+        auto* _spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        layout->addItem(_spacer);
+    }
     tabs->addTab(page, tr("Numbers"));
 }
 
@@ -311,7 +332,10 @@ void UserDefineDialog::createOperatorsTab(QTabWidget* tabs) {
     btnRow->addWidget(addBtn);
     btnRow->addWidget(remBtn);
     btnRow->addWidget(clearBtn);
-    btnRow->addStretch();
+    {
+        auto* _spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        btnRow->addItem(_spacer);
+    }
 
     connect(addBtn, &QPushButton::clicked, [this]() {
         int row = _operatorTable->rowCount();
@@ -330,7 +354,10 @@ void UserDefineDialog::createOperatorsTab(QTabWidget* tabs) {
 
     layout->addWidget(_operatorTable);
     layout->addLayout(btnRow);
-    layout->addStretch();
+    {
+        auto* _spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        layout->addItem(_spacer);
+    }
     tabs->addTab(page, tr("Operators"));
 }
 
@@ -393,7 +420,10 @@ void UserDefineDialog::createDelimitersTab(QTabWidget* tabs) {
     QPushButton* remBtn = new QPushButton(tr("Remove"), page);
     btnRow->addWidget(addBtn);
     btnRow->addWidget(remBtn);
-    btnRow->addStretch();
+    {
+        auto* _spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        btnRow->addItem(_spacer);
+    }
 
     connect(addBtn, &QPushButton::clicked, [this]() {
         int row = _delimiterTable->rowCount();
@@ -419,7 +449,10 @@ void UserDefineDialog::createDelimitersTab(QTabWidget* tabs) {
     layout->addWidget(_delimiterTable);
     layout->addLayout(btnRow);
     layout->addWidget(optionsGroup);
-    layout->addStretch();
+    {
+        auto* _spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        layout->addItem(_spacer);
+    }
     tabs->addTab(page, tr("Delimiters"));
 }
 
@@ -483,7 +516,10 @@ void UserDefineDialog::createFoldingTab(QTabWidget* tabs) {
     layout->addWidget(cmtGroup);
     layout->addWidget(preGroup);
     layout->addWidget(mrkGroup);
-    layout->addStretch();
+    {
+        auto* _spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        layout->addItem(_spacer);
+    }
     tabs->addTab(page, tr("Folding"));
 }
 

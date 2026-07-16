@@ -15,50 +15,6 @@
 #include <QStyle>
 #include <QApplication>
 
-// ============================================================================
-// ClipboardHistoryPanel
-// ============================================================================
-
-ClipboardHistoryPanel::ClipboardHistoryPanel(QWidget* parent)
-    : QWidget(parent)
-{
-    auto* lay = new QVBoxLayout(this);
-    lay->setContentsMargins(2, 2, 2, 2);
-    
-    m_list = new QListWidget(this);
-    m_list->setAlternatingRowColors(true);
-    
-    connect(m_list, &QListWidget::itemDoubleClicked,
-            this, [this](QListWidgetItem*) { emit pasteRequested(m_list->currentRow()); });
-    connect(QApplication::clipboard(), &QClipboard::changed,
-            this, &ClipboardHistoryPanel::onClipboardChanged, Qt::UniqueConnection);
-            
-    lay->addWidget(m_list);
-    applyDpiScaling();
-}
-
-void ClipboardHistoryPanel::applyDpiScaling() {
-    DpiManager& dpi = DpiManager::instance();
-    setMinimumHeight(dpi.scale(150));
-}
-
-void ClipboardHistoryPanel::addEntry(const QString& text) {
-    if (m_list->count() >= MaxEntries) delete m_list->takeItem(0);
-    auto* item = new QListWidgetItem(text.length() > 100 ? text.left(100) + "..." : text, m_list);
-    item->setData(Qt::UserRole, text);
-    item->setToolTip(text);
-}
-
-void ClipboardHistoryPanel::clear() { m_list->clear(); }
-
-void ClipboardHistoryPanel::onClipboardChanged() {
-    QString text = QApplication::clipboard()->text();
-    if (!text.isEmpty()) addEntry(text);
-}
-
-// ============================================================================
-
-
 // ToolTipButton
 // ============================================================================
 

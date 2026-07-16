@@ -10,7 +10,9 @@
 
 // Forward declarations for types used across npp-qt
 class ScintillaComponent;       // defined in ScintillaComponent.h
-using ScintillaEditView = ScintillaComponent;  // canonical alias (also in ScintillaComponent.h)
+// NOTE: ScintillaEditView is defined as a concrete class in editor/ScintillaEditView.h.
+// Do NOT add a `using` alias here — it conflicts with the concrete class definition
+// when both headers are transitively included via WinControls.
 class NppGUI;
 class NppParameters;
 

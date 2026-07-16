@@ -4,6 +4,7 @@
 
 #include "DocTabView.h"
 #include "ScintillaEditor.h"
+#include <QAbstractItemView>
 #include <QTabBar>
 #include <QMenu>
 #include <QAction>
@@ -28,8 +29,6 @@ DocTabView::DocTabView(QWidget* parent)
     tabBar()->setTabsClosable(true);
     tabBar()->setSelectionBehaviorOnRemove(QTabBar::SelectLeftTab);
     tabBar()->setAcceptDrops(true);
-    setDragDropMode(QTabWidget::DragDrop);
-
     // Context menu
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, &QTabWidget::customContextMenuRequested,
@@ -243,7 +242,7 @@ void DocTabView::moveTab(int fromIndex, int toIndex) {
 
     // Re-insert at destination
     int actualTo = (fromIndex < toIndex) ? qMax(0, toIndex - 1) : toIndex;
-    insertTab(actualTo, w, icon, text);
+    insertTab(actualTo, static_cast<ScintillaEditor*>(w), icon, text);
     setTabToolTip(actualTo, tooltip);
 
     // Restore auxiliary data
@@ -497,7 +496,7 @@ void DocTabView::onTabBarClicked(int index) {
 
 void DocTabView::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::MiddleButton) {
-        int idx = tabBar()->tabAt(event->pos());
+        int idx = tabBar()->tabAt(event->position().toPoint());
         if (idx >= 0 && !isTabPinned(idx)) {
             closeTab(idx);
             event->accept();
@@ -514,7 +513,7 @@ void DocTabView::mouseReleaseEvent(QMouseEvent* event) {
 void DocTabView::mouseDoubleClickEvent(QMouseEvent* event) {
     // Double-click on tab bar → close tab (unless pinned)
     if (event->button() == Qt::LeftButton) {
-        int idx = tabBar()->tabAt(event->pos());
+        int idx = tabBar()->tabAt(event->position().toPoint());
         if (idx >= 0 && !isTabPinned(idx)) {
             closeTab(idx);
             event->accept();
@@ -536,7 +535,7 @@ void DocTabView::dragEnterEvent(QDragEnterEvent* event) {
 
 void DocTabView::dragMoveEvent(QDragMoveEvent* event) {
     if (event->mimeData()->hasFormat("application/tab-index")) {
-        _dropIndex = tabBar()->tabAt(event->pos());
+        _dropIndex = tabBar()->tabAt(event->position().toPoint());
         event->acceptProposedAction();
         return;
     }
@@ -547,7 +546,7 @@ void DocTabView::dropEvent(QDropEvent* event) {
     if (event->mimeData()->hasFormat("application/tab-index")) {
         QByteArray data = event->mimeData()->data("application/tab-index");
         int fromIdx = QString::fromUtf8(data).toInt();
-        int toIdx = tabBar()->tabAt(event->pos());
+        int toIdx = tabBar()->tabAt(event->position().toPoint());
         if (toIdx < 0) toIdx = count() - 1;
 
         if (fromIdx != toIdx) {
@@ -611,9 +610,8 @@ TabData& DocTabView::tabData(int index) {
     return _tabData[index];
 }
 
-const TabData& DocTabView::tabData(int index) const {
-    static const TabData s_empty;
-    return _tabData.value(index, s_empty);
+TabData DocTabView::tabData(int index) const {
+    return _tabData.value(index);
 }
 
 void DocTabView::onTabMovedWhileDragging(int from, int to) {

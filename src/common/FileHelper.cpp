@@ -16,14 +16,9 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <cerrno>
-
-#if defined(_WIN32) || defined(_WIN64)
-#include <windows.h>
-#else
 #include <sys/mman.h>
 #include <fcntl.h>
-#include <utime.h>      // utimbuf, utime()
-#endif
+#include <utime.h>
 
 namespace fs = std::filesystem;
 using namespace std::chrono_literals;
@@ -247,7 +242,6 @@ std::chrono::system_clock::time_point lastModifiedTime(const std::string& path) 
 bool setLastModifiedTime(const std::string& path,
                                      const std::chrono::system_clock::time_point& t) {
     (void)path; (void)t;
-    // Platform-specific - would need utimes/mtime syscall
     return false;
 }
 
@@ -255,16 +249,10 @@ bool setLastModifiedTime(const std::string& path,
 // Temporary files
 // ============================================================================
 std::string getTempDirectory() {
-#if defined(_WIN32) || defined(_WIN64)
-    char tempPath[MAX_PATH];
-    GetTempPathA(MAX_PATH, tempPath);
-    return std::string(tempPath);
-#else
     const char* tmp = getenv("TMPDIR");
     if (!tmp) tmp = getenv("TMP");
     if (!tmp) tmp = "/tmp";
     return std::string(tmp);
-#endif
 }
 
 std::string getTempFileName(const std::string& prefix) {
@@ -272,11 +260,7 @@ std::string getTempFileName(const std::string& prefix) {
     std::string templatePath = tmpDir + "/" + prefix + "XXXXXX";
     char buf[1024];
     strcpy(buf, templatePath.c_str());
-#if defined(_WIN32) || defined(_WIN64)
-    _mktemp_s(buf);
-#else
     mkstemp(buf);
-#endif
     return std::string(buf);
 }
 
@@ -340,12 +324,10 @@ EncodingType detectEncoding(const std::string& path) {
         if (content->size() >= 2 && content->substr(0, 2) == "\xFF\xFE") return EncodingType::UTF_16_LE;
         if (content->size() >= 2 && content->substr(0, 2) == "\xFE\xFF") return EncodingType::UTF_16_BE;
     }
-    // Try to detect UTF-8 without BOM
     bool looksLikeUtf8 = true;
     for (size_t i = 0; i < content->size() && looksLikeUtf8; ++i) {
         unsigned char c = (*content)[i];
         if (c >= 0x80) {
-            // Check for valid UTF-8 sequence
             int cont = 0;
             if ((c & 0xE0) == 0xC0) cont = 1;
             else if ((c & 0xF0) == 0xE0) cont = 2;
@@ -365,7 +347,7 @@ EncodingType detectEncoding(const std::string& path) {
 // Scintilla document
 // ============================================================================
 ScintillaDocument createDocument() {
-    return nullptr;  // Will be implemented via ScintillaEditor
+    return nullptr;
 }
 
 void releaseDocument(ScintillaDocument doc) {
@@ -376,18 +358,6 @@ void releaseDocument(ScintillaDocument doc) {
 // Memory mapped file
 // ============================================================================
 MemoryMappedFile::MemoryMappedFile(const std::string& path, bool readOnly) : _readOnly(readOnly), _path(path) {
-#if defined(_WIN32) || defined(_WIN64)
-    _fileHandle = CreateFileA(path.c_str(),
-        readOnly ? GENERIC_READ : (GENERIC_READ | GENERIC_WRITE),
-        FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (_fileHandle == INVALID_HANDLE_VALUE) return;
-    _size = GetFileSize(_fileHandle, nullptr);
-    _mappingHandle = CreateFileMapping(_fileHandle, nullptr,
-        readOnly ? PAGE_READONLY : PAGE_READWRITE, 0, 0, nullptr);
-    if (!_mappingHandle) return;
-    _data = static_cast<char*>(MapViewOfFile(_mappingHandle,
-        readOnly ? FILE_MAP_READ : FILE_MAP_WRITE, 0, 0, 0));
-#else
     int flags = readOnly ? O_RDONLY : O_RDWR;
     int fd = open(path.c_str(), flags);
     if (fd < 0) return;
@@ -397,18 +367,11 @@ MemoryMappedFile::MemoryMappedFile(const std::string& path, bool readOnly) : _re
     _data = static_cast<char*>(mmap(nullptr, _size, readOnly ? PROT_READ : PROT_READ | PROT_WRITE,
         MAP_PRIVATE, fd, 0));
     close(fd);
-#endif
-    _isOpen = true;
+    _isOpen = (_data != MAP_FAILED);
 }
 
 MemoryMappedFile::~MemoryMappedFile() {
-#if defined(_WIN32) || defined(_WIN64)
-    if (_data) UnmapViewOfFile(_data);
-    if (_mappingHandle) CloseHandle(_mappingHandle);
-    if (_fileHandle != INVALID_HANDLE_VALUE) CloseHandle(_fileHandle);
-#else
-    if (_data) munmap(_data, _size);
-#endif
+    if (_data && _data != MAP_FAILED) munmap(_data, _size);
 }
 
 MemoryMappedFile::MemoryMappedFile(MemoryMappedFile&& other) noexcept {
@@ -436,11 +399,7 @@ MemoryMappedFile& MemoryMappedFile::operator=(MemoryMappedFile&& other) noexcept
 }
 
 void MemoryMappedFile::flush() {
-#if defined(_WIN32) || defined(_WIN64)
-    if (_data) FlushViewOfFile(_data, 0);
-#else
-    if (_data) msync(_data, _size, MS_SYNC);
-#endif
+    if (_data && _data != MAP_FAILED) msync(_data, _size, MS_SYNC);
 }
 
 // ============================================================================
@@ -453,9 +412,6 @@ QString readTextFile(const QString& path, const QString& encoding, QString* erro
         return QString();
     }
     QTextStream stream(&file);
-    // Qt6: QTextStream::setEncoding(QTextStream::Encoding) removed.
-    // Use file encoding directly — Qt6 QTextStream defaults to UTF-8 for
-    // QIODevice, which matches our use case.
     Q_UNUSED(encoding);
     QString content = stream.readAll();
     file.close();
@@ -517,7 +473,6 @@ qint64 getFileSize(const QString& path) {
 
 QDateTime getCreationTime(const QString& path) {
     QFileInfo info(path);
-    // Qt6: birthTime() works on all platforms (Linux >= 4.11 / glibc >= 2.12)
     return info.birthTime();
 }
 
@@ -527,23 +482,9 @@ QDateTime getModificationTime(const QString& path) {
 }
 
 bool setModificationTime(const QString& path, const QDateTime& time) {
-#if defined(_WIN32) || defined(_WIN64)
-    HANDLE hFile = CreateFileW((LPCWSTR)path.utf16(), FILE_WRITE_ATTRIBUTES, 0, nullptr,
-                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (hFile == INVALID_HANDLE_VALUE) return false;
-    FILETIME ft;
-    SYSTEMTIME st = time.toUTC().toMSecsSinceEpoch() / 1000;
-    TzSpecificLocalTimeToSystemTime(nullptr, &st, &st);
-    SystemTimeToFileTime(&st, &ft);
-    SetFileTime(hFile, nullptr, nullptr, &ft);
-    CloseHandle(hFile);
-    return true;
-#else
-    struct utimbuf ut;
-    ut.modtime = time.toSecsSinceEpoch();
-    ut.actime = time.toSecsSinceEpoch();
-    return utime(path.toUtf8().constData(), &ut) == 0;
-#endif
+    QFile file(path);
+    if (!file.exists()) return false;
+    return file.setFileTime(time, QFileDevice::FileTime::FileModificationTime);
 }
 
 // ============================================================================
@@ -556,7 +497,7 @@ QString getTempFileName(const QString& prefix) {
     if (fd < 0) return QString();
     ::close(fd);
     const QString resultPath = QString::fromLocal8Bit(tpl);
-    ::remove(tpl.constData()); // Remove the created temp file; caller only wants the path
+    ::remove(tpl.constData());
     return resultPath;
 }
 
@@ -688,7 +629,6 @@ bool isBinaryFile(const QString& path, int checkBytes) {
     file.close();
 
     for (char byte : data) {
-        // Check for null bytes or other control characters that indicate binary
         unsigned char c = static_cast<unsigned char>(byte);
         if (c == 0 || (c < 32 && c != 9 && c != 10 && c != 13)) {
             return true;

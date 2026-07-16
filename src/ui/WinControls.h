@@ -27,6 +27,9 @@
 // Forward declaration
 class DpiManager;
 
+// ClipboardHistoryPanel — full implementation in panels/ClipboardHistoryPanel.h
+class ClipboardHistoryPanel;
+
 // ColourPicker — full implementation in src/ui/ColourPicker.h
 class ColourPicker;
 // ColourPopup — full implementation in src/ui/ColourPopup.h

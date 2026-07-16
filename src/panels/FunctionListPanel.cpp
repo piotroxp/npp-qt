@@ -862,7 +862,7 @@ void FunctionListPanel::parseWithXmlParser(const QStringList& lines, LangType la
 }
 
 void FunctionListPanel::parseClassRange(const QStringList& lines,
-                                        const FunctionListRule& classRule,
+                                        const FunctionListXmlParser::FunctionListRule& classRule,
                                         QList<FunctionItem>& out) {
     if (!classRule.mainExpr.isValid())
         return;
@@ -946,7 +946,7 @@ void FunctionListPanel::parseClassRange(const QStringList& lines,
 
 void FunctionListPanel::parseTopLevelFunctions(
         const QStringList& lines,
-        const QList<FunctionListRule>& rules,
+        const QList<FunctionListXmlParser::FunctionListRule>& rules,
         QList<FunctionItem>& out) {
     if (rules.isEmpty())
         return;
@@ -1016,9 +1016,9 @@ void FunctionListPanel::parseSwift(const QStringList& lines) {
         const QString& line = lines[i];
         QRegularExpressionMatch m = funcRe.match(line);
         if (m.hasMatch()) {
-            QString kw = m.capturedRef(2).toString();
-            QString name = m.capturedRef(3).toString();
-            QString access = m.capturedRef(1).toString();
+            QString kw = m.captured(2);
+            QString name = m.captured(3);
+            QString access = m.captured(1);
             if (access.isEmpty()) access = "internal";
 
             QString type;
@@ -1049,8 +1049,8 @@ void FunctionListPanel::parseKotlin(const QStringList& lines) {
         const QString& line = lines[i];
         QRegularExpressionMatch m = funcRe.match(line);
         if (m.hasMatch()) {
-            QString kw = m.capturedRef(2).toString();
-            QString name = m.capturedRef(3).toString();
+            QString kw = m.captured(2);
+            QString name = m.captured(3);
 
             QString type;
             if (kw == "fun") type = "function";
@@ -1079,8 +1079,8 @@ void FunctionListPanel::parseTypeScript(const QStringList& lines) {
         const QString& line = lines[i];
         QRegularExpressionMatch m = funcRe.match(line);
         if (m.hasMatch()) {
-            QString kw = m.capturedRef(2).isEmpty() ? m.capturedRef(3).toString() : m.capturedRef(3).toString();
-            QString name = m.capturedRef(4).toString();
+            QString kw = m.captured(2).isEmpty() ? m.captured(3) : m.captured(3);
+            QString name = m.captured(4);
 
             QString type;
             if (kw == "function") type = "function";
@@ -1114,8 +1114,8 @@ void FunctionListPanel::parseCsharp(const QStringList& lines) {
         const QString& line = lines[i];
         QRegularExpressionMatch cm = classRe.match(line);
         if (cm.hasMatch()) {
-            QString kw = cm.capturedRef(2).toString();
-            QString name = cm.capturedRef(3).toString();
+            QString kw = cm.captured(2);
+            QString name = cm.captured(3);
             QString type;
             if (kw == "class" || kw == "record") type = "class";
             else if (kw == "struct") type = "struct";
@@ -1130,7 +1130,7 @@ void FunctionListPanel::parseCsharp(const QStringList& lines) {
 
         QRegularExpressionMatch fm = methodRe.match(line);
         if (fm.hasMatch()) {
-            QString name = fm.capturedRef(3).toString();
+            QString name = fm.captured(3);
             if (name.isEmpty() || name == "get" || name == "set" || name == "add" || name == "remove")
                 continue;
             QString modifiers = fm.captured(1);
