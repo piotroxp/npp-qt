@@ -17,8 +17,9 @@
 // colourBG = 0, colourFG = 1, colourHL = 2 (highlight current param)
 // See SCI_CALLTIPSET* messages.
 
-FunctionCallTip::FunctionCallTip(ScintillaComponent* pEditView)
-    : _pEditView(pEditView)
+FunctionCallTip::FunctionCallTip(ScintillaComponent* pEditView, QObject* parent)
+    : QObject(parent)
+    , _pEditView(pEditView)
 {
     applyStyling();
 }
@@ -99,7 +100,7 @@ void FunctionCallTip::highlightParam(int paramIndex)
     // Scintilla: highlight a parameter by setting its colour style.
     // SCI_CALLTIPSETHLT starts highlighting at the given parameter index.
     _pEditView->send(SCI_CALLTIPSETHLT, paramIndex);
-    emit paramHighlightChanged(paramIndex);
+    emit paramHighlightChangedSignal(paramIndex);
 }
 
 void FunctionCallTip::setForeground(const QColor& c)
@@ -135,14 +136,16 @@ bool FunctionCallTip::isVisible() const
 
 void FunctionCallTip::close()
 {
-    if (!_selfActivated) return;
+    bool wasVisible = isVisible();
     if (isVisible() && _pEditView)
         _pEditView->send(SCI_CALLTIPCANCEL);
 
     _selfActivated = false;
     _currentOverload = 0;
     _sticky = false;
-    emit dismissed();
+
+    if (wasVisible)
+        onDismissed();
 }
 
 void FunctionCallTip::reset()
@@ -384,10 +387,10 @@ void FunctionCallTip::updateParamHighlight()
 }
 
 // paramHighlightChanged is called by highlightParam() to notify listeners
-void FunctionCallTip::paramHighlightChanged(int /*paramIndex*/) {
-    // Called directly from highlightParam - no-op since this was a signal stub
+void FunctionCallTip::paramHighlightChanged(int paramIndex) {
+    emit paramHighlightChangedSignal(paramIndex);
 }
 
-void FunctionCallTip::dismissed() {
-    // Called from close() - no-op since this was a signal stub
+void FunctionCallTip::onDismissed() {
+    emit dismissed();
 }

@@ -66,6 +66,8 @@ private:
     QPushButton* _btnImportNpp = nullptr;
     QPushButton* _btnExportNpp = nullptr;
     QPushButton* _btnResetDefaults = nullptr;
+    QPushButton* _btnOpenThemesFolder = nullptr;
+    QPushButton* _btnReloadThemes = nullptr;
 
     // Editor page widgets
     QSpinBox* _spinTabWidth = nullptr;
@@ -84,15 +86,12 @@ private:
 
     // Appearance page widgets
     QComboBox* _cmbTheme = nullptr;
-    QPushButton* _btnOpenThemesFolder = nullptr;
-    QPushButton* _btnReloadThemes = nullptr;
     QCheckBox* _chkShowToolbar = nullptr;
     QCheckBox* _chkShowTabbar = nullptr;
     QCheckBox* _chkShowStatusbar = nullptr;
     QCheckBox* _chkShowMenubar = nullptr;
     QCheckBox* _chkCurrentLineHighlight = nullptr;
     QCheckBox* _chkShowIndentGuide = nullptr;
-    QSpinBox* _spinCurrentLineColor = nullptr;
 
     // File Associations page widgets
     QListWidget* _extListWidget = nullptr;
@@ -162,7 +161,6 @@ private:
         bool showMenubar;
         bool currentLineHighlight;
         bool showIndentGuide;
-        bool showLineNumbers;
         int lineNumberWidth;
         bool showSymbols;
         bool showFolder;

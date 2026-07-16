@@ -82,6 +82,14 @@ void PreferenceDialog::setupUi() {
     backup->setText(0, "Backup/Auto-Save");
     backup->setData(0, Qt::UserRole, 6);
 
+    QTreeWidgetItem* language = new QTreeWidgetItem(_categoryTree);
+    language->setText(0, "Language");
+    language->setData(0, Qt::UserRole, 7);
+
+    QTreeWidgetItem* search = new QTreeWidgetItem(_categoryTree);
+    search->setText(0, "Search");
+    search->setData(0, Qt::UserRole, 8);
+
     // Right side: stacked widget with pages
     _pageStack = new QStackedWidget(this);
 
@@ -92,6 +100,8 @@ void PreferenceDialog::setupUi() {
     _pageStack->addWidget(createShortcutPage());
     _pageStack->addWidget(createMarginsPage());
     _pageStack->addWidget(createBackupPage());
+    _pageStack->addWidget(createLanguagePage());
+    _pageStack->addWidget(createSearchPage());
 
     // Button box
     _buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Apply | QDialogButtonBox::Cancel, this);
@@ -152,7 +162,21 @@ QWidget* PreferenceDialog::createGeneralPage() {
     recentLayout->setColumnStretch(2, 1);
     layout->addWidget(recentGroup);
 
-    // Add stretch to push everything to top
+    // Actions
+    QHBoxLayout* btnRow = new QHBoxLayout();
+    btnRow->addStretch();
+    _btnImportNpp = new QPushButton("Import from Notepad++...", page);
+    _btnExportNpp = new QPushButton("Export to Notepad++...", page);
+    _btnResetDefaults = new QPushButton("Reset to Defaults", page);
+    btnRow->addWidget(_btnImportNpp);
+    btnRow->addWidget(_btnExportNpp);
+    btnRow->addWidget(_btnResetDefaults);
+    layout->addLayout(btnRow);
+
+    connect(_btnImportNpp, &QPushButton::clicked, this, &PreferenceDialog::onImportFromNpp);
+    connect(_btnExportNpp, &QPushButton::clicked, this, &PreferenceDialog::onExportToNpp);
+    connect(_btnResetDefaults, &QPushButton::clicked, this, &PreferenceDialog::resetToDefaults);
+
     layout->addStretch();
 
     return page;
@@ -225,6 +249,15 @@ QWidget* PreferenceDialog::createEditorPage() {
     _chkWrapWithQuotes = new QCheckBox("Wrap with quotes (selection)", editGroup);
     editLayout->addWidget(_chkWrapWithQuotes);
 
+    _chkBackspaceUnindent = new QCheckBox("Backspace unindents", editGroup);
+    editLayout->addWidget(_chkBackspaceUnindent);
+
+    _chkShowEol = new QCheckBox("Show end-of-line characters", editGroup);
+    editLayout->addWidget(_chkShowEol);
+
+    _chkShowSpaceTab = new QCheckBox("Show whitespace/tab characters", editGroup);
+    editLayout->addWidget(_chkShowSpaceTab);
+
     layout->addWidget(editGroup);
     layout->addStretch();
 
@@ -269,8 +302,34 @@ QWidget* PreferenceDialog::createAppearancePage() {
     uiLayout->addWidget(_chkShowStatusbar);
 
     layout->addWidget(uiGroup);
-    layout->addStretch();
 
+    // Editor Appearance
+    QGroupBox* editorApprGroup = new QGroupBox("Editor Appearance", page);
+    QVBoxLayout* edApprLayout = new QVBoxLayout(editorApprGroup);
+
+    _chkCurrentLineHighlight = new QCheckBox(
+        "Highlight current line background", editorApprGroup);
+    edApprLayout->addWidget(_chkCurrentLineHighlight);
+
+    _chkShowIndentGuide = new QCheckBox(
+        "Show indentation guide", editorApprGroup);
+    edApprLayout->addWidget(_chkShowIndentGuide);
+
+    layout->addWidget(editorApprGroup);
+
+    // Theme Actions
+    QHBoxLayout* themeBtnRow = new QHBoxLayout();
+    themeBtnRow->addStretch();
+    _btnOpenThemesFolder = new QPushButton("Open Themes Folder...", page);
+    _btnReloadThemes = new QPushButton("Reload Themes", page);
+    themeBtnRow->addWidget(_btnOpenThemesFolder);
+    themeBtnRow->addWidget(_btnReloadThemes);
+    layout->addLayout(themeBtnRow);
+
+    connect(_btnOpenThemesFolder, &QPushButton::clicked, this, &PreferenceDialog::onOpenThemesFolder);
+    connect(_btnReloadThemes, &QPushButton::clicked, this, &PreferenceDialog::onReloadThemes);
+
+    layout->addStretch();
     return page;
 }
 
@@ -539,6 +598,126 @@ QWidget* PreferenceDialog::createBackupPage() {
 }
 
 // ============================================================================
+// Language Page
+// ============================================================================
+QWidget* PreferenceDialog::createLanguagePage() {
+    QWidget* page = new QWidget(this);
+    QVBoxLayout* layout = new QVBoxLayout(page);
+
+    // Default Language
+    QGroupBox* langGroup = new QGroupBox("Default Language", page);
+    QGridLayout* langGrid = new QGridLayout(langGroup);
+
+    langGrid->addWidget(new QLabel("Language:", langGroup), 0, 0);
+    _cmbLanguage = new QComboBox(langGroup);
+    _cmbLanguage->addItems({
+        "None / Normal Text",
+        "C / C++",
+        "C#",
+        "D",
+        "Go",
+        "HTML",
+        "Java",
+        "JavaScript",
+        "JSON",
+        "Kotlin",
+        "Lua",
+        "Markdown",
+        "Objective-C",
+        "Pascal",
+        "Perl",
+        "PHP",
+        "Python",
+        "Ruby",
+        "Rust",
+        "SQL",
+        "Swift",
+        "Tcl",
+        "Tex / LaTeX",
+        "Vala",
+        "XML",
+        "YAML"
+    });
+    langGrid->addWidget(_cmbLanguage, 0, 1);
+    langGrid->setColumnStretch(2, 1);
+    layout->addWidget(langGroup);
+
+    // Auto-Detection
+    QGroupBox* detectGroup = new QGroupBox("Auto-Detection", page);
+    QVBoxLayout* detectLayout = new QVBoxLayout(detectGroup);
+
+    _chkAutoDetectLanguage = new QCheckBox(
+        "Automatically detect language from file extension", detectGroup);
+    detectLayout->addWidget(_chkAutoDetectLanguage);
+
+    QLabel* info = new QLabel(
+        "When enabled, the language is automatically selected based on "
+        "the file extension when opening a file.", detectGroup);
+    info->setWordWrap(true);
+    info->setStyleSheet("color: gray; font-style: italic;");
+    detectLayout->addWidget(info);
+
+    layout->addWidget(detectGroup);
+    layout->addStretch();
+
+    return page;
+}
+
+// ============================================================================
+// Search Page
+// ============================================================================
+QWidget* PreferenceDialog::createSearchPage() {
+    QWidget* page = new QWidget(this);
+    QVBoxLayout* layout = new QVBoxLayout(page);
+
+    // Highlighting
+    QGroupBox* hlGroup = new QGroupBox("Highlighting", page);
+    QGridLayout* hlGrid = new QGridLayout(hlGroup);
+
+    _chkSmartHighlighting = new QCheckBox(
+        "Highlight all matches (smart highlighting)", hlGroup);
+    hlGrid->addWidget(_chkSmartHighlighting, 0, 0, 1, 2);
+
+    hlGrid->addWidget(new QLabel("Maximum words to highlight:", hlGroup), 1, 0);
+    _spinMaxHighlightWords = new QSpinBox(hlGroup);
+    _spinMaxHighlightWords->setRange(100, 10000);
+    _spinMaxHighlightWords->setSuffix(" words");
+    _spinMaxHighlightWords->setToolTip("Limit for performance. Too many highlights can slow the editor.");
+    hlGrid->addWidget(_spinMaxHighlightWords, 1, 1);
+    hlGrid->setColumnStretch(2, 1);
+    layout->addWidget(hlGroup);
+
+    // Search Behavior
+    QGroupBox* searchGroup = new QGroupBox("Search Behavior", page);
+    QVBoxLayout* searchLayout = new QVBoxLayout(searchGroup);
+
+    _chkMatchCase = new QCheckBox("Match case by default", searchGroup);
+    searchLayout->addWidget(_chkMatchCase);
+
+    _chkMatchWholeWord = new QCheckBox("Match whole word by default", searchGroup);
+    searchLayout->addWidget(_chkMatchWholeWord);
+
+    _chkWrapAround = new QCheckBox("Wrap around when reaching end of file", searchGroup);
+    searchLayout->addWidget(_chkWrapAround);
+
+    layout->addWidget(searchGroup);
+
+    // Find History
+    QGroupBox* histGroup = new QGroupBox("Find History", page);
+    QGridLayout* histGrid = new QGridLayout(histGroup);
+
+    histGrid->addWidget(new QLabel("Number of entries to remember:", histGroup), 0, 0);
+    _spinFindHistoryCount = new QSpinBox(histGroup);
+    _spinFindHistoryCount->setRange(5, 100);
+    histGrid->addWidget(_spinFindHistoryCount, 0, 1);
+    histGrid->setColumnStretch(2, 1);
+    layout->addWidget(histGroup);
+
+    layout->addStretch();
+    return page;
+}
+
+// ============================================================================
 // Load Settings
 // ============================================================================
 void PreferenceDialog::loadSettings() {
@@ -565,6 +744,9 @@ void PreferenceDialog::loadSettings() {
 
     _chkAutoIndent->setChecked(opts.autoIndent);
     _chkWrapWithQuotes->setChecked(opts.wrapWithQuotes);
+    _chkBackspaceUnindent->setChecked(opts.backspaceUnindent);
+    _chkShowEol->setChecked(opts.showEol);
+    _chkShowSpaceTab->setChecked(opts.showSpaceTab);
 
     // Appearance
     int themeIdx = _cmbTheme->findData(QString::fromUtf8(opts.themeProfile.c_str()));
@@ -574,6 +756,8 @@ void PreferenceDialog::loadSettings() {
     _chkShowTabbar->setChecked(opts.showTabBar);
     _chkShowStatusbar->setChecked(opts.showStatusBar);
     _chkShowMenubar->setChecked(opts.showMenuBar);
+    _chkCurrentLineHighlight->setChecked(opts.currentLineHighlight);
+    _chkShowIndentGuide->setChecked(opts.showIndentGuide);
 
     // File Associations
     _extListWidget->clear();
@@ -604,6 +788,28 @@ void PreferenceDialog::loadSettings() {
     _grpAutoSaveOptions->setEnabled(opts.autoSave);
     _spinAutoSaveInterval->setEnabled(opts.autoSave);
 
+    // Language
+    if (_cmbLanguage) {
+        // Map LangType to combo index (simplified — full mapping would need LangType enum)
+        _cmbLanguage->setCurrentIndex(0);  // "None / Normal Text" as default
+    }
+    if (_chkAutoDetectLanguage)
+        _chkAutoDetectLanguage->setChecked(opts.autoDetectLanguage);
+
+    // Search
+    if (_chkSmartHighlighting)
+        _chkSmartHighlighting->setChecked(opts.smartHighlighting);
+    if (_spinMaxHighlightWords)
+        _spinMaxHighlightWords->setValue(opts.maxHighlightWords);
+    if (_chkMatchCase)
+        _chkMatchCase->setChecked(opts.matchCaseDefault);
+    if (_chkMatchWholeWord)
+        _chkMatchWholeWord->setChecked(opts.matchWholeWordDefault);
+    if (_chkWrapAround)
+        _chkWrapAround->setChecked(opts.wrapAroundDefault);
+    if (_spinFindHistoryCount)
+        _spinFindHistoryCount->setValue(opts.findHistoryCount);
+
     // Store original values
     _originalSettings.singleInstance = opts.singleInstance;
     _originalSettings.rememberSession = opts.rememberSession;
@@ -618,8 +824,11 @@ void PreferenceDialog::loadSettings() {
     _originalSettings.defaultEncoding = _cmbDefaultEncoding->currentData().toInt();
     _originalSettings.autoIndent = opts.autoIndent;
     _originalSettings.wrapWithQuotes = opts.wrapWithQuotes;
+    _originalSettings.backspaceUnindent = opts.backspaceUnindent;
     _originalSettings.theme = _cmbTheme->currentData().toString();
     _originalSettings.showToolbar = opts.showToolBar;
+    _originalSettings.currentLineHighlight = opts.currentLineHighlight;
+    _originalSettings.showIndentGuide = opts.showIndentGuide;
     _originalSettings.showTabbar = opts.showTabBar;
     _originalSettings.showStatusbar = opts.showStatusBar;
     _originalSettings.showMenubar = opts.showMenuBar;
@@ -652,6 +861,9 @@ void PreferenceDialog::applySettings() {
     opts.defaultEncoding = encType;
 
     opts.wrapWithQuotes = _chkWrapWithQuotes->isChecked();
+    opts.backspaceUnindent = _chkBackspaceUnindent->isChecked();
+    opts.showEol = _chkShowEol->isChecked();
+    opts.showSpaceTab = _chkShowSpaceTab->isChecked();
 
     // Appearance
     opts.themeProfile = _cmbTheme->currentData().toString().toUtf8().constData();
@@ -659,6 +871,8 @@ void PreferenceDialog::applySettings() {
     opts.showTabBar = _chkShowTabbar->isChecked();
     opts.showStatusBar = _chkShowStatusbar->isChecked();
     opts.showMenuBar = _chkShowMenubar->isChecked();
+    opts.currentLineHighlight = _chkCurrentLineHighlight->isChecked();
+    opts.showIndentGuide = _chkShowIndentGuide->isChecked();
 
     // File Associations — collect from list widget
     opts.fileAssociations.clear();
@@ -687,6 +901,17 @@ void PreferenceDialog::applySettings() {
     opts.backupStyle = _backupStyleCombo->currentIndex();
     opts.maxBackups = _spinMaxBackups->value();
 
+    // Language
+    opts.autoDetectLanguage = _chkAutoDetectLanguage->isChecked();
+
+    // Search
+    opts.smartHighlighting = _chkSmartHighlighting->isChecked();
+    opts.maxHighlightWords = _spinMaxHighlightWords->value();
+    opts.matchCaseDefault = _chkMatchCase->isChecked();
+    opts.matchWholeWordDefault = _chkMatchWholeWord->isChecked();
+    opts.wrapAroundDefault = _chkWrapAround->isChecked();
+    opts.findHistoryCount = _spinFindHistoryCount->value();
+
     // Apply settings to the active editor (live preview)
     if (ScintillaEditor* ed = Application::instance().getActiveEditor()) {
         ed->setTabWidth(opts.defaultTabWidth);
@@ -697,6 +922,16 @@ void PreferenceDialog::applySettings() {
         ed->setVirtualSpaceOptions(opts.virtualSpace);
         ed->setHomeKeyNavigation(opts.smartHome);
         ed->setAutoIndent(opts.autoIndent);
+        ed->setBackspaceUnindents(opts.backspaceUnindent);
+        ed->setEolVisibility(opts.showEol);
+        ed->setWhitespaceVisibility(opts.showSpaceTab);
+        ed->setCaretLineVisibility(opts.highlightCurrentLine);
+        // Indent guide via Scintilla direct function (IDC_SETINDENTATIONGUIDES)
+        if (opts.showIndentGuide) {
+            ed->send(3135 /* SCI_SETINDENTATIONGUIDES*/, 1);
+        } else {
+            ed->send(3135 /* SCI_SETINDENTATIONGUIDES*/, 0);
+        }
     }
 
     // Apply UI changes
@@ -736,8 +971,11 @@ void PreferenceDialog::applySettings() {
     _originalSettings.defaultEncoding = _cmbDefaultEncoding->currentData().toInt();
     _originalSettings.autoIndent = opts.autoIndent;
     _originalSettings.wrapWithQuotes = opts.wrapWithQuotes;
+    _originalSettings.backspaceUnindent = opts.backspaceUnindent;
     _originalSettings.theme = _cmbTheme->currentData().toString();
     _originalSettings.showToolbar = opts.showToolBar;
+    _originalSettings.currentLineHighlight = opts.currentLineHighlight;
+    _originalSettings.showIndentGuide = opts.showIndentGuide;
     _originalSettings.showTabbar = opts.showTabBar;
     _originalSettings.showStatusbar = opts.showStatusBar;
     _originalSettings.showMenubar = opts.showMenuBar;
@@ -754,6 +992,7 @@ void PreferenceDialog::onCategoryChanged(QTreeWidgetItem* item, int column) {
     int index = item->data(0, Qt::UserRole).toInt(&ok);
     if (ok) {
         _pageStack->setCurrentIndex(index);
+        _categoryTree->setCurrentItem(item);
     }
 }
 

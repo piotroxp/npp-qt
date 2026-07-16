@@ -110,6 +110,10 @@ public:
     bool applyToBuffer(Buffer* buffer, const QString& udlName);
     QString findUdlForExtension(const QString& ext) const;
 
+    // === Mutators ===
+
+    void setUdl(const QString& name, const UdlDefinition& def);
+
     // === N++ detection ===
 
     QStringList detectNppInstallPaths() const;

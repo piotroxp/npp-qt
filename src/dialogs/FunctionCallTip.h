@@ -5,6 +5,8 @@
 #include <QString>
 #include <QColor>
 #include <QPoint>
+#include <QStringList>
+#include <QObject>
 #include "common/ScintillaComponent.h"
 
 using stringVec = std::vector<const char*>;
@@ -17,9 +19,11 @@ struct FunctionOverload {
     int paramCount = 0;
 };
 
-class FunctionCallTip {
+class FunctionCallTip : public QObject {
+    Q_OBJECT
+
 public:
-    explicit FunctionCallTip(ScintillaComponent* pEditView);
+    explicit FunctionCallTip(ScintillaComponent* pEditView, QObject* parent = nullptr);
     ~FunctionCallTip() = default;
 
     void setLanguageXML(void* xmlKeyword);
@@ -64,11 +68,17 @@ public:
     QColor background() const { return _bgColor; }
     QColor highlightColor() const { return _hlColor; }
 
-public:
-    /// Called when user dismisses the calltip.
+Q_SIGNALS:
+    /// Emitted when user dismisses the calltip.
     void dismissed();
-    /// Called when the highlighted parameter changes.
+    /// Emitted when the highlighted parameter changes.
+    void paramHighlightChangedSignal(int paramIndex);
+
+public:
+    /// Called when the highlighted parameter changes (for internal chaining).
     void paramHighlightChanged(int paramIndex);
+    /// Called when user dismisses the calltip (for internal chaining).
+    void onDismissed();
 
 private:
     bool getCursorFunction();

@@ -304,6 +304,9 @@ bool AutoCompletion::update(int character)
 
     if (prefixLen < _triggerThreshold) return false;
 
+    // Capture the current word prefix for SCI_AUTOCSHOW.
+    _currentWord = _pEditView->textRange(wordStart, wordEnd);
+
     // Refresh words if needed.
     if (_documentWords.isEmpty())
         updateDocumentWords();
@@ -314,24 +317,38 @@ bool AutoCompletion::update(int character)
 
 // ─── Core autocomplete logic ───────────────────────────────────────────────────
 
-bool AutoCompletion::showAutoComplete(int /*autocType*/, bool /*autoInsert*/)
+bool AutoCompletion::showAutoComplete(int autocType, bool autoInsert)
 {
+    Q_UNUSED(autocType);  // Reserved for per-type icon/colour schemes (future).
     if (!_pEditView) return false;
 
     const QString listStr = currentCompletionList();
     if (listStr.isEmpty()) return false;
 
+    // Determine the prefix length from the current word.
+    Sci_CharacterRange cr = _pEditView->getSelection();
+    const int curPos = static_cast<int>(cr.cpMin);
+    const int wordStart = static_cast<int>(_pEditView->send(SCI_WORDSTARTPOSITION, static_cast<intptr_t>(curPos)));
+    _lastWordPrefix = _pEditView->textRange(wordStart, curPos);
+    const int prefixLen = _lastWordPrefix.length();
+
     // SCI_AUTOCSETSEPARATOR sets the separator (default ' ').
     // Scintilla will filter the list automatically as the user types.
     _pEditView->send(SCI_AUTOCSETSEPARATOR, ' ');
-    // Case sensitivity.
+    // Case sensitivity: 0 = case-sensitive, 1 = case-insensitive
     _pEditView->send(SCI_AUTOCSETIGNORECASE, _caseSensitive ? 0 : 1);
-    // AutoInsert: automatically insert the best match when there's only one.
-    _pEditView->send(2112 /*SCI_AUTOCSETFILLUPS*/, 0);
-    // Cancel on any non-identifier char.
+    // AutoInsert: if autoInsert is true and only one match, insert it automatically.
+    // SCI_AUTOCSETAUTOHIDE = 2125 — auto-hide single matches (insert common prefix).
+    _pEditView->send(2125 /*SCI_AUTOCSETAUTOHIDE*/, autoInsert ? 1 : 0);
+    // Cancel on any non-identifier char at start.
     _pEditView->send(2110 /*SCI_AUTOCSETCANCELATSTART*/, 1);
+    // Choose icon set based on completion type.
+    // Types: 0=plain, 1=double-click, 2=regular, 3=lower
+    // Note: listType can be passed to SCI_AUTOCSETTYPESEPARATOR if needed in future.
+    // SCI_AUTOCSETTYPESEPARATOR = 2608
+    _pEditView->send(SCI_AUTOCSETSEPARATOR, ' ');
 
-    _pEditView->send(SCI_AUTOCSHOW, static_cast<uptr_t>(_lastWordPrefix.length()),
+    _pEditView->send(SCI_AUTOCSHOW, static_cast<uptr_t>(prefixLen),
                      reinterpret_cast<sptr_t>(listStr.toUtf8().constData()));
 
     _completionActive = true;
@@ -460,8 +477,11 @@ void AutoCompletion::showPathCompletion()
 void AutoCompletion::showSnippetCompletion()
 {
     // Snippet completion: load from SnippetsManager.
-    // For now, return — full snippet support is in Wave 6.
-    qDebug() << "AutoCompletion::showSnippetCompletion — snippet manager not yet connected";
+    // TODO (Wave 6): integrate with SnippetsManager when available.
+    // For now, fall back to word+API completion as a basic substitute.
+    if (!_pEditView) return;
+    qDebug() << "AutoCompletion::showSnippetCompletion — snippet manager not yet connected, falling back to word+API";
+    showApiAndWordComplete();
 }
 
 void AutoCompletion::showEnvVarCompletion()
@@ -575,7 +595,7 @@ void InsertedMatchedChars::add(MatchedCharInserted mci)
     _insertedMatchedChars.push_back(mci);
 }
 
-intptr_t InsertedMatchedChars::search(char startChar, char endChar, size_t posToDetect)
+intptr_t InsertedMatchedChars::search(char startChar, char /*endChar*/, size_t posToDetect)
 {
     for (int i = static_cast<int>(_insertedMatchedChars.size()) - 1; i >= 0; --i) {
         const auto& mci = _insertedMatchedChars[i];

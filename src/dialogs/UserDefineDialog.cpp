@@ -65,10 +65,21 @@ void UserDefineDialog::setupUi() {
     createOperatorsTab(tabs);
     createDelimitersTab(tabs);
     createFoldingTab(tabs);
+    createStringsTab(tabs);
+    createPreviewTab(tabs);
     mainLayout->addWidget(tabs);
 
     // --- Buttons ---
     QHBoxLayout* btnLayout = new QHBoxLayout();
+
+    QPushButton* importBtn = new QPushButton(tr("Import…"), this);
+    QPushButton* exportBtn = new QPushButton(tr("Export…"), this);
+    QPushButton* validateBtn = new QPushButton(tr("Validate"), this);
+    QPushButton* resetBtn = new QPushButton(tr("Reset"), this);
+    btnLayout->addWidget(importBtn);
+    btnLayout->addWidget(exportBtn);
+    btnLayout->addWidget(validateBtn);
+    btnLayout->addWidget(resetBtn);
     btnLayout->addStretch();
 
     QPushButton* okBtn = new QPushButton(tr("OK"), this);
@@ -76,6 +87,10 @@ void UserDefineDialog::setupUi() {
     okBtn->setDefault(true);
     connect(okBtn, &QPushButton::clicked, this, &QDialog::accept);
     connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
+    connect(importBtn, &QPushButton::clicked, this, &UserDefineDialog::onImportClicked);
+    connect(exportBtn, &QPushButton::clicked, this, &UserDefineDialog::onExportClicked);
+    connect(validateBtn, &QPushButton::clicked, this, &UserDefineDialog::onValidateClicked);
+    connect(resetBtn, &QPushButton::clicked, this, &UserDefineDialog::onResetClicked);
     btnLayout->addWidget(okBtn);
     btnLayout->addWidget(cancelBtn);
 
@@ -125,6 +140,10 @@ void UserDefineDialog::createKeywordsTab(QTabWidget* tabs) {
             if (row >= 0)
                 table->removeRow(row);
         });
+
+        // Refresh preview when keywords change
+        connect(table, &QTableWidget::itemChanged, this, &UserDefineDialog::onKeywordTableChanged);
+        connect(table->model(), &QAbstractItemModel::rowsRemoved, this, &UserDefineDialog::onKeywordTableChanged);
 
         hbox->addWidget(table, 1);
         QVBoxLayout* btnBox = new QVBoxLayout();
@@ -357,6 +376,11 @@ void UserDefineDialog::createOperatorsTab(QTabWidget* tabs) {
         _operatorTable->setRowCount(0);
     });
 
+    // Refresh preview when operator list changes
+    connect(_operatorTable, &QTableWidget::itemChanged, this, &UserDefineDialog::onKeywordTableChanged);
+    connect(_operatorTable->model(), &QAbstractItemModel::rowsRemoved, this, &UserDefineDialog::onKeywordTableChanged);
+    connect(_operatorTable->model(), &QAbstractItemModel::rowsInserted, this, &UserDefineDialog::onKeywordTableChanged);
+
     layout->addWidget(_operatorTable);
     layout->addLayout(btnRow);
     {
@@ -441,6 +465,11 @@ void UserDefineDialog::createDelimitersTab(QTabWidget* tabs) {
         int r = _delimiterTable->currentRow();
         if (r >= 0) _delimiterTable->removeRow(r);
     });
+
+    // Refresh preview when delimiters change
+    connect(_delimiterTable, &QTableWidget::itemChanged, this, &UserDefineDialog::onKeywordTableChanged);
+    connect(_delimiterTable->model(), &QAbstractItemModel::rowsRemoved, this, &UserDefineDialog::onKeywordTableChanged);
+    connect(_delimiterTable->model(), &QAbstractItemModel::rowsInserted, this, &UserDefineDialog::onKeywordTableChanged);
 
     QGroupBox* optionsGroup = new QGroupBox(tr("Options"), page);
     QVBoxLayout* optsLayout = new QVBoxLayout(optionsGroup);
@@ -566,6 +595,29 @@ void UserDefineDialog::loadFromManager(UdlManager* manager, const QString& udlNa
         }
     }
 
+    // Delimiters — stored as space-separated pairs in stringChars
+    _delimiterTable->setRowCount(0);
+    if (!def->stringChars.isEmpty()) {
+        QStringList pairs = def->stringChars.split(' ', Qt::SkipEmptyParts);
+        for (const QString& pair : pairs) {
+            if (pair.size() >= 2) {
+                int row = _delimiterTable->rowCount();
+                _delimiterTable->insertRow(row);
+                _delimiterTable->setItem(row, 0, new QTableWidgetItem(pair.left(1)));
+                _delimiterTable->setItem(row, 1, new QTableWidgetItem(pair.mid(1, 1)));
+                _delimiterTable->setItem(row, 2, new QTableWidgetItem(tr("Normal")));
+            }
+        }
+    }
+
+    // Strings tab
+    if (_stringOpenEdit) _stringOpenEdit->clear();
+    if (_stringCloseEdit) _stringCloseEdit->clear();
+    if (_escapeCharCheck) _escapeCharCheck->setChecked(false);
+    if (_escapeCharEdit) _escapeCharEdit->clear();
+    if (_stringWordCharCheck) _stringWordCharCheck->setChecked(false);
+    if (_stringWordCharEdit) _stringWordCharEdit->clear();
+
     // Folding
     if (!def->folder.folderOpen.isEmpty())
         _folderOpenEdit->setText(def->folder.folderOpen);
@@ -574,41 +626,45 @@ void UserDefineDialog::loadFromManager(UdlManager* manager, const QString& udlNa
 }
 
 void UserDefineDialog::saveToManager(UdlManager* manager, const QString& udlName) {
-    UdlDefinition* def = manager->getUdl(udlName);
-    if (!def) {
-        // Create a new one
-        UdlDefinition newDef;
-        newDef.name = _nameEdit->text();
-        // We'll need a way to add to manager; for now just update if exists
-        def = manager->getUdl(udlName);
-        if (!def) return;
-    }
+    // Always write to a local copy so we can add a new UDL entry via setUdl
+    UdlDefinition def;
 
-    def->name = _nameEdit->text().trimmed();
-    def->extensions = _extEdit->text().split(' ', Qt::SkipEmptyParts);
+    // Load existing data if the UDL already exists
+    UdlDefinition* existing = manager->getUdl(udlName);
+    if (existing)
+        def = *existing;
+
+    def.name = _nameEdit->text().trimmed();
+    def.extensions = _extEdit->text().split(' ', Qt::SkipEmptyParts);
 
     // Keywords
-    def->keywords.words0 = keywordsFromTable(_keywordTables[0]);
-    def->keywords.words1 = keywordsFromTable(_keywordTables[1]);
-    def->keywords.words2 = keywordsFromTable(_keywordTables[2]);
-    def->keywords.words3 = keywordsFromTable(_keywordTables[3]);
-    def->keywords.words4 = keywordsFromTable(_keywordTables[4]);
-    def->keywords.words5 = keywordsFromTable(_keywordTables[5]);
-    def->keywords.words6 = keywordsFromTable(_keywordTables[6]);
-    def->keywords.words7 = keywordsFromTable(_keywordTables[7]);
-    def->keywords.words8 = keywordsFromTable(_keywordTables[8]);
+    def.keywords.words0 = keywordsFromTable(_keywordTables[0]);
+    def.keywords.words1 = keywordsFromTable(_keywordTables[1]);
+    def.keywords.words2 = keywordsFromTable(_keywordTables[2]);
+    def.keywords.words3 = keywordsFromTable(_keywordTables[3]);
+    def.keywords.words4 = keywordsFromTable(_keywordTables[4]);
+    def.keywords.words5 = keywordsFromTable(_keywordTables[5]);
+    def.keywords.words6 = keywordsFromTable(_keywordTables[6]);
+    def.keywords.words7 = keywordsFromTable(_keywordTables[7]);
+    def.keywords.words8 = keywordsFromTable(_keywordTables[8]);
 
     // Comments
-    def->comment.lineComment = _lineCommentEdit->text();
-    def->comment.streamCommentStart = _blockCommentStartEdit->text();
-    def->comment.streamCommentEnd = _blockCommentEndEdit->text();
+    def.comment.lineComment = _lineCommentEdit->text();
+    def.comment.streamCommentStart = _blockCommentStartEdit->text();
+    def.comment.streamCommentEnd = _blockCommentEndEdit->text();
 
     // Operators
-    def->operators = operatorsFromTable();
+    def.operators = operatorsFromTable();
+
+    // Delimiters
+    def.stringChars = delimitersFromTable();
 
     // Folding
-    def->folder.folderOpen = _folderOpenEdit->text();
-    def->folder.folderClose = _folderCloseEdit->text();
+    def.folder.folderOpen = _folderOpenEdit->text();
+    def.folder.folderClose = _folderCloseEdit->text();
+
+    // Persist via manager
+    manager->setUdl(udlName, def);
 }
 
 void UserDefineDialog::createNew(const QString& name) {
@@ -846,6 +902,167 @@ bool UserDefineDialog::exportToFile(const QString& path) const {
 
 // ============================================================================
 // Button handlers
+// ============================================================================
+// Strings Tab
+// ============================================================================
+
+void UserDefineDialog::createStringsTab(QTabWidget* tabs) {
+    QWidget* page = new QWidget(tabs);
+    QVBoxLayout* layout = new QVBoxLayout(page);
+
+    QLabel* hint = new QLabel(
+        tr("Define string delimiters for the language. Strings are highlighted "
+           "between the open and close characters."),
+        page);
+    hint->setWordWrap(true);
+    layout->addWidget(hint);
+
+    // Open/close delimiters
+    QGroupBox* delimGroup = new QGroupBox(tr("String Delimiters"), page);
+    QFormLayout* delimLayout = new QFormLayout(delimGroup);
+    _stringOpenEdit = new QLineEdit(delimGroup);
+    _stringOpenEdit->setPlaceholderText(tr("e.g. \" (double quote)"));
+    _stringCloseEdit = new QLineEdit(delimGroup);
+    _stringCloseEdit->setPlaceholderText(tr("e.g. \" (double quote)"));
+    delimLayout->addRow(tr("Open char:"), _stringOpenEdit);
+    delimLayout->addRow(tr("Close char:"), _stringCloseEdit);
+
+    // Escape character
+    QGroupBox* escapeGroup = new QGroupBox(tr("Escape Character"), page);
+    QFormLayout* escapeLayout = new QFormLayout(escapeGroup);
+    _escapeCharCheck = new QCheckBox(tr("Enable escape character"), escapeGroup);
+    _escapeCharEdit = new QLineEdit(escapeGroup);
+    _escapeCharEdit->setPlaceholderText(tr("e.g. \\"));
+    _escapeCharEdit->setMaxLength(1);
+    escapeLayout->addRow(QString(), _escapeCharCheck);
+    escapeLayout->addRow(tr("Escape char:"), _escapeCharEdit);
+
+    // Word characters
+    QGroupBox* wordGroup = new QGroupBox(tr("Word Characters"), page);
+    QFormLayout* wordLayout = new QFormLayout(wordGroup);
+    _stringWordCharCheck = new QCheckBox(
+        tr("Treat the following characters as part of a string word"), wordGroup);
+    _stringWordCharEdit = new QLineEdit(wordGroup);
+    _stringWordCharEdit->setPlaceholderText(tr("e.g. \\"));
+    wordLayout->addRow(QString(), _stringWordCharCheck);
+    wordLayout->addRow(tr("Extra chars:"), _stringWordCharEdit);
+
+    layout->addWidget(delimGroup);
+    layout->addWidget(escapeGroup);
+    layout->addWidget(wordGroup);
+    {
+        auto* _spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        layout->addItem(_spacer);
+    }
+    tabs->addTab(page, tr("Strings"));
+}
+
+// ============================================================================
+// Preview Tab
+// ============================================================================
+
+void UserDefineDialog::createPreviewTab(QTabWidget* tabs) {
+    QWidget* page = new QWidget(tabs);
+    QVBoxLayout* layout = new QVBoxLayout(page);
+
+    QLabel* hint = new QLabel(
+        tr("This preview shows sample text based on your UDL settings. "
+           "Keywords, comments, numbers and operators are rendered as they "
+           "would appear in the editor. Click 'Test' to apply to an open buffer."),
+        page);
+    hint->setWordWrap(true);
+    layout->addWidget(hint);
+
+    _previewEditor = new QPlainTextEdit(page);
+    _previewEditor->setMinimumHeight(200);
+    _previewEditor->setReadOnly(true);
+    _previewEditor->setLineWrapMode(QPlainTextEdit::NoWrap);
+    layout->addWidget(_previewEditor);
+
+    _previewStatusLabel = new QLabel(page);
+    _previewStatusLabel->setText(tr("No language defined yet."));
+    layout->addWidget(_previewStatusLabel);
+
+    // A small toolbar to refresh / test
+    QHBoxLayout* previewBtnLayout = new QHBoxLayout();
+    QPushButton* refreshBtn = new QPushButton(tr("Refresh Preview"), page);
+    QPushButton* testBtn = new QPushButton(tr("Test in Editor"), page);
+    connect(refreshBtn, &QPushButton::clicked, this, &UserDefineDialog::updatePreview);
+    connect(testBtn, &QPushButton::clicked, this, &UserDefineDialog::onTestClicked);
+    previewBtnLayout->addWidget(refreshBtn);
+    previewBtnLayout->addWidget(testBtn);
+    previewBtnLayout->addStretch();
+    layout->addLayout(previewBtnLayout);
+
+    tabs->addTab(page, tr("Preview"));
+}
+
+// ============================================================================
+// Keyword table helpers (stubs resolved)
+// ============================================================================
+
+void UserDefineDialog::setupOperatorTable() {
+    // Default operators are already set in createOperatorsTab().
+    // This method can be used to reset to defaults programmatically.
+    _operatorTable->setRowCount(0);
+    const QString defaultOps = "+-*/%=<>!&|^~?:,;().[]{}@#$`\\";
+    for (QChar ch : defaultOps) {
+        int row = _operatorTable->rowCount();
+        _operatorTable->insertRow(row);
+        _operatorTable->setItem(row, 0, new QTableWidgetItem(QString(ch)));
+    }
+}
+
+void UserDefineDialog::setupDelimiterTable() {
+    // Default delimiters are already set in createDelimitersTab().
+    _delimiterTable->setRowCount(0);
+    struct Pair { const char* o; const char* c; const char* s; };
+    static const Pair defaults[] = {
+        {"(", ")", "Normal"},
+        {"[", "]", "Normal"},
+        {"{", "}", "Normal"},
+        {"<", ">", "Math"},
+        {"'", "'", "Normal"},
+        {"\"", "\"", "Normal"},
+    };
+    for (const auto& p : defaults) {
+        int row = _delimiterTable->rowCount();
+        _delimiterTable->insertRow(row);
+        _delimiterTable->setItem(row, 0, new QTableWidgetItem(QString(p.o)));
+        _delimiterTable->setItem(row, 1, new QTableWidgetItem(QString(p.c)));
+        _delimiterTable->setItem(row, 2, new QTableWidgetItem(QString(p.s)));
+    }
+}
+
+void UserDefineDialog::populateKeywordAutocomplete() {
+    // Build a combined list of all keywords for future autocompletion support.
+    // The actual QLineEdit autocomplete is optional and can be wired here.
+    _allKnownKeywords.clear();
+    for (int i = 0; i < 9; ++i) {
+        if (!_keywordTables[i])
+            continue;
+        QString kws = keywordsFromTable(_keywordTables[i]);
+        QStringList lines = kws.split('\n', Qt::SkipEmptyParts);
+        for (const QString& line : lines) {
+            QStringList words = line.trimmed().split(' ', Qt::SkipEmptyParts);
+            for (const QString& w : words) {
+                if (!w.isEmpty() && !_allKnownKeywords.contains(w))
+                    _allKnownKeywords.append(w);
+            }
+        }
+    }
+}
+
+// ============================================================================
+// onKeywordTableChanged — called whenever any keyword/operator/delimiter table
+// content changes; refreshes the preview.
+// ============================================================================
+
+void UserDefineDialog::onKeywordTableChanged() {
+    populateKeywordAutocomplete();
+    updatePreview();
+}
+
 // ============================================================================
 
 void UserDefineDialog::onValidateClicked() {

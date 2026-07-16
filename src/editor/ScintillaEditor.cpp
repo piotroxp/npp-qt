@@ -4,6 +4,7 @@
 
 #include "ScintillaEditor.h"
 #include "SyntaxHighlighter.h"
+#include "../dialogs/AutoCompletion.h"
 #include "../core/ThemeManager.h"
 #include "../core/LanguageManager.h"
 #include "../core/Application.h"
@@ -144,9 +145,30 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
             _editor->foldLine(line);
         }
     });
+
+    // ── Auto-completion ─────────────────────────────────────────────────────
+    _autoCompletion = new AutoCompletion(this);
+    connect(_editor, &QsciScintilla::SCN_CHARADDED, _autoCompletion, [this](int ch) {
+        _autoCompletion->update(ch);
+    });
+    connect(_editor, QOverload<const char*, int, int, int>::of(&QsciScintilla::SCN_AUTOCSELECTION),
+            _autoCompletion, [](const char* /*selection*/, int /*position*/, int /*ch*/, int /*method*/) {
+        // Auto-completion accepted; any post-completion actions can go here.
+    });
+    connect(_editor, &QsciScintilla::SCN_AUTOCCANCELLED, _autoCompletion, [this]() {
+        _autoCompletion->close();
+    });
+    connect(_autoCompletion, &AutoCompletion::completionSelected, this, [this](const QString& text) {
+        _autoCompletion->recordWordUsed(text);
+    });
 }
 
 ScintillaEditor::~ScintillaEditor() {
+    // Explicitly delete _autoCompletion before _editor since it holds a pointer
+    // to this ScintillaEditor and may call send() during destruction.
+    delete _autoCompletion;
+    _autoCompletion = nullptr;
+
     // Explicitly delete _editor before the ScintillaEditBase/QFrame destructor runs.
     // This ensures Scintilla's internal heap allocations are freed while the
     // QApplication event loop is still alive.  Without this, ScintillaEditBase
@@ -175,6 +197,11 @@ void ScintillaEditor::setLanguage(LangType lang) {
     _editor->setLexer(lexer);
     if (lexer) {
         applyThemeToLexer(lexer);
+    }
+
+    // Propagate language to auto-completion (loads keyword sets).
+    if (_autoCompletion) {
+        _autoCompletion->setLanguage(static_cast<int>(lang));
     }
 }
 

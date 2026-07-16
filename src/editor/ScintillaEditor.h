@@ -17,6 +17,7 @@
 
 class SyntaxHighlighter;
 class Buffer;
+class AutoCompletion;
 
 class ScintillaEditor : public QFrame, public ScintillaComponent {
     Q_OBJECT
@@ -130,6 +131,9 @@ public:
 
     SyntaxHighlighter* highlighter() const { return _highlighter; }
 
+    // Auto-completion — owned by this editor
+    AutoCompletion* autoCompletion() const { return _autoCompletion; }
+
     // ScintillaComponent interface — delegates to wrapped QsciScintilla
     intptr_t send(int message, int wParam = 0, intptr_t lParam = 0) override;
 
@@ -185,6 +189,7 @@ private:
     bool eventFilter(QObject* watched, QEvent* event) override;
     QsciScintilla* _editor;
     SyntaxHighlighter* _highlighter;
+    class AutoCompletion* _autoCompletion = nullptr;
     LangType _language = LangType::L_TEXT;
     EncodingType _encoding = EncodingType::UTF_8;
     EolType _eolType = EolType::EOL_LF;

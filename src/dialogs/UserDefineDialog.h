@@ -51,6 +51,7 @@ private slots:
     void onResetClicked();
     void onAddKeywordClicked(int group);
     void onValidateClicked();
+    void onKeywordTableChanged();
     void updatePreview();
 
 private:

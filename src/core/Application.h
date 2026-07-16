@@ -84,6 +84,9 @@ struct AppOptions {
     bool         virtualSpace = true;
     bool         smartHome = true;
     bool         autoIndent = true;
+    bool         backspaceUnindent = false;
+    bool         showEol = false;
+    bool         showSpaceTab = false;
     // File Associations
     QStringList  fileAssociations;
     bool         warnOnShortcutConflict = true;
@@ -104,6 +107,17 @@ struct AppOptions {
     int          autoSaveInterval = 5;
     bool         autoSaveCurrentOnly = false;
     bool         autoSaveInBackground = true;
+    // Editor Appearance
+    bool         showIndentGuide = false;
+    bool         currentLineHighlight = true;
+    // Search
+    int          maxHighlightWords = 1000;
+    bool         matchCaseDefault = false;
+    bool         matchWholeWordDefault = false;
+    bool         wrapAroundDefault = true;
+    int          findHistoryCount = 10;
+    // Language
+    bool         autoDetectLanguage = true;
 };
 
 // ============================================================================
