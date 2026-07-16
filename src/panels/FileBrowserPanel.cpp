@@ -84,8 +84,8 @@ FileBrowserPanel::FileBrowserPanel(QWidget* parent)
 
     // Create file system model
     _model = new QFileSystemModel(this);
-    _model->setRootPath("");
-    _model->setFilter(QDir::AllEntries | QDir::NoDotAndDotDot);
+    _model->setRootPath(QDir::homePath());
+    _model->setFilter(QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot);
 
     // Set name filters for source code files
     _nameFilters = QStringList()
@@ -486,7 +486,7 @@ void FileBrowserPanel::refresh() {
     if (_showSystem) f |= QDir::System;
     else f |= QDir::Drives;
     _model->setFilter(f);
-    _model->setRootPath("");
+    _model->setRootPath(currentPath);
     setRootDirectory(currentPath);
 
     // Refresh completer
