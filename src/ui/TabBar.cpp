@@ -46,6 +46,33 @@ void TabBar::setupTabs() {
     // Additional setup if needed
 }
 
+void TabBar::setupAddTabButton() {
+    if (addTabButton) return;
+    
+    addTabButton = new QToolButton(this);
+    addTabButton->setText("+");
+    addTabButton->setCursor(Qt::ArrowCursor);
+    addTabButton->setFocusPolicy(Qt::NoFocus);
+    addTabButton->setObjectName("AddTabButton");
+    addTabButton->setStyleSheet(R"(
+        QToolButton {
+            border: none;
+            padding: 2px 6px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            background: rgba(255, 255, 255, 50);
+        }
+    )");
+    
+    connect(addTabButton, &QToolButton::clicked, this, &TabBar::onAddTabClicked);
+    
+    // Note: setCornerWidget is a QTabWidget method. For QTabBar, we use a different approach.
+    // The parent widget (QTabWidget) should set up the corner widget.
+    // We emit a signal that the parent can handle, or store reference for parent to use.
+    addTabButton->hide(); // Initially hidden until explicitly shown
+}
+
 void TabBar::updateFrom(QTabWidget* tabWidget) {
     if (!tabWidget) return;
 
@@ -617,20 +644,344 @@ void TabBar::ensureTabVisible(int index) {
     }
 }
 
-// === Stubs ===
-void TabBar::setElasticScroll(bool) {}
-void TabBar::setScrollable(bool) {}
-void TabBar::setTabBarStyle(TabBar::TabBarStyle) {}
-void TabBar::setCloseButtonVisibility(TabBar::CloseButtonVisibility) {}
-void TabBar::setAddTabButtonVisible(bool) {}
-void TabBar::onTabRemoved(int) {}
-void TabBar::onTabInserted(int) {}
-void TabBar::updateCloseButtons() {}
-void TabBar::onElasticScrollFinished() {}
-void TabBar::onScrollRight() {}
-void TabBar::onScrollLeft() {}
-void TabBar::onAddTabClicked() {}
-QSize TabBar::minimumSizeHint() const { return QWidget::minimumSizeHint(); }
-QSize TabBar::minimumTabSizeHint(int) const { return minimumSizeHint(); }
-void TabBar::paintEvent(QPaintEvent* event) { QWidget::paintEvent(event); }
+// === Stub Implementations ===
+
+void TabBar::setElasticScroll(bool enabled) {
+    elasticScroll = enabled;
+    // Elastic scroll uses the overridden wheelEvent - when enabled,
+    // wheel events will allow overshoot and animate back to nearest tab
+    // When disabled, standard scroll behavior applies
+    
+    // Find and configure the scrollbar
+    QScrollBar* scrollBar = findChild<QScrollBar*>();
+    if (scrollBar) {
+        scrollBar->setSingleStep(enabled ? 10 : 20);
+    }
+}
+
+void TabBar::setScrollable(bool scrollable) {
+    this->scrollable = scrollable;
+    setUsesScrollButtons(scrollable);
+}
+
+void TabBar::setTabBarStyle(TabBar::TabBarStyle style) {
+    if (tabStyle == style) return;
+    tabStyle = style;
+    
+    switch (style) {
+    case TabBarStyle::Classic:
+        // Default appearance with standard styling
+        setStyleSheet(QString());
+        break;
+        
+    case TabBarStyle::Modern:
+        // Modern styling with some polish
+        setStyleSheet(R"(
+            QTabBar::tab {
+                padding: 4px 12px;
+                font-size: 12px;
+            }
+            QTabBar::tab:selected {
+                background: palette(window);
+                border-bottom: 2px solid palette(highlight);
+            }
+            QTabBar::tab:!selected {
+                background: palette(light);
+            }
+        )");
+        break;
+        
+    case TabBarStyle::Compact:
+        // Compact styling with reduced padding
+        setStyleSheet(R"(
+            QTabBar::tab {
+                padding: 2px 8px;
+                font-size: 11px;
+            }
+            QTabBar::tab:selected {
+                background: palette(window);
+            }
+            QTabBar::tab:!selected {
+                background: palette(light);
+            }
+        )");
+        break;
+    }
+    
+    // For IconsOnly style, we'd typically handle this via the parent widget
+    // but we can set elide mode and minimal text here
+    if (style == TabBarStyle::Compact) {
+        setElideMode(Qt::ElideRight);
+    } else {
+        setElideMode(Qt::ElideMiddle);
+    }
+    
+    // Refresh all tabs
+    for (int i = 0; i < count(); ++i) {
+        updateTabAppearance(i);
+    }
+    update();
+}
+
+void TabBar::setCloseButtonVisibility(TabBar::CloseButtonVisibility visibility) {
+    if (closeBtnVisibility == visibility) return;
+    closeBtnVisibility = visibility;
+    
+    switch (visibility) {
+    case CloseButtonVisibility::Always:
+        setTabsClosable(true);
+        // Show all close buttons
+        for (int i = 0; i < count(); ++i) {
+            QWidget* btn = tabButton(i, QTabBar::RightSide);
+            if (btn) {
+                btn->show();
+            }
+        }
+        break;
+        
+    case CloseButtonVisibility::Hover:
+        setTabsClosable(true);
+        // Close buttons will be shown/hidden via event filter in updateCloseButtons
+        updateCloseButtons();
+        break;
+        
+    case CloseButtonVisibility::Never:
+        setTabsClosable(false);
+        break;
+    }
+    
+    update();
+}
+
+void TabBar::setAddTabButtonVisible(bool visible) {
+    if (addTabBtnVisible == visible) return;
+    addTabBtnVisible = visible;
+    
+    if (visible) {
+        setupAddTabButton();
+        // Show the button
+        if (addTabButton) {
+            addTabButton->show();
+        }
+    } else {
+        if (addTabButton) {
+            addTabButton->hide();
+        }
+    }
+}
+
+void TabBar::onTabRemoved(int index) {
+    Q_UNUSED(index);
+    // Refresh close button states
+    updateCloseButtons();
+    
+    // Update pinned/locked/modified indices if needed
+    // Clean up any state associated with the removed tab
+    m_pinnedTabs.remove(index);
+    m_lockedTabs.remove(index);
+    m_modifiedTabs.remove(index);
+    m_readOnlyTabs.remove(index);
+    m_tabToolTips.remove(index);
+    
+    // Re-index pinned tabs (tabs after removed index shift down)
+    QSet<int> newPinned;
+    for (int idx : m_pinnedTabs) {
+        if (idx > index) {
+            newPinned.insert(idx - 1);
+        } else if (idx < index) {
+            newPinned.insert(idx);
+        }
+    }
+    m_pinnedTabs = newPinned;
+    
+    QSet<int> newLocked;
+    for (int idx : m_lockedTabs) {
+        if (idx > index) {
+            newLocked.insert(idx - 1);
+        } else if (idx < index) {
+            newLocked.insert(idx);
+        }
+    }
+    m_lockedTabs = newLocked;
+    
+    update();
+}
+
+void TabBar::onTabInserted(int index) {
+    Q_UNUSED(index);
+    // Refresh after insertion
+    updateCloseButtons();
+    update();
+}
+
+void TabBar::updateCloseButtons() {
+    if (closeBtnVisibility == CloseButtonVisibility::Never) {
+        return;
+    }
+    
+    for (int i = 0; i < count(); ++i) {
+        QWidget* btn = tabButton(i, QTabBar::RightSide);
+        if (!btn) continue;
+        
+        switch (closeBtnVisibility) {
+        case CloseButtonVisibility::Always:
+            btn->show();
+            break;
+            
+        case CloseButtonVisibility::Hover:
+            // Install event filter for hover-based visibility
+            btn->installEventFilter(this);
+            // Initially hidden
+            btn->hide();
+            break;
+            
+        case CloseButtonVisibility::Never:
+            btn->hide();
+            break;
+        }
+    }
+}
+
+void TabBar::onElasticScrollFinished() {
+    // Snap to nearest tab after elastic scroll animation finishes
+    if (!elasticScroll) return;
+    
+    QScrollBar* scrollBar = findChild<QScrollBar*>();
+    if (!scrollBar) return;
+    
+    // Find the tab that should be at the leftmost visible position
+    int tabCount = count();
+    if (tabCount == 0) return;
+    
+    int targetTab = 0;
+    int minDist = INT_MAX;
+    int scrollValue = scrollBar->value();
+    
+    for (int i = 0; i < tabCount; ++i) {
+        QRect rect = tabRect(i);
+        int tabStart = rect.left();
+        int dist = qAbs(tabStart - scrollValue);
+        if (dist < minDist) {
+            minDist = dist;
+            targetTab = i;
+        }
+    }
+    
+    // Animate to the nearest tab position
+    if (m_elasticAnim) {
+        m_elasticAnim->deleteLater();
+    }
+    
+    QRect targetRect = tabRect(targetTab);
+    int targetValue = targetRect.left();
+    
+    m_elasticAnim = new QPropertyAnimation(scrollBar, "value", this);
+    m_elasticAnim->setStartValue(scrollBar->value());
+    m_elasticAnim->setEndValue(targetValue);
+    m_elasticAnim->setDuration(TabTransitionDuration);
+    m_elasticAnim->setEasingCurve(QEasingCurve::OutCubic);
+    m_elasticAnim->start(QAbstractAnimation::DeleteWhenStopped);
+}
+
+void TabBar::onScrollRight() {
+    QScrollBar* scrollBar = findChild<QScrollBar*>();
+    if (scrollBar) {
+        scrollBar->setValue(scrollBar->value() + scrollBar->pageStep());
+    }
+}
+
+void TabBar::onScrollLeft() {
+    QScrollBar* scrollBar = findChild<QScrollBar*>();
+    if (scrollBar) {
+        scrollBar->setValue(scrollBar->value() - scrollBar->pageStep());
+    }
+}
+
+void TabBar::onAddTabClicked() {
+    emit newTabRequested();
+    emit tabBarDoubleClicked();
+}
+
+QSize TabBar::minimumSizeHint() const {
+    // Return a sensible minimum size for the tab bar
+    return QSize(200, 30);
+}
+
+QSize TabBar::minimumTabSizeHint(int index) const {
+    if (index < 0 || index >= count()) {
+        return QSize(50, 20);
+    }
+    
+    // Calculate minimum size based on tab content
+    QString text = tabText(index);
+    QFontMetrics fm(font());
+    int textWidth = fm.horizontalAdvance(text);
+    
+    // Add space for icon if present
+    QIcon icon = tabIcon(index);
+    int iconWidth = 0;
+    if (!icon.isNull()) {
+        iconWidth = icon.actualSize(QSize(16, 16)).width() + 4;
+    }
+    
+    // Add space for close button if visible
+    int closeWidth = 0;
+    if (closeBtnVisibility != CloseButtonVisibility::Never) {
+        closeWidth = 20;
+    }
+    
+    // Add padding
+    int padding = 16;
+    
+    int width = textWidth + iconWidth + closeWidth + padding;
+    
+    return QSize(qMax(width, 50), 24);
+}
+
+void TabBar::paintEvent(QPaintEvent* event) {
+    // Call the base class paint event first
+    QTabBar::paintEvent(event);
+    
+    // Draw custom overlay elements
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    
+    // Draw modified indicator (small circle/dot) before close button
+    for (int i = 0; i < count(); ++i) {
+        if (m_modifiedTabs.contains(i)) {
+            QRect tabRect = this->tabRect(i);
+            QWidget* closeBtn = tabButton(i, QTabBar::RightSide);
+            
+            if (closeBtn) {
+                QPoint closePos = closeBtn->mapTo(this, QPoint(0, 0));
+                QRect closeRect(closePos, closeBtn->size());
+                
+                // Draw modified indicator (orange/red dot) to the left of close button
+                QPoint indicatorPos(closeRect.left() - 8, tabRect.center().y());
+                
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(QColor(255, 140, 0)); // Orange dot for modified
+                painter.drawEllipse(indicatorPos, 4, 4);
+            }
+        }
+        
+        // Draw pinned indicator
+        if (m_pinnedTabs.contains(i)) {
+            QRect tabRect = this->tabRect(i);
+            // Could draw a pin icon or indicator
+            QPoint pinPos(tabRect.left() + 4, tabRect.center().y());
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(100, 100, 100));
+            painter.drawEllipse(pinPos, 3, 3);
+        }
+    }
+    
+    // Draw drop indicator
+    if (m_dropTargetIndex >= 0 && m_dropTargetIndex < count()) {
+        QRect targetRect = tabRect(m_dropTargetIndex);
+        painter.setPen(QColor(0, 120, 215));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRect(targetRect.adjusted(1, 1, -1, -1));
+    }
+}
 

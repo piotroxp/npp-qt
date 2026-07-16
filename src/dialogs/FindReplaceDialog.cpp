@@ -5,6 +5,8 @@
 #include "FindReplaceDialog.h"
 #include "core/Application.h"
 #include "../editor/ScintillaEditor.h"
+#include "../NppConstants.h"
+#include "ui/MainWindow.h"
 #include <Qsci/qsciscintilla.h>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -361,27 +363,382 @@ void FindReplaceDialog::setStatusMessage(const QString& msg) {
 }
 
 // === Stubs ===
-void FindReplaceDialog::restoreAfterSearch() {}
-void FindReplaceDialog::onFindPrevious() {}
-void FindReplaceDialog::onReplaceAllInAll() {}
-void FindReplaceDialog::onMarkAll() {}
-void FindReplaceDialog::onUnmarkAll() {}
-void FindReplaceDialog::onPurge() {}
-void FindReplaceDialog::onBookmark() {}
-void FindReplaceDialog::onSelectAndFind() {}
-void FindReplaceDialog::onFindInFiles() {}
-void FindReplaceDialog::onReplaceInFiles() {}
-void FindReplaceDialog::onReplaceTextChanged(const QString&) {}
-void FindReplaceDialog::onModeChanged() {}
-void FindReplaceDialog::onReplacePrompt(const QString&, const QString&, int) {}
-void FindReplaceDialog::updateHighlight() {}
-void FindReplaceDialog::applyHighlightToggle() {}
-void FindReplaceDialog::saveSearchToHistory(const QString&) {}
-void FindReplaceDialog::saveReplaceToHistory(const QString&) {}
-void FindReplaceDialog::loadSearchHistory() {}
-void FindReplaceDialog::loadReplaceHistory() {}
-void FindReplaceDialog::updateMarkColor(const QColor&) {}
-void FindReplaceDialog::scheduleHideForSearch() {}
-void FindReplaceDialog::keyPressEvent(QKeyEvent* event) { event->ignore(); }
-void FindReplaceDialog::showEvent(QShowEvent* event) { QDialog::showEvent(event); }
+void FindReplaceDialog::restoreAfterSearch() {
+    if (!_editor) return;
+    // Clear temporary find markers via the underlying QsciScintilla
+    QsciScintilla* sci = _editor->qsciEditor();
+    sci->markerDeleteAll(MARKER_FINDMARK_ALL);
+    for (int i = 11; i <= 15; ++i) {
+        sci->markerDeleteAll(i);
+    }
+    // Restore cursor visibility and clear indicator highlight
+    clearHighlight();
+}
+
+void FindReplaceDialog::onFindPrevious() {
+    QString text = _findCombo->currentText();
+    if (text.isEmpty()) return;
+    _lastSearchText = text;
+    _lastSearchOptions = currentOptions();
+
+    if (_editor) {
+        _editor->findPrevious(text, currentOptions());
+    }
+    clearHighlight();
+    emit findPrevRequested(text, currentOptions());
+}
+
+void FindReplaceDialog::onReplaceAllInAll() {
+    QString findText = _findCombo->currentText();
+    QString replaceText = _replaceCombo->currentText();
+    if (findText.isEmpty()) return;
+
+    _lastSearchText = findText;
+    _lastSearchOptions = currentOptions();
+
+    FindOption opts = currentOptions();
+
+    // Get MainWindow and iterate all open editors
+    auto* mw = Application::instance().mainWindow();
+    if (!mw) return;
+
+    int totalReplaced = 0;
+    for (int i = 0; i < mw->editorCount(); ++i) {
+        if (auto* ed = mw->editorAt(i)) {
+            int n = ed->replaceAll(findText, replaceText, opts);
+            totalReplaced += n;
+        }
+    }
+
+    QString msg = (totalReplaced == 1)
+        ? QString("Replaced 1 occurrence of \"%1\" in all open documents").arg(findText)
+        : QString("Replaced %1 occurrences of \"%2\" in all open documents").arg(totalReplaced).arg(findText);
+    _statusLabel->setText(msg);
+    Application::instance().setStatusBarText(msg.toStdString());
+
+    emit replaceAllInAllRequested(findText, replaceText, opts);
+}
+
+void FindReplaceDialog::onMarkAll() {
+    QString text = _findCombo->currentText();
+    if (text.isEmpty() || !_editor) return;
+
+    _lastSearchText = text;
+    _lastSearchOptions = currentOptions();
+
+    // Clear previous mark markers
+    onUnmarkAll();
+
+    FindOption opts = currentOptions();
+    // We need to iterate through all matches and mark their lines.
+    // Use a dedicated marker number for "mark all" highlights.
+    int markerNum = MARKER_FINDMARK_ALL;
+
+    // Configure marker color on the editor
+    QsciScintilla* sci = _editor->qsciEditor();
+    // Set marker background color for MARKER_FINDMARK_ALL
+    sci->SendScintilla(QsciScintilla::SCI_MARKERDEFINE, markerNum, QsciScintilla::SC_MARK_BACKGROUND);
+    sci->SendScintilla(QsciScintilla::SCI_MARKERSETBACK, markerNum,
+                       static_cast<long>(QColor(_markColor).rgb()) & 0x00FFFFFF);
+
+    int count = 0;
+    int lineCount = _editor->lineCount();
+
+    // Use findFirst loop to walk all matches and mark each line.
+    // QsciScintilla::findFirst returns true if found; keep calling
+    // findFirst with the same args to advance to next match.
+    bool cs = (opts & FindOption::MatchCase) != FindOption::None;
+    bool wo = (opts & FindOption::WholeWord) != FindOption::None;
+    bool re = (opts & FindOption::Regex) != FindOption::None;
+
+    bool found = sci->findFirst(text, re, cs, wo, true /*forward*/,
+                                true /*wrap*/, 0, 0, false, false, false);
+    while (found) {
+        int line = 0, col = 0;
+        sci->getCursorPosition(&line, &col);
+        sci->markerAdd(line, markerNum);
+        ++count;
+        // Advance to next match using findFirst with the same pattern
+        found = sci->findFirst(text, re, cs, wo, true, true, 0, 0, false, false, false);
+    }
+
+    QString msg = (count == 1)
+        ? QString("Marked 1 match of \"%1\"").arg(text)
+        : (count == 0 ? QString("No matches of \"%1\"").arg(text)
+                       : QString("Marked %1 matches of \"%2\"").arg(count).arg(text));
+    _statusLabel->setText(msg);
+
+    emit markRequested(text, opts, _markColor, _markStyle);
+}
+
+void FindReplaceDialog::onUnmarkAll() {
+    if (!_editor) return;
+    QsciScintilla* sci = _editor->qsciEditor();
+    sci->markerDeleteAll(MARKER_FINDMARK_ALL);
+    for (int i = 11; i <= 15; ++i) {
+        sci->markerDeleteAll(i);
+    }
+    emit unmarkRequested(_findCombo->currentText(), currentOptions());
+}
+
+void FindReplaceDialog::onPurge() {
+    // Clear search history
+    _searchHistory.clear();
+    _replaceHistory.clear();
+    _findCombo->clear();
+    _replaceCombo->clear();
+
+    // Clear all mark markers
+    if (_editor) {
+        QsciScintilla* sci = _editor->qsciEditor();
+        sci->markerDeleteAll(MARKER_FINDMARK_ALL);
+        for (int i = 11; i <= 15; ++i) {
+            sci->markerDeleteAll(i);
+        }
+    }
+
+    // Clear highlights
+    clearHighlight();
+
+    emit purgeRequested(_findCombo->currentText(), currentOptions());
+}
+
+void FindReplaceDialog::onBookmark() {
+    if (!_editor) return;
+    int line = _editor->currentLine();
+    _editor->toggleBookmark(line);
+    _statusLabel->setText(_editor->bookmarks().contains(line)
+        ? QString("Bookmark added on line %1").arg(line + 1)
+        : QString("Bookmark removed from line %1").arg(line + 1));
+}
+
+void FindReplaceDialog::onSelectAndFind() {
+    if (!_editor) return;
+    QString selected = _editor->selectedText();
+    if (selected.isEmpty()) {
+        // Nothing selected — nothing to do
+        return;
+    }
+    // Put selected text into find box and trigger search
+    {
+        QSignalBlocker blocker(_findCombo);
+        _findCombo->setEditText(selected);
+    }
+    onSearchTextChanged(selected);
+    // Also highlight the selection for the find
+    saveSearchToHistory(selected);
+    onFindNext();
+}
+
+void FindReplaceDialog::onFindInFiles() {
+    QString text = _findCombo->currentText();
+    emit openFindInFilesRequested(text);
+    emit openFindInFilesRequested(text);
+}
+
+void FindReplaceDialog::onReplaceInFiles() {
+    QString findText = _findCombo->currentText();
+    QString replaceText = _replaceCombo->currentText();
+    emit openReplaceInFilesRequested(findText, replaceText);
+}
+
+void FindReplaceDialog::onReplaceTextChanged(const QString& text) {
+    bool hasText = !text.isEmpty();
+    if (_replaceBtn) _replaceBtn->setEnabled(hasText && _editor);
+    if (_replaceAllBtn) _replaceAllBtn->setEnabled(hasText && _editor);
+    if (_replaceAllInAllBtn) _replaceAllInAllBtn->setEnabled(hasText && _editor);
+}
+
+void FindReplaceDialog::onModeChanged() {
+    // Sync UI state based on current search mode (normal / regex / extended).
+    // This is called when regex, whole-word, or case options change.
+    // Could update the status bar or dialog appearance.
+    FindOption opts = currentOptions();
+    if ((opts & FindOption::Regex) != FindOption::None) {
+        _statusLabel->setText("  Regex mode");
+    } else {
+        _statusLabel->clear();
+    }
+}
+
+void FindReplaceDialog::onReplacePrompt(const QString& find, const QString& replace, int count) {
+    if (count <= 0) return;
+
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        "Confirm Replace",
+        QString("Replace %1 occurrence%2 of \"%3\" with \"%4\"?").arg(count).arg(count == 1 ? "" : "s").arg(find).arg(replace),
+        QMessageBox::Yes | QMessageBox::YesToAll | QMessageBox::Cancel,
+        QMessageBox::Cancel);
+
+    if (reply == QMessageBox::Yes) {
+        // Replace one at current position
+        if (_editor) _editor->replace(replace);
+    } else if (reply == QMessageBox::YesToAll) {
+        // Replace all without further prompting
+        onReplaceAll();
+    }
+    // Cancel: do nothing
+}
+
+void FindReplaceDialog::updateHighlight() {
+    // Re-apply visible find-result highlights for the current search term
+    if (!_editor) return;
+    QString text = _findCombo->currentText();
+    if (text.isEmpty()) {
+        clearHighlight();
+        return;
+    }
+    onSearchTextChanged(text);
+}
+
+void FindReplaceDialog::applyHighlightToggle() {
+    // Toggle showing/hiding find highlights based on _highlightingEnabled
+    if (!_editor) return;
+    if (_highlightingEnabled) {
+        updateHighlight();
+    } else {
+        clearHighlight();
+    }
+}
+
+void FindReplaceDialog::saveSearchToHistory(const QString& text) {
+    if (text.isEmpty()) return;
+    // Remove duplicate if exists (to avoid repeats)
+    _searchHistory.removeAll(text);
+    // Insert at front
+    _searchHistory.prepend(text);
+    // Trim to max size
+    while (_searchHistory.size() > MAX_HISTORY) {
+        _searchHistory.removeLast();
+    }
+    // Update combo box
+    {
+        QSignalBlocker blocker(_findCombo);
+        _findCombo->removeItem(_findCombo->findText(text));
+        _findCombo->insertItem(0, text);
+        _findCombo->setCurrentIndex(0);
+    }
+}
+
+void FindReplaceDialog::saveReplaceToHistory(const QString& text) {
+    if (text.isEmpty()) return;
+    _replaceHistory.removeAll(text);
+    _replaceHistory.prepend(text);
+    while (_replaceHistory.size() > MAX_HISTORY) {
+        _replaceHistory.removeLast();
+    }
+    {
+        QSignalBlocker blocker(_replaceCombo);
+        _replaceCombo->removeItem(_replaceCombo->findText(text));
+        _replaceCombo->insertItem(0, text);
+        _replaceCombo->setCurrentIndex(0);
+    }
+}
+
+void FindReplaceDialog::loadSearchHistory() {
+    // Load search history from settings and populate _findCombo
+    QSettings settings;
+    settings.beginGroup("FindReplaceDialog");
+    QStringList history = settings.value("searchHistory").toStringList();
+    settings.endGroup();
+
+    if (!history.isEmpty()) {
+        _searchHistory = history;
+        _findCombo->clear();
+        _findCombo->addItems(history);
+    }
+}
+
+void FindReplaceDialog::loadReplaceHistory() {
+    // Load replace history from settings and populate _replaceCombo
+    QSettings settings;
+    settings.beginGroup("FindReplaceDialog");
+    QStringList history = settings.value("replaceHistory").toStringList();
+    settings.endGroup();
+
+    if (!history.isEmpty()) {
+        _replaceHistory = history;
+        _replaceCombo->clear();
+        _replaceCombo->addItems(history);
+    }
+}
+
+void FindReplaceDialog::updateMarkColor(const QColor& color) {
+    _markColor = color;
+    // Re-apply mark all with new color if there's an active search
+    QString text = _findCombo->currentText();
+    if (!text.isEmpty() && _editor) {
+        onUnmarkAll();
+        onMarkAll();
+    }
+}
+
+void FindReplaceDialog::scheduleHideForSearch() {
+    // Hide the dialog briefly during search so it doesn't obscure results,
+    // then show it again after a short delay.
+    _wasHidden = !isVisible();
+    if (!isVisible()) return;  // already hidden, nothing to do
+
+    hide();
+    QTimer::singleShot(100, this, [this]() {
+        if (!_wasHidden) {
+            show();
+            activateWindow();
+        }
+    });
+}
+
+void FindReplaceDialog::keyPressEvent(QKeyEvent* event) {
+    // Handle Up/Down for history navigation in combos
+    QComboBox* combo = qobject_cast<QComboBox*>(focusWidget());
+    if (combo) {
+        if (event->key() == Qt::Key_Down && combo->currentIndex() == 0) {
+            // Allow normal combo navigation
+        }
+        if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+            // Enter in find combo: trigger find next
+            if (combo == _findCombo) {
+                onFindNext();
+                event->accept();
+                return;
+            }
+        }
+    }
+
+    // Escape closes the dialog
+    if (event->key() == Qt::Key_Escape) {
+        hide();
+        clearHighlight();
+        event->accept();
+        return;
+    }
+
+    // F3 / Shift+F3: find next / previous without mouse
+    if (event->key() == Qt::Key_F3) {
+        if (event->modifiers() & Qt::ShiftModifier) {
+            onFindPrevious();
+        } else {
+            onFindNext();
+        }
+        event->accept();
+        return;
+    }
+
+    event->ignore();
+}
+
+void FindReplaceDialog::showEvent(QShowEvent* event) {
+    QDialog::showEvent(event);
+    // Populate history combos on show
+    loadSearchHistory();
+    loadReplaceHistory();
+    // Set focus to find field
+    if (_findCombo) {
+        _findCombo->setFocus();
+        _findCombo->lineEdit()->selectAll();
+    }
+    // Update button states
+    onReplaceTextChanged(_replaceCombo->currentText());
+}
 

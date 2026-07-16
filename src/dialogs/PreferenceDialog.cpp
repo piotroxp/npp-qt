@@ -21,6 +21,14 @@
 #include <QTableWidget>
 #include <QFileDialog>
 #include <QRadioButton>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QXmlStreamReader>
+#include <QXmlStreamWriter>
+#include <QDir>
+#include <QFileInfo>
+#include <QMessageBox>
+#include <QDebug>
 
 PreferenceDialog::PreferenceDialog(QWidget* parent)
     : QDialog(parent)
@@ -765,11 +773,456 @@ void PreferenceDialog::reject() {
     QDialog::reject();
 }
 
-// === Stubs ===
-void PreferenceDialog::onReloadThemes() {}
-void PreferenceDialog::onApply() {}
-void PreferenceDialog::resetToDefaults() {}
-void PreferenceDialog::onImportFromNpp() {}
-void PreferenceDialog::onExportToNpp() {}
-void PreferenceDialog::onOpenThemesFolder() {}
+// ============================================================================
+// Theme Management
+// ============================================================================
+
+void PreferenceDialog::onReloadThemes() {
+    // Reload the theme list from standard locations and refresh the theme combo
+    QStringList themeFiles;
+
+    // Scan user themes directory: ~/.local/share/notepad--/themes/
+    QString userThemesDir = QDir::homePath() + "/.local/share/notepad--/themes";
+    QDir userDir(userThemesDir);
+    if (userDir.exists()) {
+        for (const QString& file : userDir.entryList(QStringList() << "*.xml", QDir::Files)) {
+            themeFiles.append(userThemesDir + "/" + file);
+        }
+    }
+
+    // Scan system themes directory: /usr/share/notepad--/themes/
+    QString systemThemesDir = "/usr/share/notepad--/themes";
+    QDir systemDir(systemThemesDir);
+    if (systemDir.exists()) {
+        for (const QString& file : systemDir.entryList(QStringList() << "*.xml", QDir::Files)) {
+            QString fullPath = systemThemesDir + "/" + file;
+            // Avoid duplicates
+            if (!themeFiles.contains(fullPath))
+                themeFiles.append(fullPath);
+        }
+    }
+
+    // Also scan config dir themes if it exists
+    QString configDir = QDir::homePath() + "/.config/notepad--/themes";
+    QDir configThemeDir(configDir);
+    if (configThemeDir.exists()) {
+        for (const QString& file : configThemeDir.entryList(QStringList() << "*.xml", QDir::Files)) {
+            QString fullPath = configDir + "/" + file;
+            if (!themeFiles.contains(fullPath))
+                themeFiles.append(fullPath);
+        }
+    }
+
+    // Store current selection before reload
+    QString currentTheme = _cmbTheme->currentData().toString();
+
+    // Clear and repopulate the theme combo
+    _cmbTheme->clear();
+
+    // Add built-in themes first
+    _cmbTheme->addItem("Default (Light)", "default");
+    _cmbTheme->addItem("Dark", "dark");
+    _cmbTheme->addItem("Light", "light");
+    _cmbTheme->addItem("High Contrast", "high-contrast");
+
+    // Add discovered XML themes
+    for (const QString& path : themeFiles) {
+        QFileInfo fi(path);
+        QString baseName = fi.baseName();
+        // Capitalize for display
+        QString displayName = baseName;
+        displayName[0] = displayName[0].toUpper();
+        _cmbTheme->addItem(displayName, baseName);
+    }
+
+    // Try to restore previous selection
+    int restoredIndex = _cmbTheme->findData(currentTheme);
+    if (restoredIndex >= 0) {
+        _cmbTheme->setCurrentIndex(restoredIndex);
+    }
+
+    qDebug() << "[PreferenceDialog] Reloaded" << themeFiles.size()
+             << "theme files. Current selection:" << currentTheme;
+}
+
+// ============================================================================
+// Apply Settings
+// ============================================================================
+
+void PreferenceDialog::onApply() {
+    // Delegate to the existing applySettings() which handles:
+    // - Writing settings to config file via app().saveConfig()
+    // - Updating lexer colors and editor state
+    // - Reloading theme if changed
+    applySettings();
+
+    // Emit signal for listeners to react
+    emit settingsApplied();
+
+    qDebug() << "[PreferenceDialog] Settings applied and config saved";
+}
+
+// ============================================================================
+// Reset to Defaults
+// ============================================================================
+
+void PreferenceDialog::resetToDefaults() {
+    // Ask user to confirm before resetting
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        tr("Reset to Defaults"),
+        tr("Are you sure you want to reset all settings to their default values?\n\n"
+           "This will clear your configuration file and cannot be undone."),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No);
+
+    if (reply != QMessageBox::Yes)
+        return;
+
+    // Reset all widgets to their default values
+    // General
+    _chkSingleInstance->setChecked(true);
+    _chkRememberSession->setChecked(true);
+    _spinMaxRecentFiles->setValue(50);
+
+    // Editor
+    _spinTabWidth->setValue(4);
+    _spinIndentWidth->setValue(4);
+    _chkTabAsSpaces->setChecked(false);
+    _chkWordWrap->setChecked(false);
+    _chkVirtualSpace->setChecked(true);
+    _chkSmartHome->setChecked(true);
+    _chkBackspaceUnindent->setChecked(false);
+    _cmbEolMode->setCurrentIndex(0);  // Unix (LF)
+    _cmbDefaultEncoding->setCurrentIndex(0);  // UTF-8
+    _chkAutoIndent->setChecked(true);
+    _chkWrapWithQuotes->setChecked(false);
+    _chkShowEol->setChecked(false);
+    _chkShowSpaceTab->setChecked(false);
+
+    // Appearance
+    _cmbTheme->setCurrentIndex(0);  // Default (Light)
+    _chkShowMenubar->setChecked(true);
+    _chkShowToolbar->setChecked(true);
+    _chkShowTabbar->setChecked(true);
+    _chkShowStatusbar->setChecked(true);
+    _chkCurrentLineHighlight->setChecked(true);
+    _chkShowIndentGuide->setChecked(false);
+
+    // File Associations — clear custom
+    _extListWidget->clear();
+
+    // Shortcut Mapper
+    _chkConflictWarning->setChecked(true);
+
+    // Margins
+    _chkShowLineNumbers->setChecked(true);
+    _spinLineNumberWidth->setValue(4);
+    _chkShowSymbols->setChecked(false);
+    _chkShowFolder->setChecked(true);
+    _spinSymbolMarginWidth->setValue(1);
+    _chkHighlightCurrentLine->setChecked(true);
+    _chkShowEdgeLine->setChecked(false);
+    _spinEdgeColumn->setValue(80);
+
+    // Backup / Auto-Save
+    _chkAutoSave->setChecked(false);
+    _spinAutoSaveInterval->setValue(5);
+    _chkAutoSaveCurrentOnly->setChecked(false);
+    _chkAutoSaveInBackground->setChecked(true);
+    _backupDirEdit->clear();
+    _backupStyleCombo->setCurrentIndex(0);
+    _spinMaxBackups->setValue(10);
+
+    // Language
+    _cmbLanguage->setCurrentIndex(0);
+    _chkAutoDetectLanguage->setChecked(true);
+
+    // Search
+    _chkSmartHighlighting->setChecked(true);
+    _spinMaxHighlightWords->setValue(1000);
+    _chkMatchCase->setChecked(false);
+    _chkMatchWholeWord->setChecked(false);
+    _chkWrapAround->setChecked(true);
+    _spinFindHistoryCount->setValue(10);
+
+    // Delete the config file to clear any persisted settings
+    QString configDir = QDir::homePath() + "/.config/notepad--";
+    QString configFile = configDir + "/config.xml";
+    if (QFile::exists(configFile)) {
+        QFile::remove(configFile);
+        qDebug() << "[PreferenceDialog] Removed config file:" << configFile;
+    }
+
+    // Also try app-level config path
+    app().saveConfig();
+
+    qDebug() << "[PreferenceDialog] Settings reset to defaults";
+}
+
+// ============================================================================
+// Import from Notepad++
+// ============================================================================
+
+void PreferenceDialog::onImportFromNpp() {
+    // Open file dialog to select a Notepad++ config file
+    QString filePath = QFileDialog::getOpenFileName(
+        this,
+        tr("Import Notepad++ Config"),
+        QString(),
+        tr("Notepad++ Files (*.xml *.json);;All Files (*)"));
+
+    if (filePath.isEmpty())
+        return;
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, tr("Import Error"),
+            tr("Could not open file:\n%1").arg(filePath));
+        return;
+    }
+
+    QXmlStreamReader reader(&file);
+    bool importedAny = false;
+
+    while (!reader.atEnd()) {
+        QXmlStreamReader::TokenType token = reader.readNext();
+
+        if (token == QXmlStreamReader::StartElement) {
+            QString name = reader.name().toString();
+
+            // Parse Notepad++ config.xml settings
+            if (name == "Global") {
+                while (!(reader.tokenType() == QXmlStreamReader::EndElement &&
+                         reader.name().toString() == QStringLiteral("Global")) && !reader.atEnd()) {
+                    reader.readNext();
+                    if (reader.tokenType() == QXmlStreamReader::StartElement) {
+                        QString setting = reader.name().toString();
+                        QString text = reader.readElementText();
+
+                        // Map N++ settings to npp-qt equivalents
+                        if (setting == "TabSize")
+                            _spinTabWidth->setValue(text.toInt());
+                        else if (setting == "IndentSize")
+                            _spinIndentWidth->setValue(text.toInt());
+                        else if (setting == "TabSize" && !_chkTabAsSpaces->isChecked())
+                            _chkTabAsSpaces->setChecked(true);
+                        else if (setting == "WordWrap")
+                            _chkWordWrap->setChecked(text == "yes");
+                        else if (setting == "ScintillaViewsSettings") {
+                            // Scintilla view settings
+                        }
+                    }
+                }
+                importedAny = true;
+            }
+
+            // Parse stylers.xml theme colors
+            else if (name == "LexerType") {
+                QString lexName = reader.attributes().value("name").toString();
+                // Theme colors would be applied via ThemeManager
+                Q_UNUSED(lexName);
+            }
+
+            // Parse shortcuts.xml
+            else if (name == "Shortcut") {
+                QString cmdName = reader.attributes().value("name").toString();
+                QString ctrl = reader.attributes().value("ctrl").toString();
+                QString alt = reader.attributes().value("alt").toString();
+                QString shift = reader.attributes().value("shift").toString();
+                QString key = reader.attributes().value("key").toString();
+
+                // Shortcuts would be imported via ShortcutManager
+                Q_UNUSED(cmdName);
+                Q_UNUSED(ctrl);
+                Q_UNUSED(alt);
+                Q_UNUSED(shift);
+                Q_UNUSED(key);
+            }
+        }
+    }
+
+    file.close();
+
+    if (reader.hasError()) {
+        QMessageBox::warning(this, tr("Parse Error"),
+            tr("Error parsing file:\n%1").arg(reader.errorString()));
+        return;
+    }
+
+    QString msg = importedAny
+        ? tr("Settings imported successfully from:\n%1").arg(filePath)
+        : tr("No recognized settings found in:\n%1").arg(filePath);
+    QMessageBox::information(this, tr("Import Complete"), msg);
+
+    qDebug() << "[PreferenceDialog] Imported from Notepad++ config:" << filePath;
+}
+
+// ============================================================================
+// Export to Notepad++
+// ============================================================================
+
+void PreferenceDialog::onExportToNpp() {
+    // Open file dialog to choose export destination
+    QString filePath = QFileDialog::getSaveFileName(
+        this,
+        tr("Export Settings to Notepad++ Format"),
+        QDir::homePath() + "/npp-qt-export.xml",
+        tr("Notepad++ Files (*.xml);;All Files (*)"));
+
+    if (filePath.isEmpty())
+        return;
+
+    // Ensure .xml extension
+    if (!filePath.endsWith(".xml", Qt::CaseInsensitive))
+        filePath += ".xml";
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, tr("Export Error"),
+            tr("Could not create file:\n%1").arg(filePath));
+        return;
+    }
+
+    QXmlStreamWriter writer(&file);
+    writer.setAutoFormatting(true);
+    writer.writeStartDocument();
+    writer.writeStartElement("NotepadPlus");
+
+    // Export General settings
+    writer.writeStartElement("Global");
+    writer.writeTextElement("TabSize", QString::number(_spinTabWidth->value()));
+    writer.writeTextElement("IndentSize", QString::number(_spinIndentWidth->value()));
+    writer.writeTextElement("TabSizeUsed", _chkTabAsSpaces->isChecked() ? "yes" : "no");
+    writer.writeTextElement("WordWrap", _chkWordWrap->isChecked() ? "yes" : "no");
+    writer.writeTextElement("SingleInstance",
+        _chkSingleInstance->isChecked() ? "yes" : "no");
+    writer.writeTextElement("RememberSession",
+        _chkRememberSession->isChecked() ? "yes" : "no");
+    writer.writeTextElement("MaxRecentFiles",
+        QString::number(_spinMaxRecentFiles->value()));
+    writer.writeEndElement();  // Global
+
+    // Export EOL mode
+    writer.writeStartElement("EOL");
+    int eolIdx = _cmbEolMode->currentIndex();
+    QString eolStr = (eolIdx == 0) ? "LF" : (eolIdx == 1) ? "CRLF" : "CR";
+    writer.writeAttribute("mode", eolStr);
+    writer.writeEndElement();
+
+    // Export encoding
+    writer.writeStartElement("Encoding");
+    int encIdx = _cmbDefaultEncoding->currentIndex();
+    QString encStr = (encIdx == 0) ? "UTF-8" : (encIdx == 1) ? "UTF-8-BOM"
+                    : (encIdx == 2) ? "UTF-16-LE" : (encIdx == 3) ? "UTF-16-BE" : "ANSI";
+    writer.writeCharacters(encStr);
+    writer.writeEndElement();
+
+    // Export UI visibility settings
+    writer.writeStartElement("UI");
+    writer.writeTextElement("ShowMenuBar", _chkShowMenubar->isChecked() ? "yes" : "no");
+    writer.writeTextElement("ShowToolBar", _chkShowToolbar->isChecked() ? "yes" : "no");
+    writer.writeTextElement("ShowTabBar", _chkShowTabbar->isChecked() ? "yes" : "no");
+    writer.writeTextElement("ShowStatusBar", _chkShowStatusbar->isChecked() ? "yes" : "no");
+    writer.writeEndElement();  // UI
+
+    // Export Editor settings
+    writer.writeStartElement("Editor");
+    writer.writeTextElement("AutoIndent", _chkAutoIndent->isChecked() ? "yes" : "no");
+    writer.writeTextElement("VirtualSpace", _chkVirtualSpace->isChecked() ? "yes" : "no");
+    writer.writeTextElement("SmartHome", _chkSmartHome->isChecked() ? "yes" : "no");
+    writer.writeTextElement("WrapWithQuotes", _chkWrapWithQuotes->isChecked() ? "yes" : "no");
+    writer.writeTextElement("ShowEOL", _chkShowEol->isChecked() ? "yes" : "no");
+    writer.writeTextElement("ShowSpaces", _chkShowSpaceTab->isChecked() ? "yes" : "no");
+    writer.writeEndElement();  // Editor
+
+    // Export theme
+    writer.writeStartElement("Theme");
+    writer.writeAttribute("name", _cmbTheme->currentData().toString());
+    writer.writeEndElement();
+
+    // Export margin settings
+    writer.writeStartElement("Margins");
+    writer.writeTextElement("ShowLineNumbers", _chkShowLineNumbers->isChecked() ? "yes" : "no");
+    writer.writeTextElement("LineNumberWidth", QString::number(_spinLineNumberWidth->value()));
+    writer.writeTextElement("ShowSymbolMargin", _chkShowSymbols->isChecked() ? "yes" : "no");
+    writer.writeTextElement("ShowFolderMargin", _chkShowFolder->isChecked() ? "yes" : "no");
+    writer.writeTextElement("HighlightCurrentLine",
+        _chkHighlightCurrentLine->isChecked() ? "yes" : "no");
+    writer.writeTextElement("ShowEdgeLine", _chkShowEdgeLine->isChecked() ? "yes" : "no");
+    writer.writeTextElement("EdgeColumn", QString::number(_spinEdgeColumn->value()));
+    writer.writeEndElement();  // Margins
+
+    // Export Backup/Auto-Save settings
+    writer.writeStartElement("Backup");
+    writer.writeTextElement("AutoSave", _chkAutoSave->isChecked() ? "yes" : "no");
+    writer.writeTextElement("AutoSaveInterval",
+        QString::number(_spinAutoSaveInterval->value()));
+    writer.writeTextElement("AutoSaveCurrentOnly",
+        _chkAutoSaveCurrentOnly->isChecked() ? "yes" : "no");
+    writer.writeTextElement("AutoSaveInBackground",
+        _chkAutoSaveInBackground->isChecked() ? "yes" : "no");
+    writer.writeTextElement("BackupDir", _backupDirEdit->text());
+    writer.writeTextElement("BackupStyle",
+        QString::number(_backupStyleCombo->currentIndex()));
+    writer.writeTextElement("MaxBackups", QString::number(_spinMaxBackups->value()));
+    writer.writeEndElement();  // Backup
+
+    // Export File Associations
+    writer.writeStartElement("FileAssociations");
+    for (int i = 0; i < _extListWidget->count(); ++i) {
+        writer.writeEmptyElement("Extension");
+        writer.writeAttribute("name", _extListWidget->item(i)->text());
+    }
+    writer.writeEndElement();  // FileAssociations
+
+    writer.writeEndElement();  // NotepadPlus
+    writer.writeEndDocument();
+    file.close();
+
+    QMessageBox::information(this, tr("Export Complete"),
+        tr("Settings exported successfully to:\n%1").arg(filePath));
+
+    qDebug() << "[PreferenceDialog] Exported to Notepad++ format:" << filePath;
+}
+
+// ============================================================================
+// Open Themes Folder
+// ============================================================================
+
+void PreferenceDialog::onOpenThemesFolder() {
+    // Determine the themes directory — prefer user-local over system
+    QStringList searchPaths;
+    searchPaths << QDir::homePath() + "/.config/notepad--/themes";
+    searchPaths << QDir::homePath() + "/.local/share/notepad--/themes";
+    searchPaths << "/usr/share/notepad--/themes";
+
+    QString themesDir;
+    for (const QString& path : searchPaths) {
+        if (QDir(path).exists()) {
+            themesDir = path;
+            break;
+        }
+    }
+
+    // If none exist, use the user config dir (it will be created on first theme save)
+    if (themesDir.isEmpty()) {
+        themesDir = QDir::homePath() + "/.config/notepad--/themes";
+        // Ensure directory exists
+        if (!QDir().mkpath(themesDir)) {
+            QMessageBox::warning(this, tr("Error"),
+                tr("Could not create themes directory:\n%1").arg(themesDir));
+            return;
+        }
+    }
+
+    // Open the folder in the system file manager
+    bool opened = QDesktopServices::openUrl(QUrl::fromLocalFile(themesDir));
+    if (!opened) {
+        QMessageBox::warning(this, tr("Error"),
+            tr("Could not open folder:\n%1").arg(themesDir));
+    }
+
+    qDebug() << "[PreferenceDialog] Opened themes folder:" << themesDir;
+}
 
