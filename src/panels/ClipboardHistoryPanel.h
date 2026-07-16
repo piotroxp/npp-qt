@@ -44,7 +44,7 @@ public:
 
     // Configuration
     void setMaxEntries(int max);
-    int maxEntries() const { return maxEntries; }
+    int maxEntries() const { return _maxEntries; }
 
     void setEnablePinning(bool enable);
     bool isPinningEnabled() const { return pinningEnabled; }
@@ -128,7 +128,7 @@ private:
     // Internal state
     QList<ClipboardEntry> entries;
     QString _currentFilter;
-    int maxEntries = 100;
+    int _maxEntries = 100;
     bool pinningEnabled = true;
     bool searchEnabled = true;
     bool _multiSelect = false;

@@ -706,6 +706,37 @@ bool ClipboardHistoryPanel::eventFilter(QObject* watched, QEvent* event)
 // Note: QListWidget::startDrag() is used for drag-and-drop.
 // The editor accepts drops via its own event handlers.
 
-// === Stubs ===
-void ClipboardHistoryPanel::onExpandCollapse(bool) {}
+// ─── Expand / Collapse ────────────────────────────────────────────────────────
+
+void ClipboardHistoryPanel::onExpandCollapse(bool expand)
+{
+    if (_expanded == expand) return; // Already in desired state
+    _expanded = expand;
+
+    QWidget* content = widget();
+    if (!content) return;
+
+    if (expand) {
+        // Expanded: show search box and status label, restore list widget height
+        _searchBox->show();
+        _statusLabel->show();
+
+        // Restore list widget to stretch with available space
+        _listWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        _listWidget->setFixedHeight(QWIDGETSIZE_MAX);
+
+        // Trigger layout update
+        content->layout()->activate();
+    } else {
+        // Collapsed: hide search box and status label, shrink list widget
+        _searchBox->hide();
+        _statusLabel->hide();
+
+        // Show only ~3 items by fixing list widget height
+        int itemHeight = _listWidget->sizeHintForRow(0);
+        if (itemHeight <= 0) itemHeight = 24; // fallback
+        _listWidget->setFixedHeight(itemHeight * 3 + 2 * _listWidget->frameWidth());
+        _listWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    }
+}
 

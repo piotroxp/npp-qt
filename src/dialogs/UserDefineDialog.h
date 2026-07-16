@@ -16,14 +16,13 @@
 #include <QLabel>
 #include <QGroupBox>
 #include <QTextEdit>
+#include <QPlainTextEdit>
 #include <QFontComboBox>
 
 class UdlManager;
 struct UdlDefinition;
 
 // Preview editor for real-time UDL testing
-class UdlPreviewEditor;
-
 class UserDefineDialog : public QDialog {
     Q_OBJECT
 
@@ -143,7 +142,7 @@ private:
     QLineEdit* _stringWordCharEdit = nullptr;
 
     // --- Preview tab ---
-    UdlPreviewEditor* _previewEditor = nullptr;
+    QPlainTextEdit* _previewEditor = nullptr;
     QLabel* _previewStatusLabel = nullptr;
 
     // Internal state

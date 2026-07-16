@@ -311,12 +311,7 @@ void ToolBar::setupActions() {
     // =========================================================================
     for (QAction* action : actions()) {
         if (!action->data().isNull()) {
-            connect(action, &QAction::triggered, this, [this, action]() {
-                QString cmd = action->data().toString();
-                if (!cmd.isEmpty()) {
-                    emit toolBarCommand(cmd);
-                }
-            });
+            connect(action, &QAction::triggered, this, &ToolBar::onActionTriggered);
         }
     }
 }
@@ -618,5 +613,99 @@ void ToolBar::dropEvent(QDropEvent* event) {
 }
 
 // === Stubs ===
-void ToolBar::onActionTriggered() {}
+void ToolBar::onActionTriggered() {
+    QAction* action = qobject_cast<QAction*>(sender());
+    if (!action) {
+        return;
+    }
+
+    QString cmd = action->data().toString();
+    if (cmd.isEmpty()) {
+        return;
+    }
+
+    // Extract simple command name from namespaced format (e.g., "file.new" -> "new")
+    QString simpleCmd = cmd;
+    if (cmd.contains('.')) {
+        simpleCmd = cmd.section('.', -1);
+    }
+
+    // Dispatch to appropriate handler
+    if (cmd == "file.new") {
+        onNew();
+    } else if (cmd == "file.open") {
+        onOpen();
+    } else if (cmd == "file.save") {
+        onSave();
+    } else if (cmd == "file.saveAs") {
+        onSaveAs();
+    } else if (cmd == "file.close") {
+        onClose();
+    } else if (cmd == "edit.undo") {
+        onUndo();
+    } else if (cmd == "edit.redo") {
+        onRedo();
+    } else if (cmd == "edit.cut") {
+        onCut();
+    } else if (cmd == "edit.copy") {
+        onCopy();
+    } else if (cmd == "edit.paste") {
+        onPaste();
+    } else if (cmd == "edit.delete") {
+        onDelete();
+    } else if (cmd == "edit.find") {
+        onFind();
+    } else if (cmd == "edit.replace") {
+        onReplace();
+    } else if (cmd == "edit.goto") {
+        onGotoLine();
+    } else if (cmd == "edit.toggleComment") {
+        onToggleComment();
+    } else if (cmd == "edit.blockComment") {
+        onBlockComment();
+    } else if (cmd == "edit.indent") {
+        onIndent();
+    } else if (cmd == "edit.outdent") {
+        onOutdent();
+    } else if (cmd == "macro.record") {
+        onRecordMacro();
+    } else if (cmd == "macro.stop") {
+        onStopMacro();
+    } else if (cmd == "macro.play") {
+        onPlayMacro();
+    } else if (cmd == "tools.run") {
+        onRun();
+    } else if (cmd == "tools.print") {
+        onPrint();
+    } else if (cmd == "view.wordWrap") {
+        onWordWrap();
+    } else if (cmd == "view.showAllChars") {
+        onShowAllCharacters();
+    } else if (cmd == "view.readOnly") {
+        onToggleReadOnly();
+    } else if (cmd == "view.zoomIn") {
+        onZoomIn();
+    } else if (cmd == "view.zoomOut") {
+        onZoomOut();
+    } else if (cmd == "view.zoomReset") {
+        onZoomReset();
+    } else if (cmd == "view.docMap") {
+        onDocMap();
+    } else if (cmd == "view.funcList") {
+        onFuncList();
+    } else if (cmd == "view.fileBrowser") {
+        onFileBrowser();
+    } else if (cmd == "encoding.menu" || cmd.startsWith("encoding.")) {
+        onEncodingMenu();
+    } else if (cmd.startsWith("eol.")) {
+        onEolMenu();
+    } else if (cmd.startsWith("language.")) {
+        onLanguageMenu();
+    } else if (cmd == "settings.toolbarCustomize") {
+        showCustomizationDialog();
+    }
+
+    // Emit the command for any additional listeners
+    emit toolBarCommand(cmd);
+}
 

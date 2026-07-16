@@ -19,6 +19,11 @@
 #include <QSpinBox>
 #include <QMessageBox>
 #include <QApplication>
+#include <QFileDialog>
+#include <QFile>
+#include <QTextStream>
+#include <QXmlStreamWriter>
+#include <QXmlStreamReader>
 
 // ============================================================================
 // Construction
@@ -643,12 +648,320 @@ QString UserDefineDialog::getColorString(const QColor& c) const {
         .arg(c.blue(), 2, 16, QChar('0'));
 }
 
-// === Stubs ===
-void UserDefineDialog::onValidateClicked() {}
-void UserDefineDialog::updatePreview() {}
-void UserDefineDialog::onImportClicked() {}
-void UserDefineDialog::onExportClicked() {}
-void UserDefineDialog::onTestClicked() {}
-void UserDefineDialog::onResetClicked() {}
-void UserDefineDialog::onAddKeywordClicked(int) {}
+// ============================================================================
+// Validation
+// ============================================================================
+
+QStringList UserDefineDialog::validateUdl() const {
+    QStringList errors;
+
+    if (_nameEdit->text().trimmed().isEmpty())
+        errors << tr("Language name is empty.");
+
+    // Collect all non-empty keywords across groups
+    QStringList allKeywords;
+    for (int i = 0; i < 9; ++i) {
+        if (_keywordTables[i]) {
+            QString kws = keywordsFromTable(_keywordTables[i]);
+            QStringList lines = kws.split('\n', Qt::SkipEmptyParts);
+            for (const QString& line : lines) {
+                QStringList words = line.trimmed().split(' ', Qt::SkipEmptyParts);
+                for (const QString& kw : words) {
+                    if (allKeywords.contains(kw))
+                        errors << tr("Duplicate keyword '%1' found in group %2.").arg(kw).arg(i);
+                    allKeywords.append(kw);
+                }
+            }
+        }
+    }
+
+    // Block comment requires both start and end
+    if (!_blockCommentStartEdit->text().isEmpty() && _blockCommentEndEdit->text().isEmpty())
+        errors << tr("Block comment start is set but block comment end is empty.");
+
+    if (_blockCommentStartEdit->text().isEmpty() && !_blockCommentEndEdit->text().isEmpty())
+        errors << tr("Block comment end is set but block comment start is empty.");
+
+    return errors;
+}
+
+// ============================================================================
+// Import / Export
+// ============================================================================
+
+bool UserDefineDialog::importFromFile(const QString& path) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, tr("Import Failed"),
+            tr("Could not open file:\n%1").arg(path));
+        return false;
+    }
+
+    QXmlStreamReader xml(&file);
+
+    // Read to the first UserLang element
+    while (!xml.atEnd()) {
+        xml.readNext();
+        if (xml.isStartElement() && xml.name() == QLatin1String("UserLang"))
+            break;
+    }
+
+    if (xml.atEnd() || xml.name() != QLatin1String("UserLang")) {
+        QMessageBox::warning(this, tr("Import Failed"),
+            tr("No <UserLang> element found in:\n%1").arg(path));
+        return false;
+    }
+
+    // Parse attributes: name and ext
+    QString name = xml.attributes().value(QLatin1String("name")).toString();
+    QString extStr = xml.attributes().value(QLatin1String("ext")).toString();
+
+    if (!name.isEmpty())
+        _nameEdit->setText(name);
+    if (!extStr.isEmpty())
+        _extEdit->setText(extStr);
+
+    // Parse child elements
+    while (!xml.atEnd()) {
+        xml.readNext();
+        if (xml.isEndElement() && xml.name() == QLatin1String("UserLang"))
+            break;
+        if (!xml.isStartElement())
+            continue;
+
+        if (xml.name() == QLatin1String("Keywords")) {
+            QString attrName = xml.attributes().value(QLatin1String("name")).toString();
+            QString keywords = xml.readElementText().trimmed();
+
+            if (attrName == QLatin1String("Keywords"))
+                setupKeywordTable(_keywordTables[0], keywords);
+            else if (attrName == QLatin1String("Keywords2"))
+                setupKeywordTable(_keywordTables[1], keywords);
+            else if (attrName == QLatin1String("Keywords3"))
+                setupKeywordTable(_keywordTables[2], keywords);
+            else if (attrName == QLatin1String("Keywords4"))
+                setupKeywordTable(_keywordTables[3], keywords);
+            else if (attrName == QLatin1String("Keywords5"))
+                setupKeywordTable(_keywordTables[4], keywords);
+            else if (attrName == QLatin1String("Keywords6"))
+                setupKeywordTable(_keywordTables[5], keywords);
+            else if (attrName == QLatin1String("Keywords7"))
+                setupKeywordTable(_keywordTables[6], keywords);
+            else if (attrName == QLatin1String("Keywords8"))
+                setupKeywordTable(_keywordTables[7], keywords);
+        }
+        else if (xml.name() == QLatin1String("Comment")) {
+            _lineCommentEdit->setText(
+                xml.attributes().value(QLatin1String("lineComment")).toString());
+            _blockCommentStartEdit->setText(
+                xml.attributes().value(QLatin1String("streamCommentStart")).toString());
+            _blockCommentEndEdit->setText(
+                xml.attributes().value(QLatin1String("streamCommentEnd")).toString());
+        }
+        else if (xml.name() == QLatin1String("Operators")) {
+            QString ops = xml.readElementText().trimmed();
+            _operatorTable->setRowCount(0);
+            for (QChar ch : ops) {
+                int row = _operatorTable->rowCount();
+                _operatorTable->insertRow(row);
+                _operatorTable->setItem(row, 0, new QTableWidgetItem(QString(ch)));
+            }
+        }
+        else if (xml.name() == QLatin1String("Folder")) {
+            _folderOpenEdit->setText(
+                xml.attributes().value(QLatin1String("folderStart")).toString());
+            _folderCloseEdit->setText(
+                xml.attributes().value(QLatin1String("folderEnd")).toString());
+        }
+    }
+
+    return true;
+}
+
+bool UserDefineDialog::exportToFile(const QString& path) const {
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(const_cast<UserDefineDialog*>(this), tr("Export Failed"),
+            tr("Could not write to:\n%1").arg(path));
+        return false;
+    }
+
+    QXmlStreamWriter xml(&file);
+    xml.setAutoFormatting(true);
+    xml.writeStartDocument();
+    xml.writeStartElement(QLatin1String("NotepadPlus"));
+    xml.writeStartElement(QLatin1String("UserLang"));
+    xml.writeAttribute(QLatin1String("name"), _nameEdit->text().trimmed());
+    xml.writeAttribute(QLatin1String("ext"), _extEdit->text().trimmed());
+
+    // Keywords
+    QStringList kwNames = {
+        QLatin1String("Keywords"), QLatin1String("Keywords2"),
+        QLatin1String("Keywords3"), QLatin1String("Keywords4"),
+        QLatin1String("Keywords5"), QLatin1String("Keywords6"),
+        QLatin1String("Keywords7"), QLatin1String("Keywords8")
+    };
+    for (int i = 0; i < 8; ++i) {
+        xml.writeStartElement(QLatin1String("Keywords"));
+        xml.writeAttribute(QLatin1String("name"), kwNames[i]);
+        xml.writeCharacters(keywordsFromTable(_keywordTables[i]));
+        xml.writeEndElement(); // Keywords
+    }
+
+    // Keywords9 — stored in _keywordTables[8]
+    xml.writeStartElement(QLatin1String("Keywords"));
+    xml.writeAttribute(QLatin1String("name"), QLatin1String("Keywords9"));
+    xml.writeCharacters(keywordsFromTable(_keywordTables[8]));
+    xml.writeEndElement(); // Keywords9
+
+    // Comment
+    xml.writeStartElement(QLatin1String("Comment"));
+    if (!_lineCommentEdit->text().isEmpty())
+        xml.writeAttribute(QLatin1String("lineComment"), _lineCommentEdit->text());
+    if (!_blockCommentStartEdit->text().isEmpty())
+        xml.writeAttribute(QLatin1String("streamCommentStart"), _blockCommentStartEdit->text());
+    if (!_blockCommentEndEdit->text().isEmpty())
+        xml.writeAttribute(QLatin1String("streamCommentEnd"), _blockCommentEndEdit->text());
+    xml.writeEndElement(); // Comment
+
+    // Operators
+    xml.writeStartElement(QLatin1String("Operators"));
+    xml.writeCharacters(operatorsFromTable());
+    xml.writeEndElement(); // Operators
+
+    // Folder
+    xml.writeStartElement(QLatin1String("Folder"));
+    if (!_folderOpenEdit->text().isEmpty())
+        xml.writeAttribute(QLatin1String("folderStart"), _folderOpenEdit->text());
+    if (!_folderCloseEdit->text().isEmpty())
+        xml.writeAttribute(QLatin1String("folderEnd"), _folderCloseEdit->text());
+    xml.writeEndElement(); // Folder
+
+    xml.writeEndElement(); // UserLang
+    xml.writeEndElement(); // NotepadPlus
+    xml.writeEndDocument();
+
+    return true;
+}
+
+// ============================================================================
+// Button handlers
+// ============================================================================
+
+void UserDefineDialog::onValidateClicked() {
+    QStringList errors = validateUdl();
+    if (errors.isEmpty()) {
+        QMessageBox::information(this, tr("Validation"),
+            tr("UDL is valid."));
+    } else {
+        QMessageBox::warning(this, tr("Validation Errors"),
+            tr("The following issues were found:\n\n%1").arg(errors.join("\n")));
+    }
+}
+
+void UserDefineDialog::updatePreview() {
+    // Build a simple sample snippet from keywords
+    QString sample;
+
+    for (int i = 0; i < 9; ++i) {
+        if (!_keywordTables[i])
+            continue;
+        QString kws = keywordsFromTable(_keywordTables[i]);
+        QStringList lines = kws.split('\n', Qt::SkipEmptyParts);
+        for (int li = 0; li < lines.size() && li < 2; ++li) {
+            QStringList words = lines[li].trimmed().split(' ', Qt::SkipEmptyParts);
+            for (int wi = 0; wi < words.size() && wi < 4; ++wi) {
+                sample += words[wi] + " ";
+            }
+            sample += "\n";
+        }
+    }
+
+    // Add some generic sample content if no keywords defined
+    if (sample.trimmed().isEmpty()) {
+        sample = tr("// Sample code\n"
+                   "// Add keywords in the Keywords tab to see them here\n"
+                   "int main() {\n"
+                   "    return 0;\n"
+                   "}\n");
+    }
+
+    // Emit the test signal so the main app can apply the UDL to a buffer
+    emit testUdlRequested(currentName());
+
+    if (_previewEditor) {
+        _previewEditor->setPlainText(sample);
+    }
+}
+
+void UserDefineDialog::onImportClicked() {
+    QString path = QFileDialog::getOpenFileName(
+        this,
+        tr("Import UDL"),
+        QString(),
+        tr("UDL files (*.xml *.udl);;All files (*)"));
+    if (path.isEmpty())
+        return;
+
+    if (importFromFile(path)) {
+        QMessageBox::information(this, tr("Import"),
+            tr("Import successful."));
+        updatePreview();
+    }
+}
+
+void UserDefineDialog::onExportClicked() {
+    QString defaultName = _nameEdit->text().trimmed().isEmpty()
+        ? QStringLiteral("mylang")
+        : _nameEdit->text().trimmed();
+
+    QString path = QFileDialog::getSaveFileName(
+        this,
+        tr("Export UDL"),
+        defaultName + ".xml",
+        tr("UDL files (*.xml);;All files (*)"));
+    if (path.isEmpty())
+        return;
+
+    if (exportToFile(path)) {
+        QMessageBox::information(this, tr("Export"),
+            tr("Export successful."));
+    }
+}
+
+void UserDefineDialog::onTestClicked() {
+    emit testUdlRequested(currentName());
+    QMessageBox::information(this, tr("Test Mode"),
+        tr("Test mode: Apply your language definition and test it on the sample "
+           "text in the preview tab."));
+}
+
+void UserDefineDialog::onResetClicked() {
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        tr("Reset to Defaults"),
+        tr("Reset all settings to defaults?"),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No);
+    if (reply == QMessageBox::Yes) {
+        createNew(currentName());
+        updatePreview();
+    }
+}
+
+void UserDefineDialog::onAddKeywordClicked(int group) {
+    if (group < 0 || group >= 9)
+        return;
+    QTableWidget* table = _keywordTables[group];
+    if (!table)
+        return;
+
+    int row = table->rowCount();
+    table->insertRow(row);
+    table->setItem(row, 0, new QTableWidgetItem(QString()));
+    table->setCurrentCell(row, 0);
+    table->editItem(table->item(row, 0));
+
+    updatePreview();
+}
 

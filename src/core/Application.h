@@ -248,6 +248,7 @@ public:
     DocumentMapPanel* documentMapPanel() const { return _docMapPanel; }
     FunctionListPanel* functionListPanel() const { return _funcListPanel; }
     FileBrowserPanel* fileBrowserPanel() const { return _fileBrowserPanel; }
+    class ClipboardHistoryPanel* clipboardHistoryPanel() const { return _clipboardHistoryPanel; }
 
     // Editors
     ScintillaEditor* getEditor(int viewId = -1) const;
@@ -483,6 +484,7 @@ private:
     DocumentMapPanel*   _docMapPanel = nullptr;
     FunctionListPanel*  _funcListPanel = nullptr;
     FileBrowserPanel*   _fileBrowserPanel = nullptr;
+    class ClipboardHistoryPanel* _clipboardHistoryPanel = nullptr;
 
     // UI components (typed for signal access)
     MenuBar*    _menuBar = nullptr;

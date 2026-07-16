@@ -124,4 +124,7 @@ private:
 
     // Selected items for multi-select operations
     QList<QListWidgetItem*> _selectedItems;
+
+    // Expand/collapse state
+    bool _expanded = true;
 };

@@ -8,6 +8,7 @@
 #include <QAction>
 #include <QKeySequence>
 #include <QStyle>
+#include <QSettings>
 #include "../core/RecentFilesManager.h"
 #include <QApplication>
 #include <QShortcut>
@@ -406,7 +407,21 @@ void MenuBar::buildMenus() {
     }
 }
 
-// === Stubs ===
-void MenuBar::onOpenRecentFile(const QString&) {}
-void MenuBar::onOpenRecentClear() {}
+// === Recent File Handlers ===
+void MenuBar::onOpenRecentFile(const QString& filePath) {
+    // Emit signal so listeners can react
+    emit recentFileClicked(filePath);
+    // Open the file via Application (takes std::string)
+    Application::instance().openFile(filePath.toStdString());
+}
+
+void MenuBar::onOpenRecentClear() {
+    // Clear the recent files list via RecentFilesManager
+    RecentFilesManager::instance().clear();
+    // Also save the cleared list to QSettings directly (for direct MenuBar usage)
+    QSettings settings;
+    settings.setValue("recentFiles", QStringList());
+    // Rebuild the UI by repopulating the submenu
+    RecentFilesManager::instance().populateMenu(_recentFilesMenu);
+}
 

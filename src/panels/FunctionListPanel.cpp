@@ -14,6 +14,8 @@
 #include <QRegularExpressionMatch>
 #include <QLabel>
 #include <QDebug>
+#include <QApplication>
+#include <QClipboard>
 #include <algorithm>
 
 // ============================================================================
@@ -148,6 +150,12 @@ FunctionListPanel::FunctionListPanel(QWidget* parent)
     connect(_typeFilter, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &FunctionListPanel::onTypeFilterChanged);
     connect(_sortCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &FunctionListPanel::onSortChanged);
     connect(accessFilter, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &FunctionListPanel::onTypeFilterChanged);
+
+    // Debounce timer for refresh
+    _debounceTimer = new QTimer(this);
+    _debounceTimer->setSingleShot(true);
+    _debounceTimer->setInterval(300);
+    connect(_debounceTimer, &QTimer::timeout, this, &FunctionListPanel::refresh);
 }
 
 FunctionListPanel::~FunctionListPanel() {
@@ -1157,17 +1165,125 @@ void FunctionListPanel::parseMakefile(const QStringList& lines) {
 }
 
 // === Stubs ===
-void FunctionListPanel::onEditorTextChanged() {}
-void FunctionListPanel::onLanguageChanged() {}
-void FunctionListPanel::onSortModeChanged(int) {}
-void FunctionListPanel::setSortByLine(bool) {}
-void FunctionListPanel::onExpandAll() {}
-void FunctionListPanel::onCollapseAll() {}
-void FunctionListPanel::onItemClicked(QTreeWidgetItem*, int) {}
-void FunctionListPanel::onItemExpanded(QTreeWidgetItem*) {}
-void FunctionListPanel::onItemCollapsed(QTreeWidgetItem*) {}
-void FunctionListPanel::onContextMenu(const QPoint&) {}
-void FunctionListPanel::copyFunctionName() {}
-void FunctionListPanel::copyFunctionSignature() {}
-void FunctionListPanel::goToDefinition() {}
-void FunctionListPanel::onResort() {}
+void FunctionListPanel::onEditorTextChanged() {
+    refreshDebounced();
+}
+
+void FunctionListPanel::onLanguageChanged() {
+    // Re-init XML parser for the new language and refresh the list
+    if (_editor) {
+        _lastLanguage.clear();
+    }
+    initXmlParser();
+    refreshDebounced();
+}
+
+void FunctionListPanel::onSortModeChanged(int index) {
+    // index: 0=name A-Z, 1=name Z-A, 2=line asc, 3=line desc
+    _sortByLine = (index == 2 || index == 3);
+    onResort();
+}
+
+void FunctionListPanel::setSortByLine(bool byLine) {
+    _sortByLine = byLine;
+    if (_sortCombo) {
+        _sortCombo->setCurrentIndex(byLine ? 2 : 0);
+    }
+    onResort();
+}
+
+void FunctionListPanel::onExpandAll() {
+    if (_tree) {
+        _tree->expandAll();
+    }
+    updateCounts();
+}
+
+void FunctionListPanel::onCollapseAll() {
+    if (_tree) {
+        _tree->collapseAll();
+    }
+    updateCounts();
+}
+
+void FunctionListPanel::onItemClicked(QTreeWidgetItem* item, int) {
+    if (!item) return;
+    bool ok = false;
+    int line = item->data(0, Qt::UserRole).toInt(&ok);
+    if (ok && line >= 0) {
+        goToDefinition();
+    }
+}
+
+void FunctionListPanel::onItemExpanded(QTreeWidgetItem*) {
+    updateCounts();
+}
+
+void FunctionListPanel::onItemCollapsed(QTreeWidgetItem*) {
+    updateCounts();
+}
+
+void FunctionListPanel::onContextMenu(const QPoint& pos) {
+    if (!_tree) return;
+    QMenu menu(_tree);
+    menu.addAction(tr("Copy Function Name"), this, &FunctionListPanel::copyFunctionName);
+    menu.addAction(tr("Copy Signature"), this, &FunctionListPanel::copyFunctionSignature);
+    menu.addAction(tr("Go to Definition"), this, &FunctionListPanel::goToDefinition);
+    menu.exec(_tree->viewport()->mapToGlobal(pos));
+}
+
+void FunctionListPanel::copyFunctionName() {
+    QTreeWidgetItem* item = _tree ? _tree->currentItem() : nullptr;
+    if (!item) return;
+    QString name = item->text(0);
+    if (!name.isEmpty()) {
+        QApplication::clipboard()->setText(name);
+    }
+}
+
+void FunctionListPanel::copyFunctionSignature() {
+    QTreeWidgetItem* item = _tree ? _tree->currentItem() : nullptr;
+    if (!item) return;
+    QString sig = item->data(0, Qt::UserRole + 1).toString();
+    if (!sig.isEmpty()) {
+        QApplication::clipboard()->setText(sig);
+    }
+}
+
+void FunctionListPanel::goToDefinition() {
+    QTreeWidgetItem* item = _tree ? _tree->currentItem() : nullptr;
+    if (!item || !_editor) return;
+    bool ok = false;
+    int line = item->data(0, Qt::UserRole).toInt(&ok);
+    if (!ok || line < 0) return;
+    // Scintilla lines are 0-indexed internally
+    _editor->gotoLine(line - 1, 0);
+    emit functionSelected(line);
+}
+
+void FunctionListPanel::onResort() {
+    applyFilters();
+}
+
+void FunctionListPanel::updateCounts() {
+    _fnCount = _clsCount = _structCount = _otherCount = 0;
+    for (const FunctionItem& item : std::as_const(_filteredFunctions)) {
+        if (item.type == "class" || item.type == "interface" || item.type == "trait")
+            ++_clsCount;
+        else if (item.type == "struct")
+            ++_structCount;
+        else if (item.type == "function" || item.type == "method" ||
+                 item.type == "arrow function" || item.type == "async function")
+            ++_fnCount;
+        else
+            ++_otherCount;
+    }
+}
+
+void FunctionListPanel::refreshDebounced() {
+    if (_debounceTimer) {
+        _debounceTimer->start();
+    } else {
+        refresh();
+    }
+}

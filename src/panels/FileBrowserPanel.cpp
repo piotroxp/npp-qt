@@ -936,7 +936,26 @@ void FileBrowserPanel::onFileRenamed(const QString& /*path*/) {
     refresh();
 }
 
-// === Stubs ===
-void FileBrowserPanel::toggleSystemFiles() {}
-void FileBrowserPanel::toggleHiddenFiles() {}
+// === Toggle handlers ===
+void FileBrowserPanel::toggleSystemFiles() {
+    _showSystem = !_showSystem;
+    _systemFilesAction->setChecked(_showSystem);
+
+    QDir::Filters f = QDir::AllEntries | QDir::NoDotAndDotDot;
+    if (_showHidden) f |= QDir::Hidden;
+    if (_showSystem) f |= QDir::System;
+    _model->setFilter(f);
+    _treeView->reset();
+}
+
+void FileBrowserPanel::toggleHiddenFiles() {
+    _showHidden = !_showHidden;
+    _hiddenFilesAction->setChecked(_showHidden);
+
+    QDir::Filters f = QDir::AllEntries | QDir::NoDotAndDotDot;
+    if (_showHidden) f |= QDir::Hidden;
+    if (_showSystem) f |= QDir::System;
+    _model->setFilter(f);
+    _treeView->reset();
+}
 

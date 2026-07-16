@@ -32,6 +32,7 @@
 #include "panels/DocumentMapPanel.h"
 #include "panels/FunctionListPanel.h"
 #include "panels/FileBrowserPanel.h"
+#include "panels/ClipboardHistoryPanel.h"
 #include "common/FileHelper.h"
 #include "common/StringHelper.h"
 #include "common/Util.h"
@@ -52,8 +53,10 @@
 #include <QUrl>
 #include <QFileDialog>
 #include <QInputDialog>
+#include <QLineEdit>
 #include <QStandardPaths>
 #include <QCloseEvent>
+#include <algorithm>
 #include <QTimer>
 #include <QTextStream>
 #include <QFile>
@@ -396,6 +399,9 @@ void Application::setupDockingPanels() {
     _docMapPanel = new DocumentMapPanel(_mainWindow);
     _funcListPanel = new FunctionListPanel(_mainWindow);
     _fileBrowserPanel = new FileBrowserPanel(_mainWindow);
+    _clipboardHistoryPanel = new ClipboardHistoryPanel(_mainWindow);
+    _mainWindow->addDockWidget(Qt::RightDockWidgetArea, _clipboardHistoryPanel);
+    _clipboardHistoryPanel->hide();
 
     _mainWindow->addDockWidget(Qt::RightDockWidgetArea, _docMapPanel);
     _mainWindow->addDockWidget(Qt::RightDockWidgetArea, _funcListPanel);
@@ -2074,28 +2080,250 @@ void Application::onMacroPlaybackLast() {
 }
 
 // === Stubs ===
-void Application::onMoveToSubView() {}
-void Application::onToggleWordWrap() {}
-void Application::onShowAllCharacters() {}
-void Application::onToggleClipboardHistory() {}
-void Application::onCloneToOtherView() {}
-void Application::onZoomOut() {}
-void Application::onToggleEolVisibility() {}
-void Application::onZoomRestore() {}
-void Application::onZoomIn() {}
-void Application::onOpenContainingFolder() {}
-void Application::onJoinLines() {}
-void Application::onSortDescending() {}
-void Application::onDeleteFile() {}
-void Application::onSortIntDescending() {}
-void Application::onUnmarkAll() {}
-void Application::onTrimLeading() {}
-void Application::onRenameFile() {}
-void Application::onSortReverse() {}
-void Application::onDeleteLine() {}
-void Application::onCloseAllButCurrent() {}
-void Application::onSortAscending() {}
-void Application::onSortIntAscending() {}
-void Application::onTrimTrailing() {}
-void Application::onSearchOnInternet() {}
+void Application::onMoveToSubView() {
+    if (_mainWindow) {
+        BufferID buf = getActiveBuffer();
+        moveToSubView(buf);
+    }
+}
 
+void Application::onToggleWordWrap() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (editor) {
+        editor->setWrapMode(!editor->wrapMode());
+    }
+}
+
+void Application::onShowAllCharacters() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    editor->setWhitespaceVisibility(true);
+}
+
+void Application::toggleClipboardHistory() {
+    if (_clipboardHistoryPanel) {
+        if (_clipboardHistoryPanel->isVisible()) {
+            _clipboardHistoryPanel->hide();
+        } else {
+            _clipboardHistoryPanel->show();
+        }
+    }
+}
+
+void Application::onToggleClipboardHistory() {
+    toggleClipboardHistory();
+}
+
+void Application::onCloneToOtherView() {
+    if (_mainWindow) {
+        BufferID buf = getActiveBuffer();
+        cloneToOtherView(buf);
+    }
+}
+
+void Application::onZoomOut() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (editor) editor->zoomOut();
+}
+
+void Application::onToggleEolVisibility() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    editor->setEolVisibility(true);
+}
+
+void Application::onZoomRestore() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (editor) editor->zoomReset();
+}
+
+void Application::onZoomIn() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (editor) editor->zoomIn();
+}
+
+void Application::onOpenContainingFolder() {
+    if (!_mainWindow) return;
+    BufferID buf = getActiveBuffer();
+    if (buf == BUFFER_INVALID) return;
+    QString path = _fileManager->getBufferPath(buf);
+    if (path.isEmpty()) return;
+    QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).absolutePath()));
+}
+
+void Application::onJoinLines() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n', Qt::SkipEmptyParts);
+    for (int i = 0; i < lines.size(); ++i) lines[i] = lines[i].trimmed();
+    QString joined = lines.join(" ");
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(joined.toUtf8().constData()));
+}
+
+void Application::onSortDescending() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    lines.sort(Qt::CaseInsensitive);
+    std::reverse(lines.begin(), lines.end());
+    QString result = lines.join("\n");
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(result.toUtf8().constData()));
+}
+
+void Application::onDeleteFile() {
+    BufferID buf = getActiveBuffer();
+    if (buf == BUFFER_INVALID) return;
+    QString path = _fileManager->getBufferPath(buf);
+    if (path.isEmpty()) return;
+    int ret = QMessageBox::warning(_mainWindow, "Delete File",
+        "Are you sure you want to delete the file?\n" + QFileInfo(path).fileName(),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (ret != QMessageBox::Yes) return;
+    if (QFile::remove(path)) {
+        closeFile(buf, true);
+    }
+}
+
+void Application::onSortIntDescending() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    QList<int> nums;
+    for (const QString& l : lines) {
+        bool ok;
+        nums.append(l.toInt(&ok));
+        if (!ok) return; // not all integers
+    }
+    std::sort(nums.begin(), nums.end(), std::greater<int>());
+    QStringList result;
+    for (int n : nums) result.append(QString::number(n));
+    QString out = result.join("\n");
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(out.toUtf8().constData()));
+}
+
+void Application::onUnmarkAll() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    editor->clearBookmarks();
+}
+
+void Application::onTrimLeading() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    for (int i = 0; i < lines.size(); ++i) lines[i] = lines[i].trimmed();
+    QString result = lines.join("\n");
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(result.toUtf8().constData()));
+}
+
+void Application::onRenameFile() {
+    BufferID buf = getActiveBuffer();
+    if (buf == BUFFER_INVALID) return;
+    QString oldPath = _fileManager->getBufferPath(buf);
+    if (oldPath.isEmpty()) return;
+    QFileInfo fi(oldPath);
+    bool ok;
+    QString newName = QInputDialog::getText(_mainWindow, "Rename File", "New name:",
+        QLineEdit::Normal, fi.fileName(), &ok);
+    if (!ok || newName.isEmpty() || newName == fi.fileName()) return;
+    QString newPath = fi.absolutePath() + "/" + newName;
+    if (QFile::rename(oldPath, newPath)) {
+        _fileManager->setBufferPath(buf, newPath);
+    }
+}
+
+void Application::onSortReverse() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    std::reverse(lines.begin(), lines.end());
+    QString result = lines.join("\n");
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(result.toUtf8().constData()));
+}
+
+void Application::onDeleteLine() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    int curLine = editor->currentLine();
+    int startPos = editor->send(SCI_POSITIONFROMLINE, curLine);
+    int endPos = editor->send(SCI_GETLINEENDPOSITION, curLine);
+    // Include the line ending if not the last line
+    if (curLine + 1 < editor->lineCount()) {
+        endPos = editor->send(SCI_GETLINEENDPOSITION, curLine + 1);
+    }
+    editor->send(SCI_SETSEL, startPos, endPos);
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(""));
+}
+
+void Application::onCloseAllButCurrent() {
+    closeAllBuffersExcept(getActiveBuffer());
+}
+
+void Application::onSortAscending() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    lines.sort(Qt::CaseInsensitive);
+    QString result = lines.join("\n");
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(result.toUtf8().constData()));
+}
+
+void Application::onSortIntAscending() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    QList<int> nums;
+    for (const QString& l : lines) {
+        bool ok;
+        nums.append(l.toInt(&ok));
+        if (!ok) return;
+    }
+    std::sort(nums.begin(), nums.end());
+    QStringList result;
+    for (int n : nums) result.append(QString::number(n));
+    QString out = result.join("\n");
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(out.toUtf8().constData()));
+}
+
+void Application::onTrimTrailing() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    for (int i = 0; i < lines.size(); ++i) lines[i] = lines[i].trimmed();
+    QString result = lines.join("\n");
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(result.toUtf8().constData()));
+}
+
+void Application::onSearchOnInternet() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QString query = QUrl::toPercentEncoding(text);
+    QDesktopServices::openUrl(QUrl("https://www.google.com/search?q=" + query));
+}
