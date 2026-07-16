@@ -43,10 +43,8 @@ FileBrowserPanel::FileBrowserPanel(QWidget* parent)
     , _showSystem(false)
     , _sortMode(0)
 {
-    fprintf(stderr, "DEBUG: FileBrowserPanel ctor body start\n"); fflush(stderr);
     setObjectName("FileBrowserPanel");
     setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea | Qt::BottomDockWidgetArea);
-    fprintf(stderr, "DEBUG: FileBrowserPanel ctor after setAllowedAreas\n"); fflush(stderr);
     setMinimumWidth(200);
 
     QWidget* content = new QWidget(this);
@@ -143,6 +141,9 @@ FileBrowserPanel::FileBrowserPanel(QWidget* parent)
     setupCompleter();
 
     setWidget(content);
+
+    // Update breadcrumbs now that _model and _treeView exist
+    updateBreadcrumbs();
 
     // Connect signals
     connect(_treeView, &QTreeView::doubleClicked, this, &FileBrowserPanel::onDoubleClicked);
@@ -253,6 +254,13 @@ void FileBrowserPanel::setupToolbar() {
     _hiddenFilesAction->setToolTip(tr("Show hidden files"));
     _toolBar->addAction(_hiddenFilesAction);
 
+    _systemFilesAction = new QAction(QIcon::fromTheme("show-system", QIcon()),
+                                     tr("System Files"), _toolBar);
+    _systemFilesAction->setCheckable(true);
+    _systemFilesAction->setChecked(_showSystem);
+    _systemFilesAction->setToolTip(tr("Show system files"));
+    _toolBar->addAction(_systemFilesAction);
+
     // Follow active document
     _followAction = new QAction(QIcon::fromTheme("go-jump", QIcon(":/icons/follow")),
                                  tr("Follow Active Doc"), _toolBar);
@@ -311,8 +319,6 @@ void FileBrowserPanel::setupBreadcrumbs() {
         }
     });
     bl->addWidget(gotoEdit, 1);
-
-    updateBreadcrumbs();
 }
 
 void FileBrowserPanel::setupCompleter() {
@@ -331,7 +337,7 @@ void FileBrowserPanel::setupCompleter() {
 }
 
 void FileBrowserPanel::updateBreadcrumbs() {
-    if (!_breadcrumbBar) return;
+    if (!_breadcrumbBar || !_model || !_treeView) return;
     QString currentPath = _model->filePath(_treeView->rootIndex());
 
     // Clear old actions
