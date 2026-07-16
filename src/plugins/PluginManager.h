@@ -57,6 +57,10 @@ public:
     NppQtFuncs* functions() { return &_funcs; }
     NppData* nppData() { return &_nppData; }
 
+    // Menu registration (called by plugin API)
+    void registerPluginMenuItem(const QString& label, void (*callback)());
+    void unregisterPluginMenuItem(const QString& label);
+
     // Configuration
     QString pluginDirectory() const { return _pluginDir; }
     void setPluginDirectory(const QString& dir) { _pluginDir = dir; }
@@ -92,6 +96,7 @@ private:
     // Menu integration
     QMenu* _pluginMenu;
     QMenuBar* _menuBar;
+    QMap<QString, void (*)()> _registeredMenuCallbacks;  // label -> callback
     
     // Configuration
     QString _pluginDir;

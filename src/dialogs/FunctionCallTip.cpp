@@ -299,10 +299,9 @@ void FunctionCallTip::showCalltip()
         // Parameter highlight: colour the current parameter.
         // Scintilla uses \003 to mark the start of a highlighted section,
         // \004 for the end.
-        if (_currentParam > 0 && _currentParam <= ov.paramCount) {
+        if (_currentParam > 0 && _currentParam <= static_cast<size_t>(ov.paramCount)) {
             // Count parameters in signature to insert highlight markers.
             // A simplified approach: wrap the N-th parameter in \003…\004.
-            int paramIdx = 0;
             std::string sig = ov.signature;
             size_t openParen = sig.find('(');
             if (openParen != std::string::npos) {

@@ -1,5 +1,6 @@
 #include "PluginManager.h"
 #include "core/Application.h"
+#include "editor/ScintillaEditor.h"
 #include <QLibrary>
 #include <QDir>
 #include <QFileInfo>
@@ -56,17 +57,134 @@ QString PluginManager::getDefaultPluginDir() const {
     return QDir::current().filePath("plugins");
 }
 
+// Static helper to safely get Application pointer
+static Application* getApp() {
+    try {
+        return &Application::instance();
+    } catch (...) {
+        return nullptr;
+    }
+}
+
+// Static function implementations for plugin API
+static int pf_getVersion() { return NPPQT_PLUGIN_API_VERSION; }
+
+static const char* pf_getCurrentText(int* length) {
+    Application* app = getApp();
+    if (!app) return nullptr;
+    ScintillaEditor* editor = app->getActiveEditor();
+    if (!editor) return nullptr;
+    static QString cached;
+    cached = editor->text();
+    if (length) *length = cached.size();
+    return cached.toUtf8().constData();
+}
+
+static void pf_setCurrentText(const char* text, int length) {
+    Application* app = getApp();
+    if (!app || !text) return;
+    ScintillaEditor* editor = app->getActiveEditor();
+    if (!editor) return;
+    QString s = QString::fromUtf8(text, length >= 0 ? length : static_cast<int>(strlen(text)));
+    editor->setText(s);
+}
+
+static int pf_getCurrentLine() {
+    Application* app = getApp();
+    if (!app) return 0;
+    ScintillaEditor* editor = app->getActiveEditor();
+    return editor ? editor->currentLine() : 0;
+}
+
+static int pf_getCurrentColumn() {
+    Application* app = getApp();
+    if (!app) return 0;
+    ScintillaEditor* editor = app->getActiveEditor();
+    return editor ? editor->currentColumn() : 0;
+}
+
+static void pf_setCursorPosition(int line, int column) {
+    Application* app = getApp();
+    if (!app) return;
+    ScintillaEditor* editor = app->getActiveEditor();
+    if (editor) editor->setCursorPosition(line, column);
+}
+
+static int pf_getBufferCount() {
+    Application* app = getApp();
+    return app ? app->getBufferCount() : 0;
+}
+
+static const char* pf_getBufferPath(int bufferId) {
+    Application* app = getApp();
+    if (!app) return nullptr;
+    BufferID buf = reinterpret_cast<BufferID>(static_cast<size_t>(bufferId));
+    static QString cached;
+    auto filename = app->getFileName(buf);
+    if (filename.has_value()) {
+        cached = QString::fromStdString(filename.value());
+        return cached.isEmpty() ? nullptr : cached.toUtf8().constData();
+    }
+    return nullptr;
+}
+
+static void pf_addToOutput(const char* msg) {
+    Application* app = getApp();
+    if (!app || !msg) return;
+    app->setStatusBarText(msg);
+    qDebug() << "[Plugin]" << msg;
+}
+
+static void pf_insertText(const char* text) {
+    Application* app = getApp();
+    if (!app || !text) return;
+    ScintillaEditor* editor = app->getActiveEditor();
+    if (editor) editor->insertText(QString::fromUtf8(text));
+}
+
+static void pf_replaceLine(int line, const char* newText) {
+    Application* app = getApp();
+    if (!app || !newText) return;
+    ScintillaEditor* editor = app->getActiveEditor();
+    if (editor) editor->setLineText(line, QString::fromUtf8(newText));
+}
+
+static void pf_registerMenuItem(const char* label, void (*callback)()) {
+    PluginManager::instance().registerPluginMenuItem(QString::fromUtf8(label), callback);
+}
+
+static void pf_unregisterMenuItem(const char* label) {
+    PluginManager::instance().unregisterPluginMenuItem(QString::fromUtf8(label));
+}
+
+static void pf_setLanguage(const char* langName) {
+    Application* app = getApp();
+    if (!app || !langName) return;
+    qDebug() << "[PluginManager] setLanguage called with:" << langName;
+}
+
 void PluginManager::initializeFuncs() {
-    // Zero-initialize the function table
     memset(&_funcs, 0, sizeof(NppQtFuncs));
-    
-    // Set version
-    _funcs.getVersion = []() -> int {
-        return NPPQT_PLUGIN_API_VERSION;
-    };
+    _funcs.getVersion = pf_getVersion;
+    _funcs.getCurrentText = pf_getCurrentText;
+    _funcs.setCurrentText = pf_setCurrentText;
+    _funcs.getCurrentLine = pf_getCurrentLine;
+    _funcs.getCurrentColumn = pf_getCurrentColumn;
+    _funcs.setCursorPosition = pf_setCursorPosition;
+    _funcs.getBufferCount = pf_getBufferCount;
+    _funcs.getBufferPath = pf_getBufferPath;
+    _funcs.addToOutput = pf_addToOutput;
+    _funcs.insertText = pf_insertText;
+    _funcs.replaceLine = pf_replaceLine;
+    _funcs.registerMenuItem = pf_registerMenuItem;
+    _funcs.unregisterMenuItem = pf_unregisterMenuItem;
+    _funcs.setLanguage = pf_setLanguage;
 }
 
 void PluginManager::loadPlugins(const QString& pluginDir) {
+    // Initialize function table before loading
+    initializeFuncs();
+    
     QString dir = pluginDir.isEmpty() ? _pluginDir : pluginDir;
     
     qDebug() << "[PluginManager] Loading plugins from:" << dir;
@@ -452,4 +570,14 @@ void PluginManager::enablePlugin(const QString& name, bool enable) {
 
 void PluginManager::disablePlugin(const QString& name) {
     enablePlugin(name, false);
+}
+
+void PluginManager::registerPluginMenuItem(const QString& label, void (*callback)()) {
+    _registeredMenuCallbacks[label] = callback;
+    qDebug() << "[PluginManager] Registered menu item:" << label;
+}
+
+void PluginManager::unregisterPluginMenuItem(const QString& label) {
+    _registeredMenuCallbacks.remove(label);
+    qDebug() << "[PluginManager] Unregistered menu item:" << label;
 }

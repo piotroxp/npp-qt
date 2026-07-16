@@ -101,7 +101,8 @@ TEST(test_utf8_valid_utf8_chars) {
 }
 
 TEST(test_utf8_euro_sign_byte_sequence) {
-    std::string data = "\xE2\x82\xAC100";  // Euro sign
+    // Euro sign U+20AC = E2 82 AC. Split to avoid \xAC1 being parsed as one escape.
+    std::string data = "\xE2\x82\xAC" "100";
 
     EncodingDetector detector;
     bool valid = detector.isValidUtf8(data);

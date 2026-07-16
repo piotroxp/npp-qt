@@ -108,6 +108,11 @@ public:
     void addAnnotation(int line, const QString& text);
     void clearAnnotations();
 
+    // Text insertion helpers
+    void insertText(const QString& text);
+    void setLineText(int line, const QString& newText);
+    void insertAtCursor(const QString& text);
+
     // Selection helpers
     void ensureLineVisible(int line);
     void getCursorPosition(int* line, int* col) const;
@@ -184,6 +189,7 @@ signals:
     void selectionChanged(int start, int end, int lineCount);
     void updateUI();
     void replaceAllDone(int count);
+    void languageChanged(LangType lang);
 
 private:
     bool eventFilter(QObject* watched, QEvent* event) override;

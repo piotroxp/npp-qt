@@ -46,7 +46,7 @@ static const char* CLIPBOARD_HISTORY_GROUP = "Settings";
 
 // ─── HistoryItem helpers ────────────────────────────────────────────────────────
 
-QString ClipboardHistoryPanel::HistoryItem::displayText(int maxLen) const
+QString HistoryItem::displayText(int maxLen) const
 {
     if (text.isEmpty()) return QString();
 
@@ -59,7 +59,7 @@ QString ClipboardHistoryPanel::HistoryItem::displayText(int maxLen) const
     return firstLine;
 }
 
-QString ClipboardHistoryPanel::HistoryItem::tooltipText() const
+QString HistoryItem::tooltipText() const
 {
     if (isImage) {
         return QString("Image: %1×%2\nCaptured: %3\n%4 chars")
@@ -686,6 +686,16 @@ void ClipboardHistoryPanel::saveHistory() const
     settings.setValue("maxItems", _maxItems);
     settings.setValue("autoCleanupDuplicates", _autoCleanupDuplicates);
     settings.endGroup();
+}
+
+// ─── Clear history ─────────────────────────────────────────────────────────────
+
+void ClipboardHistoryPanel::clearHistory()
+{
+    _historyItems.clear();
+    refreshListWidget();
+    saveHistory();
+    emit historyChanged();
 }
 
 // ─── Event filter ──────────────────────────────────────────────────────────────

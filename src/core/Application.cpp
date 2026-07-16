@@ -781,11 +781,107 @@ void Application::setStatusBarSelection(int chars, int lines) {
 // Session
 // ============================================================================
 bool Application::loadSession(const std::string& path) {
-    return _sessionManager->loadSession(path);
+    // Restore window geometry from QSettings (set by previous saveSession)
+    QSettings s;
+    if (_mainWindow) {
+        QByteArray geom = s.value("window/geometry").toByteArray();
+        if (!geom.isEmpty()) _mainWindow->restoreGeometry(geom);
+        QByteArray state = s.value("window/state").toByteArray();
+        if (!state.isEmpty()) _mainWindow->restoreState(state);
+    }
+
+    // Load session data
+    if (!_sessionManager->loadSession(path))
+        return false;
+
+    // Restore open files, cursor, and scroll from session data
+    const NppSession& session = _sessionManager->currentSession();
+    BufferID activeBuffer;
+
+    for (int i = 0; i < session.buffers.size(); ++i) {
+        const SessionBuffer& buf = session.buffers.at(i);
+        BufferID id = openFile(buf.path.toStdString());
+        if (!id) continue;
+
+        // Restore cursor position
+        ScintillaEditor* ed = getEditor();
+        if (ed) {
+            ed->setCursorPosition(buf.cursor.line, buf.cursor.column);
+            // Restore scroll (firstVisibleLine via SCI_LINESCROLL)
+            ed->send(SCI_SETFIRSTVISIBLELINE, buf.scrollY);
+        }
+
+        if (buf.isActive)
+            activeBuffer = id;
+    }
+
+    // Restore active buffer and view
+    if (activeBuffer)
+        setActiveBuffer(activeBuffer);
+    if (session.activeView >= 0 && session.activeView < (int)_viewContainers.size())
+        switchToView(session.activeView);
+
+    // Restore panel states
+    if (session.panels.functionList && _funcListPanel) _funcListPanel->show();
+    if (session.panels.documentMap && _docMapPanel) _docMapPanel->show();
+    if (session.panels.fileBrowser && _fileBrowserPanel) _fileBrowserPanel->show();
+
+    return true;
 }
 
 bool Application::saveSession(const std::string& path) {
     auto sessionPath = path.empty() ? FileHelper::getSessionFilePath() : path;
+
+    // Build NppSession from current Application state
+    NppSession session;
+    session.version = 1;
+
+    // Window geometry
+    if (_mainWindow) {
+        QSettings s;
+        s.setValue("window/geometry", _mainWindow->saveGeometry());
+        s.setValue("window/state", _mainWindow->saveState());
+        session.window.x = _mainWindow->x();
+        session.window.y = _mainWindow->y();
+        session.window.width = _mainWindow->width();
+        session.window.height = _mainWindow->height();
+        session.window.maximized = (_mainWindow->windowState() & Qt::WindowMaximized) != 0;
+    }
+
+    // Capture open buffers
+    int bufCount = getBufferCount();
+    BufferID activeBuf = getActiveBuffer();
+    for (int i = 0; i < bufCount; ++i) {
+        BufferID buf = getBufferAt(i);
+        if (!buf) continue;
+
+        SessionBuffer sb;
+        sb.path = _fileManager->getBufferPath(buf);
+        sb.language = QString();  // Language auto-detected on open
+        sb.isActive = (buf == activeBuf);
+
+        ScintillaEditor* ed = getEditor();
+        if (ed) {
+            int line = 0, col = 0;
+            ed->getCursorPosition(&line, &col);
+            sb.cursor.line = line;
+            sb.cursor.column = col;
+            sb.scrollY = ed->send(SCI_GETFIRSTVISIBLELINE);
+        }
+
+        session.buffers.append(sb);
+    }
+
+    session.activeBufferIndex = 0;
+    session.activeView = currentView();
+
+    // Panel visibility
+    session.panels.functionList = (_funcListPanel && _funcListPanel->isVisible());
+    session.panels.documentMap = (_docMapPanel && _docMapPanel->isVisible());
+    session.panels.fileBrowser = (_fileBrowserPanel && _fileBrowserPanel->isVisible());
+
+    // Inject into SessionManager and save
+    _sessionManager->setCurrentSession(session);
     return _sessionManager->saveSession(sessionPath);
 }
 

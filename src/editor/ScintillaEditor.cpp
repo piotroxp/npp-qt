@@ -191,6 +191,7 @@ QString ScintillaEditor::toPlainText() const { return _editor->text(); }
 void ScintillaEditor::setLanguage(LangType lang) {
     _language = lang;
     if (_highlighter) _highlighter->setLanguage(lang);
+    emit languageChanged(lang);
 
     // Use QsciScintilla's built-in lexers via LanguageManager
     QsciLexer* lexer = LanguageManager::instance().getLexer(lang);
@@ -404,11 +405,11 @@ void ScintillaEditor::setVirtualSpaceOptions(bool on) {
     _editor->SendScintilla(QsciScintillaBase::SCI_SETVIRTUALSPACEOPTIONS, on ? 1 : 0);
 }
 
-void ScintillaEditor::setHomeKeyNavigation(bool) {
-    // SCI_SETHOMEKEYSENSITIVE not exposed in Qt6 QsciScintilla.
-    // Scintilla's default Home key already implements smart-home behavior
-    // (jumps to first-non-whitespace, then BOL, then indent level).
-    // This method is a no-op but kept for API completeness.
+void ScintillaEditor::setHomeKeyNavigation(bool on) {
+    // SCI_SETHOMEKEYSENSITIVE = 2589: enables smart home behavior.
+    // 1st press → first non-whitespace, 2nd → BOL, 3rd → indent level (cycling).
+    // Use raw constant value since QsciScintillaBase doesn't expose it.
+    _editor->SendScintilla(static_cast<unsigned int>(2589), on ? 1 : 0);
 }
 
 void ScintillaEditor::setMarginLineNumbers(int margin, bool on) {
@@ -840,4 +841,29 @@ void ScintillaEditor::updateFontForDpi() {
     if (_editor->lexer()) {
         applyThemeToLexer(_editor->lexer());
     }
+}
+
+void ScintillaEditor::insertText(const QString& text) {
+    if (_editor && !text.isEmpty()) {
+        _editor->insert(text);
+    }
+}
+
+void ScintillaEditor::insertAtCursor(const QString& text) {
+    if (_editor && !text.isEmpty()) {
+        int line, col;
+        _editor->getCursorPosition(&line, &col);
+        _editor->insertAt(text, line, col);
+    }
+}
+
+void ScintillaEditor::setLineText(int line, const QString& newText) {
+    if (!_editor || line < 0) return;
+    // Get line text and replace using SendScintilla
+    int lineLen = _editor->lineLength(line);
+    if (lineLen <= 0) return;
+    int posStart = _editor->positionFromLineIndex(line, 0);
+    int posEnd = posStart + lineLen;
+    _editor->SendScintilla(QsciScintilla::SCI_SETSEL, posStart, posEnd);
+    _editor->SendScintilla(QsciScintilla::SCI_REPLACESEL, newText.toUtf8().constData());
 }

@@ -15,26 +15,27 @@
 
 class ScintillaEditor;
 
+/// Entry stored in clipboard history.
+struct HistoryItem {
+    QUuid id;                 // unique ID for this entry
+    QString text;             // plain text content
+    QImage image;             // image content (null if text-only)
+    QString html;             // rich-text HTML (may be empty)
+    QDateTime timestamp;      // when the item was captured
+    int charCount = 0;       // character count (for text)
+    bool isPinned = false;    // pinned items are not pushed out by new entries
+    bool isImage = false;     // true = this entry is an image
+
+    // For display: first line truncated to maxLen
+    QString displayText(int maxLen = 120) const;
+    QString tooltipText() const;
+};
+
+
 class ClipboardHistoryPanel : public QDockWidget {
     Q_OBJECT
 
 public:
-    /// Entry stored in clipboard history.
-    struct HistoryItem {
-        QUuid id;                 // unique ID for this entry
-        QString text;             // plain text content
-        QImage image;             // image content (null if text-only)
-        QString html;             // rich-text HTML (may be empty)
-        QDateTime timestamp;      // when the item was captured
-        int charCount = 0;       // character count (for text)
-        bool isPinned = false;    // pinned items are not pushed out by new entries
-        bool isImage = false;     // true = this entry is an image
-
-        // For display: first line truncated to maxLen
-        QString displayText(int maxLen = 120) const;
-        QString tooltipText() const;
-    };
-
     explicit ClipboardHistoryPanel(QWidget* parent = nullptr);
     ~ClipboardHistoryPanel() override;
 
@@ -101,7 +102,7 @@ private:
     void setupUi();
     void setupContextMenu();
 
-    void addItemInternal(const HistoryItem& item);
+    void addItemInternal(const ::HistoryItem& item);
     void deduplicateAndAdd(const QString& text);
     void refreshListWidget();
     int findItemIndex(const QString& text) const;
@@ -111,7 +112,7 @@ private:
     QListWidget* _listWidget = nullptr;
     QLineEdit* _searchBox = nullptr;
     QLabel* _statusLabel = nullptr;
-    QList<HistoryItem> _historyItems;
+    QList<::HistoryItem> _historyItems;
     int _maxItems = 50;
 
     // Track the last clipboard content to avoid duplicates from our own paste
@@ -128,3 +129,6 @@ private:
     // Expand/collapse state
     bool _expanded = true;
 };
+
+
+Q_DECLARE_METATYPE(HistoryItem)

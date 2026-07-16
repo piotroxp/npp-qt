@@ -273,6 +273,7 @@ void FunctionListPanel::setEditor(ScintillaEditor* editor) {
 
     if (_editor) {
         connect(_editor, &ScintillaEditor::textChanged, this, &FunctionListPanel::refresh);
+        connect(_editor, &ScintillaEditor::languageChanged, this, &FunctionListPanel::onLanguageChanged);
     }
 
     refresh();
@@ -1153,15 +1154,138 @@ void FunctionListPanel::parseCsharp(const QStringList& lines) {
 }
 
 void FunctionListPanel::parseHTML(const QStringList& lines) {
-    Q_UNUSED(lines);
+    // HTML: <tag>, <tag id="...">, </tag>, <!-- comment -->
+    QRegularExpression tagRe(
+        R"(^\s*<(/?)([\w:-]+)(?:\s+[\w:-]+(?:=["'][^"']*["'])?)*\s*(/?)\s*>|"
+        R"(^\s*<!--.*?-->)",
+        QRegularExpression::MultilineOption);
+
+    for (int i = 0; i < lines.size(); ++i) {
+        const QString& line = lines[i];
+        QRegularExpressionMatch m = tagRe.match(line);
+        if (m.hasMatch()) {
+            // Skip comments and doctypes
+            if (line.trimmed().startsWith("<!--") || line.trimmed().startsWith("<!"))
+                continue;
+
+            QString tag = m.captured(2);
+            bool isClosing = !m.captured(1).isEmpty();
+
+            // Common structural tags
+            static const QSet<QString> structuralTags = {
+                "html", "head", "body", "div", "section", "article",
+                "header", "footer", "nav", "aside", "main", "form",
+                "table", "thead", "tbody", "tfoot", "tr", "th", "td",
+                "ul", "ol", "li", "dl", "dt", "dd", "p", "h1", "h2",
+                "h3", "h4", "h5", "h6", "script", "style", "template"
+            };
+
+            QString type;
+            if (structuralTags.contains(tag.toLower())) {
+                type = isClosing ? "block" : "block";
+            } else if (isClosing) {
+                type = "closing tag";
+            } else {
+                type = "tag";
+            }
+
+            addFunctionItem(tag, i + 1, type, "public", "html");
+        }
+    }
 }
 
 void FunctionListPanel::parseSQL(const QStringList& lines) {
-    Q_UNUSED(lines);
+    // SQL: CREATE, ALTER, DROP, SELECT, INSERT, UPDATE, DELETE, FUNCTION, PROCEDURE, TRIGGER, VIEW
+    QRegularExpression sqlRe(
+        R"(^\s*(CREATE|ALTER|DROP|SELECT|INSERT|UPDATE|DELETE|GRANT|REVOKE|CALL)\s+"
+        R"((?:OR\s+REPLACE\s+)?(?:IF\s+NOT\s+EXISTS\s+)?)"
+        R"([\w\s]+?)(?:\s+|\()|$)",
+        QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
+
+    for (int i = 0; i < lines.size(); ++i) {
+        const QString& line = lines[i];
+        QRegularExpressionMatch m = sqlRe.match(line);
+        if (m.hasMatch()) {
+            QString keyword = m.captured(1).toUpper();
+            QString name = m.captured(3).trimmed();
+
+            // Extract simple identifier name
+            QStringList parts = name.split(QRegularExpression(R"(\s+)"), Qt::SkipEmptyParts);
+            if (!parts.isEmpty()) {
+                name = parts.last().remove(QRegularExpression(R"([();])"));
+            }
+
+            QString type;
+            if (keyword == "CREATE" || keyword == "ALTER" || keyword == "DROP") {
+                if (name.toUpper().contains("TABLE")) type = "table";
+                else if (name.toUpper().contains("INDEX")) type = "index";
+                else if (name.toUpper().contains("VIEW")) type = "view";
+                else if (name.toUpper().contains("TRIGGER")) type = "trigger";
+                else if (name.toUpper().contains("FUNCTION") || name.toUpper().contains("PROCEDURE")) type = "function";
+                else if (name.toUpper().contains("DATABASE")) type = "database";
+                else type = "object";
+            } else {
+                type = "statement";
+            }
+
+            if (!name.isEmpty() && !name.toUpper().contains("TABLE") &&
+                !name.toUpper().contains("INDEX") && !name.toUpper().contains("VIEW")) {
+                addFunctionItem(name, i + 1, type, "public", "sql");
+            }
+        }
+    }
+
+    // Also catch function/procedure definitions
+    QRegularExpression funcRe(
+        R"(^\s*(CREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE|TRIGGER)\s+)"
+        R"([\w.]+))",
+        QRegularExpression::MultilineOption | QRegularExpression::CaseInsensitiveOption);
+
+    for (int i = 0; i < lines.size(); ++i) {
+        QRegularExpressionMatch m = funcRe.match(lines[i]);
+        if (m.hasMatch()) {
+            QString name = m.captured(2);
+            QString type = lines[i].toUpper().contains("TRIGGER") ? "trigger" : "function";
+            addFunctionItem(name, i + 1, type, "public", "sql");
+        }
+    }
 }
 
 void FunctionListPanel::parseMakefile(const QStringList& lines) {
-    Q_UNUSED(lines);
+    // Makefile: target: dependencies
+    // Also handles include directives
+    QRegularExpression targetRe(
+        R"(^([\w.-]+)\s*:)",
+        QRegularExpression::MultilineOption);
+
+    QRegularExpression includeRe(
+        R"(^\s*(?:include|-include)\s+(\S+))",
+        QRegularExpression::MultilineOption);
+
+    for (int i = 0; i < lines.size(); ++i) {
+        const QString& line = lines[i];
+
+        // Skip continuation lines (starting with tab/space after :)
+        if (line.trimmed().isEmpty() || line.trimmed().startsWith("#"))
+            continue;
+
+        QRegularExpressionMatch m = targetRe.match(line);
+        if (m.hasMatch()) {
+            QString name = m.captured(1);
+            // Skip special targets
+            if (name == ".PHONY" || name == ".SUFFIXES" || name == ".DEFAULT" ||
+                name == ".DELETE_ON_ERROR" || name == ".IGNORE" ||
+                name == ".PRECIOUS" || name == ".SECONDARY" || name == ".SECONDEXPANSION")
+                continue;
+            addFunctionItem(name, i + 1, "target", "public", "makefile");
+        }
+
+        QRegularExpressionMatch im = includeRe.match(line);
+        if (im.hasMatch()) {
+            QString name = im.captured(1);
+            addFunctionItem(name, i + 1, "include", "public", "makefile");
+        }
+    }
 }
 
 // === Stubs ===
@@ -1173,8 +1297,9 @@ void FunctionListPanel::onLanguageChanged() {
     // Re-init XML parser for the new language and refresh the list
     if (_editor) {
         _lastLanguage.clear();
+        // Clear XML parser cache for all languages so the new language gets re-parsed
+        _xmlParserLoaded.clear();
     }
-    initXmlParser();
     refreshDebounced();
 }
 
@@ -1267,16 +1392,23 @@ void FunctionListPanel::onResort() {
 
 void FunctionListPanel::updateCounts() {
     _fnCount = _clsCount = _structCount = _otherCount = 0;
-    for (const FunctionItem& item : std::as_const(_filteredFunctions)) {
-        if (item.type == "class" || item.type == "interface" || item.type == "trait")
-            ++_clsCount;
-        else if (item.type == "struct")
-            ++_structCount;
-        else if (item.type == "function" || item.type == "method" ||
-                 item.type == "arrow function" || item.type == "async function")
-            ++_fnCount;
-        else
-            ++_otherCount;
+    for (int i = 0; i < _tree->topLevelItemCount(); ++i) {
+        QTreeWidgetItem* cat = _tree->topLevelItem(i);
+        if (!cat) continue;
+        for (int j = 0; j < cat->childCount(); ++j) {
+            QTreeWidgetItem* item = cat->child(j);
+            if (!item) continue;
+            QString type = item->text(2);
+            if (type == "class" || type == "interface" || type == "trait")
+                ++_clsCount;
+            else if (type == "struct" || type == "enum" || type == "impl")
+                ++_structCount;
+            else if (type == "function" || type == "method" ||
+                     type == "arrow function" || type == "async function")
+                ++_fnCount;
+            else
+                ++_otherCount;
+        }
     }
 }
 
