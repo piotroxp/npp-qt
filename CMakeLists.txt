@@ -60,6 +60,7 @@ set(SOURCES
     src/core/LanguageManager.cpp
     src/core/SessionManager.cpp
     src/core/ShortcutManager.cpp
+    src/MISC/Common/shortcut.cpp
     src/core/MacroManager.cpp
     src/core/MacroAction.cpp
     src/core/RecentFilesManager.cpp
@@ -72,7 +73,7 @@ set(SOURCES
     src/core/UdlManager.cpp
     src/editor/ScintillaEditor.cpp
     src/editor/ScintillaEditView.cpp
-    # src/editor/SyntaxHighlighter.cpp  # disabled: missing declarations
+    src/editor/SyntaxHighlighterStub.cpp
     src/editor/DocTabView.cpp
     # src/editor/ScintillaCtrls.cpp  # disabled: heavy Qt6 API differences
     $<$<BOOL:${NPP_HAVE_WEBENGINE}>:src/editor/WebBrowserView.cpp>
@@ -114,13 +115,10 @@ set(SOURCES
     src/common/Util.cpp
     src/common/FileHelper.cpp
     src/common/StringHelper.cpp
-    WinControls/ClipboardHistory/clipboardHistoryPanel.cpp
-)
-
-# ─── WinControls headers ───────────────────────────────────────────────────────
-set(WINCONTROL_HEADERS
-    WinControls/ClipboardHistory/clipboardHistoryPanel.h
-    WinControls/ClipboardHistory/clipboardHistoryPanel_rc.h
+    src/core/NppNotificationHandler.cpp
+    src/core/NppSciNotificationBridge.cpp
+    # src/ui/Accelerator.cpp            # disabled: duplicate impl in shortcut.cpp
+    # src/ui/ScintillaAccelerator.cpp   # disabled: duplicate impl in shortcut.cpp
 )
 
 # ─── Header files ─────────────────────────────────────────────────────────────
@@ -216,7 +214,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     src/panels
     src/core
     src/editor
-    WinControls
+    src/WinControls
     ${QSCINTILLA_INCLUDE_DIRS}
 )
 

@@ -935,3 +935,8 @@ void FileBrowserPanel::onDirectoryChanged(const QString& path) {
 void FileBrowserPanel::onFileRenamed(const QString& /*path*/) {
     refresh();
 }
+
+// === Stubs ===
+void FileBrowserPanel::toggleSystemFiles() {}
+void FileBrowserPanel::toggleHiddenFiles() {}
+

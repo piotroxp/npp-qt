@@ -7,6 +7,7 @@
 #include <QToolButton>
 #include <QWebEngineProfile>
 #include <QWebEngineSettings>
+#include <QWebEngineHistory>
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
@@ -20,13 +21,7 @@
 WebBrowserPage::WebBrowserPage(QWebEngineProfile* profile, QObject* parent)
     : QWebEnginePage(profile, parent)
 {
-    // Handle link clicks in new tabs if needed
-    setAction(QWebEnginePage::OpenLinkInNewTab, new QAction(this));
-}
-
-QWebEngineView* WebBrowserPage::view() const
-{
-    return QWebEnginePage::view();
+    // Link clicks are handled in acceptNavigationRequest
 }
 
 bool WebBrowserPage::acceptNavigationRequest(const QUrl& url, NavigationType type, bool isMainFrame)
@@ -141,14 +136,14 @@ void WebBrowserView::setupUi()
     settings->setAttribute(QWebEngineSettings::JavascriptCanOpenWindows, false);
     settings->setAttribute(QWebEngineSettings::ScrollAnimatorEnabled, true);
 
-    // Set default font
-    QWebEngineSettings::defaultSettings()->setFontFamily(QWebEngineSettings::StandardFont, "Segoe UI");
-    QWebEngineSettings::defaultSettings()->setFontFamily(QWebEngineSettings::SerifFont, "Georgia");
-    QWebEngineSettings::defaultSettings()->setFontFamily(QWebEngineSettings::SansSerifFont, "Segoe UI");
-    QWebEngineSettings::defaultSettings()->setFontFamily(QWebEngineSettings::CursiveFont, "Comic Sans MS");
-    QWebEngineSettings::defaultSettings()->setFontFamily(QWebEngineSettings::FantasyFont, "Impact");
-    QWebEngineSettings::defaultSettings()->setFontSize(QWebEngineSettings::MinimumFontSize, 8);
-    QWebEngineSettings::defaultSettings()->setFontSize(QWebEngineSettings::MinimumLogicalFontSize, 6);
+    // Set default font on profile settings
+    settings->setFontFamily(QWebEngineSettings::StandardFont, "Segoe UI");
+    settings->setFontFamily(QWebEngineSettings::SerifFont, "Georgia");
+    settings->setFontFamily(QWebEngineSettings::SansSerifFont, "Segoe UI");
+    settings->setFontFamily(QWebEngineSettings::CursiveFont, "Comic Sans MS");
+    settings->setFontFamily(QWebEngineSettings::FantasyFont, "Impact");
+    settings->setFontSize(QWebEngineSettings::MinimumFontSize, 8);
+    settings->setFontSize(QWebEngineSettings::MinimumLogicalFontSize, 6);
 
     auto* page = new WebBrowserPage(profile, this);
     webView = new QWebEngineView(this);

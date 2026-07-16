@@ -7,8 +7,7 @@
 #include <QtGui/qrgb.h>   // QRgb used by COLORREF typedef
 #include <QtCore/QString>
 #include <cstdarg>
-
-// Forward declarations for types used across npp-qt
+#include "common/Types.h"   // EolType enum for types used across npp-qt
 class ScintillaComponent;       // defined in ScintillaComponent.h
 // NOTE: ScintillaEditView is defined as a concrete class in editor/ScintillaEditView.h.
 // Do NOT add a `using` alias here — it conflicts with the concrete class definition

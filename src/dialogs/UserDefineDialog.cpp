@@ -642,3 +642,13 @@ QString UserDefineDialog::getColorString(const QColor& c) const {
         .arg(c.green(), 2, 16, QChar('0'))
         .arg(c.blue(), 2, 16, QChar('0'));
 }
+
+// === Stubs ===
+void UserDefineDialog::onValidateClicked() {}
+void UserDefineDialog::updatePreview() {}
+void UserDefineDialog::onImportClicked() {}
+void UserDefineDialog::onExportClicked() {}
+void UserDefineDialog::onTestClicked() {}
+void UserDefineDialog::onResetClicked() {}
+void UserDefineDialog::onAddKeywordClicked(int) {}
+

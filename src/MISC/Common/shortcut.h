@@ -25,6 +25,11 @@ struct KeyCombo {
     bool _isAlt = false;
     bool _isShift = false;
     quint32 _key = 0;
+
+    bool operator==(const KeyCombo& other) const {
+        return _isCtrl == other._isCtrl && _isAlt == other._isAlt &&
+               _isShift == other._isShift && _key == other._key;
+    }
 };
 
 static inline quint32 keyTranslate(quint32 keyIn) {
@@ -81,8 +86,8 @@ public:
     static QString keyToString(quint32 key);
     static int vkToQtKey(quint32 vk);
     static quint32 qtKeyToVk(int qtKey);
-    static QString parseFromString(const QString& str);
     static quint32 parseKeyName(const QString& name);
+    QString parseFromString(const QString& str);
     bool conflictsWith(const Shortcut& other) const;
     QString canonical() const;
     QString toJson() const;

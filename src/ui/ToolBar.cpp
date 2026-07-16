@@ -616,3 +616,7 @@ void ToolBar::dragMoveEvent(QDragMoveEvent* event) {
 void ToolBar::dropEvent(QDropEvent* event) {
     QToolBar::dropEvent(event);
 }
+
+// === Stubs ===
+void ToolBar::onActionTriggered() {}
+

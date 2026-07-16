@@ -705,3 +705,7 @@ bool ClipboardHistoryPanel::eventFilter(QObject* watched, QEvent* event)
 
 // Note: QListWidget::startDrag() is used for drag-and-drop.
 // The editor accepts drops via its own event handlers.
+
+// === Stubs ===
+void ClipboardHistoryPanel::onExpandCollapse(bool) {}
+

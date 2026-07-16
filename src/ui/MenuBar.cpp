@@ -405,3 +405,8 @@ void MenuBar::buildMenus() {
         }
     }
 }
+
+// === Stubs ===
+void MenuBar::onOpenRecentFile(const QString&) {}
+void MenuBar::onOpenRecentClear() {}
+

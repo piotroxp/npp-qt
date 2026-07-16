@@ -46,7 +46,16 @@ public:
     void setLanguage(LangType lang);
     LangType language() const { return _language; }
 
+    void setupLanguage(LangType lang);
+
     void setTheme(const QString& themeName);
+    void applyDarkTheme();
+    void applyDraculaTheme();
+    void applyLightTheme();
+    void applyMonokaiTheme();
+    void applyNordTheme();
+    void applyOneDarkTheme();
+    void applySolarizedDarkTheme();
     QString currentTheme() const { return _themeName; }
 
     void setThemeColors(const QString& foreground, const QString& background,

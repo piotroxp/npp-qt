@@ -2558,3 +2558,23 @@ void SyntaxHighlighter::setupBatch() {
     rule.format = _commentFormat; _rules.append(rule);
 }
 
+void SyntaxHighlighter::setLanguage(LangType lang) {
+    setupLanguage(lang);
+    rehighlight();
+}
+
+
+void SyntaxHighlighter::highlightBlock(const QString& text) {
+    for (const auto& rule : _rules) {
+        if (!rule.enabled) continue;
+        auto matchIt = rule.pattern.globalMatch(text);
+        while (matchIt.hasNext()) {
+            auto m = matchIt.next();
+            int start = m.capturedStart(rule.captureGroup);
+            int len = m.capturedLength(rule.captureGroup);
+            setFormat(start, len, rule.format);
+        }
+    }
+}
+
+// === Additional stubs ===

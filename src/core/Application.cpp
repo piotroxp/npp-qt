@@ -1614,6 +1614,68 @@ void Application::setLanguage(LangType lang) {
     onSetLanguage(lang);
 }
 
+void Application::onConvertEncoding(EncodingType enc) {
+    auto* ed = _mainWindow->currentEditor();
+    if (!ed) return;
+    // Re-encode the current buffer to the target encoding
+    // (placeholder — real implementation would convert via NppIO)
+    Q_UNUSED(ed);
+    Q_UNUSED(enc);
+}
+
+void Application::cloneToOtherView(BufferID buffer) {
+    Q_UNUSED(buffer);
+}
+
+void Application::openFolderAsWorkspace(const std::string& dir) {
+    Q_UNUSED(dir);
+}
+
+void Application::onRun() {
+    // Execute the current file (placeholder)
+}
+
+void Application::moveToSubView(BufferID buffer) {
+    Q_UNUSED(buffer);
+}
+
+void Application::onMacroRecord() {
+    onMacroStartRecording();
+}
+
+void Application::onMacroStop() {
+    onMacroStopRecording();
+}
+
+void Application::onMacroPlayback() {
+    onMacroPlaybackLast();
+}
+
+void Application::onMacroSave() {
+    // Save macro — placeholder
+}
+
+void Application::onManageUserLanguages() {
+    // Open user languages / UDL manager — placeholder
+}
+
+void Application::onToggleFileBrowser() {
+    // Toggle file browser panel — placeholder
+}
+
+void Application::onSetEol(EolType format) {
+    // Convert line endings for current buffer — placeholder
+    Q_UNUSED(format);
+}
+
+void Application::onToggleDocMap() {
+    // Toggle document map panel — placeholder
+}
+
+void Application::onToggleFunctionList() {
+    // Toggle function list panel — placeholder
+}
+
 // ============================================================================
 // Encoding helpers
 // ============================================================================
@@ -2010,3 +2072,30 @@ void Application::onMacroPlaybackLast() {
         }
     }
 }
+
+// === Stubs ===
+void Application::onMoveToSubView() {}
+void Application::onToggleWordWrap() {}
+void Application::onShowAllCharacters() {}
+void Application::onToggleClipboardHistory() {}
+void Application::onCloneToOtherView() {}
+void Application::onZoomOut() {}
+void Application::onToggleEolVisibility() {}
+void Application::onZoomRestore() {}
+void Application::onZoomIn() {}
+void Application::onOpenContainingFolder() {}
+void Application::onJoinLines() {}
+void Application::onSortDescending() {}
+void Application::onDeleteFile() {}
+void Application::onSortIntDescending() {}
+void Application::onUnmarkAll() {}
+void Application::onTrimLeading() {}
+void Application::onRenameFile() {}
+void Application::onSortReverse() {}
+void Application::onDeleteLine() {}
+void Application::onCloseAllButCurrent() {}
+void Application::onSortAscending() {}
+void Application::onSortIntAscending() {}
+void Application::onTrimTrailing() {}
+void Application::onSearchOnInternet() {}
+

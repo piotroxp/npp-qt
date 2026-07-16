@@ -616,3 +616,21 @@ void TabBar::ensureTabVisible(int index) {
         setCurrentIndex(index);
     }
 }
+
+// === Stubs ===
+void TabBar::setElasticScroll(bool) {}
+void TabBar::setScrollable(bool) {}
+void TabBar::setTabBarStyle(TabBar::TabBarStyle) {}
+void TabBar::setCloseButtonVisibility(TabBar::CloseButtonVisibility) {}
+void TabBar::setAddTabButtonVisible(bool) {}
+void TabBar::onTabRemoved(int) {}
+void TabBar::onTabInserted(int) {}
+void TabBar::updateCloseButtons() {}
+void TabBar::onElasticScrollFinished() {}
+void TabBar::onScrollRight() {}
+void TabBar::onScrollLeft() {}
+void TabBar::onAddTabClicked() {}
+QSize TabBar::minimumSizeHint() const { return QWidget::minimumSizeHint(); }
+QSize TabBar::minimumTabSizeHint(int) const { return minimumSizeHint(); }
+void TabBar::paintEvent(QPaintEvent* event) { QWidget::paintEvent(event); }
+

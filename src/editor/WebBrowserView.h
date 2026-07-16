@@ -34,6 +34,9 @@ public:
     // Print support
     void printToPdf(const QString& filePath);
 
+    // Access to the underlying page
+    QWebEnginePage* page() const;
+
 signals:
     void loadingStarted();
     void loadingFinished(bool ok);
@@ -85,7 +88,4 @@ protected:
 
 signals:
     void linkClickedSignal(const QUrl& url);
-
-private:
-    QWebEngineView* view() const;
 };

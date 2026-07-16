@@ -764,3 +764,12 @@ void PreferenceDialog::reject() {
     // The active editor and UI will revert on next buffer activation.
     QDialog::reject();
 }
+
+// === Stubs ===
+void PreferenceDialog::onReloadThemes() {}
+void PreferenceDialog::onApply() {}
+void PreferenceDialog::resetToDefaults() {}
+void PreferenceDialog::onImportFromNpp() {}
+void PreferenceDialog::onExportToNpp() {}
+void PreferenceDialog::onOpenThemesFolder() {}
+

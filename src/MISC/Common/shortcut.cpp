@@ -5,6 +5,8 @@
 #include <QMenu>
 #include <QAction>
 #include <QDebug>
+#include <QMap>
+#include <QPair>
 
 // =============================================================================
 // Shortcut Implementation
@@ -263,50 +265,50 @@ void getNameStrFromCmd(unsigned long cmd, QString& str) {
 QString Shortcut::keyToString(quint32 key) {
     // Handle special keys
     switch (key) {
-        case VK_BACK:    return "Backspace";
-        case VK_TAB:     return "Tab";
-        case VK_RETURN:  return "Enter";
-        case VK_ESCAPE:  return "Escape";
-        case VK_SPACE:   return "Space";
-        case VK_END:     return "End";
-        case VK_HOME:    return "Home";
-        case VK_LEFT:    return "Left";
-        case VK_UP:      return "Up";
-        case VK_RIGHT:   return "Right";
-        case VK_DOWN:    return "Down";
-        case VK_INSERT:  return "Insert";
-        case VK_DELETE:  return "Delete";
-        case VK_PRIOR:   return "PageUp";
-        case VK_NEXT:    return "PageDown";
-        case VK_MULTIPLY: return "*";
-        case VK_ADD:     return "+";
-        case VK_SUBTRACT: return "-";
-        case VK_DECIMAL: return ".";
-        case VK_DIVIDE:  return "/";
-        case VK_NUMLOCK: return "Num Lock";
-        case VK_SCROLL:  return "Scroll";
-        case VK_LSHIFT:  return "Left Shift";
-        case VK_RSHIFT:  return "Right Shift";
-        case VK_LCONTROL: return "Left Ctrl";
-        case VK_RCONTROL: return "Right Ctrl";
-        case VK_LMENU:   return "Left Alt";
-        case VK_RMENU:   return "Right Alt";
-        case VK_CAPITAL: return "Caps Lock";
-        case VK_LWIN:    return "Left Win";
-        case VK_RWIN:    return "Right Win";
-        case VK_APPS:    return "Menu";
+        case NppKeys::VK_BACK:    return "Backspace";
+        case NppKeys::VK_TAB:     return "Tab";
+        case NppKeys::VK_RETURN:  return "Enter";
+        case NppKeys::VK_ESCAPE:  return "Escape";
+        case NppKeys::VK_SPACE:   return "Space";
+        case NppKeys::VK_END:     return "End";
+        case NppKeys::VK_HOME:    return "Home";
+        case NppKeys::VK_LEFT:    return "Left";
+        case NppKeys::VK_UP:      return "Up";
+        case NppKeys::VK_RIGHT:   return "Right";
+        case NppKeys::VK_DOWN:    return "Down";
+        case NppKeys::VK_INSERT:  return "Insert";
+        case NppKeys::VK_DELETE:  return "Delete";
+        case NppKeys::VK_PRIOR:   return "PageUp";
+        case NppKeys::VK_NEXT:    return "PageDown";
+        case NppKeys::VK_MULTIPLY: return "*";
+        case NppKeys::VK_ADD:     return "+";
+        case NppKeys::VK_SUBTRACT: return "-";
+        case NppKeys::VK_DECIMAL: return ".";
+        case NppKeys::VK_DIVIDE:  return "/";
+        case NppKeys::VK_NUMLOCK: return "Num Lock";
+        case NppKeys::VK_SCROLL:  return "Scroll";
+        case NppKeys::VK_LSHIFT:  return "Left Shift";
+        case NppKeys::VK_RSHIFT:  return "Right Shift";
+        case NppKeys::VK_LCONTROL: return "Left Ctrl";
+        case NppKeys::VK_RCONTROL: return "Right Ctrl";
+        case NppKeys::VK_LMENU:   return "Left Alt";
+        case NppKeys::VK_RMENU:   return "Right Alt";
+        case NppKeys::VK_CAPITAL: return "Caps Lock";
+        case NppKeys::VK_LWIN:    return "Left Win";
+        case NppKeys::VK_RWIN:    return "Right Win";
+        case NppKeys::VK_APPS:    return "Menu";
         default:
             break;
     }
 
     // Function keys
-    if (key >= VK_F1 && key <= VK_F24) {
-        return QString("F%1").arg(key - VK_F1 + 1);
+    if (key >= NppKeys::VK_F1 && key <= NppKeys::VK_F24) {
+        return QString("F%1").arg(key - NppKeys::VK_F1 + 1);
     }
 
     // Numpad keys
-    if (key >= VK_NUMPAD0 && key <= VK_NUMPAD9) {
-        return QString("Num %1").arg(key - VK_NUMPAD0);
+    if (key >= NppKeys::VK_NUMPAD0 && key <= NppKeys::VK_NUMPAD9) {
+        return QString("Num %1").arg(key - NppKeys::VK_NUMPAD0);
     }
 
     // OEM keys
@@ -343,54 +345,54 @@ int Shortcut::vkToQtKey(quint32 vk) {
     // Convert Win32 virtual key to Qt key code
     if (vk >= 'A' && vk <= 'Z') return Qt::Key_A + (vk - 'A');
     if (vk >= '0' && vk <= '9') return Qt::Key_0 + (vk - '0');
-    if (vk >= VK_F1 && vk <= VK_F12) return Qt::Key_F1 + (vk - VK_F1);
-    if (vk >= VK_F13 && vk <= VK_F24) return Qt::Key_F13 + (vk - VK_F13);
+    if (vk >= NppKeys::VK_F1 && vk <= NppKeys::VK_F12) return Qt::Key_F1 + (vk - NppKeys::VK_F1);
+    if (vk >= NppKeys::VK_F13 && vk <= NppKeys::VK_F24) return Qt::Key_F13 + (vk - NppKeys::VK_F13);
 
     switch (vk) {
-        case VK_BACK:    return Qt::Key_Backspace;
-        case VK_TAB:     return Qt::Key_Tab;
-        case VK_RETURN:  return Qt::Key_Return;
-        case VK_ESCAPE:  return Qt::Key_Escape;
-        case VK_SPACE:   return Qt::Key_Space;
-        case VK_END:     return Qt::Key_End;
-        case VK_HOME:    return Qt::Key_Home;
-        case VK_LEFT:    return Qt::Key_Left;
-        case VK_UP:      return Qt::Key_Up;
-        case VK_RIGHT:   return Qt::Key_Right;
-        case VK_DOWN:    return Qt::Key_Down;
-        case VK_INSERT:  return Qt::Key_Insert;
-        case VK_DELETE:  return Qt::Key_Delete;
-        case VK_PRIOR:   return Qt::Key_PageUp;
-        case VK_NEXT:    return Qt::Key_PageDown;
-        case VK_MULTIPLY: return Qt::Key_Asterisk;
-        case VK_ADD:     return Qt::Key_Plus;
-        case VK_SUBTRACT: return Qt::Key_Minus;
-        case VK_DECIMAL: return Qt::Key_Period;
-        case VK_DIVIDE:  return Qt::Key_Slash;
-        case VK_NUMLOCK: return Qt::Key_NumLock;
-        case VK_SCROLL:  return Qt::Key_ScrollLock;
-        case VK_CAPITAL: return Qt::Key_CapsLock;
-        case VK_NUMPAD0: return Qt::Key_0;
-        case VK_NUMPAD1: return Qt::Key_1;
-        case VK_NUMPAD2: return Qt::Key_2;
-        case VK_NUMPAD3: return Qt::Key_3;
-        case VK_NUMPAD4: return Qt::Key_4;
-        case VK_NUMPAD5: return Qt::Key_5;
-        case VK_NUMPAD6: return Qt::Key_6;
-        case VK_NUMPAD7: return Qt::Key_7;
-        case VK_NUMPAD8: return Qt::Key_8;
-        case VK_NUMPAD9: return Qt::Key_9;
-        case VK_OEM_PLUS:   return Qt::Key_Equal;
-        case VK_OEM_MINUS:  return Qt::Key_Minus;
-        case VK_OEM_COMMA:  return Qt::Key_Comma;
-        case VK_OEM_PERIOD: return Qt::Key_Period;
-        case VK_OEM_1:      return Qt::Key_Semicolon;
-        case VK_OEM_2:      return Qt::Key_Slash;
-        case VK_OEM_3:      return Qt::Key_QuoteLeft;
-        case VK_OEM_4:      return Qt::Key_BracketLeft;
-        case VK_OEM_5:      return Qt::Key_Backslash;
-        case VK_OEM_6:      return Qt::Key_BracketRight;
-        case VK_OEM_7:      return Qt::Key_QuoteLeft;
+        case NppKeys::VK_BACK:    return Qt::Key_Backspace;
+        case NppKeys::VK_TAB:     return Qt::Key_Tab;
+        case NppKeys::VK_RETURN:  return Qt::Key_Return;
+        case NppKeys::VK_ESCAPE:  return Qt::Key_Escape;
+        case NppKeys::VK_SPACE:   return Qt::Key_Space;
+        case NppKeys::VK_END:     return Qt::Key_End;
+        case NppKeys::VK_HOME:    return Qt::Key_Home;
+        case NppKeys::VK_LEFT:    return Qt::Key_Left;
+        case NppKeys::VK_UP:      return Qt::Key_Up;
+        case NppKeys::VK_RIGHT:   return Qt::Key_Right;
+        case NppKeys::VK_DOWN:    return Qt::Key_Down;
+        case NppKeys::VK_INSERT:  return Qt::Key_Insert;
+        case NppKeys::VK_DELETE:  return Qt::Key_Delete;
+        case NppKeys::VK_PRIOR:   return Qt::Key_PageUp;
+        case NppKeys::VK_NEXT:    return Qt::Key_PageDown;
+        case NppKeys::VK_MULTIPLY: return Qt::Key_Asterisk;
+        case NppKeys::VK_ADD:     return Qt::Key_Plus;
+        case NppKeys::VK_SUBTRACT: return Qt::Key_Minus;
+        case NppKeys::VK_DECIMAL: return Qt::Key_Period;
+        case NppKeys::VK_DIVIDE:  return Qt::Key_Slash;
+        case NppKeys::VK_NUMLOCK: return Qt::Key_NumLock;
+        case NppKeys::VK_SCROLL:  return Qt::Key_ScrollLock;
+        case NppKeys::VK_CAPITAL: return Qt::Key_CapsLock;
+        case NppKeys::VK_NUMPAD0: return Qt::Key_0;
+        case NppKeys::VK_NUMPAD1: return Qt::Key_1;
+        case NppKeys::VK_NUMPAD2: return Qt::Key_2;
+        case NppKeys::VK_NUMPAD3: return Qt::Key_3;
+        case NppKeys::VK_NUMPAD4: return Qt::Key_4;
+        case NppKeys::VK_NUMPAD5: return Qt::Key_5;
+        case NppKeys::VK_NUMPAD6: return Qt::Key_6;
+        case NppKeys::VK_NUMPAD7: return Qt::Key_7;
+        case NppKeys::VK_NUMPAD8: return Qt::Key_8;
+        case NppKeys::VK_NUMPAD9: return Qt::Key_9;
+        case NppKeys::VK_OEM_PLUS:   return Qt::Key_Equal;
+        case NppKeys::VK_OEM_MINUS:  return Qt::Key_Minus;
+        case NppKeys::VK_OEM_COMMA:  return Qt::Key_Comma;
+        case NppKeys::VK_OEM_PERIOD: return Qt::Key_Period;
+        case NppKeys::VK_OEM_1:      return Qt::Key_Semicolon;
+        case NppKeys::VK_OEM_2:      return Qt::Key_Slash;
+        case NppKeys::VK_OEM_3:      return Qt::Key_QuoteLeft;
+        case NppKeys::VK_OEM_4:      return Qt::Key_BracketLeft;
+        case NppKeys::VK_OEM_5:      return Qt::Key_Backslash;
+        case NppKeys::VK_OEM_6:      return Qt::Key_BracketRight;
+        case NppKeys::VK_OEM_7:      return Qt::Key_QuoteLeft;
         default:            return 0;
     }
 }
@@ -401,32 +403,143 @@ quint32 Shortcut::qtKeyToVk(int qtKey) {
     if (qtKey >= Qt::Key_0 && qtKey <= Qt::Key_9)
         return '0' + (qtKey - Qt::Key_0);
     if (qtKey >= Qt::Key_F1 && qtKey <= Qt::Key_F12)
-        return VK_F1 + (qtKey - Qt::Key_F1);
+        return NppKeys::VK_F1 + (qtKey - Qt::Key_F1);
 
     switch (qtKey) {
-        case Qt::Key_Backspace: return VK_BACK;
-        case Qt::Key_Tab:       return VK_TAB;
-        case Qt::Key_Return:    return VK_RETURN;
-        case Qt::Key_Escape:    return VK_ESCAPE;
-        case Qt::Key_Space:     return VK_SPACE;
-        case Qt::Key_End:       return VK_END;
-        case Qt::Key_Home:      return VK_HOME;
-        case Qt::Key_Left:      return VK_LEFT;
-        case Qt::Key_Up:        return VK_UP;
-        case Qt::Key_Right:     return VK_RIGHT;
-        case Qt::Key_Down:      return VK_DOWN;
-        case Qt::Key_Insert:    return VK_INSERT;
-        case Qt::Key_Delete:    return VK_DELETE;
-        case Qt::Key_PageUp:    return VK_PRIOR;
-        case Qt::Key_PageDown:  return VK_NEXT;
+        case Qt::Key_Backspace: return NppKeys::VK_BACK;
+        case Qt::Key_Tab:       return NppKeys::VK_TAB;
+        case Qt::Key_Return:    return NppKeys::VK_RETURN;
+        case Qt::Key_Escape:    return NppKeys::VK_ESCAPE;
+        case Qt::Key_Space:     return NppKeys::VK_SPACE;
+        case Qt::Key_End:       return NppKeys::VK_END;
+        case Qt::Key_Home:      return NppKeys::VK_HOME;
+        case Qt::Key_Left:      return NppKeys::VK_LEFT;
+        case Qt::Key_Up:        return NppKeys::VK_UP;
+        case Qt::Key_Right:     return NppKeys::VK_RIGHT;
+        case Qt::Key_Down:      return NppKeys::VK_DOWN;
+        case Qt::Key_Insert:    return NppKeys::VK_INSERT;
+        case Qt::Key_Delete:    return NppKeys::VK_DELETE;
+        case Qt::Key_PageUp:    return NppKeys::VK_PRIOR;
+        case Qt::Key_PageDown:  return NppKeys::VK_NEXT;
         default:                return 0;
     }
+}
+
+// Helper: build specialKeys map using explicit insertion (Qt6/C++20 compatible)
+static QMap<QString, quint32> buildSpecialKeysMap() {
+    QMap<QString, quint32> m;
+    m.insert("Backspace", NppKeys::VK_BACK);
+    m.insert("Tab", NppKeys::VK_TAB);
+    m.insert("Enter", NppKeys::VK_RETURN);
+    m.insert("Return", NppKeys::VK_RETURN);
+    m.insert("Escape", NppKeys::VK_ESCAPE);
+    m.insert("Esc", NppKeys::VK_ESCAPE);
+    m.insert("Space", NppKeys::VK_SPACE);
+    m.insert("End", NppKeys::VK_END);
+    m.insert("Home", NppKeys::VK_HOME);
+    m.insert("Left", NppKeys::VK_LEFT);
+    m.insert("Up", NppKeys::VK_UP);
+    m.insert("Right", NppKeys::VK_RIGHT);
+    m.insert("Down", NppKeys::VK_DOWN);
+    m.insert("Insert", NppKeys::VK_INSERT);
+    m.insert("Delete", NppKeys::VK_DELETE);
+    m.insert("Del", NppKeys::VK_DELETE);
+    m.insert("PageUp", NppKeys::VK_PRIOR);
+    m.insert("Page Down", NppKeys::VK_PRIOR);
+    m.insert("Prior", NppKeys::VK_PRIOR);
+    m.insert("Next", NppKeys::VK_NEXT);
+    m.insert("Num0", NppKeys::VK_NUMPAD0);
+    m.insert("Num1", NppKeys::VK_NUMPAD1);
+    m.insert("Num2", NppKeys::VK_NUMPAD2);
+    m.insert("Num3", NppKeys::VK_NUMPAD3);
+    m.insert("Num4", NppKeys::VK_NUMPAD4);
+    m.insert("Num5", NppKeys::VK_NUMPAD5);
+    m.insert("Num6", NppKeys::VK_NUMPAD6);
+    m.insert("Num7", NppKeys::VK_NUMPAD7);
+    m.insert("Num8", NppKeys::VK_NUMPAD8);
+    m.insert("Num9", NppKeys::VK_NUMPAD9);
+    m.insert("Num*", NppKeys::VK_MULTIPLY);
+    m.insert("Num+", NppKeys::VK_ADD);
+    m.insert("Num-", NppKeys::VK_SUBTRACT);
+    m.insert("Num.", NppKeys::VK_DECIMAL);
+    m.insert("Num/", NppKeys::VK_DIVIDE);
+    m.insert("Multiply", NppKeys::VK_MULTIPLY);
+    m.insert("Add", NppKeys::VK_ADD);
+    m.insert("Subtract", NppKeys::VK_SUBTRACT);
+    m.insert("Decimal", NppKeys::VK_DECIMAL);
+    m.insert("Divide", NppKeys::VK_DIVIDE);
+    m.insert("F1", NppKeys::VK_F1);
+    m.insert("F2", NppKeys::VK_F2);
+    m.insert("F3", NppKeys::VK_F3);
+    m.insert("F4", NppKeys::VK_F4);
+    m.insert("F5", NppKeys::VK_F5);
+    m.insert("F6", NppKeys::VK_F6);
+    m.insert("F7", NppKeys::VK_F7);
+    m.insert("F8", NppKeys::VK_F8);
+    m.insert("F9", NppKeys::VK_F9);
+    m.insert("F10", NppKeys::VK_F10);
+    m.insert("F11", NppKeys::VK_F11);
+    m.insert("F12", NppKeys::VK_F12);
+    m.insert("CapsLock", NppKeys::VK_CAPITAL);
+    m.insert("Caps", NppKeys::VK_CAPITAL);
+    m.insert("NumLock", NppKeys::VK_NUMLOCK);
+    m.insert("ScrollLock", NppKeys::VK_SCROLL);
+    return m;
+}
+
+quint32 Shortcut::parseKeyName(const QString& name) {
+    QString n = name.trimmed();
+
+    // Function keys
+    if (n.startsWith("F", Qt::CaseInsensitive) && n.length() > 1) {
+        bool ok;
+        int num = n.mid(1).toInt(&ok);
+        if (ok && num >= 1 && num <= 24) {
+            return NppKeys::VK_F1 + (num - 1);
+        }
+    }
+
+    // Special keys
+    static const QMap<QString, quint32> specialKeys = buildSpecialKeysMap();
+
+    auto it = specialKeys.find(n);
+    if (it != specialKeys.end()) {
+        return it.value();
+    }
+
+    // Single character keys
+    if (n.length() == 1) {
+        QChar c = n[0].toUpper();
+        if (c.isLetter()) return c.unicode();
+        if (c.isDigit()) return c.unicode();
+    }
+
+    // OEM keys
+    if (n.length() == 1) {
+        char ch = n[0].toLatin1();
+        switch (ch) {
+            case ';': return 0xBA;
+            case '=': return 0xBB;
+            case ',': return 0xBC;
+            case '-': return 0xBD;
+            case '.': return 0xBE;
+            case '/': return 0xBF;
+            case '`': return 0xC0;
+            case '[': return 0xDB;
+            case '\\': return 0xDC;
+            case ']': return 0xDD;
+            case '\'': return 0xDE;
+            default: break;
+        }
+    }
+
+    return 0;
 }
 
 QString Shortcut::parseFromString(const QString& str) {
     // Parse a string like "Ctrl+Shift+S" into key components
     // Returns error message if invalid, empty string if OK
-    QStringList parts = str.split('+', Qt::SkipEmptyParts);
+    QStringList parts = str.split('+', Qt::SplitBehaviorFlags::SkipEmptyParts);
     if (parts.isEmpty()) return "Empty shortcut";
 
     _keyCombo._isCtrl = false;
@@ -467,107 +580,6 @@ QString Shortcut::parseFromString(const QString& str) {
     return QString();
 }
 
-quint32 Shortcut::parseKeyName(const QString& name) {
-    QString n = name.trimmed();
-
-    // Function keys
-    if (n.startsWith("F", Qt::CaseInsensitive) && n.length() > 1) {
-        bool ok;
-        int num = n.mid(1).toInt(&ok);
-        if (ok && num >= 1 && num <= 24) {
-            return VK_F1 + (num - 1);
-        }
-    }
-
-    // Special keys
-    static const QMap<QString, quint32> specialKeys = {
-        {"Backspace", VK_BACK},
-        {"Tab", VK_TAB},
-        {"Enter", VK_RETURN},
-        {"Return", VK_RETURN},
-        {"Escape", VK_ESCAPE},
-        {"Esc", VK_ESCAPE},
-        {"Space", VK_SPACE},
-        {"End", VK_END},
-        {"Home", VK_HOME},
-        {"Left", VK_LEFT},
-        {"Up", VK_UP},
-        {"Right", VK_RIGHT},
-        {"Down", VK_DOWN},
-        {"Insert", VK_INSERT},
-        {"Delete", VK_DELETE},
-        {"Del", VK_DELETE},
-        {"PageUp", VK_PRIOR},
-        {"Page Down", VK_PRIOR},
-        {"PageUp", VK_PRIOR},
-        {"Prior", VK_PRIOR},
-        {"Next", VK_NEXT},
-        {"Num0", VK_NUMPAD0},
-        {"Num1", VK_NUMPAD1},
-        {"Num2", VK_NUMPAD2},
-        {"Num3", VK_NUMPAD3},
-        {"Num4", VK_NUMPAD4},
-        {"Num5", VK_NUMPAD5},
-        {"Num6", VK_NUMPAD6},
-        {"Num7", VK_NUMPAD7},
-        {"Num8", VK_NUMPAD8},
-        {"Num9", VK_NUMPAD9},
-        {"Num*", VK_MULTIPLY},
-        {"Num+", VK_ADD},
-        {"Num-", VK_SUBTRACT},
-        {"Num.", VK_DECIMAL},
-        {"Num/", VK_DIVIDE},
-        {"Multiply", VK_MULTIPLY},
-        {"Add", VK_ADD},
-        {"Subtract", VK_SUBTRACT},
-        {"Decimal", VK_DECIMAL},
-        {"Divide", VK_DIVIDE},
-        {"F1", VK_F1}, {"F2", VK_F2}, {"F3", VK_F3}, {"F4", VK_F4},
-        {"F5", VK_F5}, {"F6", VK_F6}, {"F7", VK_F7}, {"F8", VK_F8},
-        {"F9", VK_F9}, {"F10", VK_F10}, {"F11", VK_F11}, {"F12", VK_F12},
-        {"CapsLock", VK_CAPITAL},
-        {"Caps", VK_CAPITAL},
-        {"NumLock", VK_NUMLOCK},
-        {"ScrollLock", VK_SCROLL},
-    };
-
-    auto it = specialKeys.find(n);
-    if (it != specialKeys.end()) {
-        return it.value();
-    }
-
-    // Single character keys
-    if (n.length() == 1) {
-        QChar c = n[0].toUpper()[0];
-        if (c.isLetter()) return c.unicode();
-        if (c.isDigit()) return c.unicode();
-    }
-
-    // OEM keys
-    if (n.length() == 1) {
-        char ch = n[0].toLatin1();
-        switch (ch) {
-            case ';': return 0xBA;
-            case '=': return 0xBB;
-            case ',': return 0xBC;
-            case '-': return 0xBD;
-            case '.': return 0xBE;
-            case '/': return 0xBF;
-            case '`': return 0xC0;
-            case '[': return 0xDB;
-            case '\\': return 0xDC;
-            case ']': return 0xDD;
-            case '\'': return 0xDE;
-            default: break;
-        }
-    }
-
-    return 0;
-}
-
-// Static member definitions
-QString (*Shortcut::keyToStringFunc)(quint32) = nullptr;
-
 // Additional Shortcut methods
 bool Shortcut::conflictsWith(const Shortcut& other) const {
     return _keyCombo._isCtrl == other._keyCombo._isCtrl &&
@@ -601,14 +613,8 @@ bool Shortcut::fromJson(const QString& json) {
     _keyCombo._isCtrl = obj["ctrl"].toBool();
     _keyCombo._isAlt = obj["alt"].toBool();
     _keyCombo._isShift = obj["shift"].toBool();
-    _keyCombo._key = obj["key"].toString().toUInt(Q_NULLPTR, 16);
+    _keyCombo._key = obj["key"].toString().toUInt(nullptr, 16);
     _name = obj["name"].toString();
     _menuName = obj["menuName"].toString();
     return true;
-}
-
-// KeyCombo operator overloads
-bool KeyCombo::operator==(const KeyCombo& other) const {
-    return _isCtrl == other._isCtrl && _isAlt == other._isAlt &&
-           _isShift == other._isShift && _key == other._key;
 }

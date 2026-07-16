@@ -359,3 +359,29 @@ void FindReplaceDialog::setStatusMessage(const QString& msg) {
     if (_statusLabel)
         _statusLabel->setText(QString("  %1").arg(msg));
 }
+
+// === Stubs ===
+void FindReplaceDialog::restoreAfterSearch() {}
+void FindReplaceDialog::onFindPrevious() {}
+void FindReplaceDialog::onReplaceAllInAll() {}
+void FindReplaceDialog::onMarkAll() {}
+void FindReplaceDialog::onUnmarkAll() {}
+void FindReplaceDialog::onPurge() {}
+void FindReplaceDialog::onBookmark() {}
+void FindReplaceDialog::onSelectAndFind() {}
+void FindReplaceDialog::onFindInFiles() {}
+void FindReplaceDialog::onReplaceInFiles() {}
+void FindReplaceDialog::onReplaceTextChanged(const QString&) {}
+void FindReplaceDialog::onModeChanged() {}
+void FindReplaceDialog::onReplacePrompt(const QString&, const QString&, int) {}
+void FindReplaceDialog::updateHighlight() {}
+void FindReplaceDialog::applyHighlightToggle() {}
+void FindReplaceDialog::saveSearchToHistory(const QString&) {}
+void FindReplaceDialog::saveReplaceToHistory(const QString&) {}
+void FindReplaceDialog::loadSearchHistory() {}
+void FindReplaceDialog::loadReplaceHistory() {}
+void FindReplaceDialog::updateMarkColor(const QColor&) {}
+void FindReplaceDialog::scheduleHideForSearch() {}
+void FindReplaceDialog::keyPressEvent(QKeyEvent* event) { event->ignore(); }
+void FindReplaceDialog::showEvent(QShowEvent* event) { QDialog::showEvent(event); }
+
