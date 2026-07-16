@@ -1802,7 +1802,7 @@ ApplicationImportResult Application::importFromNpp(const QString& nppPath) {
                         QString shift = reader.attributes().value("shift").toString();
                         QString key = reader.attributes().value("key").toString();
                         if (!name.isEmpty()) {
-                            Shortcut sc;
+                            ShortcutDef sc;
                             sc.name = name.toStdString();
                             sc.ctrl = ctrl.toInt();
                             sc.alt = alt.toInt();
@@ -1905,7 +1905,7 @@ bool Application::exportSettingsToJson(const QString& path) {
 
     // Export shortcuts
     QJsonArray shortcuts;
-    for (const Shortcut& sc : NppParameters::getInstance().getShortcuts()) {
+    for (const ShortcutDef& sc : NppParameters::getInstance().getShortcuts()) {
         QJsonObject obj;
         obj["name"] = QString::fromStdString(sc.name);
         obj["ctrl"] = sc.ctrl;
@@ -1948,7 +1948,7 @@ bool Application::exportSettingsToNpp(const QString& path) {
 
     // Write shortcuts
     writer.writeStartElement("Shortcuts");
-    for (const Shortcut& sc : NppParameters::getInstance().getShortcuts()) {
+    for (const ShortcutDef& sc : NppParameters::getInstance().getShortcuts()) {
         writer.writeEmptyElement("Shortcut");
         writer.writeAttribute("name", QString::fromStdString(sc.name));
         writer.writeAttribute("ctrl", QString::number(sc.ctrl));

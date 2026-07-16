@@ -392,7 +392,9 @@ struct FindHistory {
     int  _counter3 = 0;
 };
 
-struct Shortcut {
+// ShortcutDef — plain data struct (for serialization). Named to avoid clash
+// with MISC::Common::Shortcut (QObject subclass in shortcut.h).
+struct ShortcutDef {
     std::string name;
     int id = 0;
     int ctrl = 0;

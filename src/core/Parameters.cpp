@@ -150,7 +150,7 @@ bool NppParameters::writeStyles() {
 // ============================================================================
 // Shortcuts
 // ============================================================================
-void NppParameters::setShortcuts(const std::vector<Shortcut>& shortcuts) {
+void NppParameters::setShortcuts(const std::vector<ShortcutDef>& shortcuts) {
     _shortcuts = shortcuts;
     _shortcutIndex.clear();
     for (size_t i = 0; i < shortcuts.size(); ++i) {
@@ -159,7 +159,7 @@ void NppParameters::setShortcuts(const std::vector<Shortcut>& shortcuts) {
     saveShortcuts();
 }
 
-Shortcut* NppParameters::findShortcut(const QString& name) {
+ShortcutDef* NppParameters::findShortcut(const QString& name) {
     auto it = _shortcutIndex.find(name);
     if (it != _shortcutIndex.end() && it->second < static_cast<int>(_shortcuts.size())) {
         return &_shortcuts[it->second];
@@ -346,7 +346,7 @@ void NppParameters::loadShortcutsFromXml(const QString& path) {
     while (!xml.atEnd()) {
         xml.readNext();
         if (xml.isStartElement() && xml.name().toString() == QStringLiteral("Shortcut")) {
-            Shortcut sc;
+            ShortcutDef sc;
             sc.name = xml.attributes().value("name").toString().toStdString();
             sc.id = xml.attributes().value("id").toString().toInt();
             sc.ctrl = xml.attributes().value("ctrl").toString().toInt();

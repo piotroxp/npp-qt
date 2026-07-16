@@ -422,7 +422,7 @@ private:
 // Scintilla notification codes (SCN_*)
 // Guarded so they don't leak into files that don't expect them
 #ifndef NPP_SCN_DEFINED
-#define NPP_SCN_DEFINED
+#define NPP_SCINTILLA_NOTIFY_DEFINED
 
 #ifndef SCN_STYLENEEDED
 #define SCN_STYLENEEDED 2000
@@ -464,7 +464,7 @@ private:
 #define SCN_AUTOCCANCELLED 2022
 #endif
 
-#endif  // NPP_SCN_DEFINED
+#endif  // NPP_SCINTILLA_NOTIFY_DEFINED
 
 // Sci_NotifyHeader struct (minimal)
 struct Sci_NotifyHeader {

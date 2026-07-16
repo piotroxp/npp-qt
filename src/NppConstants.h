@@ -289,35 +289,9 @@ inline constexpr int PF_X64    = 101;
 inline constexpr int PF_IA64   = 102;
 inline constexpr int PF_ARM64  = 103;
 
-// LangType enum — original Win32 ordering from N++ Notepad_plus_msgs.h
-// Plain enum (not enum class) so L_TEXT, L_PHP, etc. are in enclosing scope
-enum LangType {
-    L_TEXT = 0,        L_PHP = 1,      L_C = 2,          L_CPP = 3,
-    L_CS = 4,          L_OBJC = 5,     L_JAVA = 6,       L_RC = 7,
-    L_HTML = 8,        L_XML = 9,      L_MAKEFILE = 10,  L_PASCAL = 11,
-    L_BATCH = 12,      L_INI = 13,     L_ASCII = 14,     L_USER = 15,
-    L_ASP = 16,        L_SQL = 17,     L_VB = 18,        L_JS_EMBEDDED = 19,
-    L_CSS = 20,        L_PERL = 21,    L_PYTHON = 22,    L_LUA = 23,
-    L_TEX = 24,        L_FORTRAN = 25, L_BASH = 26,      L_FLASH = 27,
-    L_NSIS = 28,       L_TCL = 29,     L_LISP = 30,      L_SCHEME = 31,
-    L_ASM = 32,        L_DIFF = 33,    L_PROPS = 34,     L_PS = 35,
-    L_RUBY = 36,       L_SMALLTALK = 37, L_VHDL = 38,    L_KIX = 39,
-    L_AU3 = 40,        L_CAML = 41,    L_ADA = 42,       L_VERILOG = 43,
-    L_MATLAB = 44,     L_HASKELL = 45, L_INNO = 46,      L_SEARCHRESULT = 47,
-    L_CMAKE = 48,      L_YAML = 49,    L_COBOL = 50,     L_GUI4CLI = 51,
-    L_D = 52,          L_POWERSHELL = 53, L_R = 54,      L_JSP = 55,
-    L_COFFEESCRIPT = 56, L_JSON = 57,  L_JAVASCRIPT = 58, L_FORTRAN_77 = 59,
-    L_BAANC = 60,      L_SREC = 61,    L_IHEX = 62,      L_TEHEX = 63,
-    L_SWIFT = 64,      L_ASN1 = 65,   L_AVS = 66,        L_BLITZBASIC = 67,
-    L_PUREBASIC = 68,  L_FREEBASIC = 69, L_CSOUND = 70,  L_ERLANG = 71,
-    L_ESCRIPT = 72,    L_FORTH = 73,   L_LATEX = 74,     L_MMIXAL = 75,
-    L_NIM = 76,        L_NNCRONTAB = 77, L_OSCRIPT = 78, L_REBOL = 79,
-    L_REGISTRY = 80,   L_RUST = 81,    L_SPICE = 82,     L_TXT2TAGS = 83,
-    L_VISUALPROLOG = 84, L_TYPESCRIPT = 85, L_JSON5 = 86, L_MSSQL = 87,
-    L_GDSCRIPT = 88,   L_HOLLYWOOD = 89, L_GOLANG = 90,  L_RAKU = 91,
-    L_TOML = 92,       L_SAS = 93,     L_ERRORLIST = 94, L_EXTERNAL = 95,
-    L_MARKDOWN = 96,
-};
+// LangType enum was removed from NppConstants.h — the definitive definition
+// lives in common/Types.h as enum class LangType. All code uses LangType::L_*
+// scoped form, which maps correctly to the npp-qt set.
 
 // Windows version enum (from N++ Notepad_plus_msgs.h)
 enum class WinVersion {
