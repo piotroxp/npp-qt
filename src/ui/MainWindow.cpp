@@ -45,6 +45,7 @@ MainWindow* MainWindow::_instance = nullptr;
 MainWindow::MainWindow()
     : QMainWindow(nullptr)
 {
+    fprintf(stderr, "DEBUG: MainWindow ctor start\n"); fflush(stderr);
     _instance = this;
     setWindowTitle("Notepad--Qt");
     setAcceptDrops(true);
@@ -335,6 +336,7 @@ void MainWindow::createStatusBar() {
 }
 
 void MainWindow::createPanels() {
+    fprintf(stderr, "DEBUG: createPanels() start\n"); fflush(stderr);
     // File Browser panel (left dock)
     _fileBrowserDock = new QDockWidget("File Browser", this);
     _fileBrowserDock->setWidget(app().fileBrowserPanel());

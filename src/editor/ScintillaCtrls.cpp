@@ -172,7 +172,7 @@ void ScintillaCtrls::joinLines(ScintillaEditor* editor) {
     }
 
     qsci->beginUndoAction();
-    qsci->SendScintilla(QsciScintilla::SCI_SETSELECTION, startPos, endPos);
+    qsci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_SETSELECTION), static_cast<unsigned long>(startPos), static_cast<long>(endPos));
     qsci->replaceSelectedText(replacement);
     qsci->endUndoAction();
 }
@@ -350,15 +350,16 @@ void ScintillaCtrls::syncScrolling(QsciScintilla* primary, QsciScintilla* second
     // Connect primary's scrollChanged to our callback using a lambda that can
     // survive the static context.  We use a small QObject wrapper approach.
     // For simplicity, install an event filter on the primary scrollbar.
-    QObject::connect(primary, &QsciScintilla::updateRequest,
-                     [](const QRect&, int dy) {
-        if (_syncing || !_syncPrimary || !_syncSecondary) return;
-        double fraction = scrollPosition(_syncPrimary);
-        _syncing = true;
-        setScrollPosition(_syncSecondary, fraction);
-        _syncing = false;
-        Q_UNUSED(dy);
-    });
+    // Use scrollbar valueChanged instead of the non-existent updateRequest signal
+    if (auto* sb = primary->verticalScrollBar()) {
+        QObject::connect(sb, &QScrollBar::valueChanged, primary, [](int) {
+            if (_syncing || !_syncPrimary || !_syncSecondary) return;
+            double fraction = scrollPosition(_syncPrimary);
+            _syncing = true;
+            setScrollPosition(_syncSecondary, fraction);
+            _syncing = false;
+        });
+    }
 }
 
 void ScintillaCtrls::unsyncScrolling(QsciScintilla* primary) {
@@ -433,8 +434,8 @@ void ScintillaCtrls::addAnnotation(QsciScintilla* sci, int line,
     // SCI_ANNOTATIONSETTEXT = 2222, SCI_ANNOTATIONSETSTYLE = 2223
     // SCI_ANNOTATIONSETSTYLES = 2224
     QByteArray utf8 = text.toUtf8();
-    sci->SendScintilla(2222, line, utf8.constData());       // SCI_ANNOTATIONSETTEXT
-    sci->SendScintilla(2223, line, style);                   // SCI_ANNOTATIONSETSTYLE
+    sci->SendScintilla(2222, static_cast<unsigned long>(line), utf8.constData()); // SCI_ANNOTATIONSETTEXT
+    sci->SendScintilla(2223, static_cast<unsigned long>(line), static_cast<unsigned long>(style)); // SCI_ANNOTATIONSETSTYLE
     // Show the annotation margin (margin 4)
     sci->SendScintilla(2226, 1); // SCI_ANNOTATIONSETVISIBLE = 2226, 1=Standard
     // Auto-size the margin
@@ -445,12 +446,12 @@ void ScintillaCtrls::addAnnotation(QsciScintilla* sci, int line,
 void ScintillaCtrls::clearAnnotations(QsciScintilla* sci) {
     if (!sci) return;
     // SCI_ANNOTATIONCLEARALL = 2225
-    sci->SendScintilla(2225, 0, 0);
+    sci->SendScintilla(2225, 0, static_cast<long>(0));
 }
 
 void ScintillaCtrls::clearAnnotation(QsciScintilla* sci, int line) {
     if (!sci || line < 0) return;
-    sci->SendScintilla(2222, line, 0); // SCI_ANNOTATIONSETTEXT with null clears
+    sci->SendScintilla(2222, static_cast<unsigned long>(line), static_cast<const char*>(nullptr)); // SCI_ANNOTATIONSETTEXT with null clears
 }
 
 // ============================================================================
@@ -571,14 +572,14 @@ void ScintillaCtrls::showCallTip(QsciScintilla* sci, const QString& tip,
     QByteArray defnBytes = defn.toUtf8();
     // SCI_CALLTIPSHOW = 2200
     // lParam = text, wParam = position (0 = at caret)
-    sci->SendScintilla(2200, 0, tipBytes.constData());
+    sci->SendScintilla(static_cast<unsigned long>(2200), static_cast<unsigned long>(0), tipBytes.constData());
     Q_UNUSED(defnBytes);
 }
 
 void ScintillaCtrls::cancelCallTip(QsciScintilla* sci) {
     if (!sci) return;
     // SCI_CALLTIPCANCEL = 2201
-    sci->SendScintilla(2201, 0, 0);
+    sci->SendScintilla(static_cast<unsigned long>(2201), static_cast<unsigned long>(0), static_cast<long>(0));
 }
 
 void ScintillaCtrls::registerCallTipArgs(QsciScintilla* sci,
@@ -603,12 +604,12 @@ void ScintillaCtrls::setTextDragEnabled(QsciScintilla* sci, bool enabled) {
     if (!sci) return;
     // SCI_SETDRAGANDDROP = 2371
     // mode: 0=drag disabled, 1=drag normal, 2=drag with user drop
-    sci->SendScintilla(2371, enabled ? 1 : 0, 0);
+    sci->SendScintilla(static_cast<unsigned long>(2371), static_cast<unsigned long>(enabled ? 1 : 0), static_cast<long>(0));
 }
 
 bool ScintillaCtrls::isTextDragEnabled(QsciScintilla* sci) {
     if (!sci) return false;
-    return sci->SendScintilla(2372, 0, 0) != 0; // SCI_GETDRAGANDDROP
+    return sci->SendScintilla(static_cast<unsigned long>(2372), static_cast<unsigned long>(0), static_cast<long>(0)) != 0; // SCI_GETDRAGANDDROP
 }
 
 // ============================================================================
@@ -617,7 +618,7 @@ bool ScintillaCtrls::isTextDragEnabled(QsciScintilla* sci) {
 
 bool ScintillaCtrls::isRectangularSelection(QsciScintilla* sci) {
     if (!sci) return false;
-    return sci->SendScintilla(QsciScintilla::SCI_GETSELECTIONMODE, 0, 0)
+    return sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_GETSELECTIONMODE), static_cast<unsigned long>(0), static_cast<long>(0))
            == 1; // SC_SEL_RECTANGLE
 }
 
@@ -625,24 +626,24 @@ void ScintillaCtrls::startColumnSelection(QsciScintilla* sci,
                                            int startLine, int startCol,
                                            int endLine, int endCol) {
     if (!sci) return;
-    sci->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE, 1); // SC_SEL_RECTANGLE
-    sci->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 1); // SCVS_USERACCESSIBLE
+    sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_SETSELECTIONMODE), static_cast<unsigned long>(1), static_cast<long>(0)); // SC_SEL_RECTANGLE
+    sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS), static_cast<unsigned long>(1), static_cast<long>(0)); // SCVS_USERACCESSIBLE
 
-    int startPos = sci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, startLine)
-                  + startCol;
-    int endPos = sci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, endLine)
-                 + endCol;
+    int startPos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_POSITIONFROMLINE), static_cast<unsigned long>(startLine));
+    (void)(startCol);
+    int endPos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_POSITIONFROMLINE), static_cast<unsigned long>(endLine));
+    (void)(endCol);
 
-    sci->SendScintilla(QsciScintilla::SCI_SETSELECTION, startPos, endPos);
+    sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_SETSELECTION), static_cast<unsigned long>(startPos), static_cast<long>(endPos));
 }
 
 QRect ScintillaCtrls::columnSelectionBounds(QsciScintilla* sci) {
     if (!sci) return QRect();
     int sl = 0, sc = 0, el = 0, ec = 0;
-    int startPos = sci->SendScintilla(QsciScintilla::SCI_GETSELECTIONNSTART, 0, 0);
-    int endPos = sci->SendScintilla(QsciScintilla::SCI_GETSELECTIONNEND, 0, 0);
-    int startLine = sci->SendScintilla(QsciScintilla::SCI_LINEFROMPOSITION, startPos, 0);
-    int endLine = sci->SendScintilla(QsciScintilla::SCI_LINEFROMPOSITION, endPos, 0);
+    int startPos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_GETSELECTIONNSTART), static_cast<unsigned long>(0), static_cast<long>(0));
+    int endPos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_GETSELECTIONNEND), static_cast<unsigned long>(0), static_cast<long>(0));
+    int startLine = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_LINEFROMPOSITION), static_cast<unsigned long>(startPos), static_cast<long>(0));
+    int endLine = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_LINEFROMPOSITION), static_cast<unsigned long>(endPos), static_cast<long>(0));
     int startCol = startPos - sci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, startLine, 0);
     int endCol = endPos - sci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, endLine, 0);
     Q_UNUSED(sl); Q_UNUSED(sc); Q_UNUSED(el); Q_UNUSED(ec);
@@ -655,7 +656,7 @@ QRect ScintillaCtrls::columnSelectionBounds(QsciScintilla* sci) {
 
 void ScintillaCtrls::selectWordAtCursor(QsciScintilla* sci) {
     if (!sci) return;
-    int pos = sci->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS, 0, 0);
+    int pos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_GETCURRENTPOS), static_cast<unsigned long>(0), static_cast<long>(0));
     int start = sci->SendScintilla(QsciScintilla::SCI_WORDSTARTPOSITION, pos, 0);
     int end = sci->SendScintilla(QsciScintilla::SCI_WORDENDPOSITION, pos, 0);
     sci->SendScintilla(QsciScintilla::SCI_SETSELECTION, start, end);
@@ -663,7 +664,7 @@ void ScintillaCtrls::selectWordAtCursor(QsciScintilla* sci) {
 
 QPair<int, int> ScintillaCtrls::wordAtCursor(QsciScintilla* sci) {
     if (!sci) return qMakePair(-1, -1);
-    int pos = sci->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS, 0, 0);
+    int pos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_GETCURRENTPOS), static_cast<unsigned long>(0), static_cast<long>(0));
     int start = sci->SendScintilla(QsciScintilla::SCI_WORDSTARTPOSITION, pos, 0);
     int end = sci->SendScintilla(QsciScintilla::SCI_WORDENDPOSITION, pos, 0);
     return qMakePair(start, end);
@@ -671,7 +672,7 @@ QPair<int, int> ScintillaCtrls::wordAtCursor(QsciScintilla* sci) {
 
 bool ScintillaCtrls::isInComment(QsciScintilla* sci) {
     if (!sci) return false;
-    int pos = sci->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS, 0, 0);
+    int pos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_GETCURRENTPOS), static_cast<unsigned long>(0), static_cast<long>(0));
     int style = sci->SendScintilla(QsciScintilla::SCI_GETSTYLEAT, pos, 0);
     // Style 1 is typically a comment in most lexers (check specific lexer)
     // For C-like: 1=comment, 2=comment line
@@ -680,7 +681,7 @@ bool ScintillaCtrls::isInComment(QsciScintilla* sci) {
 
 bool ScintillaCtrls::isInString(QsciScintilla* sci) {
     if (!sci) return false;
-    int pos = sci->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS, 0, 0);
+    int pos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_GETCURRENTPOS), static_cast<unsigned long>(0), static_cast<long>(0));
     int style = sci->SendScintilla(QsciScintilla::SCI_GETSTYLEAT, pos, 0);
     // For C-like: 5=string, 6=dstring, 7= verbatim string
     return style == 5 || style == 6 || style == 7;
