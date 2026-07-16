@@ -13,8 +13,6 @@
 #include <QVBoxLayout>
 #include <QGridLayout>
 #include <QFrame>
-#include <QColor>
-#include <QFont>
 #include <QSize>
 #include <QPoint>
 #include <QIcon>
@@ -25,51 +23,14 @@
 #include <QToolTip>
 #include <QClipboard>
 #include <QApplication>
-#include <QColorDialog>
-#include <QSpinBox>
-#include <QCheckBox>
-#include <QFontComboBox>
 
 // Forward declaration
 class DpiManager;
 
-// ColourPicker — colour palette with custom colour picker
-class ColourPicker : public QWidget {
-    Q_OBJECT
-public:
-    explicit ColourPicker(QWidget* parent = nullptr);
-    QColor currentColor() const { return m_current; }
-    void setCurrentColor(const QColor& c);
-Q_SIGNALS:
-    void colorSelected(const QColor& c);
-private:
-    void setupPalette();
-    void applyDpiScaling();
-    QColor m_current = Qt::white;
-    QVector<QColor> m_palette;
-    QLabel* m_preview = nullptr;
-};
-
-// WordStyleDlg — syntax highlighting style editor
-class WordStyleDlg : public QWidget {
-    Q_OBJECT
-public:
-    explicit WordStyleDlg(QWidget* parent = nullptr);
-Q_SIGNALS:
-    void styleChanged(int id, const QString& prop, const QVariant& val);
-private:
-    void setupUi();
-    void applyDpiScaling();
-    QComboBox* m_langCombo = nullptr;
-    QComboBox* m_styleCombo = nullptr;
-    ColourPicker* m_fgPicker = nullptr;
-    ColourPicker* m_bgPicker = nullptr;
-    QFontComboBox* m_fontCombo = nullptr;
-    QSpinBox* m_sizeSpin = nullptr;
-    QCheckBox* m_bold = nullptr;
-    QCheckBox* m_italic = nullptr;
-    QCheckBox* m_underline = nullptr;
-};
+// ColourPicker — full implementation in src/ui/ColourPicker.h
+class ColourPicker;
+// ColourPopup — full implementation in src/ui/ColourPopup.h
+class ColourPopup;
 
 // ToolTipButton — tool button with extended tip (tip + tip2)
 class ToolTipButton : public QToolButton {

@@ -357,7 +357,9 @@ void NppCommands::goToLine() {
     if (!editor) return;
 
     GoToLineDialog dlg(static_cast<QWidget*>(m_app->mainWindow()));
-    dlg.setEditor(editor);
+    if (editor) {
+        dlg.setMaxLineNumber(editor->lines());
+    }
     dlg.exec();
 }
 

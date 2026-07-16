@@ -7,6 +7,7 @@
 #include <QLabel>
 #include <QTimer>
 #include <QMenu>
+#include <QContextMenuEvent>
 #include <QAction>
 #include <QProgressBar>
 #include <QToolButton>

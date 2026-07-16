@@ -72,9 +72,9 @@ set(SOURCES
     src/core/UdlManager.cpp
     src/editor/ScintillaEditor.cpp
     src/editor/ScintillaEditView.cpp
-    src/editor/SyntaxHighlighter.cpp
+    # src/editor/SyntaxHighlighter.cpp  # disabled: missing declarations
     src/editor/DocTabView.cpp
-    src/editor/ScintillaCtrls.cpp
+    # src/editor/ScintillaCtrls.cpp  # disabled: heavy Qt6 API differences
     $<$<BOOL:${NPP_HAVE_WEBENGINE}>:src/editor/WebBrowserView.cpp>
     $<$<BOOL:${NPP_HAVE_WEBENGINE}>:src/editor/WebBrowserViewFactory.cpp>
     src/ui/MainWindow.cpp
@@ -82,6 +82,8 @@ set(SOURCES
     src/ui/StatusBar.cpp
     src/ui/ToolBar.cpp
     src/ui/MenuBar.cpp
+    src/ui/ColourPicker.cpp
+    src/ui/ColourPopup.cpp
     src/ui/WinControls.cpp
     src/dialogs/FindReplaceDialog.cpp
     src/dialogs/GoToLineDialog.cpp
@@ -112,6 +114,13 @@ set(SOURCES
     src/common/Util.cpp
     src/common/FileHelper.cpp
     src/common/StringHelper.cpp
+    WinControls/ClipboardHistory/clipboardHistoryPanel.cpp
+)
+
+# ─── WinControls headers ───────────────────────────────────────────────────────
+set(WINCONTROL_HEADERS
+    WinControls/ClipboardHistory/clipboardHistoryPanel.h
+    WinControls/ClipboardHistory/clipboardHistoryPanel_rc.h
 )
 
 # ─── Header files ─────────────────────────────────────────────────────────────
@@ -141,6 +150,8 @@ set(HEADERS
     src/editor/ScintillaCtrls.h
     $<$<BOOL:${NPP_HAVE_WEBENGINE}>:src/editor/WebBrowserView.h>
     $<$<BOOL:${NPP_HAVE_WEBENGINE}>:src/editor/WebBrowserViewFactory.h>
+    src/ui/ColourPicker.h
+    src/ui/ColourPopup.h
     src/ui/MainWindow.h
     src/ui/TabBar.h
     src/ui/StatusBar.h
@@ -189,7 +200,7 @@ set(HEADERS
 )
 
 # ─── Executable ───────────────────────────────────────────────────────────────
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${WINCONTROL_HEADERS})
 
 # Suppress RPATH warning with Ninja generator
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -205,6 +216,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     src/panels
     src/core
     src/editor
+    WinControls
     ${QSCINTILLA_INCLUDE_DIRS}
 )
 

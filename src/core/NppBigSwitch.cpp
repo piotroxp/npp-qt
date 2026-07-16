@@ -153,14 +153,14 @@ void NppBigSwitch::init() {
     reg(IDM_VIEW_MOVETO_SUB,        [this]() { m_app->moveToSubView(m_app->getActiveBuffer()); });
 
     // ── Encoding commands ────────────────────────────────────────────────────
-    reg(IDM_ENCODING_ANSI,          [this]() { m_app->onConvertEncoding(EncodingType::ISO88591); });
-    reg(IDM_ENCODING_UTF8,          [this]() { m_app->onConvertEncoding(EncodingType::UTF8); });
-    reg(IDM_ENCODING_UTF16,         [this]() { m_app->onConvertEncoding(EncodingType::UTF16LE); });
+    reg(IDM_ENCODING_ANSI,          [this]() { m_app->onConvertEncoding(EncodingType::ANSI); });
+    reg(IDM_ENCODING_UTF8,          [this]() { m_app->onConvertEncoding(EncodingType::UTF_8); });
+    reg(IDM_ENCODING_UTF16,         [this]() { m_app->onConvertEncoding(EncodingType::UTF_16_LE); });
 
     // ── EOL commands ────────────────────────────────────────────────────────
-    reg(IDM_EOL_CRLF,              [this]() { m_app->onSetEol(EolType::CRLF); });
-    reg(IDM_EOL_LF,                [this]() { m_app->onSetEol(EolType::LF); });
-    reg(IDM_EOL_CR,                [this]() { m_app->onSetEol(EolType::CR); });
+    reg(IDM_EOL_CRLF,              [this]() { m_app->onSetEol(EolType::EOL_CRLF); });
+    reg(IDM_EOL_LF,                [this]() { m_app->onSetEol(EolType::EOL_LF); });
+    reg(IDM_EOL_CR,                [this]() { m_app->onSetEol(EolType::EOL_CR); });
 
     // ── Language commands ────────────────────────────────────────────────────
     reg(IDM_LANG_MANAGE_UDL,       [this]() { m_app->onManageUserLanguages(); });

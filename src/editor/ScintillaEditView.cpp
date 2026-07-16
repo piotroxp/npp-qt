@@ -133,12 +133,12 @@ void ScintillaEditView::convertEol(int eolMode) {
 
 void ScintillaEditView::convertCase(int operation) {
     // Valid operations: SCI_LOWERCASE (2342), SCI_UPPERCASE (2343), SCI_TITLECASE (2344)
-    sendCommand(operation, 0, 0);
+    sendCommand(operation, 0);
 }
 
 void ScintillaEditView::joinLines() {
     // SCI_LINESJOIN: joins all lines in the selected range
-    sendCommand(SCI_LINESJOIN, 0, 0);
+    sendCommand(SCI_LINESJOIN, 0);
 }
 
 void ScintillaEditView::sortLines(int mode) {
@@ -154,11 +154,11 @@ void ScintillaEditView::sortLines(int mode) {
 
 void ScintillaEditView::setRectangularSelection(bool on) {
     if (on) {
-        sendCommand(SCI_SETSELECTIONMODE, SC_SEL_RECTANGLE, 0);
-        sendCommand(SCI_SETVIRTUALSPACEOPTIONS, SCVS_USERACCESSIBLE, 0);
+        sendCommand(SCI_SETSELECTIONMODE, SC_SEL_RECTANGLE);
+        sendCommand(SCI_SETVIRTUALSPACEOPTIONS, SCVS_USERACCESSIBLE);
     } else {
-        sendCommand(SCI_SETSELECTIONMODE, SC_SEL_STREAM, 0);
-        sendCommand(SCI_SETVIRTUALSPACEOPTIONS, SCVS_NONE, 0);
+        sendCommand(SCI_SETSELECTIONMODE, SC_SEL_STREAM);
+        sendCommand(SCI_SETVIRTUALSPACEOPTIONS, SCVS_NONE);
     }
 }
 
@@ -175,19 +175,19 @@ bool ScintillaEditView::isRectangularSelection() const {
 // ---------------------------------------------------------------------------
 
 void ScintillaEditView::wordLeft() {
-    sendCommand(SCI_WORDLEFT, 0, 0);
+    sendCommand(SCI_WORDLEFT, 0);
 }
 
 void ScintillaEditView::wordRight() {
-    sendCommand(SCI_WORDRIGHT, 0, 0);
+    sendCommand(SCI_WORDRIGHT, 0);
 }
 
 void ScintillaEditView::wordLeftEnd() {
-    sendCommand(SCI_WORDLEFTEND, 0, 0);
+    sendCommand(SCI_WORDLEFTEND, 0);
 }
 
 void ScintillaEditView::wordRightEnd() {
-    sendCommand(SCI_WORDRIGHTEND, 0, 0);
+    sendCommand(SCI_WORDRIGHTEND, 0);
 }
 
 void ScintillaEditView::selectWord() {
@@ -211,7 +211,7 @@ void ScintillaEditView::moveLineUp() {
 
     if (line <= 0) return; // Already at top
 
-    sendCommand(SCI_BEGINUNDOACTION, 0, 0);
+    sendCommand(SCI_BEGINUNDOACTION, 0);
 
     // Get the line above and current line
     int prevLineStart = static_cast<int>(sendCommand(SCI_POSITIONFROMLINE,
@@ -239,16 +239,16 @@ void ScintillaEditView::moveLineUp() {
                 reinterpret_cast<sptr_t>(currLineBuf.data()));
 
     // Replace prev line with curr line text
-    sendCommand(SCI_SETTARGETSTART, prevLineStart, 0);
-    sendCommand(SCI_SETTARGETEND, prevLineEnd, 0);
+    sendCommand(SCI_SETTARGETSTART, prevLineStart);
+    sendCommand(SCI_SETTARGETEND, prevLineEnd);
     sendCommand(SCI_REPLACETARGET, currLen, currLineBuf.constData());
 
     // Replace curr line with prev line text
     // Positions shift after first replacement
     int newCurrStart = prevLineStart + currLen;
     int newCurrEnd = newCurrStart + prevLen;
-    sendCommand(SCI_SETTARGETSTART, newCurrStart, 0);
-    sendCommand(SCI_SETTARGETEND, newCurrEnd, 0);
+    sendCommand(SCI_SETTARGETSTART, newCurrStart);
+    sendCommand(SCI_SETTARGETEND, newCurrEnd);
     sendCommand(SCI_REPLACETARGET, prevLen, prevLineBuf.constData());
 
     // Restore cursor
@@ -261,7 +261,7 @@ void ScintillaEditView::moveLineUp() {
         (anchor >= currLineStart) ? (anchor + delta - prevLen - 1)
                                   : (anchor - prevLen - 1)), 0);
 
-    sendCommand(SCI_ENDUNDOACTION, 0, 0);
+    sendCommand(SCI_ENDUNDOACTION, 0);
 }
 
 void ScintillaEditView::moveLineDown() {
@@ -272,7 +272,7 @@ void ScintillaEditView::moveLineDown() {
     int totalLines = lineCount();
     if (line >= totalLines - 1) return;
 
-    sendCommand(SCI_BEGINUNDOACTION, 0, 0);
+    sendCommand(SCI_BEGINUNDOACTION, 0);
 
     int currLineStart = static_cast<int>(sendCommand(SCI_POSITIONFROMLINE,
                                                      static_cast<uptr_t>(line), 0));
@@ -295,8 +295,8 @@ void ScintillaEditView::moveLineDown() {
                 reinterpret_cast<sptr_t>(nextLineBuf.data()));
 
     // Swap: next becomes curr, curr becomes next
-    sendCommand(SCI_SETTARGETSTART, currLineStart, 0);
-    sendCommand(SCI_SETTARGETEND, nextLineEnd, 0);
+    sendCommand(SCI_SETTARGETSTART, currLineStart);
+    sendCommand(SCI_SETTARGETEND, nextLineEnd);
     QByteArray combined = nextLineBuf + currLineBuf;
     sendCommand(SCI_REPLACETARGET, combined.size(),
                 reinterpret_cast<sptr_t>(combined.constData()));
@@ -312,17 +312,17 @@ void ScintillaEditView::moveLineDown() {
         (anchor >= nextLineStart) ? (anchor - nextLen - 1)
                                   : (anchor + nextLen + 1)), 0);
 
-    sendCommand(SCI_ENDUNDOACTION, 0, 0);
+    sendCommand(SCI_ENDUNDOACTION, 0);
 }
 
 void ScintillaEditView::duplicateLine() {
     // SCI_LINEDUPLICATE: duplicates the line containing the caret
-    sendCommand(SCI_LINEDUPLICATE, 0, 0);
+    sendCommand(SCI_LINEDUPLICATE, 0);
 }
 
 void ScintillaEditView::deleteLine() {
     // SCI_LINEDELETE: deletes the line containing the caret
-    sendCommand(SCI_LINEDELETE, 0, 0);
+    sendCommand(SCI_LINEDELETE, 0);
 }
 
 void ScintillaEditView::deleteLineEnd() {
@@ -332,25 +332,25 @@ void ScintillaEditView::deleteLineEnd() {
                                                sendCommand(SCI_LINEFROMPOSITION,
                                                            static_cast<uptr_t>(curPos), 0), 0));
     if (lineEnd > curPos) {
-        sendCommand(SCI_BEGINUNDOACTION, 0, 0);
+        sendCommand(SCI_BEGINUNDOACTION, 0);
         sendCommand(SCI_SETSELECTION, static_cast<uptr_t>(curPos),
                     static_cast<uptr_t>(lineEnd), 0);
-        sendCommand(SCI_CLEAR, 0, 0);
-        sendCommand(SCI_ENDUNDOACTION, 0, 0);
+        sendCommand(SCI_CLEAR, 0);
+        sendCommand(SCI_ENDUNDOACTION, 0);
     }
 }
 
 void ScintillaEditView::lineJoin() {
-    sendCommand(SCI_LINESJOIN, 0, 0);
+    sendCommand(SCI_LINESJOIN, 0);
 }
 
 void ScintillaEditView::lineCut() {
-    sendCommand(SCI_LINECUT, 0, 0);
+    sendCommand(SCI_LINECUT, 0);
 }
 
 void ScintillaEditView::lineTranspose() {
     // SCI_LINETRANSPOSE: swaps the current line with the one above
-    sendCommand(SCI_LINETRANSPOSE, 0, 0);
+    sendCommand(SCI_LINETRANSPOSE, 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -358,11 +358,11 @@ void ScintillaEditView::lineTranspose() {
 // ---------------------------------------------------------------------------
 
 void ScintillaEditView::tabKey() {
-    sendCommand(SCI_TAB, 0, 0);
+    sendCommand(SCI_TAB, 0);
 }
 
 void ScintillaEditView::backtabKey() {
-    sendCommand(SCI_BACKTAB, 0, 0);
+    sendCommand(SCI_BACKTAB, 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -370,12 +370,12 @@ void ScintillaEditView::backtabKey() {
 // ---------------------------------------------------------------------------
 
 void ScintillaEditView::braceMatch() {
-    sendCommand(SCI_BRACEMATCH, -1, 0);
+    sendCommand(SCI_BRACEMATCH, -1);
 }
 
 void ScintillaEditView::braceHighlight() {
     // SCI_HIGHLIGHTBRACES: highlight matching braces within visible range
-    sendCommand(SCI_HIGHLIGHTBRACES, 0, 0);
+    sendCommand(SCI_HIGHLIGHTBRACES, 0);
 }
 
 bool ScintillaEditView::findMatchingBrace(int& endPos) const {
@@ -518,8 +518,8 @@ void ScintillaEditView::addFindMarks(int indicator,
 
 void ScintillaEditView::columnEdit(int line, int startCol, int endCol) {
     // Set rectangular selection
-    sendCommand(SCI_SETSELECTIONMODE, SC_SEL_RECTANGLE, 0);
-    sendCommand(SCI_SETVIRTUALSPACEOPTIONS, SCVS_USERACCESSIBLE, 0);
+    sendCommand(SCI_SETSELECTIONMODE, SC_SEL_RECTANGLE);
+    sendCommand(SCI_SETVIRTUALSPACEOPTIONS, SCVS_USERACCESSIBLE);
     int startPos = static_cast<int>(sendCommand(SCI_POSITIONFROMLINE,
                                                static_cast<uptr_t>(line), 0)) + startCol;
     int endPos = static_cast<int>(sendCommand(SCI_POSITIONFROMLINE,
@@ -529,7 +529,7 @@ void ScintillaEditView::columnEdit(int line, int startCol, int endCol) {
 }
 
 void ScintillaEditView::setColumnSelection(int startPos, int endPos) {
-    sendCommand(SCI_SETSELECTIONMODE, SC_SEL_RECTANGLE, 0);
+    sendCommand(SCI_SETSELECTIONMODE, SC_SEL_RECTANGLE);
     sendCommand(SCI_SETSELECTION, static_cast<uptr_t>(startPos),
                 static_cast<uptr_t>(endPos), 0);
 }
@@ -539,22 +539,22 @@ void ScintillaEditView::columnInsert(const QString& text) {
     QByteArray utf8 = text.toUtf8();
     // For each selection in turn (multi-caret), insert the text
     int selCount = static_cast<int>(sendCommand(SCI_GETSELECTIONS, 0, 0));
-    sendCommand(SCI_BEGINUNDOACTION, 0, 0);
+    sendCommand(SCI_BEGINUNDOACTION, 0);
     for (int i = 0; i < selCount; ++i) {
         int start = static_cast<int>(sendCommand(SCI_GETSELECTIONNSTART, i, 0));
         int end = static_cast<int>(sendCommand(SCI_GETSELECTIONNEND, i, 0));
-        sendCommand(SCI_SETTARGETSTART, start, 0);
-        sendCommand(SCI_SETTARGETEND, end, 0);
+        sendCommand(SCI_SETTARGETSTART, start);
+        sendCommand(SCI_SETTARGETEND, end);
         sendCommand(SCI_REPLACETARGET, utf8.size(),
                     reinterpret_cast<sptr_t>(utf8.constData()));
     }
-    sendCommand(SCI_ENDUNDOACTION, 0, 0);
+    sendCommand(SCI_ENDUNDOACTION, 0);
     Q_UNUSED(selCount);
 }
 
 void ScintillaEditView::columnDelete() {
     // Delete all selections (column mode)
-    sendCommand(SCI_CLEARSELECTIONS, 0, 0);
+    sendCommand(SCI_CLEARSELECTIONS, 0);
 }
 
 bool ScintillaEditView::isColumnSelection() const {
@@ -645,7 +645,7 @@ void ScintillaEditView::deleteAllMarkers(int markerNum) {
 
 bool ScintillaEditView::hasMarker(int line, int markerNum) const {
     if (!_widget) return false;
-    return _widget->markerFind(line, markerNum) >= 0;
+    return (_widget->markersAtLine(line) & (1 << markerNum)) != 0;
 }
 
 QVector<int> ScintillaEditView::markersWithType(int markerNum) const {
@@ -653,7 +653,7 @@ QVector<int> ScintillaEditView::markersWithType(int markerNum) const {
     if (!_widget) return lines;
     int totalLines = _widget->lines();
     for (int line = 0; line < totalLines; ++line) {
-        if (_widget->markerFind(line, markerNum) >= 0)
+        if ((_widget->markersAtLine(line) & (1 << markerNum)) != 0)
             lines.append(line);
     }
     return lines;
@@ -662,8 +662,9 @@ QVector<int> ScintillaEditView::markersWithType(int markerNum) const {
 void ScintillaEditView::defineMarker(int markerNum, int style,
                                       const QColor& fore, const QColor& back) {
     if (!_widget) return;
-    _widget->defineMarker(markerNum, static_cast<QsciScintilla::MarkerSymbol>(style),
-                          fore, back);
+    _widget->markerDefine(static_cast<QsciScintilla::MarkerSymbol>(style), markerNum);
+    _widget->setMarkerForegroundColor(fore, markerNum);
+    _widget->setMarkerBackgroundColor(back, markerNum);
 }
 
 // ---------------------------------------------------------------------------
@@ -692,7 +693,7 @@ int ScintillaEditView::selectionEnd() const {
 }
 
 void ScintillaEditView::clearSelections() {
-    sendCommand(SCI_CLEARSELECTIONS, 0, 0);
+    sendCommand(SCI_CLEARSELECTIONS, 0);
 }
 
 void ScintillaEditView::addSelection(int anchor, int caret) {

@@ -214,16 +214,16 @@ void EditorCommandManager::registerAll(Application* app) {
 
     // ---- Encoding commands ----
     registerCommand(CMD_ENCODING_UTF8, "encoding.utf8",
-        [app](ScintillaEditor*) { app->onConvertEncoding(EncodingType::UTF_8); });
+        [app](ScintillaEditor*) { app->convertEncoding(EncodingType::UTF_8); });
 
     registerCommand(CMD_ENCODING_UTF8_BOM, "encoding.utf8bom",
-        [app](ScintillaEditor*) { app->onConvertEncoding(EncodingType::UTF_8_BOM); });
+        [app](ScintillaEditor*) { app->convertEncoding(EncodingType::UTF_8_BOM); });
 
     registerCommand(CMD_ENCODING_UTF16_LE, "encoding.utf16le",
-        [app](ScintillaEditor*) { app->onConvertEncoding(EncodingType::UTF_16_LE); });
+        [app](ScintillaEditor*) { app->convertEncoding(EncodingType::UTF_16_LE); });
 
     registerCommand(CMD_ENCODING_UTF16_BE, "encoding.utf16be",
-        [app](ScintillaEditor*) { app->onConvertEncoding(EncodingType::UTF_16_BE); });
+        [app](ScintillaEditor*) { app->convertEncoding(EncodingType::UTF_16_BE); });
 
     // ---- Language commands ----
     registerCommand(CMD_LANGUAGE_NORMAL, "language.normal_text",

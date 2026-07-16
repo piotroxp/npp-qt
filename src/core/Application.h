@@ -376,8 +376,11 @@ public slots:
     void onToggleDocMap();
     void onToggleFunctionList();
     void onToggleFileBrowser();
+    void onToggleClipboardHistory();
     void onCloneToOtherView();
     void onMoveToSubView();
+    void onConvertEncoding(EncodingType enc);
+    void onSetEol(EolType format);
 
     // Macro commands
     void onMacroStartRecording();
@@ -507,39 +510,14 @@ private:
     Observer<ThemeNotification>  _themeObserver;
 
     std::mutex _mutex;
+
+// ── NppBigSwitch compatibility stubs ───────────────────────────────────────
+
+
 };
 
 // ============================================================================
 // Inline singleton accessor
 // ============================================================================
+
 inline Application& app() { return Application::instance(); }
-    // ── Aliases for NppBigSwitch compatibility ───────────────────────────────
-    void onCloseAllButCurrent() { closeAllButCurrent(); }
-    bool onDeleteFile() { return deleteFile(getActiveBuffer()); }
-    bool onRenameFile() { return renameFile(getActiveBuffer(), {}); }
-    void onDeleteLine() { deleteLine(); }
-    void onJoinLines() { joinLines(); }
-    void onTrimTrailing() { trimTrailing(); }
-    void onTrimLeading() { trimLeading(); }
-    void onSortAscending() { sortAscending(); }
-    void onSortDescending() { sortDescending(); }
-    void onSortIntAscending() { sortIntAscending(); }
-    void onSortIntDescending() { sortIntDescending(); }
-    void onSortReverse() { sortReverse(); }
-    void onOpenContainingFolder() { openContainingFolder(getActiveBuffer()); }
-    void onSearchOnInternet() { searchOnInternet(); }
-    void onUnmarkAll() { unmarkAll(); }
-    void onZoomIn() { zoomIn(); }
-    void onZoomOut() { zoomOut(); }
-    void onZoomRestore() { zoomRestore(); }
-    void onToggleWordWrap() { toggleWordWrap(); }
-    void onToggleEolVisibility() { toggleEolVisibility(); }
-    void onShowAllCharacters() { showAllCharacters(); }
-    void onToggleDocMap() { toggleDocMap(); }
-    void onToggleFunctionList() { toggleFunctionList(); }
-    void onToggleFileBrowser() { toggleFileBrowser(); }
-    void onToggleClipboardHistory() { toggleClipboardHistory(); }
-    void onCloneToOtherView() { cloneToOtherView(getActiveBuffer()); }
-    void onMoveToSubView() { moveToSubView(getActiveBuffer()); }
-    bool onConvertEncoding(EncodingType enc) { return setBufferEncoding(getActiveBuffer(), enc); }
-    bool onSetEol(EolType eol) { return setBufferEol(getActiveBuffer(), eol); }

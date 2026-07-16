@@ -188,7 +188,7 @@ void TabBar::setScrollEnabled(bool enabled) {
 
 void TabBar::scrollToTab(int index) {
     if (index >= 0 && index < count()) {
-        ensureVisible(index);
+        ensureTabVisible(index);
     }
 }
 

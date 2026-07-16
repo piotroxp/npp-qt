@@ -27,6 +27,9 @@
 | — | Build fixes: mkstemp, QDir::Recursive → QDirIterator | ✅ complete | this session |
 | — | Documentation expanded: ARCHITECTURE.md + README.md | ✅ complete | cdac62f |
 | — | CHANGELOG.md restored | ✅ complete | this session |
+| — | ColourPicker: Win32→Qt6 swatch button + popup grid + QColorDialog | ✅ complete | this session |
+| — | AnsiCharPanel: 16×16 char grid with 15 code pages, QTableWidget, char insertion | ✅ complete | this session |
+| — | ClipboardHistoryControl: clipboard monitoring, history list, paste/clear/copy, QSettings persistence | ✅ complete | this session |
 
 ---
 

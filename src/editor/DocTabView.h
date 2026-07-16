@@ -7,6 +7,7 @@
 #include <QTabWidget>
 #include <QTabBar>
 #include <QMenu>
+#include <QPushButton>
 #include <QAction>
 #include <QMouseEvent>
 #include <QDrag>
@@ -197,7 +198,7 @@ private:
     QAction* _pinAct = nullptr;
     QAction* _newTabAct = nullptr;
 
-    QWidget* _newTabBtn = nullptr;    // The "+" button
+    QPushButton* _newTabBtn = nullptr;  // The "+" button
     QTimer* _tabReorderTimer = nullptr;
 
     QMap<int, TabData> _tabData;     // Per-tab auxiliary state

@@ -356,8 +356,12 @@ enum LangIdxStyle {
     LANG_INDEX_SUBSTYLE8 = 16
 };
 
-// EolType — line ending format
-enum class EolType { EolWindows = 0, EolUnix = 1, EolMac = 2, unknown = -1, osdefault = 0 };
+// EolType — line ending format (defined in common/Types.h)
+// N++ compatibility aliases (Types.h has EOL_NONE=0, EOL_LF=1, EOL_CRLF=2, EOL_CR=3)
+inline constexpr int EolWindows = 2;   // CRLF
+inline constexpr int EolUnix   = 1;   // LF
+inline constexpr int EolMac    = 3;   // CR
+inline constexpr int EolUnknown = 0;  // default
 
 // ToolBarStatusType is defined in ToolBar.h (enum class ToolBarDisplayType + using alias)
 
@@ -907,11 +911,11 @@ inline constexpr int MENUINDEX_TOOLS        = 7;
 inline constexpr int MENUINDEX_MACRO        = 8;
 inline constexpr int MENUINDEX_RUN          = 9;
 
-// Missing EolType enum values
-inline constexpr int EolType_unix = 0;      // LF
-inline constexpr int EolType_windows = 1;   // CRLF
-inline constexpr int EolType_mac = 2;       // CR
-inline constexpr int EolType_macLegacy = 3; // CR (classic)
+// Missing EolType enum values (values match common/Types.h enum)
+inline constexpr int EolType_unix = 1;      // EOL_LF
+inline constexpr int EolType_windows = 2;   // EOL_CRLF
+inline constexpr int EolType_mac = 3;       // EOL_CR
+inline constexpr int EolType_macLegacy = 3; // EOL_CR
 
 // Missing DocFileStatus values
 inline constexpr int DocFileStatus_clean = 0;

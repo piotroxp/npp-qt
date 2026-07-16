@@ -118,6 +118,10 @@ public:
     void setLogicalDpi(int dpi) { _logicalDpi = dpi; }
     int logicalDpi() const { return _logicalDpi; }
 
+public:
+    // public so inline helpers in the header can call it
+    void recalculateDpi();
+
 signals:
     void dpiChanged(int newDpi, qreal newScaleFactor);
 
@@ -129,7 +133,6 @@ private:
     explicit DpiManager(QObject* parent = nullptr);
     ~DpiManager() override;
 
-    void recalculateDpi();
     int detectScreenDpi() const;
 
     qreal _scaleFactor = 1.0;

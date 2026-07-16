@@ -11,6 +11,7 @@
 #include <QString>
 #include <QToolButton>
 #include <QPropertyAnimation>
+#include <QSettings>
 #include <QParallelAnimationGroup>
 
 class QTabWidget;

@@ -14,6 +14,7 @@
 #include <QDebug>
 #include <QStyle>
 #include <QStyleOptionTab>
+#include <QPushButton>
 
 // ============================================================================
 // Construction
@@ -27,7 +28,7 @@ DocTabView::DocTabView(QWidget* parent)
     tabBar()->setTabsClosable(true);
     tabBar()->setSelectionBehaviorOnRemove(QTabBar::SelectLeftTab);
     tabBar()->setAcceptDrops(true);
-    tabBar()->setDragDropMode(QTabBar::DragDrop);
+    setDragDropMode(QTabWidget::DragDrop);
 
     // Context menu
     setContextMenuPolicy(Qt::CustomContextMenu);
@@ -246,6 +247,9 @@ void DocTabView::moveTab(int fromIndex, int toIndex) {
     setTabToolTip(actualTo, tooltip);
 
     // Restore auxiliary data
+    if (auto* ed = qobject_cast<ScintillaEditor*>(w)) {
+        // Editor-specific restore if needed
+    }
     _tabData[actualTo] = data;
 
     // Apply pinned appearance if needed

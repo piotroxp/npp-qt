@@ -394,9 +394,9 @@ std::string fileMD5(const std::string& path) {
 // URL helpers
 // ============================================================================
 bool isValidUrl(const std::string& url) {
-    return StringHelper::startsWith(url, "http://") ||
-           StringHelper::startsWith(url, "https://") ||
-           StringHelper::startsWith(url, "file://");
+    return StringHelper::startsWith(std::string_view(url), "http://") ||
+           StringHelper::startsWith(std::string_view(url), "https://") ||
+           StringHelper::startsWith(std::string_view(url), "file://");
 }
 
 std::string urlEncode(const std::string& s) {

@@ -1551,55 +1551,6 @@ void Application::onToggleToolBar() {
 // ============================================================================
 // Encoding command slots
 // ============================================================================
-void Application::onConvertEncoding(EncodingType enc) {
-    ScintillaEditor* ed = getActiveEditor();
-    if (!ed) return;
-
-    BufferID buffer = getActiveBuffer();
-    if (!buffer) return;
-
-    QString text = QString::fromStdString(getBufferText(buffer));
-    if (text.isEmpty()) return;
-
-    // Map EncodingType → Scintilla codepage → QTextCodec MIB
-    auto encToMib = [](EncodingType e) -> int {
-        switch (e) {
-            case EncodingType::ANSI:       return 4;     // Latin-1
-            case EncodingType::UTF_8:
-            case EncodingType::UTF_8_BOM:  return 106;    // UTF-8
-            case EncodingType::UTF_16_LE: return 1000;   // UTF-16LE
-            case EncodingType::UTF_16_BE: return 1001;   // UTF-16BE
-            case EncodingType::OEM:        return 4;      // OEM (Latin-1 as fallback)
-            default:                       return 4;
-        }
-    };
-
-    EncodingType currentEnc = getBufferEncoding(buffer);
-    int fromMib = encToMib(currentEnc);
-    int toMib   = encToMib(enc);
-
-    if (fromMib != toMib) {
-        text = NppParameters::getInstance().convertEncoding(text, fromMib, toMib);
-    }
-
-    // Apply the new encoding to buffer and editor
-    setBufferEncoding(buffer, enc);
-    ed->setEncoding(enc);
-    ed->setText(text);
-    ed->setModified(true);
-
-    // Update status bar with the new encoding name
-    const char* encName = "ANSI";
-    switch (enc) {
-        case EncodingType::UTF_8:      encName = "UTF-8"; break;
-        case EncodingType::UTF_8_BOM:  encName = "UTF-8-BOM"; break;
-        case EncodingType::UTF_16_LE: encName = "UTF-16 LE"; break;
-        case EncodingType::UTF_16_BE: encName = "UTF-16 BE"; break;
-        case EncodingType::OEM:       encName = "OEM"; break;
-        default:                      encName = "ANSI"; break;
-    }
-    setStatusBarEncoding(encName);
-}
 
 void Application::onEolConversion(const QString& eolCmd) {
     ScintillaEditor* ed = getActiveEditor();
