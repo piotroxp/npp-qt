@@ -75,7 +75,7 @@ set(SOURCES
     src/editor/ScintillaEditView.cpp
     src/editor/SyntaxHighlighterStub.cpp
     src/editor/DocTabView.cpp
-#    src/editor/ScintillaCtrls.cpp  # disabled: Qt6 API differences
+    src/editor/ScintillaCtrls.cpp
     $<$<BOOL:${NPP_HAVE_WEBENGINE}>:src/editor/WebBrowserView.cpp>
     $<$<BOOL:${NPP_HAVE_WEBENGINE}>:src/editor/WebBrowserViewFactory.cpp>
     src/ui/MainWindow.cpp

@@ -478,31 +478,31 @@ QMenu* ScintillaCtrls::buildContextMenu(ScintillaEditor* editor,
                                          QWidget* parent) {
     QMenu* menu = new QMenu(parent);
 
-    QAction* undoAct = new QAction(QIcon::fromTheme("edit-undo"), tr("Undo"), menu);
+    QAction* undoAct = new QAction(QIcon::fromTheme("edit-undo"), QStringLiteral("Undo"), menu);
     QObject::connect(undoAct, &QAction::triggered, editor, &ScintillaEditor::undo);
     menu->addAction(undoAct);
 
-    QAction* redoAct = new QAction(QIcon::fromTheme("edit-redo"), tr("Redo"), menu);
+    QAction* redoAct = new QAction(QIcon::fromTheme("edit-redo"), QStringLiteral("Redo"), menu);
     QObject::connect(redoAct, &QAction::triggered, editor, &ScintillaEditor::redo);
     menu->addAction(redoAct);
 
     menu->addSeparator();
 
-    QAction* cutAct = new QAction(QIcon::fromTheme("edit-cut"), tr("Cut"), menu);
+    QAction* cutAct = new QAction(QIcon::fromTheme("edit-cut"), QStringLiteral("Cut"), menu);
     QObject::connect(cutAct, &QAction::triggered, editor, &ScintillaEditor::cut);
     menu->addAction(cutAct);
 
-    QAction* copyAct = new QAction(QIcon::fromTheme("edit-copy"), tr("Copy"), menu);
+    QAction* copyAct = new QAction(QIcon::fromTheme("edit-copy"), QStringLiteral("Copy"), menu);
     QObject::connect(copyAct, &QAction::triggered, editor, &ScintillaEditor::copy);
     menu->addAction(copyAct);
 
-    QAction* pasteAct = new QAction(QIcon::fromTheme("edit-paste"), tr("Paste"), menu);
+    QAction* pasteAct = new QAction(QIcon::fromTheme("edit-paste"), QStringLiteral("Paste"), menu);
     QObject::connect(pasteAct, &QAction::triggered, editor, &ScintillaEditor::paste);
     menu->addAction(pasteAct);
 
     menu->addSeparator();
 
-    QAction* selectAllAct = new QAction(tr("Select All"), menu);
+    QAction* selectAllAct = new QAction(QStringLiteral("Select All"), menu);
     QObject::connect(selectAllAct, &QAction::triggered, editor, &ScintillaEditor::selectAll);
     menu->addAction(selectAllAct);
 
@@ -512,50 +512,50 @@ QMenu* ScintillaCtrls::buildContextMenu(ScintillaEditor* editor,
 void ScintillaCtrls::addWrapActionsToMenu(QMenu* menu,
                                           ScintillaEditor* editor) {
     if (!menu || !editor) return;
-    QMenu* wrapMenu = menu->addMenu(tr("Wrap With"));
+    QMenu* wrapMenu = menu->addMenu(QStringLiteral("Wrap With"));
 
     auto wrap = [editor](const QString& b, const QString& a) {
         wrapSelection(editor, b, a);
     };
 
-    QAction* parenAct = wrapMenu->addAction(tr("Parentheses  ( )"));
+    QAction* parenAct = wrapMenu->addAction(QStringLiteral("Parentheses  ( )"));
     QObject::connect(parenAct, &QAction::triggered, [wrap]() { wrap("(", ")"); });
 
-    QAction* bracketAct = wrapMenu->addAction(tr("Brackets  [ ]"));
+    QAction* bracketAct = wrapMenu->addAction(QStringLiteral("Brackets  [ ]"));
     QObject::connect(bracketAct, &QAction::triggered, [wrap]() { wrap("[", "]"); });
 
-    QAction* braceAct = wrapMenu->addAction(tr("Braces  { }"));
+    QAction* braceAct = wrapMenu->addAction(QStringLiteral("Braces  { }"));
     QObject::connect(braceAct, &QAction::triggered, [wrap]() { wrap("{", "}"); });
 
-    QAction* quoteAct = wrapMenu->addAction(tr("Single Quotes  ' '"));
+    QAction* quoteAct = wrapMenu->addAction(QStringLiteral("Single Quotes  ' '"));
     QObject::connect(quoteAct, &QAction::triggered, [wrap]() { wrap("'", "'"); });
 
-    QAction* dquoteAct = wrapMenu->addAction(tr("Double Quotes  \" \""));
+    QAction* dquoteAct = wrapMenu->addAction(QStringLiteral("Double Quotes  \" \""));
     QObject::connect(dquoteAct, &QAction::triggered, [wrap]() { wrap("\"", "\""); });
 
     wrapMenu->addSeparator();
 
-    QAction* commentAct = wrapMenu->addAction(tr("C-style Comment  /* */"));
+    QAction* commentAct = wrapMenu->addAction(QStringLiteral("C-style Comment  /* */"));
     QObject::connect(commentAct, &QAction::triggered, [wrap]() { wrap("/* ", " */"); });
 
-    QAction* hashAct = wrapMenu->addAction(tr("Line Comment  //"));
+    QAction* hashAct = wrapMenu->addAction(QStringLiteral("Line Comment  //"));
     QObject::connect(hashAct, &QAction::triggered, [wrap]() { wrap("// ", ""); });
 
-    QAction* htmlAct = wrapMenu->addAction(tr("HTML Comment  <!-- -->"));
+    QAction* htmlAct = wrapMenu->addAction(QStringLiteral("HTML Comment  <!-- -->"));
     QObject::connect(htmlAct, &QAction::triggered, [wrap]() { wrap("<!-- ", " -->"); });
 }
 
 void ScintillaCtrls::addIndentActionsToMenu(QMenu* menu,
                                              ScintillaEditor* editor) {
     if (!menu || !editor) return;
-    QMenu* indentMenu = menu->addMenu(tr("Indent"));
+    QMenu* indentMenu = menu->addMenu(QStringLiteral("Indent"));
 
-    QAction* indentAct = indentMenu->addAction(tr("Increase Indent"));
+    QAction* indentAct = indentMenu->addAction(QStringLiteral("Increase Indent"));
     QObject::connect(indentAct, &QAction::triggered, [editor]() {
         indentBlock(editor, 4);
     });
 
-    QAction* dedentAct = indentMenu->addAction(tr("Decrease Indent"));
+    QAction* dedentAct = indentMenu->addAction(QStringLiteral("Decrease Indent"));
     QObject::connect(dedentAct, &QAction::triggered, [editor]() {
         indentBlock(editor, -4);
     });
@@ -639,15 +639,14 @@ void ScintillaCtrls::startColumnSelection(QsciScintilla* sci,
 
 QRect ScintillaCtrls::columnSelectionBounds(QsciScintilla* sci) {
     if (!sci) return QRect();
-    int sl = 0, sc = 0, el = 0, ec = 0;
-    int startPos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_GETSELECTIONNSTART), static_cast<unsigned long>(0), static_cast<long>(0));
-    int endPos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_GETSELECTIONNEND), static_cast<unsigned long>(0), static_cast<long>(0));
-    int startLine = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_LINEFROMPOSITION), static_cast<unsigned long>(startPos), static_cast<long>(0));
-    int endLine = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_LINEFROMPOSITION), static_cast<unsigned long>(endPos), static_cast<long>(0));
-    int startCol = startPos - sci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, startLine, 0);
-    int endCol = endPos - sci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, endLine, 0);
-    Q_UNUSED(sl); Q_UNUSED(sc); Q_UNUSED(el); Q_UNUSED(ec);
-    return QRect(startCol, startLine, endCol - startCol, endLine - startLine);
+    long startPos = sci->SendScintilla(QsciScintilla::SCI_GETSELECTIONNSTART);
+    long endPos = sci->SendScintilla(QsciScintilla::SCI_GETSELECTIONNEND);
+    long startLine = sci->SendScintilla(QsciScintilla::SCI_LINEFROMPOSITION, static_cast<unsigned long>(startPos));
+    long endLine = sci->SendScintilla(QsciScintilla::SCI_LINEFROMPOSITION, static_cast<unsigned long>(endPos));
+    long startLineStart = sci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, static_cast<unsigned long>(startLine));
+    long endLineStart = sci->SendScintilla(QsciScintilla::SCI_POSITIONFROMLINE, static_cast<unsigned long>(endLine));
+    return QRect(static_cast<int>(startPos - startLineStart), static_cast<int>(startLine),
+                 static_cast<int>(endPos - endLineStart), static_cast<int>(endLine - startLine));
 }
 
 // ============================================================================
@@ -656,33 +655,30 @@ QRect ScintillaCtrls::columnSelectionBounds(QsciScintilla* sci) {
 
 void ScintillaCtrls::selectWordAtCursor(QsciScintilla* sci) {
     if (!sci) return;
-    int pos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_GETCURRENTPOS), static_cast<unsigned long>(0), static_cast<long>(0));
-    int start = sci->SendScintilla(QsciScintilla::SCI_WORDSTARTPOSITION, pos, 0);
-    int end = sci->SendScintilla(QsciScintilla::SCI_WORDENDPOSITION, pos, 0);
-    sci->SendScintilla(QsciScintilla::SCI_SETSELECTION, start, end);
+    long pos = sci->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
+    long start = sci->SendScintilla(QsciScintilla::SCI_WORDSTARTPOSITION, static_cast<unsigned long>(pos));
+    long end = sci->SendScintilla(QsciScintilla::SCI_WORDENDPOSITION, static_cast<unsigned long>(pos));
+    sci->SendScintilla(QsciScintilla::SCI_SETSELECTION, static_cast<unsigned long>(start), static_cast<unsigned long>(end));
 }
 
 QPair<int, int> ScintillaCtrls::wordAtCursor(QsciScintilla* sci) {
     if (!sci) return qMakePair(-1, -1);
-    int pos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_GETCURRENTPOS), static_cast<unsigned long>(0), static_cast<long>(0));
-    int start = sci->SendScintilla(QsciScintilla::SCI_WORDSTARTPOSITION, pos, 0);
-    int end = sci->SendScintilla(QsciScintilla::SCI_WORDENDPOSITION, pos, 0);
-    return qMakePair(start, end);
+    long pos = sci->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
+    long start = sci->SendScintilla(QsciScintilla::SCI_WORDSTARTPOSITION, static_cast<unsigned long>(pos));
+    long end = sci->SendScintilla(QsciScintilla::SCI_WORDENDPOSITION, static_cast<unsigned long>(pos));
+    return qMakePair(static_cast<int>(start), static_cast<int>(end));
 }
 
 bool ScintillaCtrls::isInComment(QsciScintilla* sci) {
     if (!sci) return false;
-    int pos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_GETCURRENTPOS), static_cast<unsigned long>(0), static_cast<long>(0));
-    int style = sci->SendScintilla(QsciScintilla::SCI_GETSTYLEAT, pos, 0);
-    // Style 1 is typically a comment in most lexers (check specific lexer)
-    // For C-like: 1=comment, 2=comment line
+    long pos = sci->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
+    long style = sci->SendScintilla(QsciScintilla::SCI_GETSTYLEAT, static_cast<unsigned long>(pos));
     return style == 1 || style == 2;
 }
 
 bool ScintillaCtrls::isInString(QsciScintilla* sci) {
     if (!sci) return false;
-    int pos = sci->SendScintilla(static_cast<unsigned long>(QsciScintilla::SCI_GETCURRENTPOS), static_cast<unsigned long>(0), static_cast<long>(0));
-    int style = sci->SendScintilla(QsciScintilla::SCI_GETSTYLEAT, pos, 0);
-    // For C-like: 5=string, 6=dstring, 7= verbatim string
+    long pos = sci->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
+    long style = sci->SendScintilla(QsciScintilla::SCI_GETSTYLEAT, static_cast<unsigned long>(pos));
     return style == 5 || style == 6 || style == 7;
 }
