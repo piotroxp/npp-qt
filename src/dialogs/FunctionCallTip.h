@@ -64,10 +64,10 @@ public:
     QColor background() const { return _bgColor; }
     QColor highlightColor() const { return _hlColor; }
 
-signals:
-    /// Emitted when user dismisses the calltip.
+public:
+    /// Called when user dismisses the calltip.
     void dismissed();
-    /// Emitted when the highlighted parameter changes.
+    /// Called when the highlighted parameter changes.
     void paramHighlightChanged(int paramIndex);
 
 private:

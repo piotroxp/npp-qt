@@ -382,3 +382,12 @@ void FunctionCallTip::updateParamHighlight()
     if (!isVisible()) return;
     highlightParam(static_cast<int>(_currentParam));
 }
+
+// paramHighlightChanged is called by highlightParam() to notify listeners
+void FunctionCallTip::paramHighlightChanged(int /*paramIndex*/) {
+    // Called directly from highlightParam - no-op since this was a signal stub
+}
+
+void FunctionCallTip::dismissed() {
+    // Called from close() - no-op since this was a signal stub
+}

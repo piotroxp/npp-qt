@@ -596,3 +596,23 @@ void TabBar::clearDropHighlight() {
         update();
     }
 }
+
+// Stub implementations for methods declared in header but not yet defined
+void TabBar::setTabToolTip(int index, const QString& tip) {
+    QTabBar::setTabToolTip(index, tip);
+}
+
+void TabBar::moveTab(int from, int to) {
+    QTabBar::moveTab(from, to);
+}
+
+int TabBar::tabAt(const QPoint& pos) const {
+    return QTabBar::tabAt(pos);
+}
+
+void TabBar::ensureTabVisible(int index) {
+    // For basic implementation, just ensure the tab is visible
+    if (index >= 0 && index < count()) {
+        setCurrentIndex(index);
+    }
+}
