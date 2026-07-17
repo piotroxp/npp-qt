@@ -428,11 +428,17 @@ void Application::setupConnections() {
     connect(this, &Application::fileSaved, this, &Application::onFileSaved);
     connect(this, &Application::bufferModifiedChanged, this, &Application::updateWindowTitle);
 
-    // File browser → open file
-    if (_fileBrowserPanel) {
+    // File browser → open file.  Use _mainWindow->openFileInTab() so that all
+    // ScintillaEditor construction goes through the same guarded code path:
+    //   - _tabWidget null guard
+    //   - _openingFileDepth re-entrancy guard
+    //   - signal disconnection during construction
+    // Do NOT use openFile() here — it bypasses MainWindow guards and can cause
+    // re-entrant ScintillaEditor construction during rapid double-click.
+    if (_fileBrowserPanel && _mainWindow) {
         connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
-                this, [this](const QString& path) {
-            openFile(path.toStdString());
+                _mainWindow, [this](const QString& path) {
+            _mainWindow->openFileInTab(path);
         });
     }
 

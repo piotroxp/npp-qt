@@ -771,6 +771,9 @@ void MainWindow::openFileInTab(const QString& path) {
     // emits a file signal before MainWindow::setupUI() has completed.
     if (!_tabWidget) return;
 
+    // Guard: _tabBar must be valid (initialized before _tabWidget in constructor).
+    if (!_tabBar) return;
+
     // Guard: re-entrancy into ScintillaEditor construction.  ScintillaEditor
     // is a QFrame; its construction triggers Qt widget events (style propagation,
     // font inheritance, etc.) that bubble up to parent widgets including
@@ -1098,6 +1101,8 @@ void MainWindow::onMacroCommand(const QString& macroName) {
 // Buffer notifications
 void MainWindow::onBufferOpened(BufferID buffer) {
     if (!buffer) return;
+    if (!_tabWidget) return;
+    if (!_tabBar) return;
 
     // Check if already open — switch to existing tab
     if (_bufferToTab.contains(buffer)) {

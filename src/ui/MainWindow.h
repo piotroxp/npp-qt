@@ -70,6 +70,7 @@ public slots:
     void onSaveFileAs();
     void onCloseFile();
     void onExit();
+    void openFileInTab(const QString& path);
     void onUndo();
     void onRedo();
     void onCut();
@@ -165,9 +166,6 @@ private:
     static MainWindow* _instance;
     QMap<BufferID, ScintillaEditor*> _bufferToEditor; // buffer → editor
     QMap<BufferID, int> _bufferToTab;          // buffer → tab index
-
-    // Open a file path in a new tab (or switch to existing tab)
-    void openFileInTab(const QString& path);
 
     // Update tab title to reflect modified state
     void updateTabTitle(BufferID buf, bool dirty);
