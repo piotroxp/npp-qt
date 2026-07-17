@@ -24,6 +24,8 @@ add_library(test_core STATIC
     ${REL_ROOT}/common/StringHelper.cpp
     ${REL_ROOT}/common/FileHelper.cpp
     ${REL_ROOT}/dialogs/LargeFileWarningDialog.cpp
+    ${REL_ROOT}/dialogs/FunctionCallTip.cpp
+    ${REL_ROOT}/dialogs/AutoCompletion.cpp
 )
 target_include_directories(test_core PUBLIC
     ${TEST_INC}
