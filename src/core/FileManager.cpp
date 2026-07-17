@@ -317,15 +317,14 @@ Buffer* FileManager::bufferFromId(BufferID id) const {
 }
 
 BufferID FileManager::openFile(const QString& path, bool readOnly) {
-    Buffer* buf = new Buffer(this, _nextBufferId, path, false);
-    ++_nextBufferId;
-
-    // Read raw bytes for encoding detection
+    // Check file can be opened before allocating a Buffer (avoids ID waste on failure)
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        delete buf;
         return nullptr;
     }
+
+    Buffer* buf = new Buffer(this, _nextBufferId, path, false);
+    ++_nextBufferId;
     QFileInfo fileInfo(path);
     qint64 fileSize = fileInfo.size();
     QByteArray raw = file.readAll();

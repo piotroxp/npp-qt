@@ -42,7 +42,14 @@ public:
         if (event->type() == QEvent::FileOpen) {
             auto* fe = dynamic_cast<QFileOpenEvent*>(event);
             if (fe) {
-                Application::instance().openFile(fe->file().toStdString());
+                // Guard: initialize() may not have run yet (event can fire during startup).
+                // isInitialized() is safe to call — it only checks _state, not _fileManager.
+                if (Application::instance().isInitialized()) {
+                    Application::instance().openFile(fe->file().toStdString());
+                } else {
+                    qWarning() << "[App] QFileOpenEvent received before initialize, dropping:"
+                               << fe->file();
+                }
             }
         }
         return QApplication::event(event);
@@ -160,16 +167,16 @@ int main(int argc, char* argv[]) {
         application.setSkipPlugins(true);
     }
 
-    // Load session if specified
-    if (!args.sessionToLoad.empty()) {
-        application.loadSession(args.sessionToLoad);
-    }
-
     // Initialize
     if (!application.initialize()) {
         QMessageBox::critical(nullptr, "Startup Error",
             "Failed to initialize application.\n" + application.lastError());
         return 1;
+    }
+
+    // Load session if specified (must be after initialize() — needs _sessionManager and _fileManager)
+    if (!args.sessionToLoad.empty()) {
+        application.loadSession(args.sessionToLoad);
     }
 
     // Open files from command line
