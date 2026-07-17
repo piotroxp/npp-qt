@@ -5,6 +5,8 @@
 #pragma once
 
 #include <QMainWindow>
+
+class Application;  // forward declaration
 #include <QToolBar>
 #include <QStatusBar>
 #include <QMenuBar>
@@ -14,6 +16,7 @@
 #include <QString>
 #include <QKeyEvent>
 #include "../common/Types.h"
+#include "../core/Application.h"
 #include "../panels/FileBrowserPanel.h"
 #include "../dialogs/ClipboardHistoryPanel.h"
 #include "../panels/FunctionListPanel.h"
@@ -38,6 +41,8 @@ class MainWindow : public QMainWindow {
 
 public:
     static MainWindow* instance() { return _instance; }
+
+    void setApplication(Application* app) { _app = app; }
 
     MainWindow();
     ~MainWindow() override;
@@ -153,6 +158,7 @@ private:
     QMap<QString, QAction*> _actions;
     QString _lastOpenedDirectory;
     QSignalMapper* _recentFileMapper = nullptr;
+    Application* _app = nullptr;
 
     // Editor registry — maps between tabs, buffers, and editors
     QMap<int, BufferID> _tabToBuffer;          // tab index → buffer

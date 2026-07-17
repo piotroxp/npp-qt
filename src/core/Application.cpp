@@ -92,6 +92,7 @@ Application::Application() : QObject(qApp) {
     fprintf(stderr, "DEBUG: Application ctor start\n"); fflush(stderr);
     _mainWindow = new MainWindow();
     fprintf(stderr, "DEBUG: MainWindow created\n"); fflush(stderr);
+    _mainWindow->setApplication(this);
     _centralWidget = new QWidget();
     _viewStack = new QStackedWidget();
 }

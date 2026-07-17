@@ -377,9 +377,9 @@ void MainWindow::createPanels() {
     _funcListDock->raise();
 
     // Sync pointers to Application so both sides reference the same objects
-    Application::instance().setFileBrowserPanel(_fileBrowserPanel);
-    Application::instance().setFunctionListPanel(_funcListPanel);
-    Application::instance().setDocumentMapPanel(_docMapPanel);
+    _app->setFileBrowserPanel(_fileBrowserPanel);
+    _app->setFunctionListPanel(_funcListPanel);
+    _app->setDocumentMapPanel(_docMapPanel);
     fprintf(stderr, "DEBUG: createPanels() done\n"); fflush(stderr);
 }
 
