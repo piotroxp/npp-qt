@@ -114,7 +114,10 @@ void TestEncodingDetector::test_isValidUtf8_overlongEncoding_threeByte()
 }
 
 void TestEncodingDetector::test_isValidUtf8_overlongEncoding_fourByte()
- "Overlong 4-byte encoding of U+0000 should be invalid");
+{
+    // Overlong: 4-byte sequence encoding U+0000 (F0 80 80 80) -- must be invalid
+    std::string s = "\xF0\x80\x80\x80";
+    QVERIFY2(!_ed.isValidUtf8(s), "Overlong 4-byte encoding of U+0000 should be invalid");
 }
 
 void TestEncodingDetector::test_isValidUtf8_invalidStartByte()
