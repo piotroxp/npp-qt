@@ -18,6 +18,7 @@
 #include <QUrl>
 #include <QDesktopServices>
 #include <QProcess>
+#include <QDirIterator>
 #include <QInputDialog>
 #include <QFileDialog>
 #include <QSettings>

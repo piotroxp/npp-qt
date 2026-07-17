@@ -27,7 +27,8 @@ public:
     MockScintillaComponent() = default;
     ~MockScintillaComponent() override = default;
 
-    sptr_t send(int message, uptr_t wParam = 0, sptr_t lParam = 0) override {
+    // Match ScintillaComponent's primary virtual signature exactly
+    intptr_t send(int message, int wParam = 0, intptr_t lParam = 0) override {
         Q_UNUSED(message);
         Q_UNUSED(wParam);
         Q_UNUSED(lParam);
@@ -56,11 +57,11 @@ TEST(test_autocompletion_language_setup) {
 
     // Set C++ language
     bool ok = ac.setLanguage(static_cast<int>(LangType::L_CPP));
-    ASSERT_TRUE(ok || !ok); // ok may be false if no keywords loaded, that's fine
+    Q_UNUSED(ok); // ok may be false if no keywords loaded, that's fine
 
     // Case sensitivity should be set
     bool cs = ac.isCaseSensitive();
-    (void)cs; // Just verify it doesn't crash
+    Q_UNUSED(cs); // Just verify it doesn't crash
 
     delete mock;
 }
