@@ -42,9 +42,7 @@ class MainWindow : public QMainWindow {
 public:
     static MainWindow* instance() { return _instance; }
 
-    void setApplication(Application* app) { _app = app; }
-
-    MainWindow();
+    explicit MainWindow(Application* app);
     ~MainWindow() override;
 
     void addEditorTab(ScintillaEditor* editor, const QString& title);

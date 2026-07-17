@@ -46,8 +46,7 @@
 
 MainWindow* MainWindow::_instance = nullptr;
 
-MainWindow::MainWindow()
-    : QMainWindow(nullptr)
+MainWindow::MainWindow(Application* app) : QMainWindow(nullptr), _app(app)
 {
     fprintf(stderr, "DEBUG: MainWindow ctor start\n"); fflush(stderr);
     _instance = this;
@@ -116,19 +115,19 @@ MainWindow::MainWindow()
 
     // Wire Ctrl+I for incremental search
     connect(new QShortcut(QKeySequence("Ctrl+I"), this), &QShortcut::activated,
-        this, [this]() {
+        this, [=]() {
             if (!_incrementalSearch) return;
-            ScintillaEditor* ed = app().getActiveEditor();
+            ScintillaEditor* ed = Application::instance().getActiveEditor();
             if (!ed) return;
             _incrementalSearch->showAtTop();
         });
 
     // Wire incremental search signals to the active editor
-    connect(_incrementalSearch, &IncrementalSearchDialog::searchNext, this, [this](const QString& text) {
-        if (auto* ed = app().getActiveEditor()) ed->findNext(text, {});
+    connect(_incrementalSearch, &IncrementalSearchDialog::searchNext, this, [=](const QString& text) {
+        if (auto* ed = Application::instance().getActiveEditor()) ed->findNext(text, {});
     });
-    connect(_incrementalSearch, &IncrementalSearchDialog::searchPrev, this, [this](const QString& text) {
-        if (auto* ed = app().getActiveEditor()) ed->findPrevious(text, {});
+    connect(_incrementalSearch, &IncrementalSearchDialog::searchPrev, this, [=](const QString& text) {
+        if (auto* ed = Application::instance().getActiveEditor()) ed->findPrevious(text, {});
     });
 
     // Connect DPI changes to UI refresh
@@ -414,7 +413,7 @@ void MainWindow::updateRecentFilesMenu() {
                 }
                 
                 // Add recent files
-                auto recentFiles = app().getRecentFiles();
+                auto recentFiles = _app->getRecentFiles();
                 for (const auto& file : recentFiles) {
                     QAction* recentAction = submenu->addAction(QString::fromStdString(file));
                     recentAction->setData(QString::fromStdString(file));
@@ -440,15 +439,15 @@ void MainWindow::dispatchCommand(const QString& cmd) {
     } else if (cmd == "file.saveAs") {
         onSaveFileAs();
     } else if (cmd == "file.saveAll") {
-        app().saveAllFiles();
+        _app->saveAllFiles();
     } else if (cmd == "file.close") {
         onCloseFile();
     } else if (cmd == "file.closeAll") {
-        app().closeAllFiles();
+        _app->closeAllFiles();
     } else if (cmd == "file.exit") {
         onExit();
     } else if (cmd == "file.clearRecent") {
-        app().clearRecentFiles();
+        _app->clearRecentFiles();
         updateRecentFilesMenu();
     }
     // Edit commands
@@ -480,13 +479,13 @@ void MainWindow::dispatchCommand(const QString& cmd) {
         onFindPrevious();
     } else if (cmd == "search.incrementalSearch") {
         if (!_incrementalSearch) return;
-        ScintillaEditor* ed = app().getActiveEditor();
+        ScintillaEditor* ed = _app->getActiveEditor();
         if (!ed) return;
         _incrementalSearch->showAtTop();
     } else if (cmd == "search.findInFiles") {
-        app().onFindInFiles();
+        _app->onFindInFiles();
     } else if (cmd == "search.count") {
-        if (auto* dlg = app().findReplaceDialog()) {
+        if (auto* dlg = _app->findReplaceDialog()) {
             QString text = dlg->lastSearchText();
             if (!text.isEmpty()) {
                 if (auto* editor = currentEditor()) {
@@ -496,7 +495,7 @@ void MainWindow::dispatchCommand(const QString& cmd) {
             }
         }
     } else if (cmd == "search.markAll") {
-        if (auto* dlg = app().findReplaceDialog()) {
+        if (auto* dlg = _app->findReplaceDialog()) {
             QString text = dlg->lastSearchText();
             if (!text.isEmpty()) {
                 if (auto* editor = currentEditor()) {
@@ -545,7 +544,7 @@ void MainWindow::dispatchCommand(const QString& cmd) {
     else if (cmd.startsWith("language.")) {
         QString langName = cmd.mid(9);
         langName = langName.replace('_', ' ');
-        ScintillaEditor* ed = app().getActiveEditor();
+        ScintillaEditor* ed = _app->getActiveEditor();
         LangType lang = LangType::L_TEXT;
         if (langName == "C++") lang = LangType::L_CPP;
         else if (langName == "C") lang = LangType::L_C;
@@ -840,7 +839,7 @@ void MainWindow::onSaveFile() {
 
 void MainWindow::onSaveFileAs() {
     BufferID buffer = app().getActiveBuffer();
-    ScintillaEditor* ed = app().getActiveEditor();
+    ScintillaEditor* ed = _app->getActiveEditor();
     if (!buffer) return;
     // Sync editor text into buffer before save-as
     if (ed) app().syncEditorToBuffer(ed, buffer);
@@ -899,14 +898,14 @@ void MainWindow::onSelectAll() {
 
 void MainWindow::onFind() {
     // Open find dialog
-    if (auto* dlg = app().findReplaceDialog()) {
+    if (auto* dlg = _app->findReplaceDialog()) {
         dlg->show();
     }
 }
 
 void MainWindow::onReplace() {
     // Open replace dialog
-    if (auto* dlg = app().findReplaceDialog()) {
+    if (auto* dlg = _app->findReplaceDialog()) {
         dlg->show();
     }
 }
@@ -918,7 +917,7 @@ void MainWindow::onGoto() {
 }
 
 void MainWindow::onFindNext() {
-    if (auto* dlg = app().findReplaceDialog()) {
+    if (auto* dlg = _app->findReplaceDialog()) {
         QString text = dlg->lastSearchText();
         if (!text.isEmpty()) {
             if (auto* editor = currentEditor()) {
@@ -932,7 +931,7 @@ void MainWindow::onFindNext() {
 }
 
 void MainWindow::onFindPrevious() {
-    if (auto* dlg = app().findReplaceDialog()) {
+    if (auto* dlg = _app->findReplaceDialog()) {
         QString text = dlg->lastSearchText();
         if (!text.isEmpty()) {
             if (auto* editor = currentEditor()) {
@@ -1079,7 +1078,7 @@ void MainWindow::onBufferOpened(BufferID buffer) {
     });
 
     // Wire DocumentMap to the first editor (initial setup)
-    if (app().documentMapPanel() && !app().getActiveEditor()) {
+    if (app().documentMapPanel() && !_app->getActiveEditor()) {
         app().documentMapPanel()->setEditor(editor);
     }
 
@@ -1098,7 +1097,7 @@ void MainWindow::onFileExternallyModified(const QString& filePath) {
         BufferID buf = app().getBufferForPath(filePath.toStdString());
         if (buf) {
             app().reloadFile(buf);
-            ScintillaEditor* ed = app().getActiveEditor();
+            ScintillaEditor* ed = _app->getActiveEditor();
             if (ed) {
                 ed->setText(QString::fromStdString(app().getBufferText(buf)));
                 ed->setModified(false);
@@ -1142,7 +1141,7 @@ void MainWindow::onBufferModified(BufferID buffer, bool modified) {
 
 void MainWindow::onBufferChanged() {
     BufferID buffer = app().getActiveBuffer();
-    ScintillaEditor* ed = app().getActiveEditor();
+    ScintillaEditor* ed = _app->getActiveEditor();
     if (buffer && ed) {
         // Sync editor text into the buffer immediately so save is always fresh
         app().syncEditorToBuffer(ed, buffer);
