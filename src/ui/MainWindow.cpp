@@ -355,7 +355,7 @@ void MainWindow::createPanels() {
     addDockWidget(Qt::LeftDockWidgetArea, _fileBrowserDock);
     connect(_fileBrowserDock, &QDockWidget::visibilityChanged,
             this, [this](bool v){ if(v) _fileBrowserDock->setFocus(); });
-    connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
+    _fileBrowserConnection = connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
             this, [this](const QString& path){
                 // Re-entrancy guard: set before calling openFileInTab so that any
                 // ScintillaEditor-construction events that fire back through this
@@ -695,11 +695,29 @@ void MainWindow::onNewFile() {
     ++_openingFileDepth;
     auto guard = qScopeGuard([this]() { --_openingFileDepth; });
 
+    // Disconnect the file browser signal while ScintillaEditor is being
+    // constructed.  ScintillaEditor/QFrame construction triggers Qt widget
+    // events that can propagate back to FileBrowserPanel.  postEvent() is used
+    // for these events, which means they are delivered asynchronously (later
+    // in the event loop) after _openingFileDepth has already reset to 0 --
+    // so the depth counter alone cannot block them.  Disconnecting the signal
+    // is the only reliable way to prevent the re-entrant call.
+    QObject::disconnect(_fileBrowserConnection);
+    auto reconnectGuard = qScopeGuard([this]() {
+        _fileBrowserConnection = connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
+            this, [this](const QString& path){
+                if (_openingFileDepth > 0) return;
+                ++_openingFileDepth;
+                auto guard = qScopeGuard([this]() { --_openingFileDepth; });
+                openFileInTab(path);
+            });
+    });
     auto& appRef = Application::instance();
     BufferID buf = appRef.newFile();
 
     // Create editor
     ScintillaEditor* editor = new ScintillaEditor(_tabWidget);
+    reconnectGuard.dismiss();  // normal completion -- no need to reconnect
     editor->applyTheme(ThemeManager::instance().currentTheme());  // apply current theme to status bar
     connect(editor, &ScintillaEditor::cursorPositionChanged,
              _statusBarWidget, [this](int line, int col) {
@@ -774,11 +792,36 @@ void MainWindow::openFileInTab(const QString& path) {
     // Check if already open — switch to existing tab
     if (_bufferToTab.contains(buf)) {
         _tabWidget->setCurrentIndex(_bufferToTab[buf]);
+        QObject::disconnect(_fileBrowserConnection);
+        _fileBrowserConnection = connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
+            this, [this](const QString& path){
+                if (_openingFileDepth > 0) return;
+                ++_openingFileDepth;
+                auto guard = qScopeGuard([this]() { --_openingFileDepth; });
+                openFileInTab(path);
+            });
         return;
     }
 
+    // Disconnect the file browser signal while ScintillaEditor is being
+    // constructed.  ScintillaEditor/QFrame construction triggers Qt widget
+    // events that bubble back to FileBrowserPanel.  postEvent() delivers these
+    // asynchronously AFTER _openingFileDepth has reset to 0, so the depth
+    // counter alone cannot block them.  Disconnecting is the only reliable way.
+    QObject::disconnect(_fileBrowserConnection);
+    auto reconnectGuard = qScopeGuard([this]() {
+        _fileBrowserConnection = connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
+            this, [this](const QString& path){
+                if (_openingFileDepth > 0) return;
+                ++_openingFileDepth;
+                auto guard = qScopeGuard([this]() { --_openingFileDepth; });
+                openFileInTab(path);
+            });
+    });
+
     // Create editor
     ScintillaEditor* editor = new ScintillaEditor(_tabWidget);
+    reconnectGuard.dismiss();  // normal completion — no need to reconnect
 
     // Wire cursor position to status bar
     connect(editor, &ScintillaEditor::cursorPositionChanged,
