@@ -26,6 +26,7 @@ add_library(test_core STATIC
     ${REL_ROOT}/dialogs/LargeFileWarningDialog.cpp
     ${REL_ROOT}/dialogs/FunctionCallTip.cpp
     ${REL_ROOT}/dialogs/AutoCompletion.cpp
+    ${REL_ROOT}/dialogs/IncrementalSearchDialog.cpp
 )
 target_include_directories(test_core PUBLIC
     ${TEST_INC}
