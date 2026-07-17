@@ -544,7 +544,7 @@ ScintillaEditor* Application::addView() {
     ScintillaEditor* editor = new ScintillaEditor();
     layout->addWidget(editor);
 
-    int viewId = _viewStack->addWidget(container);
+    [[maybe_unused]] int viewId = _viewStack->addWidget(container);
     _viewContainers.push_back(container);
     return editor;
 }

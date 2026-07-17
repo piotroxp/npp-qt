@@ -57,9 +57,13 @@ endif()
 add_library(npp-qt-test-lib STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/EncodingDetector.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/LanguageManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/ThemeManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/Application.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/StringHelper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/FileHelper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/Util.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/DpiManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/editor/SyntaxHighlighter.cpp
 )
 target_link_libraries(npp-qt-test-lib PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Xml ${QSCINTILLA_LIBRARY})
 target_include_directories(npp-qt-test-lib PRIVATE

@@ -173,8 +173,8 @@ add_custom_command(TARGET npp-qt POST_BUILD
 )
 
 # Scintilla and Lexilla headers (from notepad-plus-plus-translation workspace)
-set(SCINTILLA_INCLUDE "/home/piotro/.openclaw/workspace/notepad-plus-plus-translation/scintilla/include")
-set(LEXILLA_INCLUDE "/home/piotro/.openclaw/workspace/notepad-plus-plus-translation/lexilla/include")
+set(SCINTILLA_INCLUDE "/home/node/.openclaw/workspace-employee-blunt/notepad-plus-plus-translation/scintilla/include")
+set(LEXILLA_INCLUDE "/home/node/.openclaw/workspace-employee-blunt/notepad-plus-plus-translation/lexilla/include")
 
 target_include_directories(npp-qt PRIVATE
     ${CMAKE_SOURCE_DIR}/src

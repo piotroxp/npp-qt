@@ -144,6 +144,9 @@ private:
     void setupFortran();
     void setupLisp();
     void setupHaskell();
+    void setupAda();
+    void setupRegex();
+    void setupGraphviz();
     void setupVerilog();
     void setupVHDL();
     void setupAsm();

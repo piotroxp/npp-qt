@@ -30,7 +30,7 @@ static const char* const BINARY_SIGNATURES[] = {
     "BM",           // BMP
     "II\x2a\x00",   // TIFF little-endian
     "MM\x00\x2a",   // TIFF big-endian
-    "\xca\xfe\xba\xbe", // Java class / Mach-O
+    "\xCA\xFE\xBA\xBE", // Java class / Mach-O
     "\xfe\xed\xfa\xce", // Mach-O 32-bit
     "\xfe\xed\xfa\xcf", // Mach-O 64-bit
     "\x7fELF",       // ELF
@@ -677,7 +677,7 @@ QString FileLoaderWorker::decodeContent(const QByteArray& data, EncodingType enc
 
         case EncodingType::UTF_16_LE:
         case EncodingType::UTF_16_LE_BOM:
-            return QString::fromUtf16(reinterpret_cast<const ushort*>(data.constData()),
+            return QString::fromUtf16(reinterpret_cast<const char16_t*>(data.constData()),
                                       data.size() / 2);
 
         case EncodingType::UTF_16_BE:
@@ -689,12 +689,12 @@ QString FileLoaderWorker::decodeContent(const QByteArray& data, EncodingType enc
                 swapped[i] = swapped[i + 1];
                 swapped[i + 1] = tmp;
             }
-            return QString::fromUtf16(reinterpret_cast<const ushort*>(swapped.constData()),
+            return QString::fromUtf16(reinterpret_cast<const char16_t*>(static_cast<const void*>(swapped.constData())),
                                       swapped.size() / 2);
         }
 
         case EncodingType::UTF_32_LE:
-            return QString::fromUcs4(reinterpret_cast<const uint*>(data.constData()),
+            return QString::fromUcs4(reinterpret_cast<const char32_t*>(data.constData()),
                                      data.size() / 4);
 
         case EncodingType::UTF_32_BE: {
@@ -703,7 +703,7 @@ QString FileLoaderWorker::decodeContent(const QByteArray& data, EncodingType enc
                 qSwap(swapped[i], swapped[i + 3]);
                 qSwap(swapped[i + 1], swapped[i + 2]);
             }
-            return QString::fromUcs4(reinterpret_cast<const uint*>(swapped.constData()),
+            return QString::fromUcs4(reinterpret_cast<const char32_t*>(static_cast<const void*>(swapped.constData())),
                                      swapped.size() / 4);
         }
 

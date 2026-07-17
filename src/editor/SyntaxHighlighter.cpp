@@ -33,7 +33,7 @@ void SyntaxHighlighter::applyDarkTheme() {
     _preprocessorFormat.setForeground(QColor("#C586C0"));
     _attributeFormat.setForeground(QColor("#9CDCFE"));
     _labelFormat.setForeground(QColor("#D7BA7D"));
-    _operatorFormat.setForeground(QColor("#D4D4D4");
+    _operatorFormat.setForeground(QColor("#D4D4D4"));
 }
 
 void SyntaxHighlighter::applyDraculaTheme() {
@@ -157,7 +157,7 @@ void SyntaxHighlighter::setupLanguage(LangType lang) {
     _embeddedLang = LangType::L_TEXT;
 
     switch (lang) {
-        case LangType::L_TEXT:       setupText();       break;
+        case LangType::L_TEXT:       setupDefault();    break;
         case LangType::L_C:          setupC();          break;
         case LangType::L_CPP:        setupCpp();        break;
         case LangType::L_OBJC:       setupObjectiveC(); break;

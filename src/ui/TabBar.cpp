@@ -354,7 +354,8 @@ void TabBar::mouseDoubleClickEvent(QMouseEvent* event) {
         int tabIndex = tabAt(event->pos());
         if (tabIndex >= 0) {
             // Double-click on tab could open file properties or show context menu
-            contextMenuEvent(new QContextMenuEvent(QContextMenuEvent::Mouse, event->pos(), event->globalPos()));
+            QContextMenuEvent e(QContextMenuEvent::Mouse, event->position().toPoint(), event->globalPosition().toPoint());
+            contextMenuEvent(&e);
         } else {
             // Double-click on empty area creates new tab
             emit newTabRequested();
@@ -378,7 +379,7 @@ void TabBar::dragEnterEvent(QDragEnterEvent* event) {
 }
 
 void TabBar::dragMoveEvent(QDragMoveEvent* event) {
-    int targetIndex = tabAt(event->pos());
+    int targetIndex = tabAt(event->position().toPoint());
     
     if (targetIndex >= 0) {
         highlightDropTarget(targetIndex);
@@ -408,7 +409,7 @@ void TabBar::dropEvent(QDropEvent* event) {
         const QList<QUrl>& urls = event->mimeData()->urls();
         for (const QUrl& url : urls) {
             if (url.isLocalFile()) {
-                emit tabDroppedOutside(-1, event->pos()); // For opening in new tab
+                emit tabDroppedOutside(-1, event->position().toPoint()); // For opening in new tab
             }
         }
     }

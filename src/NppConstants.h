@@ -949,8 +949,8 @@ struct RECT {
     long bottom;
     long width()  const { return right - left; }
     long height() const { return bottom - top; }
-    Q_DECL_CONSTEXPR operator QRect() const { return QRect(left, top, width(), height()); }
-    Q_DECL_CONSTEXPR QRect toQRect() const { return QRect(left, top, width(), height()); }
+    operator QRect() const { return QRect(left, top, right - left, bottom - top); }
+    QRect toQRect() const { return QRect(left, top, right - left, bottom - top); }
 };
 #endif
 #ifndef LPRECT

@@ -166,6 +166,10 @@ enum class LangType : int {
     L_REGEX      = 55,
     L_GRAPHVIZ   = 56,
     L_SQL        = 57,
+    L_FSHARP     = 58,
+    L_GROOVY     = 59,
+    L_WEBASSEMBLY = 60,
+    L_PROPERTIES  = 61,
     L_USER       = 1000,  // User-defined languages start here
     L_EXTERNAL   = 2000,
     L_REGISTRY   = 3000
