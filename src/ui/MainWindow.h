@@ -138,6 +138,7 @@ private:
     friend class ShortcutManager;
 
     QTabWidget* _tabWidget = nullptr;
+    bool _openingFile = false;  // re-entrancy guard: block signals during ScintillaEditor construction
     BufferID bufferAtTabIndex(int tabIndex) const;
     TabBar* _tabBar = nullptr;
     MenuBar* _menuBar = nullptr;

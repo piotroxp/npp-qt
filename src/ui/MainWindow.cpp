@@ -23,6 +23,7 @@
 #include <QTabWidget>
 #include <QVBoxLayout>
 #include <QFileDialog>
+#include <QScopeGuard>
 #include <QMessageBox>
 #include <QDragEnterEvent>
 #include <QMimeData>
@@ -114,7 +115,7 @@ MainWindow::MainWindow(Application* app) : QMainWindow(nullptr), _app(app)
 
     // Wire Ctrl+I for incremental search
     connect(new QShortcut(QKeySequence("Ctrl+I"), this), &QShortcut::activated,
-        this, [=]() {
+        this, [=, this]() {
             if (!_incrementalSearch) return;
             ScintillaEditor* ed = Application::instance().getActiveEditor();
             if (!ed) return;
@@ -681,6 +682,11 @@ void MainWindow::onNewFile() {
     // Guard: _tabWidget may be null during early initialization.
     if (!_tabWidget) return;
 
+    // Guard: re-entrancy (same concern as openFileInTab).
+    if (_openingFile) return;
+    _openingFile = true;
+    auto guard = qScopeGuard([this]() { _openingFile = false; });
+
     auto& appRef = Application::instance();
     BufferID buf = appRef.newFile();
 
@@ -738,6 +744,20 @@ void MainWindow::openFileInTab(const QString& path) {
     // Guard: _tabWidget may be null during early initialization if a panel
     // emits a file signal before MainWindow::setupUI() has completed.
     if (!_tabWidget) return;
+
+    // Guard: re-entrancy into ScintillaEditor construction.  ScintillaEditor
+    // is a QFrame; its construction triggers Qt widget events (style propagation,
+    // font inheritance, etc.) that bubble up to parent widgets including
+    // FileBrowserPanel.  If the user double-clicks during construction,
+    // onDoubleClicked fires and re-enters openFileInTab, calling
+    // new ScintillaEditor(_tabWidget) while a prior ScintillaEditor is still
+    // being constructed.  The second ScintillaEditor sees a corrupted parent
+    // pointer, and QWidget::setParent crashes with SEGV.
+    // Fix: skip if already inside openFileInTab.
+    if (_openingFile) return;
+    _openingFile = true;
+
+    auto guard = qScopeGuard([this]() { _openingFile = false; });
 
     auto& appRef = Application::instance();
     BufferID buf = appRef.openFile(path.toStdString());
