@@ -678,6 +678,9 @@ void MainWindow::updateTitleBar(const QString& fileName) {
 
 // File operations
 void MainWindow::onNewFile() {
+    // Guard: _tabWidget may be null during early initialization.
+    if (!_tabWidget) return;
+
     auto& appRef = Application::instance();
     BufferID buf = appRef.newFile();
 
@@ -732,6 +735,10 @@ void MainWindow::onOpenFile() {
 }
 
 void MainWindow::openFileInTab(const QString& path) {
+    // Guard: _tabWidget may be null during early initialization if a panel
+    // emits a file signal before MainWindow::setupUI() has completed.
+    if (!_tabWidget) return;
+
     auto& appRef = Application::instance();
     BufferID buf = appRef.openFile(path.toStdString());
     if (!buf) {

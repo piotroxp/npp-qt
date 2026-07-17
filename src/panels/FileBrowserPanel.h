@@ -114,4 +114,6 @@ private:
     // Internal file path tracking for follow-active-document
     QString _activeFilePath;
     void openInFileManagerAt(const QString& path, bool selectFile = false);
+
+    bool _initialized = false;  // guard: block interactions until fully constructed
 };

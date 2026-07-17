@@ -53,9 +53,17 @@ FileBrowserPanel::FileBrowserPanel(QWidget* parent)
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // Setup toolbar
+    // Setup toolbar — initializes all toolbar actions needed by breadcrumb slots
     setupToolbar();
     mainLayout->addWidget(_toolBar);
+
+    // Mark initialized so that any signal emissions during construction are guarded.
+    // updateBreadcrumbs() creates lambdas bound to setCurrentProjectDirectory() /
+    // setRootDirectory(); those would previously fire with _initialized=false, risking
+    // partially-constructed state if the model/view layout triggered re-entrancy.
+    // With the flag set here, all early interactions (double-click, context menu,
+    // toolbar) are safely discarded until the panel is fully built.
+    _initialized = true;
 
     // Breadcrumb bar
     setupBreadcrumbs();
@@ -606,7 +614,7 @@ void FileBrowserPanel::collapseAll() {
 // Double-click
 // ---------------------------------------------------------------------------
 void FileBrowserPanel::onDoubleClicked(const QModelIndex& index) {
-    if (!index.isValid()) return;
+    if (!_initialized || !index.isValid()) return;
 
     QString path = _model->filePath(index);
     QFileInfo info = _model->fileInfo(index);
@@ -716,6 +724,7 @@ void FileBrowserPanel::onContextMenu(const QPoint& pos) {
 // File operations
 // ---------------------------------------------------------------------------
 void FileBrowserPanel::openSelectedFile() {
+    if (!_initialized) return;
     QModelIndex index = _treeView->currentIndex();
     if (!index.isValid()) return;
     QString path = _model->filePath(index);
@@ -726,11 +735,10 @@ void FileBrowserPanel::openSelectedFile() {
 }
 
 void FileBrowserPanel::openReadOnly() {
-    // Open as read-only (emit signal with read-only flag)
+    if (!_initialized) return;
     QModelIndex index = _treeView->currentIndex();
     if (!index.isValid()) return;
     QString path = _model->filePath(index);
-    // For now, emit same signal — the Application can check readonly flag
     emit fileDoubleClicked(path + "?readonly=1");
 }
 
