@@ -356,7 +356,15 @@ void MainWindow::createPanels() {
     connect(_fileBrowserDock, &QDockWidget::visibilityChanged,
             this, [this](bool v){ if(v) _fileBrowserDock->setFocus(); });
     connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
-            this, [this](const QString& path){ openFileInTab(path); });
+            this, [this](const QString& path){
+                // Re-entrancy guard: set before calling openFileInTab so that any
+                // ScintillaEditor-construction events that fire back through this
+                // signal see _openingFile==true and drop the re-entrant call.
+                if (_openingFile) return;
+                _openingFile = true;
+                auto guard = qScopeGuard([this]() { _openingFile = false; });
+                openFileInTab(path);
+            });
 
     // Function List panel (right dock)
     _funcListPanel = new FunctionListPanel(this);
