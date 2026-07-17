@@ -44,8 +44,17 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 
 # ─── Compiler flags ───────────────────────────────────────────────────────────
+option(NPP_DEBUG_SANITIZERS "Enable ASAN/UBSAN sanitizers for debugging" OFF)
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(-Wall -Wextra -Wpedantic -O2)
+    add_compile_options(-Wall -Wextra -Wpedantic -O0 -g -fno-omit-frame-pointer)
+    if(NPP_DEBUG_SANITIZERS)
+        message(STATUS "Sanitizers ENABLED (ASAN + UBSAN)")
+        add_compile_options(-fsanitize=address -fsanitize=undefined)
+        add_link_options(-fsanitize=address -fsanitize=undefined)
+    else()
+        message(STATUS "Debug symbols enabled (no sanitizers — set NPP_DEBUG_SANITIZERS=ON to enable)")
+    endif()
 endif()
 
 # ─── Source files ─────────────────────────────────────────────────────────────

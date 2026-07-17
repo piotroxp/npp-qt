@@ -6,12 +6,19 @@
 
 #include <QtTest/QtTest>
 #include <QCoreApplication>
+#include <Qsci/qscilexer.h>
+#include <Qsci/qscilexercpp.h>
+#include <Qsci/qscilexerpython.h>
+#include <Qsci/qscilexerhtml.h>
 #include "core/LanguageManager.h"
 #include "editor/ScintillaEditor.h"
+#include "common/Types.h"
 
 class TestLexer : public QObject
 {
     Q_OBJECT
+
+    using enum LangType;  // bring L_C, L_CPP, L_HTML, etc. into scope
 
 private slots:
     void initTestCase();

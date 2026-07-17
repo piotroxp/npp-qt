@@ -69,6 +69,7 @@ enum class SavingStatus : int {
 // Encoding Types
 // ============================================================================
 enum class EncodingType : int {
+    NONE       = -1,  // No encoding detected / unknown
     ANSI       = 0,
     UTF_8      = 1,
     UTF_8_BOM  = 2,

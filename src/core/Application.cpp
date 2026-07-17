@@ -89,9 +89,7 @@ Application& Application::instance() {
 // Constructor / Destructor
 // ============================================================================
 Application::Application() : QObject(qApp) {
-    fprintf(stderr, "DEBUG: Application ctor start\n"); fflush(stderr);
     _mainWindow = new MainWindow(this);
-    fprintf(stderr, "DEBUG: MainWindow created\n"); fflush(stderr);
     _centralWidget = new QWidget();
     _viewStack = new QStackedWidget();
 }
@@ -169,10 +167,12 @@ bool Application::initialize() {
         setupConnections();
 
         // Load plugins from config directory
-        QString pluginDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-                            + "/notepad--qt/plugins";
-        QDir().mkpath(pluginDir);
-        PluginManager::instance().loadPlugins(pluginDir);
+        if (!_skipPlugins) {
+            QString pluginDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
+                                + "/notepad--qt/plugins";
+            QDir().mkpath(pluginDir);
+            PluginManager::instance().loadPlugins(pluginDir);
+        }
 
         _state = AppState::Ready;
         logInfo("Initialization complete");
@@ -368,8 +368,8 @@ void Application::setupUI() {
     centralLayout->setContentsMargins(0, 0, 0, 0);
     centralLayout->addWidget(_viewStack);
 
-    // Add initial view
-    addView();
+    // Add initial view and set it as the active editor
+    _activeEditor = addView();
 
     setupMenuBar();
     setupToolBar();
@@ -533,7 +533,7 @@ void Application::shutdown() {
 // ============================================================================
 // View Management
 // ============================================================================
-int Application::addView() {
+ScintillaEditor* Application::addView() {
     QWidget* container = new QWidget();
     QHBoxLayout* layout = new QHBoxLayout(container);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -543,7 +543,7 @@ int Application::addView() {
 
     int viewId = _viewStack->addWidget(container);
     _viewContainers.push_back(container);
-    return viewId;
+    return editor;
 }
 
 void Application::closeView(int viewId) {
@@ -2380,8 +2380,9 @@ void Application::playbackMacroStep(int message, uintptr_t wParam, uintptr_t lPa
     switch (typeIndex) {
         case RecordedMacroStep::mtUseSParameter: {
             QString s = QString::fromUtf8(sParam);
+            const QByteArray sUtf8 = s.toUtf8();  // store — dangling pointer otherwise
             sci->SendScintilla(message, wParam,
-                reinterpret_cast<sptr_t>(s.toUtf8().constData()));
+                reinterpret_cast<sptr_t>(sUtf8.constData()));
             break;
         }
         case RecordedMacroStep::mtUseLParameter:
@@ -2473,8 +2474,9 @@ void Application::onJoinLines() {
     QStringList lines = text.split('\n', Qt::SkipEmptyParts);
     for (int i = 0; i < lines.size(); ++i) lines[i] = lines[i].trimmed();
     QString joined = lines.join(" ");
+    const QByteArray joinedUtf8 = joined.toUtf8();  // store — dangling pointer otherwise
     editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
-        reinterpret_cast<sptr_t>(joined.toUtf8().constData()));
+        reinterpret_cast<sptr_t>(joinedUtf8.constData()));
 }
 
 void Application::onSortDescending() {
@@ -2486,8 +2488,9 @@ void Application::onSortDescending() {
     lines.sort(Qt::CaseInsensitive);
     std::reverse(lines.begin(), lines.end());
     QString result = lines.join("\n");
+    const QByteArray resultUtf8 = result.toUtf8();  // store — dangling pointer otherwise
     editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
-        reinterpret_cast<sptr_t>(result.toUtf8().constData()));
+        reinterpret_cast<sptr_t>(resultUtf8.constData()));
 }
 
 void Application::onDeleteFile() {
@@ -2520,8 +2523,9 @@ void Application::onSortIntDescending() {
     QStringList result;
     for (int n : nums) result.append(QString::number(n));
     QString out = result.join("\n");
+    const QByteArray outUtf8 = out.toUtf8();  // store — dangling pointer otherwise
     editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
-        reinterpret_cast<sptr_t>(out.toUtf8().constData()));
+        reinterpret_cast<sptr_t>(outUtf8.constData()));
 }
 
 void Application::onUnmarkAll() {
@@ -2538,8 +2542,9 @@ void Application::onTrimLeading() {
     QStringList lines = text.split('\n');
     for (int i = 0; i < lines.size(); ++i) lines[i] = lines[i].trimmed();
     QString result = lines.join("\n");
+    const QByteArray resultUtf8 = result.toUtf8();  // store — dangling pointer otherwise
     editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
-        reinterpret_cast<sptr_t>(result.toUtf8().constData()));
+        reinterpret_cast<sptr_t>(resultUtf8.constData()));
 }
 
 void Application::onRenameFile() {
@@ -2566,8 +2571,9 @@ void Application::onSortReverse() {
     QStringList lines = text.split('\n');
     std::reverse(lines.begin(), lines.end());
     QString result = lines.join("\n");
+    const QByteArray resultUtf8 = result.toUtf8();  // store — dangling pointer otherwise
     editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
-        reinterpret_cast<sptr_t>(result.toUtf8().constData()));
+        reinterpret_cast<sptr_t>(resultUtf8.constData()));
 }
 
 void Application::onDeleteLine() {
@@ -2597,8 +2603,9 @@ void Application::onSortAscending() {
     QStringList lines = text.split('\n');
     lines.sort(Qt::CaseInsensitive);
     QString result = lines.join("\n");
+    const QByteArray resultUtf8 = result.toUtf8();  // store — dangling pointer otherwise
     editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
-        reinterpret_cast<sptr_t>(result.toUtf8().constData()));
+        reinterpret_cast<sptr_t>(resultUtf8.constData()));
 }
 
 void Application::onSortIntAscending() {
@@ -2617,8 +2624,9 @@ void Application::onSortIntAscending() {
     QStringList result;
     for (int n : nums) result.append(QString::number(n));
     QString out = result.join("\n");
+    const QByteArray outUtf8 = out.toUtf8();  // store — dangling pointer otherwise
     editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
-        reinterpret_cast<sptr_t>(out.toUtf8().constData()));
+        reinterpret_cast<sptr_t>(outUtf8.constData()));
 }
 
 void Application::onTrimTrailing() {
@@ -2629,8 +2637,9 @@ void Application::onTrimTrailing() {
     QStringList lines = text.split('\n');
     for (int i = 0; i < lines.size(); ++i) lines[i] = lines[i].trimmed();
     QString result = lines.join("\n");
+    const QByteArray resultUtf8 = result.toUtf8();  // store — dangling pointer otherwise
     editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
-        reinterpret_cast<sptr_t>(result.toUtf8().constData()));
+        reinterpret_cast<sptr_t>(resultUtf8.constData()));
 }
 
 void Application::onSearchOnInternet() {

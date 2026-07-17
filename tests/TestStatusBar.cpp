@@ -3,14 +3,18 @@
 
 #include <QtTest/QtTest>
 #include <QCoreApplication>
+#include <QPointer>
 #include "ui/StatusBar.h"
+
+static int    s_argc    = 1;
+static char*  s_argv[]  = { const_cast<char*>("test") };
+static QCoreApplication s_app(s_argc, s_argv);
 
 class TestStatusBar : public QObject
 {
     Q_OBJECT
 
 private slots:
-    void initTestCase();
     void init();
 
     void test_setPosition();
@@ -20,16 +24,15 @@ private slots:
     void test_setMessage();
     void test_setSelection();
 
+    void cleanup()
+    {
+        delete _bar;
+        _bar = nullptr;
+    }
+
 private:
     StatusBar* _bar = nullptr;
 };
-
-void TestStatusBar::initTestCase()
-{
-    static int argc = 1;
-    static char* argv[] = { const_cast<char*>("test") };
-    static QCoreApplication app(argc, argv);
-}
 
 void TestStatusBar::init()
 {
@@ -38,7 +41,7 @@ void TestStatusBar::init()
 
 void TestStatusBar::test_setPosition()
 {
-    _bar->setPosition(1, 10);  // line 1, col 10
+    _bar->setPosition(1, 10);
     _bar->setPosition(100, 5);
 }
 
@@ -71,8 +74,8 @@ void TestStatusBar::test_setMessage()
 
 void TestStatusBar::test_setSelection()
 {
-    _bar->setSelection(0, 0);     // no selection
-    _bar->setSelection(10, 2);    // 10 chars, 2 lines selected
+    _bar->setSelection(0, 0);
+    _bar->setSelection(10, 2);
 }
 
 QTEST_MAIN(TestStatusBar)

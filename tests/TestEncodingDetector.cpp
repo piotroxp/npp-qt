@@ -88,7 +88,7 @@ void TestEncodingDetector::test_detectBOM_utf8()
 {
     std::string s = "\xEF\xBB\xBFHello";  // UTF-8 BOM
     EncodingType enc = _ed.detectBOM(s);
-    if (enc != EncodingType::UTF_8)
+    if (enc != EncodingType::UTF_8_BOM)
         qWarning("UTF-8 BOM detected as %d, expected UTF_8", int(enc));
 }
 
@@ -112,7 +112,7 @@ void TestEncodingDetector::test_detectBOM_none()
 {
     std::string s = "No BOM here";
     EncodingType enc = _ed.detectBOM(s);
-    if (enc != EncodingType::NONE)
+    if (enc != EncodingType::ANSI)
         qWarning("No BOM detected as %d, expected NONE", int(enc));
 }
 
@@ -155,7 +155,7 @@ void TestEncodingDetector::test_detectEol_mixed()
 
 void TestEncodingDetector::test_encodingName()
 {
-    std::string name = EncodingDetector::encodingName(EncodingType::UTF8);
+    std::string name = EncodingDetector::encodingName(EncodingType::UTF_8);
     qDebug("UTF-8 name: %s", name.c_str());
     QVERIFY(!name.empty());
 }

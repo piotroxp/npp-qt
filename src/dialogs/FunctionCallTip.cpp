@@ -369,8 +369,9 @@ void FunctionCallTip::showCalltip()
     // Show calltip at current position.
     // Scintilla will automatically position it above or below the cursor
     // depending on available space.
+    const QByteArray tipUtf8 = tipStr.toUtf8();  // store — dangling pointer otherwise
     _pEditView->send(SCI_CALLTIPSHOW, _startPos,
-                     reinterpret_cast<sptr_t>(tipStr.toUtf8().constData()));
+                     reinterpret_cast<sptr_t>(tipUtf8.constData()));
     _selfActivated = true;
 
     // Highlight the current parameter if any.

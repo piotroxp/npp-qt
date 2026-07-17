@@ -47,57 +47,53 @@ private slots:
     // ── Tab/space conversion ───────────────────────────────────────────────
     void test_tabsToSpaces();
     void test_spacesToTabs();
-
-private:
-    // Helper to compare std::string with raw C string
-    static bool eq(const std::string& a, const char* b) { return a == b; }
 };
 
-// ─── Case conversion ────────────────────────────────────────────────────────────
+// ─── Case conversion ─────────────────────────────────────────────────────────
 
 void TestStringHelper::test_toLower()
 {
-    QString qresult = QString::fromStdString(toLower("Hello World"));
+    QString qresult = QString::fromStdString(toLower(std::string("Hello World")));
     if (qresult != "hello world")
         qWarning("toLower(\"Hello World\") = \"%s\"", qPrintable(qresult));
 }
 
 void TestStringHelper::test_toUpper()
 {
-    QString qresult = QString::fromStdString(toUpper("Hello World"));
+    QString qresult = QString::fromStdString(toUpper(std::string("Hello World")));
     if (qresult != "HELLO WORLD")
         qWarning("toLower(\"Hello World\") = \"%s\"", qPrintable(qresult));
 }
 
-// ─── Trim ─────────────────────────────────────────────────────────────────────
+// ─── Trim ────────────────────────────────────────────────────────────────────
 
 void TestStringHelper::test_trim_basic()
 {
-    if (trim("  hello  ") != "hello")
+    if (trim(std::string("  hello  ")) != "hello")
         qWarning("trim failed on \"  hello  \"");
 }
 
 void TestStringHelper::test_trim_leftOnly()
 {
-    if (trimLeft("  hello") != "hello")
+    if (trimLeft(std::string("  hello")) != "hello")
         qWarning("trimLeft failed on \"  hello\"");
 }
 
 void TestStringHelper::test_trim_rightOnly()
 {
-    if (trimRight("hello  ") != "hello")
+    if (trimRight(std::string("hello  ")) != "hello")
         qWarning("trimRight failed on \"hello  \"");
 }
 
 void TestStringHelper::test_trim_noChange()
 {
-    if (trim("hello") != "hello")
+    if (trim(std::string("hello")) != "hello")
         qWarning("trim changed \"hello\"");
 }
 
 void TestStringHelper::test_trim_empty()
 {
-    if (!trim("").empty())
+    if (!trim(std::string("")).empty())
         qWarning("trim changed \"\"");
 }
 
@@ -105,32 +101,32 @@ void TestStringHelper::test_trim_empty()
 
 void TestStringHelper::test_startsWith()
 {
-    QVERIFY(startsWith("Hello", "He"));
-    QVERIFY(startsWith("Hello", "Hello"));
-    QVERIFY(!startsWith("Hello", "hello"));
+    QVERIFY(startsWith(std::string("Hello"), std::string("He")));
+    QVERIFY(startsWith(std::string("Hello"), std::string("Hello")));
+    QVERIFY(!startsWith(std::string("Hello"), std::string("hello")));
 }
 
 void TestStringHelper::test_endsWith()
 {
-    QVERIFY(endsWith("Hello", "lo"));
-    QVERIFY(endsWith("Hello", "Hello"));
-    QVERIFY(!endsWith("Hello", "Hello!"));
+    QVERIFY(endsWith(std::string("Hello"), std::string("lo")));
+    QVERIFY(endsWith(std::string("Hello"), std::string("Hello")));
+    QVERIFY(!endsWith(std::string("Hello"), std::string("Hello!")));
 }
 
 // ─── Contains ────────────────────────────────────────────────────────────────
 
 void TestStringHelper::test_contains()
 {
-    QVERIFY(contains("Hello world", "world"));
-    QVERIFY(contains("Hello world", ""));
-    QVERIFY(!contains("Hello", "World"));
+    QVERIFY(contains(std::string("Hello world"), std::string("world")));
+    QVERIFY(contains(std::string("Hello world"), std::string("")));
+    QVERIFY(!contains(std::string("Hello"), std::string("World")));
 }
 
 // ─── Replace ─────────────────────────────────────────────────────────────────
 
 void TestStringHelper::test_replaceAll()
 {
-    if (replaceAll("hello world world", "world", "there") != "hello there there")
+    if (replaceAll(std::string("hello world world"), std::string("world"), std::string("there")) != "hello there there")
         qWarning("replaceAll failed");
 }
 
@@ -138,7 +134,7 @@ void TestStringHelper::test_replaceAll()
 
 void TestStringHelper::test_split()
 {
-    auto parts = split("a,b,c", ",");
+    auto parts = split(std::string("a,b,c"), std::string(","));
     if (parts.size() != 3)
         qWarning("split size=%zu", parts.size());
 }
@@ -146,7 +142,7 @@ void TestStringHelper::test_split()
 void TestStringHelper::test_join()
 {
     std::vector<std::string> parts = {"a", "b", "c"};
-    if (join(parts, ",") != "a,b,c")
+    if (join(parts, std::string(",")) != "a,b,c")
         qWarning("join failed");
 }
 
@@ -154,18 +150,18 @@ void TestStringHelper::test_join()
 
 void TestStringHelper::test_toInt()
 {
-    if (toInt("42") != 42) qWarning("toInt(\"42\") failed");
-    if (toInt("abc", 99) != 99) qWarning("toInt(\"abc\", 99) failed");
+    if (toInt(std::string("42")) != 42) qWarning("toInt(\"42\") failed");
+    if (toInt(std::string("abc"), 99) != 99) qWarning("toInt(\"abc\", 99) failed");
 }
 
 void TestStringHelper::test_toLong()
 {
-    if (toLong("1234567890") != 1234567890LL) qWarning("toLong failed");
+    if (toLong(std::string("1234567890")) != 1234567890LL) qWarning("toLong failed");
 }
 
 void TestStringHelper::test_toDouble()
 {
-    if (toDouble("3.14") < 3.139 || toDouble("3.14") > 3.141)
+    if (toDouble(std::string("3.14")) < 3.139 || toDouble(std::string("3.14")) > 3.141)
         qWarning("toDouble failed");
 }
 
@@ -180,7 +176,7 @@ void TestStringHelper::test_fromDouble()
     if (s != "3.1416") qWarning("fromDouble(3.14159, 4) = \"%s\"", s.c_str());
 }
 
-// ─── Tab/space conversion ───────────────────────────────────────────────────────
+// ─── Tab/space conversion ────────────────────────────────────────────────────
 
 void TestStringHelper::test_tabsToSpaces()
 {

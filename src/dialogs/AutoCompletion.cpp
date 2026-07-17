@@ -322,8 +322,9 @@ bool AutoCompletion::showAutoComplete(int autocType, bool autoInsert)
     Q_UNUSED(autocType);  // Reserved for per-type icon/colour schemes (future).
     if (!_pEditView) return false;
 
-    const QString listStr = currentCompletionList();
+    QString listStr = currentCompletionList();
     if (listStr.isEmpty()) return false;
+    const QByteArray listUtf8 = listStr.toUtf8();  // store — passing .toUtf8().constData() directly creates dangling pointer
 
     // Determine the prefix length from the current word.
     Sci_CharacterRange cr = _pEditView->getSelection();
@@ -349,7 +350,7 @@ bool AutoCompletion::showAutoComplete(int autocType, bool autoInsert)
     _pEditView->send(SCI_AUTOCSETSEPARATOR, ' ');
 
     _pEditView->send(SCI_AUTOCSHOW, static_cast<uptr_t>(prefixLen),
-                     reinterpret_cast<sptr_t>(listStr.toUtf8().constData()));
+                     reinterpret_cast<sptr_t>(listUtf8.constData()));
 
     _completionActive = true;
     emit completionShown();
@@ -466,10 +467,11 @@ void AutoCompletion::showPathCompletion()
     if (paths.isEmpty()) return;
 
     QString listStr = paths.join(' ');
+    const QByteArray listUtf8 = listStr.toUtf8();  // store — dangling pointer otherwise
     _pEditView->send(SCI_AUTOCSETSEPARATOR, ' ');
     _pEditView->send(SCI_AUTOCSETIGNORECASE, 1);
     _pEditView->send(SCI_AUTOCSHOW, 0,
-                     reinterpret_cast<sptr_t>(listStr.toUtf8().constData()));
+                     reinterpret_cast<sptr_t>(listUtf8.constData()));
     _completionActive = true;
     emit completionShown();
 }
@@ -491,10 +493,11 @@ void AutoCompletion::showEnvVarCompletion()
     if (envVars.isEmpty()) return;
 
     QString listStr = envVars.join(' ');
+    const QByteArray listUtf8 = listStr.toUtf8();  // store — dangling pointer otherwise
     _pEditView->send(SCI_AUTOCSETSEPARATOR, ' ');
     _pEditView->send(SCI_AUTOCSETIGNORECASE, 1);
     _pEditView->send(SCI_AUTOCSHOW, 1,
-                     reinterpret_cast<sptr_t>(listStr.toUtf8().constData()));
+                     reinterpret_cast<sptr_t>(listUtf8.constData()));
     _completionActive = true;
     emit completionShown();
 }

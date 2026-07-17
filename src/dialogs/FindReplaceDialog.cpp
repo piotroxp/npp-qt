@@ -85,6 +85,20 @@ void FindReplaceDialog::setupUi() {
 
     replaceLayout->addRow("", optionsLayout);
 
+    // --- Replace options ---
+    QHBoxLayout* replaceOptsLayout = new QHBoxLayout();
+    _highlightingCheck = new QCheckBox("Highlight Matches", this);
+    _promptsCheck = new QCheckBox("Confirm on Replace", this);
+    _hideDialogCheck = new QCheckBox("Hide on Replace", this);
+    _highlightingCheck->setChecked(true);
+    _promptsCheck->setChecked(true);
+    _hideDialogCheck->setChecked(true);
+    replaceOptsLayout->addWidget(_highlightingCheck);
+    replaceOptsLayout->addWidget(_promptsCheck);
+    replaceOptsLayout->addWidget(_hideDialogCheck);
+    replaceOptsLayout->addStretch();
+    replaceLayout->addRow("", replaceOptsLayout);
+
     // --- Button row ---
     QHBoxLayout* btnLayout = new QHBoxLayout();
     _findNextBtn = new QPushButton("Find Next", this);

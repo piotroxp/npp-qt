@@ -165,6 +165,7 @@ public:
     void setConfigDirectory(const std::string& dir);
     void setPluginDirectory(const std::string& dir);
     void setThemeProfile(const std::string& profile);
+    void setSkipPlugins(bool skip) { _skipPlugins = skip; }
     bool saveConfig(const std::string& path = "");
     const AppOptions& options() const { return _options; }
     AppOptions& options() { return _options; }
@@ -232,7 +233,7 @@ public:
     // View management
     int currentView() const;
     void switchToView(int viewId);
-    int addView();
+    ScintillaEditor* addView();
     void closeView(int viewId);
     int activeViewId() const { return _activeViewId; }
 
@@ -479,6 +480,7 @@ private:
     std::string     _currentTheme = "default";
     bool            _isFullScreen = false;
     bool            _isDistractionFree = false;
+    bool            _skipPlugins = false;
 
     MainWindow*     _mainWindow = nullptr;
     QWidget*        _centralWidget = nullptr;

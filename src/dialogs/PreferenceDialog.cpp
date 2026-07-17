@@ -866,7 +866,9 @@ void PreferenceDialog::applySettings() {
     opts.showSpaceTab = _chkShowSpaceTab->isChecked();
 
     // Appearance
-    opts.themeProfile = _cmbTheme->currentData().toString().toUtf8().constData();
+    // NOTE: must convert via toStdString() — toUtf8().toStdString() is correct
+    // (toStdString() on QByteArray would use Latin-1, wrong for UTF-8)
+    opts.themeProfile = _cmbTheme->currentData().toString().toStdString();
     opts.showToolBar = _chkShowToolbar->isChecked();
     opts.showTabBar = _chkShowTabbar->isChecked();
     opts.showStatusBar = _chkShowStatusbar->isChecked();

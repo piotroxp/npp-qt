@@ -59,6 +59,7 @@ struct CommandLineArgs {
     bool readOnly = false;
     bool newInstance = false;
     bool showHelp = false;
+    bool noPlugins = false;
     std::string sessionToLoad;
     std::string profile;  // e.g. "dark", "light"
 };
@@ -73,6 +74,8 @@ CommandLineArgs parseArgs(int argc, char* argv[]) {
             args.readOnly = true;
         } else if (arg == "-n" || arg == "--new-instance") {
             args.newInstance = true;
+        } else if (arg == "--no-plugins") {
+            args.noPlugins = true;
         } else if (arg == "-c" || arg == "--config") {
             if (i + 1 < argc) args.configDir = argv[++i];
         } else if (arg == "-p" || arg == "--plugin-dir") {
@@ -120,9 +123,7 @@ int main(int argc, char* argv[]) {
     auto startTime = steady_clock::now();
 
     setupExceptionHandler();
-    fprintf(stderr, "DEBUG: main() start\n"); fflush(stderr);
     CommandLineArgs args = parseArgs(argc, argv);
-    fprintf(stderr, "DEBUG: after parseArgs\n"); fflush(stderr);
 
     if (args.showHelp) {
         printHelp(argv[0]);
@@ -139,7 +140,6 @@ int main(int argc, char* argv[]) {
     QApplication::setStyle(QStyleFactory::create("Fusion"));
 
     NotepadApp app(argc, argv);
-    fprintf(stderr, "DEBUG: after NotepadApp ctor\n"); fflush(stderr);
 
     // Set up signal handlers
     std::signal(SIGINT, signalHandler);
@@ -147,7 +147,6 @@ int main(int argc, char* argv[]) {
 
     // Initialize application
     auto& application = Application::instance();
-    fprintf(stderr, "DEBUG: after Application::instance()\n"); fflush(stderr);
     if (!args.configDir.empty()) {
         application.setConfigDirectory(args.configDir);
     }
@@ -157,6 +156,9 @@ int main(int argc, char* argv[]) {
     if (!args.profile.empty()) {
         application.setThemeProfile(args.profile);
     }
+    if (args.noPlugins) {
+        application.setSkipPlugins(true);
+    }
 
     // Load session if specified
     if (!args.sessionToLoad.empty()) {
@@ -164,13 +166,11 @@ int main(int argc, char* argv[]) {
     }
 
     // Initialize
-    fprintf(stderr, "DEBUG: before initialize()\n"); fflush(stderr);
     if (!application.initialize()) {
         QMessageBox::critical(nullptr, "Startup Error",
             "Failed to initialize application.\n" + application.lastError());
         return 1;
     }
-    fprintf(stderr, "DEBUG: initialize() succeeded\n"); fflush(stderr);
 
     // Open files from command line
     for (const auto& filePath : args.files) {
@@ -183,13 +183,11 @@ int main(int argc, char* argv[]) {
     }
 
     // Show main window
-    application.showMainWindow();
-    fprintf(stderr, "DEBUG: after showMainWindow()\n"); fflush(stderr);
+    // NOTE: showMainWindow() is already called inside initialize().
+    // Calling it here again causes a double-show / double-exec crash.
 
     // Main event loop
-    fprintf(stderr, "DEBUG: entering app.exec()\n"); fflush(stderr);
     int result = app.exec();
-    fprintf(stderr, "DEBUG: app.exec() returned\n"); fflush(stderr);
 
     // Cleanup
     application.shutdown();

@@ -74,10 +74,10 @@ static const char* pf_getCurrentText(int* length) {
     if (!app) return nullptr;
     ScintillaEditor* editor = app->getActiveEditor();
     if (!editor) return nullptr;
-    static QString cached;
-    cached = editor->text();
+    static QByteArray cached;  // static QByteArray — survives the return
+    cached = editor->text().toUtf8();
     if (length) *length = cached.size();
-    return cached.toUtf8().constData();
+    return cached.constData();
 }
 
 static void pf_setCurrentText(const char* text, int length) {
@@ -120,10 +120,13 @@ static const char* pf_getBufferPath(int bufferId) {
     if (!app) return nullptr;
     BufferID buf = reinterpret_cast<BufferID>(static_cast<size_t>(bufferId));
     static QString cached;
+    static QByteArray cachedBytes;  // static QByteArray — survives the return
     auto filename = app->getFileName(buf);
     if (filename.has_value()) {
         cached = QString::fromStdString(filename.value());
-        return cached.isEmpty() ? nullptr : cached.toUtf8().constData();
+        if (cached.isEmpty()) return nullptr;
+        cachedBytes = cached.toUtf8();
+        return cachedBytes.constData();
     }
     return nullptr;
 }

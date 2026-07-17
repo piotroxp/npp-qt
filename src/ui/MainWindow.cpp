@@ -48,7 +48,6 @@ MainWindow* MainWindow::_instance = nullptr;
 
 MainWindow::MainWindow(Application* app) : QMainWindow(nullptr), _app(app)
 {
-    fprintf(stderr, "DEBUG: MainWindow ctor start\n"); fflush(stderr);
     _instance = this;
     setWindowTitle("Notepad--Qt");
     setAcceptDrops(true);
@@ -347,8 +346,6 @@ void MainWindow::createStatusBar() {
 }
 
 void MainWindow::createPanels() {
-    fprintf(stderr, "DEBUG: createPanels() start\n"); fflush(stderr);
-
     // File Browser panel (left dock) — created HERE so panels exist during construction
     _fileBrowserPanel = new FileBrowserPanel(this);
     _fileBrowserDock = new QDockWidget("File Browser", this);
@@ -379,7 +376,6 @@ void MainWindow::createPanels() {
     _app->setFileBrowserPanel(_fileBrowserPanel);
     _app->setFunctionListPanel(_funcListPanel);
     _app->setDocumentMapPanel(_docMapPanel);
-    fprintf(stderr, "DEBUG: createPanels() done\n"); fflush(stderr);
 }
 
 void MainWindow::setupConnections() {

@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 
+enable_testing()
+include(CTest)
+
 # =============================================================================
 # npp-qt test suite — Qt Test integration
 # All test targets are built together; `make test` / ctest runs them.
@@ -12,8 +15,13 @@ cmake_minimum_required(VERSION 3.16)
 #   src/uchardet/    — charset detection
 # =============================================================================
 
-find_package(Qt6 REQUIRED COMPONENTS Test)
-find_package(Qt6 REQUIRED COMPONENTS Xml)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Xml PrintSupport Test)
+
+# QScintilla / Scintilla includes (must match main project)
+find_path(SCINTILLA_INCLUDE Qsci/qsciscintilla.h PATHS /usr/include/x86_64-linux-gnu/qt6)
+set(LEXILLA_INCLUDE "")  # not needed for test targets
 
 set(CTEST_ENVIRONMENT "QT_QPA_PLATFORM=offscreen;LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$ENV{LD_LIBRARY_PATH}")
 
@@ -48,12 +56,12 @@ endif()
 
 add_library(npp-qt-test-lib STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/EncodingDetector.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/LanguageManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/StringHelper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/FileHelper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/Util.cpp
-    ${UCHARDET_SOURCES}
 )
-target_link_libraries(npp-qt-test-lib PRIVATE Qt6::Core Qt6::Xml)
+target_link_libraries(npp-qt-test-lib PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Xml ${QSCINTILLA_LIBRARY})
 target_include_directories(npp-qt-test-lib PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core
@@ -72,12 +80,15 @@ add_library(npp-qt-test-lib-gui STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/Util.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/DpiManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/ui/StatusBar.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/dialogs/PreferenceDialog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/dialogs/AboutDialog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/dialogs/FileReloadDialog.cpp
 )
+set_target_properties(npp-qt-test-lib-gui PROPERTIES AUTOMOC ON)
 target_link_libraries(npp-qt-test-lib-gui PRIVATE
-    Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Xml Qt6::PrintSupport npp-qt-test-lib
+    Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Xml Qt6::PrintSupport
+    Qt6::Test
+    ${QSCINTILLA_LIBRARY}
+    npp-qt-test-lib
 )
 target_include_directories(npp-qt-test-lib-gui PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
@@ -92,6 +103,13 @@ target_include_directories(npp-qt-test-lib-gui PRIVATE
     ${LEXILLA_INCLUDE}
 )
 
+# QScintilla library for ScintillaEditor
+find_library(QSCINTILLA_LIBRARY NAMES qscintilla2_qt6 qscintilla2_qt5 qscintilla2 PATHS /usr/lib/x86_64-linux-gnu)
+if(QSCINTILLA_LIBRARY)
+    message(STATUS "QScintilla found: ${QSCINTILLA_LIBRARY}")
+endif()
+
+
 # ─── Test helper macros ────────────────────────────────────────────────────────
 
 function(add_npp_test_pure NAME)
@@ -100,6 +118,9 @@ function(add_npp_test_pure NAME)
     set_target_properties(${NAME} PROPERTIES
         BUILD_RPATH "/usr/lib/x86_64-linux-gnu"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+        AUTOMOC ON
+        AUTORCC OFF
+        AUTOUIC OFF
     )
     target_include_directories(${NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../src
@@ -107,9 +128,11 @@ function(add_npp_test_pure NAME)
         ${CMAKE_CURRENT_SOURCE_DIR}/../src/common
         ${CMAKE_CURRENT_SOURCE_DIR}/../src/MISC/Common
         ${CMAKE_CURRENT_SOURCE_DIR}/../src/uchardet
+        ${CMAKE_BINARY_DIR}/${NAME}_autogen/include  # Qt AUTOMOC .moc files
     )
     target_compile_definitions(${NAME} PRIVATE
         QT_DISABLE_DEPRECATED_BEFORE=0x060000
+        TEST_BUILD
     )
     add_test(NAME ${NAME} COMMAND ${NAME})
     set_tests_properties(${NAME} PROPERTIES
@@ -120,11 +143,12 @@ endfunction()
 function(add_npp_test_gui NAME)
     add_executable(${NAME} EXCLUDE_FROM_ALL ${ARGN})
     target_link_libraries(${NAME} PRIVATE
-        Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Test Qt6::Xml npp-qt-test-lib-gui
+        Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Test Qt6::Xml Qt6::PrintSupport npp-qt-test-lib-gui
     )
     set_target_properties(${NAME} PROPERTIES
         BUILD_RPATH "/usr/lib/x86_64-linux-gnu"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+        AUTOMOC ON
     )
     target_include_directories(${NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../src
@@ -134,6 +158,7 @@ function(add_npp_test_gui NAME)
         ${CMAKE_CURRENT_SOURCE_DIR}/../src/ui
         ${CMAKE_CURRENT_SOURCE_DIR}/../src/panels
         ${CMAKE_CURRENT_SOURCE_DIR}/../src/MISC/Common
+        ${CMAKE_BINARY_DIR}/${NAME}_autogen/include  # Qt AUTOMOC .moc files
     )
     target_compile_definitions(${NAME} PRIVATE
         QT_DISABLE_DEPRECATED_BEFORE=0x060000
@@ -161,9 +186,14 @@ endfunction()
 add_npp_test_pure(npp-test-encoding  TestEncodingDetector.cpp)
 add_npp_test_pure(npp-test-string   TestStringHelper.cpp)
 add_npp_test_pure(npp-test-file     TestFileHelper.cpp)
-add_npp_test_pure(npp-test-lexer    TestLexer.cpp)
 
+add_npp_test_gui(npp-test-lexer     TestLexer.cpp)
 add_npp_test_gui(npp-test-statusbar TestStatusBar.cpp)
 add_npp_test_gui(npp-test-dialogs   TestDialogs.cpp)
 
-include(CTest)
+# ─── Startup / integration smoke tests ─────────────────────────────────────────
+# Headless tests that verify source patterns and build configuration.
+# These tests run without a display using QT_QPA_PLATFORM=offscreen.
+add_npp_test_pure(npp-test-startup startup_test.cpp)
+add_npp_test_pure(npp-test-integration integration_test.cpp)
+add_npp_test_pure(npp-test-integration-editor integration_editor_test.cpp)

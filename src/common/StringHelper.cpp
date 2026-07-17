@@ -20,7 +20,7 @@ std::string toUtf8(const std::wstring& s) {
     // Qt6: use QStringView for iterator-pair construction
     QString qstr = QString::fromUtf16(
         reinterpret_cast<const char16_t*>(s.data()), static_cast<int>(s.size()));
-    return qstr.toUtf8().constData();
+    return qstr.toUtf8().toStdString();  // toStdString() copies the data
 }
 
 std::u16string toUtf16(const std::string& s) {
@@ -33,7 +33,7 @@ std::u16string toUtf16(const std::string& s) {
 std::string utf16ToUtf8(const std::u16string& s) {
     if (s.empty()) return {};
     QString qstr = QString::fromUtf16(s.data(), static_cast<int>(s.size()));
-    return qstr.toUtf8().constData();
+    return qstr.toUtf8().toStdString();  // toStdString() copies the data
 }
 
 // ============================================================================

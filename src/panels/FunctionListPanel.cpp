@@ -624,6 +624,80 @@ void FunctionListPanel::parseRuby(const QStringList& lines) {
     }
 }
 
+void FunctionListPanel::parsePerl(const QStringList& lines) {
+    // Perl: sub, package, use constant
+    QRegularExpression funcRe(
+        R"(^\s*(sub\s+\w+|package\s+\w+|use\s+constant\s+\w+))",
+        QRegularExpression::MultilineOption);
+
+    for (int i = 0; i < lines.size(); ++i) {
+        const QString& line = lines[i];
+        QRegularExpressionMatch m = funcRe.match(line);
+        if (m.hasMatch()) {
+            QString matched = m.captured(1).trimmed();
+            QString name = matched;
+            QString type = "sub";
+            if (matched.startsWith("package")) {
+                type = "namespace";
+                name = matched.section(QLatin1String(" "), 1, 1);
+            } else if (matched.startsWith("use constant")) {
+                type = "constant";
+                name = matched.section(QLatin1String(" "), 2, 2);
+            } else {
+                name = matched.section(QLatin1String(" "), 1, 1);
+            }
+            addFunctionItem(name, i + 1, type, "public", "perl");
+        }
+    }
+}
+
+void FunctionListPanel::parseLua(const QStringList& lines) {
+    // Lua: function, local function, local var = {}
+    QRegularExpression funcRe(
+        R"(^\s*(function\s+[a-zA-Z_][\w:]*\(|local\s+(function\s+)?([a-zA-Z_][\w]*)\(|local\s+\w+\s*=\s*\{))",
+        QRegularExpression::MultilineOption);
+
+    for (int i = 0; i < lines.size(); ++i) {
+        const QString& line = lines[i];
+        QRegularExpressionMatch m = funcRe.match(line);
+        if (m.hasMatch()) {
+            QString matched = m.captured(0).trimmed();
+            QString type = "function";
+            QString name = matched;
+            if (matched.startsWith("local") && matched.contains("=")) {
+                type = "table";
+                name = matched.section(QLatin1Char('='), 0, 0).section(QLatin1String("local"), 1, 1).trimmed();
+            } else if (matched.startsWith("local")) {
+                name = m.captured(3);
+            } else {
+                name = matched.section(QLatin1Char('('), 0, 0).section("function ", 1).trimmed();
+            }
+            addFunctionItem(name, i + 1, type, "public", "lua");
+        }
+    }
+}
+
+void FunctionListPanel::parsePHP(const QStringList& lines) {
+    // PHP: function, public/private/protected static function, class, interface, trait
+    QRegularExpression funcRe(
+        R"(^\s*(public\s+|private\s+|protected\s+|static\s+)*(function\s+[a-zA-Z_][\w]*|class\s+[a-zA-Z_][\w]*|interface\s+[a-zA-Z_][\w]*|trait\s+[a-zA-Z_][\w]*))",
+        QRegularExpression::MultilineOption);
+
+    for (int i = 0; i < lines.size(); ++i) {
+        const QString& line = lines[i];
+        QRegularExpressionMatch m = funcRe.match(line);
+        if (m.hasMatch()) {
+            QString matched = m.captured(2).trimmed();
+            QString type = matched.startsWith("class") ? "class"
+                         : matched.startsWith("interface") ? "interface"
+                         : matched.startsWith("trait") ? "trait"
+                         : "method";
+            QString name = matched.section(QLatin1String(" "), 1, 1);
+            addFunctionItem(name, i + 1, type, "public", "php");
+        }
+    }
+}
+
 void FunctionListPanel::parseGeneric(const QStringList& lines) {
     // Generic C-style function parser for unknown languages
     QRegularExpression genericRe(

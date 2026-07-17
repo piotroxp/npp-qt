@@ -864,6 +864,7 @@ void ScintillaEditor::setLineText(int line, const QString& newText) {
     if (lineLen <= 0) return;
     int posStart = _editor->positionFromLineIndex(line, 0);
     int posEnd = posStart + lineLen;
+    const QByteArray newTextUtf8 = newText.toUtf8();  // store — dangling pointer otherwise
     _editor->SendScintilla(QsciScintilla::SCI_SETSEL, posStart, posEnd);
-    _editor->SendScintilla(QsciScintilla::SCI_REPLACESEL, newText.toUtf8().constData());
+    _editor->SendScintilla(QsciScintilla::SCI_REPLACESEL, newTextUtf8.constData());
 }

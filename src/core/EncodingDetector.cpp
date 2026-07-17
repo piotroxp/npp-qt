@@ -64,6 +64,21 @@ int EncodingDetector::validateUtf8Sequence(const unsigned char* data, size_t len
     for (size_t i = 1; i < *outLen; ++i) {
         if ((data[i] & 0xC0) != 0x80) return -1;
     }
+    // ── Codepoint overlong check ──────────────────────────────────────────
+    // Encode the decoded codepoint and verify it fits the sequence length.
+    // Reject sequences that encode a codepoint smaller than the minimum
+    // valid value for that byte count (e.g. U+0000 encoded as C0 80).
+    if (*outLen == 2) {
+        uint32_t cp = ((data[0] & 0x1F) << 6) | (data[1] & 0x3F);
+        if (cp < 0x80) return -1;
+    } else if (*outLen == 3) {
+        uint32_t cp = ((data[0] & 0x0F) << 12) | ((data[1] & 0x3F) << 6) | (data[2] & 0x3F);
+        if (cp < 0x800) return -1;
+    } else if (*outLen == 4) {
+        uint32_t cp = ((data[0] & 0x07) << 18) | ((data[1] & 0x3F) << 12)
+                    | ((data[2] & 0x3F) << 6) | (data[3] & 0x3F);
+        if (cp < 0x10000) return -1;
+    }
     return 0;
 }
 
@@ -105,7 +120,7 @@ std::string EncodingDetector::toUtf8(const std::string& bytes, EncodingType from
     QStringDecoder decoder(enc);
     QString decoded = decoder.decode(QByteArray::fromRawData(bytes.data(), static_cast<int>(bytes.size())));
     if (decoder.hasError()) return bytes;
-    return decoded.toUtf8().constData();
+    return decoded.toUtf8().toStdString();  // toStdString() copies — avoids dangling pointer
 }
 
 std::string EncodingDetector::fromUtf8(const std::string& utf8, EncodingType to) const {
