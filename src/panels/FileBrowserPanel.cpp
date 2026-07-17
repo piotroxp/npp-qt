@@ -614,9 +614,10 @@ void FileBrowserPanel::collapseAll() {
 // Double-click
 // ---------------------------------------------------------------------------
 void FileBrowserPanel::onDoubleClicked(const QModelIndex& index) {
-    if (!_initialized || !index.isValid()) return;
+    if (!_initialized || !_model || !_treeView || !index.isValid()) return;
 
     QString path = _model->filePath(index);
+    if (path.isEmpty()) return;
     QFileInfo info = _model->fileInfo(index);
 
     if (info.isFile()) {
@@ -724,10 +725,11 @@ void FileBrowserPanel::onContextMenu(const QPoint& pos) {
 // File operations
 // ---------------------------------------------------------------------------
 void FileBrowserPanel::openSelectedFile() {
-    if (!_initialized) return;
+    if (!_initialized || !_model || !_treeView) return;
     QModelIndex index = _treeView->currentIndex();
     if (!index.isValid()) return;
     QString path = _model->filePath(index);
+    if (path.isEmpty()) return;
     if (_model->fileInfo(index).isFile()) {
         _activeFilePath = path;
         emit fileDoubleClicked(path);
@@ -735,17 +737,20 @@ void FileBrowserPanel::openSelectedFile() {
 }
 
 void FileBrowserPanel::openReadOnly() {
-    if (!_initialized) return;
+    if (!_initialized || !_model || !_treeView) return;
     QModelIndex index = _treeView->currentIndex();
     if (!index.isValid()) return;
     QString path = _model->filePath(index);
+    if (path.isEmpty()) return;
     emit fileDoubleClicked(path + "?readonly=1");
 }
 
 void FileBrowserPanel::openInNewInstance() {
+    if (!_initialized || !_model || !_treeView) return;
     QModelIndex index = _treeView->currentIndex();
     if (!index.isValid()) return;
     QString path = _model->filePath(index);
+    if (path.isEmpty()) return;
     // Launch a new instance with this file
     QString appPath = QApplication::applicationFilePath();
     QProcess::startDetached(appPath, {path});
