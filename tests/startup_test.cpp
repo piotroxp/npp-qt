@@ -136,6 +136,65 @@ public:
 // ============================================================================
 // Test: main() — showMainWindow() called exactly once (inside initialize())
 // ============================================================================
+// ============================================================================
+// Test: Regression for double-click-before-init crash (SEGV ScintillaEditor)
+// GitHub: crash on startup when FileBrowserPanel emits fileDoubleClicked before
+// _tabWidget is set. Fix: FileBrowserPanel::_initialized guard + null guard in
+// MainWindow::openFileInTab().
+// ============================================================================
+class FileBrowserPanelDoubleClickGuardTest : public QObject {
+public:
+    FileBrowserPanelDoubleClickGuardTest() : QObject() {}
+    void run() {
+        QDir d(__FILE__);
+        d.cdUp(); d.cdUp();
+
+        // 1. FileBrowserPanel must have _initialized guard
+        QString fbPath = d.filePath("src/panels/FileBrowserPanel.h");
+        QString fbSrc = readFile(fbPath);
+        QVERIFY2(!fbSrc.isEmpty(), qPrintable("Could not read: " + fbPath));
+        QVERIFY2(fbSrc.contains("bool _initialized"),
+                 "FileBrowserPanel must declare bool _initialized; guard");
+
+        QString fbCpp = readFile(d.filePath("src/panels/FileBrowserPanel.cpp"));
+        QVERIFY2(!fbCpp.isEmpty(), qPrintable("Could not read FileBrowserPanel.cpp"));
+
+        // Guard must be set to true after toolbar/setup before any widget/layout
+        bool initAfterToolbar = fbCpp.indexOf("_initialized = true") <
+                                fbCpp.indexOf("mainLayout->addWidget");
+        QVERIFY2(initAfterToolbar,
+                 "_initialized = true must appear BEFORE mainLayout->addWidget() "
+                 "to block signals before widgets are added to layout");
+
+        // All entry points must check _initialized
+        QStringList guarded = {"onDoubleClicked(", "openSelectedFile(", "openReadOnly("};
+        for (const QString& fn : guarded) {
+            int pos = fbCpp.indexOf(fn);
+            QVERIFY2(pos >= 0, qPrintable("Missing: " + fn));
+            QString snippet = fbCpp.mid(pos, 300);
+            QVERIFY2(snippet.contains("!_initialized") || snippet.contains("_initialized &&"),
+                     qPrintable("Missing _initialized guard in: " + fn));
+        }
+
+        // 2. MainWindow::openFileInTab() must guard against null _tabWidget
+        QString mwPath = d.filePath("src/ui/MainWindow.cpp");
+        QString mwSrc = readFile(mwPath);
+        QVERIFY2(!mwSrc.isEmpty(), qPrintable("Could not read: " + mwPath));
+
+        int openFn = mwSrc.indexOf("void MainWindow::openFileInTab(");
+        QVERIFY2(openFn >= 0, "Missing: void MainWindow::openFileInTab()");
+        QString openFnBody = mwSrc.mid(openFn, 600);
+        QVERIFY2(openFnBody.contains("!_tabWidget") || openFnBody.contains("_tabWidget) return"),
+                 "MainWindow::openFileInTab() must guard: if (!_tabWidget) return;");
+
+        qDebug() << "PASSED: FileBrowserPanel _initialized guard present";
+        qDebug() << "PASSED: MainWindow::openFileInTab null guard present";
+    }
+};
+
+// ============================================================================
+// Test: No double show of main window
+// ============================================================================
 class MainDoubleShowTest : public QObject {
 public:
     MainDoubleShowTest() : QObject() {}
@@ -371,6 +430,12 @@ int main(int argc, char* argv[]) {
     {
         ScintillaEditorSafetyTest t;
         qDebug() << "\n=== RUN  : ScintillaEditorSafety ===";
+        if (QTest::qExec(&t, argc, argv) != 0) ++failed;
+        else qDebug() << "=== PASSED ===";
+    }
+    {
+        FileBrowserPanelDoubleClickGuardTest t;
+        qDebug() << "\n=== RUN  : FileBrowserPanelDoubleClickGuard ===";
         if (QTest::qExec(&t, argc, argv) != 0) ++failed;
         else qDebug() << "=== PASSED ===";
     }
