@@ -541,8 +541,7 @@ void Buffer::setHideLineChanged(bool isHide, size_t location) {
 // ============================================================================
 
 bool Buffer::allowBraceMatch() const {
-    // TODO: Read from application settings for large file restrictions
-    // For now, always allow
+    // Disable brace matching for very large files to avoid performance issues
     return !_isLargeFile;
 }
 

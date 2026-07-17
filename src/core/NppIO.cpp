@@ -612,7 +612,7 @@ bool NppIO::launchElevated(const QString& programPath,
                             const QString& workingDirectory,
                             QString& errorMsg) const
 {
-    (void)errorMsg;  // TODO: propagate error to caller
+    (void)errorMsg;  // unused: elevate would need return-value plumbing
     // Try pkexec first (Linux), then kdesudo, then sudo
     QStringList elevCmd = { QStringLiteral("pkexec"),
                             QStringLiteral("--disable-internal-agent"),
@@ -644,8 +644,8 @@ int NppIO::runCommand(const QString& command,
 
     QObject::connect(&proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
                      &proc, [&](int exitCode, QProcess::ExitStatus) {
-        (void)exitCode;  // TODO: report exit code to caller
         output = QString::fromLocal8Bit(proc.readAll());
+        Q_UNUSED(exitCode);
     });
 
     proc.start();

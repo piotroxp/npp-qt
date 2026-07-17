@@ -10,6 +10,8 @@ set(TEST_INC
     ${REL_ROOT}/common
     ${REL_ROOT}/core
     ${REL_ROOT}/editor
+    ${REL_ROOT}/dialogs
+    ${REL_ROOT}/uchardet
 )
 
 # Test library — includes all core sources that need Buffer
@@ -23,16 +25,14 @@ add_library(test_core STATIC
     ${REL_ROOT}/common/FileHelper.cpp
     ${REL_ROOT}/dialogs/LargeFileWarningDialog.cpp
 )
-target_include_directories(test_core PUBLIC ${TEST_INC})
+target_include_directories(test_core PUBLIC
+    ${TEST_INC}
+    ${QSCINTILLA_INCLUDE_DIR}
+)
 target_link_libraries(test_core PUBLIC
     Qt6::Core
     Qt6::Widgets
     ${QSCINTILLA_LIBRARY}
-)
-
-# Ensure QScintilla headers are visible to test_core
-target_include_directories(test_core PUBLIC
-    ${QSCINTILLA_INCLUDE_DIR}
 )
 target_compile_options(test_core PRIVATE -w)
 
@@ -54,7 +54,17 @@ add_executable(test_buffer ${CMAKE_CURRENT_SOURCE_DIR}/test_buffer.cpp)
 target_link_libraries(test_buffer PRIVATE test_core)
 add_test(NAME BufferTests COMMAND test_buffer)
 
-# Util tests
-# add_executable(test_util ${CMAKE_CURRENT_SOURCE_DIR}/test_util.cpp)
-# target_link_libraries(test_util PRIVATE test_core)
-# add_test(NAME UtilTests COMMAND test_util)
+# FunctionCallTip tests
+add_executable(test_functioncalltip ${CMAKE_CURRENT_SOURCE_DIR}/test_functioncalltip.cpp)
+target_link_libraries(test_functioncalltip PRIVATE test_core Qt6::Widgets ${QSCINTILLA_LIBRARY})
+add_test(NAME FunctionCallTipTests COMMAND test_functioncalltip)
+
+# AutoCompletion tests
+add_executable(test_autocompletion ${CMAKE_CURRENT_SOURCE_DIR}/test_autocompletion.cpp)
+target_link_libraries(test_autocompletion PRIVATE test_core Qt6::Widgets ${QSCINTILLA_LIBRARY})
+add_test(NAME AutoCompletionTests COMMAND test_autocompletion)
+
+# IncrementalSearchDialog tests
+add_executable(test_incremental_search ${CMAKE_CURRENT_SOURCE_DIR}/test_incremental_search.cpp)
+target_link_libraries(test_incremental_search PRIVATE test_core Qt6::Widgets ${QSCINTILLA_LIBRARY})
+add_test(NAME IncrementalSearchDialogTests COMMAND test_incremental_search)

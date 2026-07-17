@@ -6,14 +6,13 @@
 
 #include "common/NonCopyable.h"
 #include "common/Types.h"
+#include "ShortcutManager.h"
 #include <QObject>
 #include <QVector>
-#include "ShortcutManager.h"
-#include <string>
-#include <vector>
-#include <unordered_map>
-#include "ShortcutManager.h"
 #include <functional>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 class ScintillaEditor;
 class Application;

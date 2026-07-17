@@ -1,81 +1,84 @@
 // Application.cpp - Main application controller implementation
 #include "Application.h"
+
+#include <QApplication>
+#include <QClipboard>
+#include <QCloseEvent>
+#include <QDesktopServices>
+#include <QDebug>
+#include <QDialogButtonBox>
+#include <QDir>
+#include <QDirIterator>
 #include <QFile>
-#include "FileManager.h"
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QHeaderView>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QMenuBar>
+#include <QMessageBox>
+#include <QAbstractItemView>
+#include <QPrinter>
+#include <QProcess>
+#include <QPrintDialog>
+#include <QSettings>
+#include <QStandardPaths>
+#include <QStatusBar>
+#include <QStringConverter>
+#include <QTableWidget>
+#include <QTableWidgetItem>
+#include <QTextStream>
+#include <QThread>
+#include <QTimer>
+#include <QToolBar>
+#include <QUrl>
+#include <QVBoxLayout>
+#include <QWindow>
+#include <algorithm>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QProgressDialog>
+#include <QXmlStreamReader>
+#include <QXmlStreamWriter>
+
 #include "Buffer.h"
-#include "EncodingDetector.h"
-#include "LanguageManager.h"
-#include "ThemeManager.h"
-#include "SessionManager.h"
-#include "EditorCommandManager.h"
-#include "MacroManager.h"
-#include "RecentFilesManager.h"
-#include "Parameters.h"
-#include "UdlManager.h"
-#include "editor/ScintillaEditor.h"
-#include "editor/SyntaxHighlighter.h"
-#include <Qsci/qsciscintilla.h>
-#include "ui/MainWindow.h"
-#include "ui/TabBar.h"
-#include "ui/StatusBar.h"
-#include "ui/ToolBar.h"
-#include "ui/MenuBar.h"
-#include "dialogs/FindReplaceDialog.h"
-#include "dialogs/FindInFilesWorker.h"
-#include "dialogs/FindInFilesDialog.h"
-#include "dialogs/GoToLineDialog.h"
-#include "dialogs/ShortcutMapperDialog.h"
-#include "ShortcutManager.h"
-#include "MISC/Common/shortcut.h"
-#include "dialogs/CommandPaletteDialog.h"
-#include "dialogs/PreferenceDialog.h"
-#include "dialogs/AboutDialog.h"
-#include "panels/DocumentMapPanel.h"
-#include "panels/FunctionListPanel.h"
-#include "panels/FileBrowserPanel.h"
-// ClipboardHistoryPanel.h included via MainWindow.h
 #include "common/FileHelper.h"
 #include "common/StringHelper.h"
 #include "common/Util.h"
 #include "Constants.h"
-#include "Parameters.h"
-#include <QApplication>
-#include <QMessageBox>
-#include <QDesktopServices>
-#include <QDir>
-#include <QDirIterator>
-#include <QThread>
-#include <QVBoxLayout>
-#include <QDialogButtonBox>
-#include <QHeaderView>
-#include <QTableWidget>
-#include <QAbstractItemView>
-#include <QTableWidgetItem>
-#include <QUrl>
-#include <QFileDialog>
-#include <QInputDialog>
-#include <QLineEdit>
-#include <QStandardPaths>
-#include <QCloseEvent>
-#include <QProcess>
-#include <QFileInfo>
-#include <algorithm>
-#include <QTimer>
-#include <QTextStream>
-#include <QFile>
-#include <QStringConverter>
-#include <QDebug>
-#include <QWindow>
-#include <QMenuBar>
-#include <QToolBar>
-#include <QStatusBar>
-#include <QPrintDialog>
-#include <QPrinter>
-#include <QSettings>
-#include <QFileInfo>
-#include <QClipboard>
-#include "ui/MainWindow.h"
+#include "dialogs/AboutDialog.h"
+#include "dialogs/CommandPaletteDialog.h"
+#include "dialogs/FindInFilesDialog.h"
+#include "dialogs/FindInFilesWorker.h"
+#include "dialogs/GoToLineDialog.h"
 #include "dialogs/IncrementalSearchDialog.h"
+#include "dialogs/PreferenceDialog.h"
+#include "dialogs/ShortcutMapperDialog.h"
+#include "EditorCommandManager.h"
+#include "EncodingDetector.h"
+#include "FileManager.h"
+#include "FindReplaceDialog.h"
+#include "LanguageManager.h"
+#include "MacroManager.h"
+#include "MISC/Common/shortcut.h"
+#include "Parameters.h"
+#include "RecentFilesManager.h"
+#include "SessionManager.h"
+#include "ShortcutManager.h"
+#include "SyntaxHighlighter.h"
+#include "ThemeManager.h"
+#include "UdlManager.h"
+#include <Qsci/qsciscintilla.h>
+#include "editor/ScintillaEditor.h"
+#include "panels/DocumentMapPanel.h"
+#include "panels/FileBrowserPanel.h"
+#include "panels/FunctionListPanel.h"
+#include "ui/MainWindow.h"
+#include "ui/MenuBar.h"
+#include "ui/StatusBar.h"
+#include "ui/TabBar.h"
+#include "ui/ToolBar.h"
 
 // ============================================================================
 // Singleton
@@ -1434,23 +1437,14 @@ void Application::onSelectAll() {
 }
 
 void Application::onFind() {
-    if (!_findReplaceDialog) {
-        _findReplaceDialog = new FindReplaceDialog(_mainWindow);
-    }
     _findReplaceDialog->show();
 }
 
 void Application::onReplace() {
-    if (!_findReplaceDialog) {
-        _findReplaceDialog = new FindReplaceDialog(_mainWindow);
-    }
     _findReplaceDialog->show();
 }
 
 void Application::onGotoLine() {
-    if (!_gotoLineDialog) {
-        _gotoLineDialog = new GoToLineDialog(_mainWindow);
-    }
     _gotoLineDialog->show();
 }
 
@@ -1474,24 +1468,6 @@ void Application::onFindPrev() {
 }
 
 void Application::onFindInFiles() {
-    if (!_findInFilesDialog) {
-        _findInFilesDialog = new FindInFilesDialog(_mainWindow);
-        // Wire double-click on result → open file at line
-        connect(_findInFilesDialog, &FindInFilesDialog::openFile,
-                this, [this](const QString& path, int lineNumber) {
-            BufferID buf = openFile(path.toStdString());
-            if (buf) {
-                setActiveBuffer(buf);
-                ScintillaEditor* ed = getActiveEditor();
-                if (ed) {
-                    ed->setCursorPosition(lineNumber - 1, 0);
-                    ed->ensureLineVisible(lineNumber - 1);
-                    ed->setFocus();
-                }
-            }
-        });
-    }
-
     // Pre-fill search text from Find/Replace dialog if available
     if (_findReplaceDialog && !_findReplaceDialog->lastSearchText().isEmpty()) {
         _findInFilesDialog->setSearchText(_findReplaceDialog->lastSearchText());
@@ -1990,9 +1966,6 @@ std::string Application::encodingToString(EncodingType enc) const {
 // Settings command slots
 // ============================================================================
 void Application::onShowPreferences() {
-    if (!_preferenceDialog) {
-        _preferenceDialog = new PreferenceDialog(_mainWindow);
-    }
     _preferenceDialog->show();
     _preferenceDialog->raise();
     _preferenceDialog->activateWindow();
@@ -2019,9 +1992,6 @@ void Application::onShowCommandPalette() {
 // Help command slots
 // ============================================================================
 void Application::onShowAbout() {
-    if (!_aboutDialog) {
-        _aboutDialog = new AboutDialog(_mainWindow);
-    }
     _aboutDialog->show();
 }
 
@@ -2089,15 +2059,6 @@ void Application::showFindInFilesResults(const QList<FindResult>& results) {
 // ============================================================================
 // Notepad++ Compatibility
 // ============================================================================
-
-#include "UdlManager.h"
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QXmlStreamReader>
-#include <QXmlStreamWriter>
-#include <QProgressDialog>
-#include <QFileDialog>
 
 ApplicationImportResult Application::importFromNpp() {
     QStringList paths = detectNppPaths();

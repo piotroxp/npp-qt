@@ -5,6 +5,8 @@
 #include <QApplication>
 #include <QLabel>
 #include <QKeyEvent>
+#include <QHideEvent>
+#include <Qsci/qsciscintilla.h>
 
 IncrementalSearchDialog::IncrementalSearchDialog(QWidget* parent)
     : QDialog(parent, Qt::Tool | Qt::FramelessWindowHint)
@@ -42,6 +44,8 @@ IncrementalSearchDialog::IncrementalSearchDialog(QWidget* parent)
 
     // Handle Escape key to close dialog
     _searchEdit->installEventFilter(this);
+    // Also handle F3 navigation
+    installEventFilter(this);
 
     // Style
     setStyleSheet(R"(
@@ -83,8 +87,12 @@ IncrementalSearchDialog::IncrementalSearchDialog(QWidget* parent)
     )");
 }
 
+IncrementalSearchDialog::~IncrementalSearchDialog() {
+    clearHighlight();
+}
+
 bool IncrementalSearchDialog::eventFilter(QObject* obj, QEvent* event) {
-    if (obj == _searchEdit && event->type() == QEvent::KeyPress) {
+    if (event->type() == QEvent::KeyPress) {
         auto* ke = static_cast<QKeyEvent*>(event);
         if (ke->key() == Qt::Key_Escape) {
             hide();
@@ -96,22 +104,38 @@ bool IncrementalSearchDialog::eventFilter(QObject* obj, QEvent* event) {
     return QDialog::eventFilter(obj, event);
 }
 
+void IncrementalSearchDialog::keyPressEvent(QKeyEvent* event) {
+    // Handle F3 for find next/prev when dialog is focused
+    if (event->key() == Qt::Key_F3) {
+        if (event->modifiers() & Qt::ShiftModifier)
+            onPrev();
+        else
+            onNext();
+        event->accept();
+        return;
+    }
+    QDialog::keyPressEvent(event);
+}
+
+void IncrementalSearchDialog::hideEvent(QHideEvent* event) {
+    clearHighlight();
+    QDialog::hideEvent(event);
+}
+
 void IncrementalSearchDialog::setEditor(ScintillaEditor* editor) {
     _editor = editor;
 }
 
 void IncrementalSearchDialog::clearHighlight() {
     if (!_editor) return;
-    // Clear any previous incremental search highlights (indicator 0)
-    _editor->send(QsciScintillaBase::SCI_SETSEARCHFLAGS, 0);
+    // Configure and clear indicator for isearch highlights
+    _editor->send(SCI_SETINDICATORCURRENT, _highlightIndicator);
+    _editor->send(SCI_INDICATORCLEARRANGE, 0, _editor->send(SCI_GETLENGTH));
     _editor->send(SCI_ANNOTATION_CLEARALL);
-    // Clear indicator 0 highlights across the whole document
-    int lines = _editor->lineCount();
-    _editor->clearIndicatorRange(0, 0, lines, 0, 0);
-    _editor->send(SCI_ANCHOR);
 }
 
 void IncrementalSearchDialog::onTextChanged(const QString& text) {
+    emit searchTextChanged(text);
     if (text.isEmpty()) {
         _countLabel->setText("");
         clearHighlight();
@@ -121,7 +145,7 @@ void IncrementalSearchDialog::onTextChanged(const QString& text) {
         return;
     }
 
-    // Only search when text actually changes (not on every keystroke during typing)
+    // Only search when text actually changes
     if (text != _lastText) {
         _lastText = text;
         _currentMatch = 0;
