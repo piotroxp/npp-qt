@@ -541,7 +541,7 @@ ScintillaEditor* Application::addView() {
     QHBoxLayout* layout = new QHBoxLayout(container);
     layout->setContentsMargins(0, 0, 0, 0);
 
-    ScintillaEditor* editor = new ScintillaEditor();
+    ScintillaEditor* editor = new ScintillaEditor(container);
     layout->addWidget(editor);
 
     [[maybe_unused]] int viewId = _viewStack->addWidget(container);

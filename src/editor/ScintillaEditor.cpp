@@ -41,6 +41,42 @@
 #include <QDragEnterEvent>
 #include <QDropEvent>
 
+// NOTE: SEGV root cause investigation (2026-07-17).
+//
+// Root cause: ScintillaEditor is instantiated with a null parent in one
+// code path: Application::addView() (Application.cpp:544).
+//
+// Call chain for the crash:
+//   Application::Application()
+//     → _mainWindow = new MainWindow(this)    // MainWindow init order:
+//       → _tabWidget = new QTabWidget(this)   // _tabWidget CREATED (MainWindow.cpp:73)
+//       → createPanels()                      // panels set up
+//     → Application::initialize()              // called from main() AFTER construction
+//       → _activeEditor = addView()           // Application.cpp:375
+//         → new ScintillaEditor()            // Application.cpp:544: NULL parent!
+//           → QFrame(nullptr)
+//           → new QsciScintilla()            // SEGV — Scintilla requires valid parent
+//
+// The ScintillaEditBase / QsciScintilla internals call Qt platform APIs
+// (QWindow::fromWinId, QWidget::createWinId, handle construction) that
+// resolve the parent widget's native handle.  With a null parent, Qt6's
+// QWidget system crashes when Scintilla attempts to attach to the parent
+// window surface.
+//
+// All other call sites (MainWindow::openFileInTab, MainWindow::onNewFile,
+// MainWindow::onBufferOpened) correctly pass _tabWidget as the parent and
+// additionally guard with the _openingFileDepth counter and the
+// `if (!_tabWidget) return;` check.
+//
+// Fix: Application::addView() must pass a valid parent widget to
+// ScintillaEditor.  Parent it to the container QWidget (which owns the
+// layout), or restructure addView() to not create a ScintillaEditor at all
+// since tab management is done via MainWindow::openFileInTab.
+//
+// The constructor itself is safe: member initializers run in order,
+// _editor is initialized before any Qt event propagation reaches it, and
+// _autoCompletion is constructed after the Scintilla surface is fully set up.
+// The crash only manifests at the call site, not within this constructor.
 ScintillaEditor::ScintillaEditor(QWidget* parent)
     : QFrame(parent)
     , _editor(new QsciScintilla())
