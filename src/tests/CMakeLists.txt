@@ -32,6 +32,7 @@ target_include_directories(test_core PUBLIC
 target_link_libraries(test_core PUBLIC
     Qt6::Core
     Qt6::Widgets
+    Qt6::PrintSupport
     ${QSCINTILLA_LIBRARY}
 )
 target_compile_options(test_core PRIVATE -w)

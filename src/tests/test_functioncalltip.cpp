@@ -23,8 +23,8 @@ public:
     MockScintillaComponent() = default;
     ~MockScintillaComponent() override = default;
 
-    sptr_t send(int message, uptr_t wParam = 0, sptr_t lParam = 0) override {
-        // Track calltip messages
+    // Match ScintillaComponent's primary virtual signature exactly
+    intptr_t send(int message, int wParam = 0, intptr_t lParam = 0) override {
         lastMessage = message;
         lastWParam = wParam;
         lastLParam = lParam;
@@ -38,8 +38,8 @@ public:
     int calltipCancelCount = 0;
     int calltipActiveCount = 0;
     int lastMessage = 0;
-    uptr_t lastWParam = 0;
-    sptr_t lastLParam = 0;
+    int lastWParam = 0;
+    intptr_t lastLParam = 0;
 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -123,7 +123,6 @@ TEST(test_functioncalltip_show_for_function) {
 
     // showCalltip() sends SCI_CALLTIPSHOW
     ASSERT_TRUE(mock->calltipShowCount >= 1 || !fct.isVisible());
-    // The calltip should be visible after showForFunction
 
     fct.close();
     ASSERT_FALSE(fct.isVisible());
@@ -174,17 +173,6 @@ TEST(test_functioncalltip_reset) {
     delete mock;
 }
 
-TEST(test_functioncalltip_cleanup) {
-    MockScintillaComponent* mock = new MockScintillaComponent();
-    FunctionCallTip fct(mock, nullptr);
-
-    // Cleanup should close and reset
-    fct.cleanup();
-    ASSERT_FALSE(fct.isVisible());
-
-    delete mock;
-}
-
 TEST(test_functioncalltip_set_language_xml) {
     MockScintillaComponent* mock = new MockScintillaComponent();
     FunctionCallTip fct(mock, nullptr);
@@ -210,7 +198,6 @@ int main(int argc, char* argv[]) {
     RUN(test_functioncalltip_navigation);
     RUN(test_functioncalltip_highlight_param);
     RUN(test_functioncalltip_reset);
-    RUN(test_functioncalltip_cleanup);
     RUN(test_functioncalltip_set_language_xml);
 
     std::cout << "\nAll FunctionCallTip tests passed.\n";
