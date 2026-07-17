@@ -9,7 +9,6 @@
 #include <QObject>
 #include <QSettings>
 #include <QtGui/QFontDatabase>
-#include <QStringList>
 #include <QString>
 #include <QStringList>
 #include <memory>
