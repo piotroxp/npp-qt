@@ -360,9 +360,9 @@ void MainWindow::createPanels() {
                 // Re-entrancy guard: set before calling openFileInTab so that any
                 // ScintillaEditor-construction events that fire back through this
                 // signal see _openingFile==true and drop the re-entrant call.
-                if (_openingFile) return;
-                _openingFile = true;
-                auto guard = qScopeGuard([this]() { _openingFile = false; });
+                if (_openingFileDepth > 0) return;
+                ++_openingFileDepth;
+                auto guard = qScopeGuard([this]() { --_openingFileDepth; });
                 openFileInTab(path);
             });
 
@@ -691,9 +691,9 @@ void MainWindow::onNewFile() {
     if (!_tabWidget) return;
 
     // Guard: re-entrancy (same concern as openFileInTab).
-    if (_openingFile) return;
-    _openingFile = true;
-    auto guard = qScopeGuard([this]() { _openingFile = false; });
+    if (_openingFileDepth > 0) return;
+    ++_openingFileDepth;
+    auto guard = qScopeGuard([this]() { --_openingFileDepth; });
 
     auto& appRef = Application::instance();
     BufferID buf = appRef.newFile();
@@ -761,11 +761,8 @@ void MainWindow::openFileInTab(const QString& path) {
     // new ScintillaEditor(_tabWidget) while a prior ScintillaEditor is still
     // being constructed.  The second ScintillaEditor sees a corrupted parent
     // pointer, and QWidget::setParent crashes with SEGV.
-    // Fix: skip if already inside openFileInTab.
-    if (_openingFile) return;
-    _openingFile = true;
-
-    auto guard = qScopeGuard([this]() { _openingFile = false; });
+    // Fix: skip if re-entrant (depth > 1 means this call is nested).
+    if (_openingFileDepth > 1) return;
 
     auto& appRef = Application::instance();
     BufferID buf = appRef.openFile(path.toStdString());
