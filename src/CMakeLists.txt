@@ -53,8 +53,8 @@ file(GLOB_RECURSE WORKERS_SOURCES "src/workers/*.cpp"     "src/workers/*.h")
 file(GLOB_RECURSE PLUGINS_SOURCES "src/plugins/*.cpp"     "src/plugins/*.h")
 file(GLOB_RECURSE COMMON_SOURCES  "src/common/*.cpp"      "src/common/*.h")
 # GLOB_RECURSE doesn't track new files after initial cmake run — add explicitly
-list(APPEND COMMON_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/common/MenuAdapter.cpp")
-list(APPEND COMMON_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/common/FileWatcherAdapter.cpp")
+list(APPEND COMMON_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/common/MenuAdapter.cpp")
+list(APPEND COMMON_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/common/FileWatcherAdapter.cpp")
 
 # MISC/Common and MISC/PluginsManager — canonical home for shared utilities
 file(GLOB_RECURSE MISC_COMMON_SOURCES     "src/MISC/Common/*.cpp"         "src/MISC/Common/*.h")
