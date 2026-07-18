@@ -35,6 +35,7 @@ class FindReplaceDialog;
 class IncrementalSearchDialog;
 class PreferenceDialog;
 class AboutDialog;
+class ShortcutAdapter;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -155,6 +156,9 @@ private:
     FunctionListPanel* _funcListPanel = nullptr;
     DocumentMapPanel* _docMapPanel = nullptr;
     IncrementalSearchDialog* _incrementalSearch = nullptr;
+
+    // Keyboard shortcut adapter (Win32 RegisterHotKey → Qt6 QShortcut)
+    ShortcutAdapter* _shortcutAdapter = nullptr;
 
     QMap<QString, QAction*> _actions;
     QString _lastOpenedDirectory;

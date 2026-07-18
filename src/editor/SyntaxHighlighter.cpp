@@ -20,6 +20,7 @@ SyntaxHighlighter::~SyntaxHighlighter() = default;
 // =====================================================================
 
 void SyntaxHighlighter::applyDarkTheme() {
+    _themeName = "dark";
     _keywordFormat.setForeground(QColor("#569CD6"));
     _keywordFormat.setFontWeight(QFont::Bold);
     _typeFormat.setForeground(QColor("#4EC9B0"));
@@ -37,6 +38,7 @@ void SyntaxHighlighter::applyDarkTheme() {
 }
 
 void SyntaxHighlighter::applyDraculaTheme() {
+    _themeName = "dracula";
     _keywordFormat.setForeground(QColor("#FF79C6"));
     _keywordFormat.setFontWeight(QFont::Bold);
     _typeFormat.setForeground(QColor("#8BE9FD"));
@@ -54,6 +56,7 @@ void SyntaxHighlighter::applyDraculaTheme() {
 }
 
 void SyntaxHighlighter::applyLightTheme() {
+    _themeName = "light";
     _keywordFormat.setForeground(QColor("#0000FF"));
     _keywordFormat.setFontWeight(QFont::Bold);
     _typeFormat.setForeground(QColor("#267F99"));
@@ -71,6 +74,7 @@ void SyntaxHighlighter::applyLightTheme() {
 }
 
 void SyntaxHighlighter::applyMonokaiTheme() {
+    _themeName = "monokai";
     _keywordFormat.setForeground(QColor("#F92672"));
     _keywordFormat.setFontWeight(QFont::Bold);
     _typeFormat.setForeground(QColor("#66D9EF"));
@@ -88,6 +92,7 @@ void SyntaxHighlighter::applyMonokaiTheme() {
 }
 
 void SyntaxHighlighter::applyNordTheme() {
+    _themeName = "nord";
     _keywordFormat.setForeground(QColor("#81A1C1"));
     _keywordFormat.setFontWeight(QFont::Bold);
     _typeFormat.setForeground(QColor("#8FBCBB"));
@@ -105,6 +110,7 @@ void SyntaxHighlighter::applyNordTheme() {
 }
 
 void SyntaxHighlighter::applyOneDarkTheme() {
+    _themeName = "one-dark";
     _keywordFormat.setForeground(QColor("#C678DD"));
     _keywordFormat.setFontWeight(QFont::Bold);
     _typeFormat.setForeground(QColor("#E5C07B"));
@@ -122,6 +128,7 @@ void SyntaxHighlighter::applyOneDarkTheme() {
 }
 
 void SyntaxHighlighter::applySolarizedDarkTheme() {
+    _themeName = "solarized-dark";
     _keywordFormat.setForeground(QColor("#859900"));
     _keywordFormat.setFontWeight(QFont::Bold);
     _typeFormat.setForeground(QColor("#268BD2"));
@@ -869,45 +876,6 @@ void SyntaxHighlighter::setupHtml() {
     // Color codes
     rule = {}; rule.pattern = QRegularExpression(R"(#[0-9a-fA-F]{3,8})\b");
     rule.format = _numberFormat; _rules.append(rule);
-}
-
-void SyntaxHighlighter::setupXml() {
-    HighlightRule rule;
-
-    // Tags
-    rule = {}; rule.pattern = QRegularExpression(
-        R"(<\/?[a-zA-Z_:][a-zA-Z0-9:_.\-]*)");
-    rule.format = _keywordFormat; _rules.append(rule);
-
-    // Attributes
-    rule = {}; rule.pattern = QRegularExpression(
-        R"(\b[a-zA-Z_:][a-zA-Z0-9:_.\-]*(?=\s*=))");
-    rule.format = _attributeFormat; _rules.append(rule);
-
-    // Attribute values
-    rule = {}; rule.pattern = QRegularExpression(
-        R"%((?:=\s*)"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')%");
-    rule.format = _stringFormat; _rules.append(rule);
-
-    // XML Declaration
-    rule = {}; rule.pattern = QRegularExpression(R"(<\?xml[^?]*\?>)");
-    rule.format = _preprocessorFormat; _rules.append(rule);
-
-    // DOCTYPE
-    rule = {}; rule.pattern = QRegularExpression(R"(<!DOCTYPE[^>]*>)");
-    rule.format = _preprocessorFormat; _rules.append(rule);
-
-    // CDATA
-    rule = {}; rule.pattern = QRegularExpression(R"(<!\[CDATA\[[\s\S]*?\]\]>)");
-    rule.format = _commentFormat; _rules.append(rule);
-
-    // Comments
-    rule = {}; rule.pattern = QRegularExpression(R"(<!--[\s\S]*?-->)");
-    rule.format = _commentFormat; _rules.append(rule);
-
-    // Processing instructions
-    rule = {}; rule.pattern = QRegularExpression(R"(<\?[^?]*\?>)");
-    rule.format = _attributeFormat; _rules.append(rule);
 }
 
 void SyntaxHighlighter::setupCss() {
@@ -1756,21 +1724,6 @@ void SyntaxHighlighter::setupBash() {
     rule.format = _operatorFormat; _rules.append(rule);
 }
 
-void SyntaxHighlighter::setupPowerShell() {
-    _singleLineComment = "#";
-    _commentStart = "<#";
-    _commentEnd = "#>";
-
-    HighlightRule rule;
-
-    // Keywords
-    rule = {}; rule.pattern = QRegularExpression(
-        R"(\b(Begin|Break|Catch|Class|Continue|Data|Define|Do|DynamicParam|Else|ElseIf|End|Exit|Filter|Finally|For|ForEach|Function|If|In|InlineScript|Parallel|Param|Process|Return|Sequence|Static|Switch|Throw|Trap|Try|Until|While|Workflow|Until|Workflow)\b)");
-    rule.format = _keywordFormat; _rules.append(rule);
-
-    // Variables
-    rule = {}; rule.pattern = QRegularExpression(R"(\$[a-zA-Z_][a-zA-Z0-9_]*|\$\{[^}]+\}|\$[0-9]+|\$_(?:\.[a-zA-Z_][a-zA-Z0-9_]*)+)");
-    rule.format = _typeFormat; _rules.append(rule);
 
     // Built-in cmdlets
     rule = {}; rule.pattern = QRegularExpression(
@@ -1809,85 +1762,6 @@ void SyntaxHighlighter::setupPowerShell() {
     rule.format = _operatorFormat; _rules.append(rule);
 }
 
-void SyntaxHighlighter::setupTcl() {
-    _singleLineComment = "#";
-    HighlightRule rule;
-
-    // Keywords
-    rule = {}; rule.pattern = QRegularExpression(
-        R"(\b(after|append|apply|array|auto_execok|auto_load|auto_mkindex|auto_path|bell|bind|binary|break|case|catch|cd|clock|close|concat|continue|error|eval|exec|exit|expr|fblocked|fconfigure|fcopy|file|fileevent|flush|for|foreach|format|gets|glob|global|history|http|if|incr|info|interp|join|lappend|library|lindex|linsert|list|llength|load|loadTk|lrange|lreplace|lsearch|lset|lsort|memory|msgcat|namespace|open|package|parray|pid|proc|puts|pwd|read|regexp|registry|regsub|rename|return|scan|seek|set|source|split|string|subst|switch|tcl_findLibrary|tell|time|trace|unknown|unset|update|uplevel|upvar|variable|vwait|while|zlib)\b)");
-    rule.format = _keywordFormat; _rules.append(rule);
-
-    // Built-in commands
-    rule = {}; rule.pattern = QRegularExpression(
-        R"(\b(puts|gets|set|unset|incr|append|lappend|lindex|linsert|llength|lrange|lreplace|lsearch|lset|lsort|concat|join|split|string|subst|format|scan|regexp|regsub|switch|list|lrange|dict|lmap|array|dollarparens|upvar|global|variable|namespace|proc|lambda|tailcall|return|break|continue|error|try|throw|finally|catch)\b)");
-    rule.format = _builtInFormat; _rules.append(rule);
-
-    // Variables
-    rule = {}; rule.pattern = QRegularExpression(R"(\$[a-zA-Z_][a-zA-Z0-9_]*(?:\([^)]*\))?(?:\([a-zA-Z0-9_]+\))?|\$\{[a-zA-Z_][a-zA-Z0-9_]*\})");
-    rule.format = _typeFormat; _rules.append(rule);
-
-    // Command substitution
-    rule = {}; rule.pattern = QRegularExpression(R"(\[[^\[\]]*\])");
-    rule.format = _attributeFormat; _rules.append(rule);
-
-    // Strings
-    rule = {}; rule.pattern = QRegularExpression(R"(\{(?:[^{}]|\{[^{}]*\})*\}|"(?:[^"\\]|\\.)*")");
-    rule.format = _stringFormat; _rules.append(rule);
-
-    // Numbers
-    rule = {}; rule.pattern = QRegularExpression(
-        R"(\b0[xX][0-9a-fA-F_]+|[0-9][0-9_]*\.[0-9_]+|[0-9]+[eE][+-]?[0-9_]+)\b)");
-    rule.format = _numberFormat; _rules.append(rule);
-
-    // Operators
-    rule = {}; rule.pattern = QRegularExpression(R"([+\-*/%=<>!&|^~?:]+|==|!=|<=|>=|&&|\|\||eq|ne|lt|gt|le|ge|in|ni|and|or|not|xor));
-    rule.format = _operatorFormat; _rules.append(rule);
-}
-
-void SyntaxHighlighter::setupDockerfile() {
-    _singleLineComment = "#";
-    HighlightRule rule;
-
-    // Instructions
-    rule = {}; rule.pattern = QRegularExpression(
-        R"(^(FROM|RUN|CMD|LABEL|EXPOSE|ENV|ADD|COPY|ENTRYPOINT|VOLUME|USER|WORKDIR|ARG|MAINTAINER|ONBUILD|STOPSIGNAL|HEALTHCHECK|SHELL|ARG|IMPORT|EXPOSE|STOPSIGNAL)\b)",
-        QRegularExpression::CaseInsensitiveOption);
-    rule.format = _keywordFormat; _rules.append(rule);
-
-    // Environment variables
-    rule = {}; rule.pattern = QRegularExpression(R"(\$[a-zA-Z_][a-zA-Z0-9_]*|\$\{[a-zA-Z_][a-zA-Z0-9_]*\})");
-    rule.format = _attributeFormat; _rules.append(rule);
-
-    // Escape directive
-    rule = {}; rule.pattern = QRegularExpression(R"(^#\s*escape\s*=\s*[\`\\])");
-    rule.format = _preprocessorFormat; _rules.append(rule);
-
-    // Strings
-    rule = {}; rule.pattern = QRegularExpression(R"("(?:[^"\\]|\\.)*")");
-    rule.format = _stringFormat; _rules.append(rule);
-
-    // Paths
-    rule = {}; rule.pattern = QRegularExpression(R"(\/[a-zA-Z0-9_.\-]+)+|\.[a-zA-Z0-9_.\-]+");
-    rule.format = _functionFormat; _rules.append(rule);
-
-    // Ports
-    rule = {}; rule.pattern = QRegularExpression(R"(\b[0-9]{1,5}\b(?:\s*:\s*[0-9]{1,5})?)");
-    rule.format = _numberFormat; _rules.append(rule);
-
-    // Flags
-    rule = {}; rule.pattern = QRegularExpression(R"(--[a-zA-Z][a-zA-Z0-9_-]*)");
-    rule.format = _attributeFormat; _rules.append(rule);
-
-    // Numbers
-    rule = {}; rule.pattern = QRegularExpression(R"(\b[0-9]+\b)");
-    rule.format = _numberFormat; _rules.append(rule);
-
-    // Operators
-    rule = {}; rule.pattern = QRegularExpression(R"([=\[\]|])");
-    rule.format = _operatorFormat; _rules.append(rule);
-}
-
 void SyntaxHighlighter::setupCMake() {
     _singleLineComment = "#";
     HighlightRule rule;
@@ -1920,47 +1794,6 @@ void SyntaxHighlighter::setupCMake() {
 
     // Operators
     rule = {}; rule.pattern = QRegularExpression(R"([+\-*/%=<>!&|^:]+|==|!=|<=|>=|\${|}|\$|<|>));
-    rule.format = _operatorFormat; _rules.append(rule);
-}
-
-void SyntaxHighlighter::setupMakefile() {
-    _singleLineComment = "#";
-    HighlightRule rule;
-
-    // Targets (words before :)
-    rule = {}; rule.pattern = QRegularExpression(
-        R"(^[A-Za-z0-9_.-]+(?=\s*:)|^\t+[A-Za-z0-9_.-]+(?=\s*\())");
-    rule.format = _functionFormat; _rules.append(rule);
-
-    // Variables
-    rule = {}; rule.pattern = QRegularExpression(R"(\$[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\}|\$\([A-Za-z_][A-Za-z0-9_]*\))");
-    rule.format = _typeFormat; _rules.append(rule);
-
-    // Automatic variables
-    rule = {}; rule.pattern = QRegularExpression(R"%(\$@|\$<|\$^\|\$+|\$\?|\$\*|\$|)%");
-    rule.format = _attributeFormat; _rules.append(rule);
-
-    // Keywords
-    rule = {}; rule.pattern = QRegularExpression(
-        R"(\b(ifndef|ifdef|ifeq|ifneq|else|endif|define|endef|override|export|unexport|include|-include|sinclude|vpath)\b)");
-    rule.format = _keywordFormat; _rules.append(rule);
-
-    // Functions
-    rule = {}; rule.pattern = QRegularExpression(
-        R"(\$[A-Za-z][A-Za-z0-9_-]*\()");
-    rule.format = _builtInFormat; _rules.append(rule);
-
-    // Strings
-    rule = {}; rule.pattern = QRegularExpression(R"("(?:[^"\\]|\\.)*")");
-    rule.format = _stringFormat; _rules.append(rule);
-
-    // Numbers
-    rule = {}; rule.pattern = QRegularExpression(
-        R"(\b[0-9][0-9_]*\b)");
-    rule.format = _numberFormat; _rules.append(rule);
-
-    // Line continuation
-    rule = {}; rule.pattern = QRegularExpression(R"(\\$)");
     rule.format = _operatorFormat; _rules.append(rule);
 }
 
@@ -2559,6 +2392,7 @@ void SyntaxHighlighter::setupBatch() {
 }
 
 void SyntaxHighlighter::setLanguage(LangType lang) {
+    _language = lang;
     setupLanguage(lang);
     rehighlight();
 }

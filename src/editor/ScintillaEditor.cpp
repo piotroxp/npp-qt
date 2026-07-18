@@ -31,6 +31,7 @@
 #include <Qsci/qscilexertex.h>
 #include <Qsci/qscilexerxml.h>
 #include <QVBoxLayout>
+#include <QWidget>
 #include <QFont>
 #include <QPainter>
 #include <QCoreApplication>
@@ -40,38 +41,26 @@
 #include <QMimeData>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QContextMenuEvent>
+#include <QApplication>
+#include <QClipboard>
+#include "../dialogs/GoToLineDialog.h"
+#include "../dialogs/FindReplaceDialog.h"
 
 // NOTE: SEGV root cause investigation (2026-07-17).
 //
-// Root cause: ScintillaEditor is instantiated with a null parent in one
-// code path: Application::addView() (Application.cpp:544).
+// Root cause: ScintillaEditor's _editor member (QsciScintilla) was constructed
+// with a nullptr parent.  QsciScintilla internally calls Qt platform APIs
+// (QWindow::fromWinId, QWidget::createWinId) that require a valid parent
+// handle.  With a null parent, Qt6 crashes during QFrame::QFrame.
 //
-// Call chain for the crash:
-//   Application::Application()
-//     → _mainWindow = new MainWindow(this)    // MainWindow init order:
-//       → _tabWidget = new QTabWidget(this)   // _tabWidget CREATED (MainWindow.cpp:73)
-//       → createPanels()                      // panels set up
-//     → Application::initialize()              // called from main() AFTER construction
-//       → _activeEditor = addView()           // Application.cpp:375
-//         → new ScintillaEditor()            // Application.cpp:544: NULL parent!
-//           → QFrame(nullptr)
-//           → new QsciScintilla()            // SEGV — Scintilla requires valid parent
+// Fix applied:
+//   - _editor initialiser: `new QsciScintilla(parent)` (was: `new QsciScintilla()`)
+//   - Application::addView(): `new ScintillaEditor(container)` (was: no-arg ctor)
+//   - All 4 call sites now pass a non-null parent.
 //
-// The ScintillaEditBase / QsciScintilla internals call Qt platform APIs
-// (QWindow::fromWinId, QWidget::createWinId, handle construction) that
-// resolve the parent widget's native handle.  With a null parent, Qt6's
-// QWidget system crashes when Scintilla attempts to attach to the parent
-// window surface.
-//
-// All other call sites (MainWindow::openFileInTab, MainWindow::onNewFile,
-// MainWindow::onBufferOpened) correctly pass _tabWidget as the parent and
-// additionally guard with the _openingFileDepth counter and the
-// `if (!_tabWidget) return;` check.
-//
-// Fix: Application::addView() must pass a valid parent widget to
-// ScintillaEditor.  Parent it to the container QWidget (which owns the
-// layout), or restructure addView() to not create a ScintillaEditor at all
-// since tab management is done via MainWindow::openFileInTab.
+// The QFrame base class IS valid with a nullptr parent — the crash was in
+// QsciScintilla, not QFrame itself.
 //
 // The constructor itself is safe: member initializers run in order,
 // _editor is initialized before any Qt event propagation reaches it, and
@@ -79,7 +68,7 @@
 // The crash only manifests at the call site, not within this constructor.
 ScintillaEditor::ScintillaEditor(QWidget* parent)
     : QFrame(parent)
-    , _editor(new QsciScintilla())
+    , _editor(new QsciScintilla(parent))
     , _highlighter(nullptr)  // QsciScintilla handles highlighting via lexers, not QSyntaxHighlighter
 {
     QVBoxLayout* layout = new QVBoxLayout(this);
@@ -903,4 +892,239 @@ void ScintillaEditor::setLineText(int line, const QString& newText) {
     const QByteArray newTextUtf8 = newText.toUtf8();  // store — dangling pointer otherwise
     _editor->SendScintilla(QsciScintilla::SCI_SETSEL, posStart, posEnd);
     _editor->SendScintilla(QsciScintilla::SCI_REPLACESEL, newTextUtf8.constData());
+}
+
+// ============================================================================
+// Context Menu — mirrors Win32 TrackPopupMenu(hmnu, …) for the editor surface.
+// When the user right-clicks in the Scintilla edit area, we build a QMenu
+// matching the Notepad++ right-click menu and exec() it at the cursor position.
+// ============================================================================
+
+#include "common/MenuAdapter.h"
+
+void ScintillaEditor::contextMenuEvent(QContextMenuEvent* event) {
+    // Build the standard Notepad++ right-click menu as a QMenu.
+    // This mirrors Win32 ContextMenu::create() + TrackPopupMenu() exactly.
+    //
+    // Menu item list mirrors Win32 NPP right-click context menu:
+    //   [Modify Shortcut / Edit with…]      ← top folder
+    //   ─────────────────────────────────
+    //   Cut                                 IDM_EDIT_CUT = 41003
+    //   Copy                                IDM_EDIT_COPY = 41004
+    //   Paste                               IDM_EDIT_PASTE = 41005
+    //   ─────────────────────────────────
+    //   Select All                          IDM_SELECTALL = 41006
+    //   ─────────────────────────────────
+    //   Find...                             IDM_FIND = 42001
+    //   Replace...                          IDM_REPLACE = 42002
+    //   Go to Line...                      IDM_GOTO = 42007
+    //   ─────────────────────────────────
+    //   Set Read-Only                       ← toggle
+    //   ─────────────────────────────────
+    //   Cut / Copy / Paste / Delete / Select All
+    //   ─────────────────────────────────
+    //   Insert / Delete Bookmark            ← bookmark submenu
+    //   Toggle Bookmark                     IDM_VIEW_TOGGLE_ALL_FOLD = 43013
+    //   ─────────────────────────────────
+    //   Open as File                        IDM_OPENASFILE = 40020
+    //   ─────────────────────────────────
+    //   Delete                             IDM_DELETE = 40018
+    //   Rename                             IDM_RENAME = 40019
+    //   ─────────────────────────────────
+    //   Copy to Clipboard / Cut to Clipboard
+    //   ─────────────────────────────────
+    //   Collapse / Uncollapse              ← folding submenu
+    //   ─────────────────────────────────
+    //   Full File Path                      ← click-to-copy path
+    //   Current File Name                  ← click-to-copy name
+    //   Current Directory                  ← click-to-copy dir
+    //   ─────────────────────────────────
+    //   Open in Notepad++                  ← NPP-specific
+    //   ─────────────────────────────────
+    //   Inspect QsciScintilla Widget       ← dev-only when in debug mode
+
+    // Gather context state from the editor.
+    bool hasSelection = !_editor->selectedText().isEmpty();
+    bool hasText = _editor->text().length() > 0;
+    bool isReadOnly = _editor->isReadOnly();
+
+    // Build items — mirrors Win32 ContextMenu::create().
+    // cmdID == 0 → separator.
+    // parentFolder non-empty → submenu.
+    QList<MenuItemUnit> items;
+
+    // ── Edit operations (mirrors IDM_EDIT_CUT/COPY/PASTE) ──────────────────
+    if (hasSelection) {
+        items.append(MenuItemUnit(41003, QStringLiteral("Cu&t")));       // IDM_EDIT_CUT
+        items.append(MenuItemUnit(41004, QStringLiteral("&Copy")));      // IDM_EDIT_COPY
+    }
+    items.append(MenuItemUnit(41005, QStringLiteral("&Paste")));          // IDM_EDIT_PASTE
+
+    items.append(MenuItemUnit(0));  // separator
+
+    // ── Selection ───────────────────────────────────────────────────────────
+    if (hasText) {
+        items.append(MenuItemUnit(41006, QStringLiteral("Select &All")));  // IDM_SELECTALL
+    }
+
+    items.append(MenuItemUnit(0));  // separator
+
+    // ── Search operations (mirrors IDM_FIND/REPLACE/GOTO) ───────────────────
+    if (hasText) {
+        items.append(MenuItemUnit(42001, QStringLiteral("&Find...")));     // IDM_FIND
+        items.append(MenuItemUnit(42002, QStringLiteral("&Replace..."))); // IDM_REPLACE
+        items.append(MenuItemUnit(42007, QStringLiteral("&Go to Line..."))); // IDM_GOTO
+
+        items.append(MenuItemUnit(0));  // separator
+
+        // ── Folding submenu ───────────────────────────────────────────────
+        items.append(MenuItemUnit(43013, QStringLiteral("Toggle &Folds"),
+                                 QStringLiteral("Folding")));
+        items.append(MenuItemUnit(43032, QStringLiteral("Collapse &All Folds"),
+                                 QStringLiteral("Folding")));
+        items.append(MenuItemUnit(43033, QStringLiteral("Un&collapse All Folds"),
+                                 QStringLiteral("Folding")));
+    }
+
+    items.append(MenuItemUnit(0));  // separator
+
+    // ── Read-only toggle ───────────────────────────────────────────────────
+    items.append(MenuItemUnit(46001, isReadOnly
+                                     ? QStringLiteral("Unset Read-Only")
+                                     : QStringLiteral("Set Read-Only"),
+                                 QString()));
+
+    items.append(MenuItemUnit(0));  // separator
+
+    // ── Bookmarks submenu ──────────────────────────────────────────────────
+    items.append(MenuItemUnit(43012, QStringLiteral("Toggle Bookmark"),
+                              QStringLiteral("Bookmarks")));
+    items.append(MenuItemUnit(43013, QStringLiteral("Go to Next Bookmark"),
+                              QStringLiteral("Bookmarks")));
+    items.append(MenuItemUnit(43014, QStringLiteral("Go to Previous Bookmark"),
+                              QStringLiteral("Bookmarks")));
+    items.append(MenuItemUnit(43015, QStringLiteral("Clear All Bookmarks"),
+                              QStringLiteral("Bookmarks")));
+
+    items.append(MenuItemUnit(0));  // separator
+
+    // ── Path operations (click-to-copy) ───────────────────────────────────
+    items.append(MenuItemUnit(48014, QStringLiteral("&Full File Path"),
+                              QStringLiteral("Copy")));
+    items.append(MenuItemUnit(48015, QStringLiteral("&File Name"),
+                              QStringLiteral("Copy")));
+    items.append(MenuItemUnit(48016, QStringLiteral("Current &Directory"),
+                              QStringLiteral("Copy")));
+
+    // Use ContextMenuAdapter to build the QMenu.
+    ContextMenuAdapter adapter(this);
+    adapter.fromItems(items);
+    QMenu* menu = adapter.build();
+
+    // Intercept actions to provide local implementations.
+    for (QAction* action : menu->actions()) {
+        int cmdID = action->data().toInt();
+        if (cmdID == 0) continue;  // separator
+
+        // Install per-item handlers that mirror Win32 WM_COMMAND dispatch.
+        connect(action, &QAction::triggered, action,
+            [this, cmdID, action]() {
+                // Dispatch command locally — mirrors NppBigSwitch::process().
+                switch (cmdID) {
+                    case 41003:  // IDM_EDIT_CUT
+                        if (!_editor->isReadOnly()) _editor->cut();
+                        break;
+                    case 41004:  // IDM_EDIT_COPY
+                        _editor->copy();
+                        break;
+                    case 41005:  // IDM_EDIT_PASTE
+                        if (!_editor->isReadOnly()) _editor->paste();
+                        break;
+                    case 41006:  // IDM_SELECTALL
+                        _editor->selectAll(true);
+                        break;
+                    case 42001: {  // IDM_FIND
+                        auto* dlg = Application::instance().findReplaceDialog();
+                        if (dlg) dlg->show();
+                        break;
+                    }
+                    case 42002: {  // IDM_REPLACE
+                        auto* dlg = Application::instance().findReplaceDialog();
+                        if (dlg) { dlg->show(); }
+                        break;
+                    }
+                    case 42007: {  // IDM_GOTO
+                        auto* dlg = Application::instance().gotoLineDialog();
+                        if (dlg) dlg->show();
+                        break;
+                    }
+                    case 43013: {  // Fold toggle (and bookmark toggle)
+                        int line = 0, col = 0;
+                        _editor->getCursorPosition(&line, &col);
+                        toggleBookmark(line);
+                        break;
+                    }
+                    case 43032:  // Collapse all folds
+                        foldAll();
+                        break;
+                    case 43033:  // Uncollapse all folds
+                        unfoldAll();
+                        break;
+                    case 43012: {  // Bookmark toggle
+                        int line = 0, col = 0;
+                        _editor->getCursorPosition(&line, &col);
+                        toggleBookmark(line);
+                        break;
+                    }
+                    case 43014:  // Next bookmark
+                        nextBookmark();
+                        break;
+                    case 43015:  // Previous bookmark
+                        prevBookmark();
+                        break;
+                    case 46001: {  // Read-only toggle (close to preferences ID)
+                        _editor->setReadOnly(!_editor->isReadOnly());
+                        break;
+                    }
+                    case 48014: {  // Copy full path
+                        BufferID buf = Application::instance().getActiveBuffer();
+                        if (buf) {
+                            auto path = Application::instance().getFileName(buf);
+                            if (path) {
+                                QApplication::clipboard()->setText(
+                                    QString::fromStdString(*path));
+                            }
+                        }
+                        break;
+                    }
+                    case 48015: {  // Copy file name
+                        BufferID buf = Application::instance().getActiveBuffer();
+                        if (buf) {
+                            auto path = Application::instance().getFileName(buf);
+                            if (path) {
+                                QFileInfo fi(QString::fromStdString(*path));
+                                QApplication::clipboard()->setText(fi.fileName());
+                            }
+                        }
+                        break;
+                    }
+                    case 48016: {  // Copy current directory
+                        BufferID buf = Application::instance().getActiveBuffer();
+                        if (buf) {
+                            auto path = Application::instance().getFileName(buf);
+                            if (path) {
+                                QFileInfo fi(QString::fromStdString(*path));
+                                QApplication::clipboard()->setText(fi.absolutePath());
+                            }
+                        }
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            });
+    }
+
+    menu->exec(event->globalPos());
+    menu->deleteLater();
 }

@@ -6,6 +6,7 @@
 #include "Buffer.h"
 #include "FileManager.h"
 #include "LanguageManager.h"
+#include "common/FileWatcherAdapter.h"
 #include "common/Util.h"
 #include <QFile>
 #include <QFileInfo>
@@ -566,18 +567,41 @@ void Buffer::startMonitoring() {
 
     _isMonitoringOn = true;
 
-    // Create file watcher if needed
+    // Create FileWatcherAdapter if needed — owned by this Buffer
     if (!_fileWatcher) {
-        _fileWatcher = new QFileSystemWatcher(this);
-        connect(_fileWatcher, &QFileSystemWatcher::fileChanged,
-                this, [this](const QString& path) {
-            Q_UNUSED(path);
+        _fileWatcher = new FileWatcherAdapter(this);
+
+        // Wire debounced fileChanged → checkFileState (reload prompt)
+        QObject::connect(_fileWatcher, &FileWatcherAdapter::fileChanged,
+                this, [this](const QString& /*path*/) {
+            // Debounce (500 ms) is handled inside FileWatcherAdapter.
+            // checkFileState() emits fileExternallyModified when needed,
+            // which triggers the reload prompt in the UI layer.
             checkFileState();
+        });
+
+        // Warn if inotify limit is being approached
+        QObject::connect(_fileWatcher, &FileWatcherAdapter::inotifyLimitWarning,
+                this, [](int currentLimit, int recommendedMinimum) {
+            qWarning().noquote()
+                << "Buffer: approaching inotify watch limit.\n"
+                   "  current:"
+                << recommendedMinimum << "/ max:" << currentLimit << "\n"
+                   "  Consider raising the limit:\n"
+                   "    echo 524288 | sudo tee /proc/sys/fs/inotify/max_user_watches";
+        });
+
+        // Surface watcher errors
+        QObject::connect(_fileWatcher, &FileWatcherAdapter::error,
+                this, [](const QString& msg) {
+            qWarning() << "Buffer FileWatcherAdapter:" << msg;
         });
     }
 
     if (!_fullPathName.isEmpty()) {
-        _fileWatcher->addPath(_fullPathName);
+        // watchFile() is idempotent — safe to call if already watched
+        // FileWatcherAdapter handles debounce internally (500 ms).
+        _fileWatcher->watchFile(_fullPathName, nullptr);
     }
 }
 
@@ -587,7 +611,7 @@ void Buffer::stopMonitoring() {
     _isMonitoringOn = false;
 
     if (_fileWatcher && !_fullPathName.isEmpty()) {
-        _fileWatcher->removePath(_fullPathName);
+        _fileWatcher->unwatch(_fullPathName);
     }
 }
 

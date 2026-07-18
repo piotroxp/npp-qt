@@ -8,6 +8,7 @@
 #include <QString>
 #include <QColor>
 #include <QPrinter>
+#include <QContextMenuEvent>
 #include <vector>
 #include <Qsci/qsciscintilla.h>
 #include "../common/Types.h"
@@ -192,6 +193,11 @@ signals:
     void languageChanged(LangType lang);
 
 private:
+    // ---- Context menu ----
+    /// Right-click context menu.  Mirrors Win32 TrackPopupMenu() behaviour.
+    /// Builds a QMenu from MenuItemUnit lists and exec()s it at the cursor.
+    void contextMenuEvent(QContextMenuEvent* event) override;
+
     bool eventFilter(QObject* watched, QEvent* event) override;
     QsciScintilla* _editor;
     SyntaxHighlighter* _highlighter;

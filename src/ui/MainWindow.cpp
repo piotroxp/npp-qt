@@ -767,12 +767,38 @@ void MainWindow::onOpenFile() {
 }
 
 void MainWindow::openFileInTab(const QString& path) {
+    // Guard: empty path — reject before touching any subsystem
+    if (path.isEmpty()) {
+        QMessageBox::warning(this, "Open Error", "File path is empty.");
+        return;
+    }
+
+    // Guard: path must be an existing regular file before any editor construction.
+    // This prevents ScintillaEditor from being created for directories, symlinks
+    // to directories, or invalid paths.  FileBrowserPanel already validates this,
+    // but double-click from external sources or drag-and-drop can bypass it.
+    if (!QFileInfo(path).isFile()) {
+        QMessageBox::warning(this, "Open Error",
+            "Path is not a valid file: " + path);
+        return;
+    }
+
     // Guard: _tabWidget may be null during early initialization if a panel
     // emits a file signal before MainWindow::setupUI() has completed.
     if (!_tabWidget) return;
 
     // Guard: _tabBar must be valid (initialized before _tabWidget in constructor).
     if (!_tabBar) return;
+
+    // Guard: _fileBrowserPanel is required for the signal-reconnect workaround
+    // used below. If it is absent we cannot safely construct a ScintillaEditor
+    // (double-click events would be lost and could leave _openingFileDepth
+    // in an inconsistent state). Return early with a user-visible error.
+    if (!_fileBrowserPanel) {
+        QMessageBox::warning(this, "Open Error",
+            "File browser panel is not available. Cannot open: " + path);
+        return;
+    }
 
     // Guard: re-entrancy into ScintillaEditor construction.  ScintillaEditor
     // is a QFrame; its construction triggers Qt widget events (style propagation,

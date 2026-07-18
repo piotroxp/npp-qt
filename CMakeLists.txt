@@ -48,6 +48,7 @@ option(NPP_DEBUG_SANITIZERS "Enable ASAN/UBSAN sanitizers for debugging" OFF)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(-Wall -Wextra -Wpedantic -O0 -g -fno-omit-frame-pointer)
+    add_compile_definitions(NPPQT_HAVE_SHORTCUT_MANAGER)
     if(NPP_DEBUG_SANITIZERS)
         message(STATUS "Sanitizers ENABLED (ASAN + UBSAN)")
         add_compile_options(-fsanitize=address -fsanitize=undefined)
@@ -65,6 +66,21 @@ set(SOURCES
     src/core/Application.cpp
     src/core/EditorCommandManager.cpp
     src/core/EncodingDetector.cpp
+    src/core/Utf8_16.cpp
+    src/ui/WinControls/Grid/BabyGridWrapper.cpp
+    src/ui/WinControls/Grid/ShortcutMapper.cpp
+    src/ui/WinControls/StaticDialog/StaticDialog.cpp
+    src/ui/WinControls/StaticDialog/RunDlg/RunDlg.cpp
+    src/ui/WinControls/SplitterContainer/SplitterContainer.cpp
+    src/ui/WinControls/SplitterContainer/Splitter.cpp
+    src/ui/WinControls/TaskList/TaskList.cpp
+    src/ui/WinControls/TreeView/TreeView.cpp
+    src/ui/WinControls/ToolTip/ToolTip.cpp
+    src/ui/WinControls/TrayIcon/TrayIcon.cpp
+    src/ui/WinControls/StatusBar/StatusBar.cpp
+    src/ui/WinControls/VerticalFileSwitcher/VerticalFileSwitcher.cpp
+    src/ui/WinControls/AboutDlg/AboutDlg.cpp
+    src/ui/WinControls/Window.h
     src/core/FileManager.cpp
     src/core/LanguageManager.cpp
     src/core/SessionManager.cpp
@@ -82,7 +98,8 @@ set(SOURCES
     src/core/UdlManager.cpp
     src/editor/ScintillaEditor.cpp
     src/editor/ScintillaEditView.cpp
-    src/editor/SyntaxHighlighterStub.cpp
+    src/editor/SyntaxHighlighter.cpp
+    src/editor/SyntaxHighlighterImpl.cpp
     src/editor/DocTabView.cpp
     src/editor/ScintillaCtrls.cpp
     $<$<BOOL:${NPP_HAVE_WEBENGINE}>:src/editor/WebBrowserView.cpp>
@@ -120,10 +137,16 @@ set(SOURCES
     src/panels/FunctionListXmlParser.cpp
     src/panels/FileBrowserPanel.cpp
     src/common/DpiManager.cpp
+    src/common/ShortcutAdapter.cpp
+    src/common/MenuAdapter.cpp
+    src/common/FileWatcherAdapter.cpp
+    src/common/PathHelper.cpp
+    src/common/UrlHelper.cpp
     src/plugins/PluginManager.cpp
     src/common/Util.cpp
     src/common/FileHelper.cpp
     src/common/StringHelper.cpp
+    src/common/ClipboardAdapter.cpp
     src/core/NppNotificationHandler.cpp
     src/core/NppSciNotificationBridge.cpp
     # src/ui/Accelerator.cpp            # disabled: duplicate impl in shortcut.cpp
@@ -138,6 +161,21 @@ set(HEADERS
     src/core/NppIO.h
     src/core/EditorCommandManager.h
     src/core/EncodingDetector.h
+    src/core/Utf8_16.h
+    src/ui/WinControls/Grid/BabyGridWrapper.h
+    src/ui/WinControls/Grid/ShortcutMapper.h
+    src/ui/WinControls/StaticDialog/StaticDialog.h
+    src/ui/WinControls/StaticDialog/RunDlg/RunDlg.h
+    src/ui/WinControls/SplitterContainer/SplitterContainer.h
+    src/ui/WinControls/SplitterContainer/Splitter.h
+    src/ui/WinControls/TaskList/TaskList.h
+    src/ui/WinControls/TreeView/TreeView.h
+    src/ui/WinControls/ToolTip/ToolTip.h
+    src/ui/WinControls/TrayIcon/TrayIcon.h
+    src/ui/WinControls/StatusBar/StatusBar.h
+    src/ui/WinControls/VerticalFileSwitcher/VerticalFileSwitcher.h
+    src/ui/WinControls/AboutDlg/AboutDlg.h
+    src/ui/WinControls/Window.h
     src/core/FileManager.h
     src/core/LanguageManager.h
     src/core/SessionManager.h
@@ -193,7 +231,11 @@ set(HEADERS
     src/common/Util.h
     src/common/FileHelper.h
     src/common/StringHelper.h
+    src/common/ClipboardAdapter.h
     src/common/DpiManager.h
+    src/common/ShortcutAdapter.h
+    src/common/MenuAdapter.h
+    src/common/FileWatcherAdapter.h
     src/common/NonCopyable.h
     src/common/Observer.h
     src/common/PathHelper.h
@@ -247,7 +289,7 @@ endif()
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
         $<TARGET_FILE:${PROJECT_NAME}>
-        /workspace/NotepadMinusMinusQt
+        /home/piotro/NotepadMinusMinusQt
     COMMENT "Copying binary to /workspace/"
 )
 

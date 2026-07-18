@@ -238,7 +238,7 @@ std::wstring fileName(const std::wstring& path) {
 std::string fileExt(const std::string& path) {
     size_t pos = path.find_last_of('.');
     if (pos == std::string::npos || pos == 0) return "";
-    return path.substr(pos + 1);
+    return path.substr(pos);
 }
 
 std::string filePath(const std::string& path) {

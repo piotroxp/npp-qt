@@ -10,7 +10,7 @@
 #include <QObject>
 #include <QString>
 #include <QDateTime>
-#include <QFileSystemWatcher>
+#include "common/FileWatcherAdapter.h"
 #include <QVector>
 #include <QMutex>
 #include <string>
@@ -416,7 +416,7 @@ private:
     bool _isPartialLoad = false;
 
     // File monitoring
-    QFileSystemWatcher* _fileWatcher = nullptr;
+    FileWatcherAdapter* _fileWatcher = nullptr;
     bool _isMonitoringOn = false;
 
     bool _hasLangBeenSetFromMenu = false;

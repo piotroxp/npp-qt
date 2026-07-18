@@ -109,7 +109,7 @@ bool UrlHelper::equals(const QString& a, const QString& b) {
     QUrl qa = toQUrl(a);
     QUrl qb = toQUrl(b);
     // Normalize and compare
-    qa.normalize();
-    qb.normalize();
+
+
     return qa == qb;
 }

@@ -1,0 +1,890 @@
+// ScintillaEditor.cpp
+// Copyright (C) 2026 Agent Army
+// GPL v3
+
+#include "ScintillaEditor.h"
+#include "SyntaxHighlighter.h"
+#include "../dialogs/AutoCompletion.h"
+#include "../core/ThemeManager.h"
+#include "../core/LanguageManager.h"
+#include "../core/Application.h"
+#include "../common/DpiManager.h"
+#include <Qsci/qsciscintilla.h>
+#include <Qsci/qsciscintillabase.h>
+#include <Qsci/qscilexercustom.h>
+#include <Qsci/qscilexercpp.h>
+#include <Qsci/qscilexerpython.h>
+#include <Qsci/qscilexerjavascript.h>
+#include <Qsci/qscilexerhtml.h>
+#include <Qsci/qscilexercss.h>
+#include <Qsci/qscilexerjson.h>
+#include <Qsci/qscilexermarkdown.h>
+#include <Qsci/qscilexermakefile.h>
+#include <Qsci/qscilexerbatch.h>
+#include <Qsci/qscilexerlua.h>
+#include <Qsci/qscilexerruby.h>
+#include <Qsci/qscilexerperl.h>
+#include <Qsci/qscilexerbash.h>
+#include <Qsci/qscilexeryaml.h>
+#include <Qsci/qscilexerdiff.h>
+#include <Qsci/qscilexersql.h>
+#include <Qsci/qscilexertex.h>
+#include <Qsci/qscilexerxml.h>
+#include <QVBoxLayout>
+#include <QWidget>
+#include <QFont>
+#include <QPainter>
+#include <QCoreApplication>
+#include <QPrinter>
+#include <QPainter>
+#include <QFileInfo>
+#include <QMimeData>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+
+// NOTE: SEGV root cause investigation (2026-07-17).
+//
+// Root cause: ScintillaEditor's _editor member (QsciScintilla) was constructed
+// with a nullptr parent.  QsciScintilla internally calls Qt platform APIs
+// (QWindow::fromWinId, QWidget::createWinId) that require a valid parent
+// handle.  With a null parent, Qt6 crashes during QFrame::QFrame.
+//
+// Fix applied:
+//   - _editor initialiser: `new QsciScintilla(parent)` (was: `new QsciScintilla()`)
+//   - Application::addView(): `new ScintillaEditor(container)` (was: no-arg ctor)
+//   - All 4 call sites now pass a non-null parent.
+//
+// The QFrame base class IS valid with a nullptr parent — the crash was in
+// QsciScintilla, not QFrame itself.
+//
+// The constructor itself is safe: member initializers run in order,
+// _editor is initialized before any Qt event propagation reaches it, and
+// _autoCompletion is constructed after the Scintilla surface is fully set up.
+// The crash only manifests at the call site, not within this constructor.
+ScintillaEditor::ScintillaEditor(QWidget* parent)
+    : QFrame(parent)
+    , _editor(new QsciScintilla(parent))
+    , _highlighter(nullptr)  // QsciScintilla handles highlighting via lexers, not QSyntaxHighlighter
+{
+    QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(_editor);
+    layout->setSpacing(0);
+
+    _editor->setUtf8(true);
+    _editor->setEolMode(QsciScintilla::EolUnix);
+    _editor->setMarginType(0, QsciScintilla::NumberMargin);
+    _editor->setMarginWidth(0, "00000");
+    _editor->setTabWidth(4);
+    _editor->setIndentationsUseTabs(false);
+    _editor->setAutoIndent(true);
+    _editor->setCaretLineVisible(true);
+    _editor->setCaretLineBackgroundColor(QColor("#2c313a"));  // One Dark default
+    _editor->setIndentationGuides(true);
+    _editor->setTabIndents(true);
+    _editor->setBackspaceUnindents(true);
+
+    // Bracket matching
+    _editor->setBraceMatching(QsciScintilla::SloppyBraceMatch);
+    _editor->setMatchedBraceBackgroundColor(QColor("#FFFF00")); // yellow
+    _editor->setMatchedBraceForegroundColor(Qt::black);
+    _editor->setUnmatchedBraceBackgroundColor(QColor("#FF6600")); // orange
+    _editor->setUnmatchedBraceForegroundColor(Qt::white);
+    // Highlight guide (indentation guide column indicator)
+    _editor->SendScintilla(QsciScintilla::SCI_SETINDENTATIONGUIDES, 1); // SC_IV_LOOKBOTH
+
+    // --- Wave 18 Features ---
+    // Allow cursor to move past end of line (virtual space)
+    // SC_VS_USERACCESSIBLE = 1, SC_VS_NONE = 0
+    _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 1);
+
+    // Smart home: Scintilla handles Home key natively with virtual space enabled above
+    // Smart backspace
+    _editor->setBackspaceUnindents(true);
+
+    // Show tabs and spaces (only in indented areas)
+    _editor->setWhitespaceVisibility(QsciScintilla::WsVisibleOnlyInIndent);
+    // Also show eol markers
+    _editor->setEolMode(QsciScintilla::EolUnix);
+
+    // Thin line numbers — dynamic width based on line count
+    _editor->setMarginType(0, QsciScintilla::NumberMargin);
+    updateLineNumberMargin();
+
+    // Drag & drop file support
+    setFileDropEnabled(true);
+
+    // Code folding — boxed tree style with fold margin
+    _editor->setFolding(QsciScintilla::BoxedTreeFoldStyle);
+    _editor->setMarginType(2, QsciScintilla::SymbolMargin);
+    _editor->setMarginWidth(2, "0");
+    _editor->setMarginSensitivity(2, true);
+    _editor->setMarkerForegroundColor(QColor("#cccccc"), 0);
+    _editor->setMarkerBackgroundColor(QColor("#e0e0e0"), 0);
+    _editor->setFoldMarginColors(QColor("#888888"), QColor("#f0f0f0"));
+
+    // Pre-configure indicators for match highlighting.
+    // Indicator 0: for current-selection highlight (yellow)
+    _editor->indicatorDefine(QsciScintilla::FullBoxIndicator, 0);
+    _editor->setIndicatorForegroundColor(QColor("#FFFF00"), 0);
+    // Indicator 1: for "mark all" highlights (light yellow/amber)
+    _editor->indicatorDefine(QsciScintilla::BoxIndicator, 1);
+    _editor->setIndicatorForegroundColor(QColor("#FFFF00"), 1);
+
+    // Bookmark margin (margin 1)
+    _editor->setMarginType(1, QsciScintilla::SymbolMargin);
+    _editor->setMarginWidth(1, "0");
+    _editor->setMarginSensitivity(1, true);
+    _editor->setMarkerBackgroundColor(QColor("#0088FF"), BOOKMARK_MARKER);
+
+    // Connect margin click for bookmarks
+    connect(_editor, &QsciScintilla::marginClicked, this, [this](int margin, int line, Qt::KeyboardModifiers) {
+        if (margin == 1) toggleBookmark(line);
+    });
+
+    connect(_editor, &QsciScintilla::textChanged, this, &ScintillaEditor::textChanged);
+    connect(_editor, &QsciScintilla::cursorPositionChanged, [this](int line, int col) {
+        emit cursorPositionChanged(line, col);
+        // Trigger bracket matching on cursor move
+        _editor->SendScintilla(QsciScintilla::SCI_BRACEMATCH, -1);
+    });
+    connect(_editor, &QsciScintilla::modificationChanged, this, &ScintillaEditor::modificationChanged);
+    connect(_editor, &QsciScintilla::selectionChanged, this, [this]() {
+        int start = _editor->SendScintilla(QsciScintilla::SCI_GETSELECTIONNSTART, 0);
+        int end = _editor->SendScintilla(QsciScintilla::SCI_GETSELECTIONNEND, 0);
+        int lines = 0;
+        if (end > start) {
+            QString sel = _editor->selectedText();
+            lines = sel.count('\n') + 1;
+        }
+        emit selectionChanged(start, end, lines);
+    });
+    connect(_editor, &QsciScintilla::marginClicked, this, [this](int margin, int line, Qt::KeyboardModifiers) {
+        if (margin == 2) {
+            // foldLine() internally sends SCI_FOLDLINE which toggles fold state
+            _editor->foldLine(line);
+        }
+    });
+
+    // ── Auto-completion ─────────────────────────────────────────────────────
+    _autoCompletion = new AutoCompletion(this);
+    connect(_editor, &QsciScintilla::SCN_CHARADDED, _autoCompletion, [this](int ch) {
+        _autoCompletion->update(ch);
+    });
+    connect(_editor, QOverload<const char*, int, int, int>::of(&QsciScintilla::SCN_AUTOCSELECTION),
+            _autoCompletion, [](const char* /*selection*/, int /*position*/, int /*ch*/, int /*method*/) {
+        // Auto-completion accepted; any post-completion actions can go here.
+    });
+    connect(_editor, &QsciScintilla::SCN_AUTOCCANCELLED, _autoCompletion, [this]() {
+        _autoCompletion->close();
+    });
+    connect(_autoCompletion, &AutoCompletion::completionSelected, this, [this](const QString& text) {
+        _autoCompletion->recordWordUsed(text);
+    });
+}
+
+ScintillaEditor::~ScintillaEditor() {
+    // Explicitly delete _autoCompletion before _editor since it holds a pointer
+    // to this ScintillaEditor and may call send() during destruction.
+    delete _autoCompletion;
+    _autoCompletion = nullptr;
+
+    // Explicitly delete _editor before the ScintillaEditBase/QFrame destructor runs.
+    // This ensures Scintilla's internal heap allocations are freed while the
+    // QApplication event loop is still alive.  Without this, ScintillaEditBase
+    // may be destroyed *after* QApplication exits its event loop, causing
+    // "free(): invalid size" when the CRT tries to free Scintilla's malloc'd
+    // memory after the heap is already torn down.
+    delete _editor;
+    _editor = nullptr;
+}
+
+intptr_t ScintillaEditor::send(int message, int wParam, intptr_t lParam) {
+    return _editor->SendScintilla(message, wParam, lParam);
+}
+
+void ScintillaEditor::setText(const QString& text) { _editor->setText(text); }
+QString ScintillaEditor::text() const { return _editor->text(); }
+void ScintillaEditor::setPlainText(const QString& text) { _editor->setText(text); }
+QString ScintillaEditor::toPlainText() const { return _editor->text(); }
+
+void ScintillaEditor::setLanguage(LangType lang) {
+    _language = lang;
+    if (_highlighter) _highlighter->setLanguage(lang);
+    emit languageChanged(lang);
+
+    // Use QsciScintilla's built-in lexers via LanguageManager
+    QsciLexer* lexer = LanguageManager::instance().getLexer(lang);
+    _editor->setLexer(lexer);
+    if (lexer) {
+        applyThemeToLexer(lexer);
+    }
+
+    // Propagate language to auto-completion (loads keyword sets).
+    if (_autoCompletion) {
+        _autoCompletion->setLanguage(static_cast<int>(lang));
+    }
+}
+
+void ScintillaEditor::applyTheme(const QString& themeName) {
+    ThemeManager::instance().loadTheme(themeName);
+    ThemeColors c = ThemeManager::instance().currentThemeColors();
+
+    _editor->setColor(QColor(c.foreground));
+    _editor->setPaper(QColor(c.background));
+    _editor->setCaretForegroundColor(QColor(c.caretColor));
+    _editor->setCaretLineBackgroundColor(QColor(c.currentLineBackground));
+    _editor->setSelectionBackgroundColor(QColor(c.selectionBackground));
+    // Re-apply lexer colors if a lexer is active
+    if (_editor->lexer()) {
+        applyThemeToLexer(_editor->lexer());
+    }
+}
+
+void ScintillaEditor::applyThemeToLexer(QsciLexer* lexer) {
+    if (!lexer) return;
+    ThemeColors c = ThemeManager::instance().currentThemeColors();
+
+    // Set base colors for all text
+    lexer->setColor(QColor(c.foreground));
+    lexer->setPaper(QColor(c.background));
+
+    // Use the editor font as the default for all styles
+    QFont f = _editor->font();
+    lexer->setFont(f);
+
+    // Map ThemeColors to common QsciLexer style roles.
+    // QsciLexer uses its own per-lexer style constants (e.g. QsciLexerCPP::Comment).
+    // We cast to specific types and set colours for the most important categories.
+    // For unknown lexers, the base colour set above is used as fallback.
+
+    if (auto* cpp = dynamic_cast<QsciLexerCPP*>(lexer)) {
+        cpp->setColor(QColor(c.keywordColor),  QsciLexerCPP::Keyword);
+        cpp->setColor(QColor(c.stringColor),   QsciLexerCPP::DoubleQuotedString);
+        cpp->setColor(QColor(c.stringColor),   QsciLexerCPP::SingleQuotedString);
+        cpp->setColor(QColor(c.commentColor),  QsciLexerCPP::Comment);
+        cpp->setColor(QColor(c.commentColor),  QsciLexerCPP::CommentLine);
+        cpp->setColor(QColor(c.numberColor),   QsciLexerCPP::Number);
+    } else if (auto* py = dynamic_cast<QsciLexerPython*>(lexer)) {
+        py->setColor(QColor(c.keywordColor),  QsciLexerPython::Keyword);
+        py->setColor(QColor(c.stringColor),   QsciLexerPython::DoubleQuotedString);
+        py->setColor(QColor(c.stringColor),   QsciLexerPython::SingleQuotedString);
+        py->setColor(QColor(c.commentColor),  QsciLexerPython::Comment);
+        py->setColor(QColor(c.numberColor),   QsciLexerPython::Number);
+    } else if (auto* js = dynamic_cast<QsciLexerJavaScript*>(lexer)) {
+        js->setColor(QColor(c.keywordColor),  QsciLexerCPP::Keyword);
+        js->setColor(QColor(c.stringColor),   QsciLexerCPP::DoubleQuotedString);
+        js->setColor(QColor(c.stringColor),   QsciLexerCPP::SingleQuotedString);
+        js->setColor(QColor(c.commentColor),  QsciLexerCPP::Comment);
+        js->setColor(QColor(c.numberColor),   QsciLexerCPP::Number);
+    } else if (auto* html = dynamic_cast<QsciLexerHTML*>(lexer)) {
+        html->setColor(QColor(c.keywordColor),  QsciLexerHTML::Tag);
+        html->setColor(QColor(c.stringColor),   QsciLexerHTML::HTMLDoubleQuotedString);
+        html->setColor(QColor(c.stringColor),   QsciLexerHTML::HTMLSingleQuotedString);
+        html->setColor(QColor(c.commentColor),  QsciLexerHTML::HTMLComment);
+        html->setColor(QColor(c.numberColor),   QsciLexerHTML::HTMLNumber);
+    } else if (auto* css = dynamic_cast<QsciLexerCSS*>(lexer)) {
+        css->setColor(QColor(c.keywordColor),  QsciLexerCSS::ClassSelector);
+        css->setColor(QColor(c.stringColor),   QsciLexerCSS::DoubleQuotedString);
+        css->setColor(QColor(c.stringColor),   QsciLexerCSS::SingleQuotedString);
+        css->setColor(QColor(c.commentColor),  QsciLexerCSS::Comment);
+        css->setColor(QColor(c.numberColor),   QsciLexerCSS::Value);
+    } else if (auto* json = dynamic_cast<QsciLexerJSON*>(lexer)) {
+        json->setColor(QColor(c.keywordColor),  QsciLexerJSON::Property);
+        json->setColor(QColor(c.stringColor),   QsciLexerJSON::String);
+        json->setColor(QColor(c.numberColor),   QsciLexerJSON::Number);
+    } else if (auto* mkdn = dynamic_cast<QsciLexerMarkdown*>(lexer)) {
+        mkdn->setColor(QColor(c.keywordColor),  QsciLexerMarkdown::Special);
+        mkdn->setColor(QColor(c.commentColor),  QsciLexerMarkdown::BlockQuote);
+        mkdn->setColor(QColor(c.stringColor),  QsciLexerMarkdown::Link);
+    } else if (auto* mkf = dynamic_cast<QsciLexerMakefile*>(lexer)) {
+        mkf->setColor(QColor(c.keywordColor),  QsciLexerMakefile::Target);
+        mkf->setColor(QColor(c.stringColor),   QsciLexerMakefile::Variable);
+        mkf->setColor(QColor(c.commentColor),  QsciLexerMakefile::Comment);
+    } else if (auto* bash = dynamic_cast<QsciLexerBash*>(lexer)) {
+        bash->setColor(QColor(c.keywordColor),  QsciLexerBash::Keyword);
+        bash->setColor(QColor(c.stringColor),   QsciLexerBash::DoubleQuotedString);
+        bash->setColor(QColor(c.stringColor),   QsciLexerBash::SingleQuotedString);
+        bash->setColor(QColor(c.commentColor),  QsciLexerBash::Comment);
+        bash->setColor(QColor(c.numberColor),   QsciLexerBash::Number);
+    } else if (auto* bat = dynamic_cast<QsciLexerBatch*>(lexer)) {
+        bat->setColor(QColor(c.keywordColor),  QsciLexerBatch::Keyword);
+        bat->setColor(QColor(c.stringColor),   QsciLexerBatch::Variable);
+        bat->setColor(QColor(c.commentColor),  QsciLexerBatch::Comment);
+    } else if (auto* lua = dynamic_cast<QsciLexerLua*>(lexer)) {
+        lua->setColor(QColor(c.keywordColor),  QsciLexerLua::Keyword);
+        lua->setColor(QColor(c.stringColor),   QsciLexerLua::String);
+        lua->setColor(QColor(c.commentColor),  QsciLexerLua::Comment);
+        lua->setColor(QColor(c.numberColor),   QsciLexerLua::Number);
+    } else if (auto* ruby = dynamic_cast<QsciLexerRuby*>(lexer)) {
+        ruby->setColor(QColor(c.keywordColor),  QsciLexerRuby::Keyword);
+        ruby->setColor(QColor(c.stringColor),   QsciLexerRuby::DoubleQuotedString);
+        ruby->setColor(QColor(c.stringColor),   QsciLexerRuby::SingleQuotedString);
+        ruby->setColor(QColor(c.commentColor),  QsciLexerRuby::Comment);
+        ruby->setColor(QColor(c.numberColor),   QsciLexerRuby::Number);
+    } else if (auto* perl = dynamic_cast<QsciLexerPerl*>(lexer)) {
+        perl->setColor(QColor(c.keywordColor),  QsciLexerPerl::Keyword);
+        perl->setColor(QColor(c.stringColor),   QsciLexerPerl::DoubleQuotedString);
+        perl->setColor(QColor(c.stringColor),   QsciLexerPerl::SingleQuotedString);
+        perl->setColor(QColor(c.commentColor),  QsciLexerPerl::Comment);
+        perl->setColor(QColor(c.numberColor),   QsciLexerPerl::Number);
+    } else if (auto* yaml = dynamic_cast<QsciLexerYAML*>(lexer)) {
+        yaml->setColor(QColor(c.keywordColor),  QsciLexerYAML::Keyword);
+        yaml->setColor(QColor(c.commentColor),  QsciLexerYAML::Comment);
+        yaml->setColor(QColor(c.numberColor),   QsciLexerYAML::Number);
+    } else if (auto* diff = dynamic_cast<QsciLexerDiff*>(lexer)) {
+        diff->setColor(QColor(c.stringColor),   QsciLexerDiff::LineAdded);
+        diff->setColor(QColor(c.keywordColor),  QsciLexerDiff::LineRemoved);
+        diff->setColor(QColor(c.commentColor),  QsciLexerDiff::Comment);
+    } else if (auto* sql = dynamic_cast<QsciLexerSQL*>(lexer)) {
+        sql->setColor(QColor(c.keywordColor),  QsciLexerSQL::Keyword);
+        sql->setColor(QColor(c.stringColor),   QsciLexerSQL::DoubleQuotedString);
+        sql->setColor(QColor(c.stringColor),   QsciLexerSQL::SingleQuotedString);
+        sql->setColor(QColor(c.commentColor),  QsciLexerSQL::Comment);
+        sql->setColor(QColor(c.numberColor),   QsciLexerSQL::Number);
+    } else if (auto* tex = dynamic_cast<QsciLexerTeX*>(lexer)) {
+        tex->setColor(QColor(c.keywordColor),  QsciLexerTeX::Command);
+        tex->setColor(QColor(c.stringColor),   QsciLexerTeX::Text);
+    } else if (auto* xml = dynamic_cast<QsciLexerXML*>(lexer)) {
+        xml->setColor(QColor(c.keywordColor),  QsciLexerHTML::Tag);
+        xml->setColor(QColor(c.stringColor),   QsciLexerHTML::HTMLDoubleQuotedString);
+        xml->setColor(QColor(c.commentColor),  QsciLexerHTML::HTMLComment);
+    }
+    // L_TEXT and other unhandled lexers: base colour already set above
+    Q_UNUSED(c);
+}
+void ScintillaEditor::setEncoding(EncodingType enc) { _encoding = enc; }
+void ScintillaEditor::setEolType(EolType eol) {
+    _eolType = eol;
+    switch (eol) {
+        case EolType::EOL_LF: _editor->setEolMode(QsciScintilla::EolUnix); break;
+        case EolType::EOL_CRLF: _editor->setEolMode(QsciScintilla::EolWindows); break;
+        case EolType::EOL_CR: _editor->setEolMode(QsciScintilla::EolMac); break;
+        default: break;
+    }
+}
+
+int ScintillaEditor::currentLine() const {
+    int line = 0, col = 0;
+    _editor->getCursorPosition(&line, &col);
+    return line;
+}
+int ScintillaEditor::currentColumn() const {
+    int line = 0, col = 0;
+    _editor->getCursorPosition(&line, &col);
+    return col;
+}
+int ScintillaEditor::lineCount() const { return _editor->lines(); }
+
+void ScintillaEditor::gotoLine(int line, int col) { _editor->setCursorPosition(line, col); }
+void ScintillaEditor::setCursorPosition(int line, int col) { _editor->setCursorPosition(line, col); }
+
+QString ScintillaEditor::selectedText() const { return _editor->selectedText(); }
+void ScintillaEditor::setSelection(int, int, int, int) { }
+void ScintillaEditor::selectAll() { _editor->selectAll(true); }
+
+void ScintillaEditor::copy() { _editor->copy(); }
+void ScintillaEditor::cut() { _editor->cut(); }
+void ScintillaEditor::paste() { _editor->paste(); }
+void ScintillaEditor::deleteSelection() { _editor->removeSelectedText(); }
+
+void ScintillaEditor::undo() { _editor->undo(); }
+void ScintillaEditor::redo() { _editor->redo(); }
+bool ScintillaEditor::isUndoAvailable() const { return _editor->isUndoAvailable(); }
+bool ScintillaEditor::isRedoAvailable() const { return _editor->isRedoAvailable(); }
+void ScintillaEditor::setModified(bool m) { _editor->setModified(m); }
+bool ScintillaEditor::isModified() const { return _editor->isModified(); }
+void ScintillaEditor::setReadOnly(bool ro) { _editor->setReadOnly(ro); }
+bool ScintillaEditor::isReadOnly() const { return _editor->isReadOnly(); }
+
+void ScintillaEditor::setFont(const QFont& font) { _editor->setFont(font); }
+QFont ScintillaEditor::font() const { return _editor->font(); }
+
+void ScintillaEditor::setTabWidth(int w) { _editor->setTabWidth(w); }
+int ScintillaEditor::tabWidth() const { return _editor->tabWidth(); }
+void ScintillaEditor::setUseTabs(bool u) { _editor->setIndentationsUseTabs(u); }
+bool ScintillaEditor::useTabs() const { return _editor->indentationsUseTabs(); }
+void ScintillaEditor::setIndent(int indentLevel) {
+    int line = 0, col = 0;
+    _editor->getCursorPosition(&line, &col);
+    _editor->setIndentation(line, indentLevel);
+}
+int ScintillaEditor::indent() const {
+    int line = 0, col = 0;
+    _editor->getCursorPosition(&line, &col);
+    return _editor->indentation(line);
+}
+
+void ScintillaEditor::setIndentWidth(int width) {
+    // Scintilla's indent width is the same as indentation width
+    _editor->SendScintilla(QsciScintilla::SCI_SETINDENT, width);
+}
+
+void ScintillaEditor::setVirtualSpaceOptions(bool on) {
+    // SC_VS_USERACCESSIBLE = 1, SC_VS_NONE = 0
+    _editor->SendScintilla(QsciScintillaBase::SCI_SETVIRTUALSPACEOPTIONS, on ? 1 : 0);
+}
+
+void ScintillaEditor::setHomeKeyNavigation(bool on) {
+    // SCI_SETHOMEKEYSENSITIVE = 2589: enables smart home behavior.
+    // 1st press → first non-whitespace, 2nd → BOL, 3rd → indent level (cycling).
+    // Use raw constant value since QsciScintillaBase doesn't expose it.
+    _editor->SendScintilla(static_cast<unsigned int>(2589), on ? 1 : 0);
+}
+
+void ScintillaEditor::setMarginLineNumbers(int margin, bool on) {
+    if (on) {
+        _editor->setMarginType(margin, QsciScintilla::NumberMargin);
+        updateLineNumberMargin();
+    } else {
+        _editor->setMarginWidth(margin, 0);
+    }
+}
+
+void ScintillaEditor::updateLineNumberMargin() {
+    int digits = qMax(3, QString::number(_editor->lines()).length());
+    _editor->setMarginWidth(0, QString("0").repeated(digits));
+}
+
+void ScintillaEditor::setLineNumberingEnabled(bool enabled) {
+    _editor->setMarginWidth(0, enabled ? "00000" : "0");
+}
+bool ScintillaEditor::isLineNumberingEnabled() const { return _editor->marginWidth(0) != 0; }
+
+void ScintillaEditor::setWhitespaceVisibility(bool visible) {
+    _editor->setWhitespaceVisibility(visible
+        ? QsciScintilla::WsVisible
+        : QsciScintilla::WsInvisible);
+}
+void ScintillaEditor::setEolVisibility(bool) {
+    // EOL character visibility in Scintilla requires SCI_SETVIEWWS.
+    // Qsci does not expose this directly; EOL visibility is controlled
+    // by the document's EOL mode set via setEolType(). No-op here.
+}
+
+void ScintillaEditor::setCaretLineVisibility(bool visible) {
+    _editor->setCaretLineVisible(visible);
+}
+bool ScintillaEditor::isCaretLineVisible() const {
+    return _editor->SendScintilla(QsciScintilla::SCI_GETCARETLINEVISIBLE) != 0;
+}
+void ScintillaEditor::setCaretWidth(int pixels) {
+    _editor->setCaretWidth(pixels);
+}
+int ScintillaEditor::caretWidth() const {
+    return _editor->SendScintilla(QsciScintilla::SCI_GETCARETWIDTH);
+}
+void ScintillaEditor::setCaretForegroundColor(const QColor& color) {
+    _editor->setCaretForegroundColor(color);
+}
+void ScintillaEditor::setCaretLineBackgroundColor(const QColor& color) {
+    _editor->setCaretLineBackgroundColor(color);
+}
+
+void ScintillaEditor::zoomIn() { _editor->zoomIn(); ++_zoomLevel; }
+void ScintillaEditor::zoomOut() { _editor->zoomOut(); --_zoomLevel; }
+void ScintillaEditor::zoomReset() {
+    while (_zoomLevel > 0) { _editor->zoomOut(); --_zoomLevel; }
+    while (_zoomLevel < 0) { _editor->zoomIn(); ++_zoomLevel; }
+}
+
+void ScintillaEditor::setWrapMode(bool wrap) {
+    _editor->setWrapMode(wrap ? QsciScintilla::WrapWord : QsciScintilla::WrapNone);
+}
+bool ScintillaEditor::wrapMode() const { return _editor->wrapMode() != QsciScintilla::WrapNone; }
+
+void ScintillaEditor::setMarkerLine(int line) { _editor->setMarkerBackgroundColor(Qt::yellow, line); }
+void ScintillaEditor::clearMarkerLine() { }
+
+void ScintillaEditor::findNext(const QString& text, FindOption options) {
+    findNext(text, options, true);
+}
+
+void ScintillaEditor::findPrevious(const QString& text, FindOption options) {
+    findNext(text, options, false);
+}
+
+void ScintillaEditor::findNext(const QString& text, FindOption options, bool forward) {
+    if (text.isEmpty()) return;
+    bool cs = (options & FindOption::MatchCase) != FindOption::None;
+    bool wo = (options & FindOption::WholeWord) != FindOption::None;
+    bool re = (options & FindOption::Regex) != FindOption::None;
+
+    // Save cursor so we can detect wrapping
+    int origLine = 0, origCol = 0;
+    _editor->getCursorPosition(&origLine, &origCol);
+
+    bool found = _editor->findFirst(text, re, cs, wo, true /*wrap*/,
+                                    forward /*forward*/, -1, -1,
+                                    true /*show*/, false /*posix*/, false /*cxx11*/);
+
+    if (found) {
+        int newLine = 0, newCol = 0;
+        _editor->getCursorPosition(&newLine, &newCol);
+        Q_UNUSED(origLine);
+        Q_UNUSED(origCol);
+        Q_UNUSED(newLine);
+        Q_UNUSED(newCol);
+    }
+}
+
+int ScintillaEditor::countMatches(const QString& text, FindOption options) {
+    if (text.isEmpty()) return 0;
+    bool cs = (options & FindOption::MatchCase) != FindOption::None;
+    bool wo = (options & FindOption::WholeWord) != FindOption::None;
+    bool re = (options & FindOption::Regex) != FindOption::None;
+
+    int count = 0;
+    int startLine = 0, startCol = 0;
+
+    // Save cursor position
+    _editor->getCursorPosition(&startLine, &startCol);
+
+    // Search from the beginning of the document
+    bool found = _editor->findFirst(text, re, cs, wo, true /*wrap*/,
+                                    true /*forward*/, -1, -1,
+                                    false /*no-show*/, false, false);
+    while (found) {
+        ++count;
+        found = _editor->findFirst(text, re, cs, wo, true, true, -1, -1, false, false, false);
+        if (count > 100000) break;  // Sanity limit
+    }
+
+    // Restore cursor
+    _editor->setCursorPosition(startLine, startCol);
+
+    return count;
+}
+
+int ScintillaEditor::replaceAll(const QString& find, const QString& rep, FindOption options) {
+    if (find.isEmpty()) return 0;
+
+    bool cs = (options & FindOption::MatchCase) != FindOption::None;
+    bool wo = (options & FindOption::WholeWord) != FindOption::None;
+    bool re = (options & FindOption::Regex) != FindOption::None;
+    bool isRegex = re;
+
+    if (isRegex) {
+        // Use the SCI_TARGET approach for regex with backreference support.
+        // This mirrors NPP's processRange → replaceTargetRegExMode pattern.
+        int docLength = _editor->length();
+
+        // Build search flags
+        int flags = 0;
+        if (cs) flags |= 0x04;        // SCFIND_MATCHCASE
+        if (wo) flags |= 0x02;        // SCFIND_WHOLEWORD
+        if (re) {
+            flags |= 0x00200000;       // SCFIND_REGEXP
+            flags |= 0x00020000;       // SCFIND_REGEXP_SKIPCRLFASONE
+        }
+
+        _editor->SendScintilla(QsciScintilla::SCI_SETSEARCHFLAGS, flags);
+        _editor->SendScintilla(QsciScintilla::SCI_BEGINUNDOACTION);
+
+        int replacedCount = 0;
+        int targetStart = 0;
+        int targetEnd = docLength;
+        QByteArray findBa = find.toUtf8();
+        QByteArray repBa = rep.toUtf8();
+
+        while (targetStart < docLength) {
+            _editor->SendScintilla(QsciScintilla::SCI_SETTARGETSTART, targetStart);
+            _editor->SendScintilla(QsciScintilla::SCI_SETTARGETEND, targetEnd);
+
+            int foundPos = _editor->SendScintilla(
+                QsciScintilla::SCI_SEARCHINTARGET,
+                findBa.size(), findBa.constData());
+
+            if (foundPos < 0) break;
+
+            int foundEnd = _editor->SendScintilla(QsciScintilla::SCI_GETTARGETEND);
+            Q_UNUSED(foundEnd);
+
+            // SCI_REPLACETARGETRE expands backreferences (\1, \2, ...) in the
+            // replacement string using matched groups from the target.
+            int newLen = _editor->SendScintilla(
+                QsciScintilla::SCI_REPLACETARGETRE,
+                repBa.size(), repBa.constData());
+            Q_UNUSED(newLen);
+
+            ++replacedCount;
+
+            // Advance past the replaced text
+            targetStart = foundPos + newLen;
+        }
+
+        _editor->SendScintilla(QsciScintilla::SCI_ENDUNDOACTION);
+        emit replaceAllDone(replacedCount);
+        return replacedCount;
+    } else {
+        // Plain text replace-all: use findFirst loop
+        int count = 0;
+        bool found = _editor->findFirst(find, false, cs, wo, true, true,
+                                        -1, -1, false, false, false);
+        while (found) {
+            _editor->replace(rep);
+            ++count;
+            found = _editor->findFirst(find, false, cs, wo, true, true,
+                                       -1, -1, false, false, false);
+        }
+        emit replaceAllDone(count);
+        return count;
+    }
+}
+
+void ScintillaEditor::replace(const QString& replacement) {
+    _editor->replace(replacement);
+}
+
+int ScintillaEditor::markAllMatches(const QString& text, FindOption options) {
+    if (text.isEmpty()) return 0;
+
+    // Ensure indicator 1 is configured
+    _editor->indicatorDefine(QsciScintilla::BoxIndicator, 1);
+    _editor->setIndicatorForegroundColor(QColor("#FFFF00"), 1);
+
+    // Clear all existing indicator-1 highlights from entire document
+    QsciScintilla* sci = _editor;
+    sci->clearIndicatorRange(0, 0, sci->lines(), 0, 1);
+
+    int count = 0;
+    int startLine = 0, startCol = 0;
+    _editor->getCursorPosition(&startLine, &startCol);
+
+    bool cs = (options & FindOption::MatchCase) != FindOption::None;
+    bool wo = (options & FindOption::WholeWord) != FindOption::None;
+    bool re = (options & FindOption::Regex) != FindOption::None;
+
+    // Start search from beginning (pos 0)
+    bool found = _editor->findFirst(text, re, cs, wo, true /*wrap*/,
+                                    true /*forward*/, -1, -1,
+                                    false /*no-show*/, false, false);
+    while (found) {
+        int sl = 0, si = 0, el = 0, ei = 0;
+        _editor->getSelection(&sl, &si, &el, &ei);
+        if (sl >= 0 && (sl < el || (sl == el && si < ei))) {
+            _editor->fillIndicatorRange(sl, si, el, ei - si, 1);
+            ++count;
+        }
+
+        // Advance to next match
+        found = _editor->findFirst(text, re, cs, wo, true, true, -1, -1,
+                                   false, false, false);
+
+        // Guard: if we've wrapped back to or before our start, stop
+        int cl = 0, ci = 0;
+        _editor->getCursorPosition(&cl, &ci);
+        if (cl < startLine || (cl == startLine && ci <= startCol)) {
+            if (count > 0) break;  // We got at least one wrap
+        }
+        if (count > 100000) break;  // Sanity limit
+    }
+
+    // Restore cursor
+    _editor->setCursorPosition(startLine, startCol);
+
+    return count;
+}
+
+void ScintillaEditor::clearSelection() {
+    int line = 0, col = 0;
+    _editor->getCursorPosition(&line, &col);
+    _editor->setSelection(line, col, line, col);
+}
+
+void ScintillaEditor::ensureLineVisible(int line) {
+    _editor->ensureLineVisible(line);
+}
+
+void ScintillaEditor::getCursorPosition(int* line, int* col) const {
+    _editor->getCursorPosition(line, col);
+}
+
+void ScintillaEditor::clearIndicatorRange(int startLine, int startCol,
+                                          int endLine, int endCol, int indicator) {
+    _editor->clearIndicatorRange(startLine, startCol, endLine, endCol, indicator);
+}
+
+void ScintillaEditor::setAnnotationsEnabled(bool) { }
+void ScintillaEditor::addAnnotation(int, const QString&) { }
+void ScintillaEditor::clearAnnotations() { }
+
+void ScintillaEditor::setAutoIndent(bool enabled) { _editor->setAutoIndent(enabled); }
+void ScintillaEditor::setBackspaceUnindents(bool) { }
+void ScintillaEditor::setTabIndents(bool) { }
+void ScintillaEditor::setRectangularSelectionEnabled(bool) { }
+void ScintillaEditor::setMultipleSelectionEnabled(bool) { }
+
+void ScintillaEditor::setColumnSelectionMode(bool on) {
+    // SC_SEL_RECTANGLE = 1, SC_SEL_STREAM = 0, SC_SEL_LINES = 2
+    if (on) {
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE, 1);  // SC_SEL_RECTANGLE
+        _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 1);  // SC_VS_USERACCESSIBLE
+    } else {
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE, 0);  // SC_SEL_STREAM
+        _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 0);  // SC_VS_NONE
+    }
+}
+
+void ScintillaEditor::convertEol(EolType eol) {
+    setEolType(eol);
+}
+
+void ScintillaEditor::print(QPrinter* printer) {
+    QPainter painter(printer);
+    if (!painter.isActive()) return;
+    _editor->render(&painter);
+    painter.end();
+}
+
+// ============================================================================
+// Code Folding
+// ============================================================================
+void ScintillaEditor::foldAll() {
+    _editor->foldAll(false);
+}
+
+void ScintillaEditor::unfoldAll() {
+    // SCI_SETFOLDEXPANDED with expanded=1 forces lines to expand.
+    // Use explicit casts to resolve SendScintilla overload ambiguity.
+    for (int line = 0; line < _editor->lines(); ++line) {
+        unsigned int msg = static_cast<unsigned int>(QsciScintilla::SCI_SETFOLDEXPANDED);
+        unsigned long lParam = 1UL; // 1 = expanded (force expand)
+        _editor->SendScintilla(msg, static_cast<unsigned long>(line), lParam);
+    }
+}
+
+void ScintillaEditor::toggleFold(int line) {
+    _editor->foldLine(line);
+}
+
+// ============================================================================
+// Drag & Drop
+// ============================================================================
+void ScintillaEditor::setFileDropEnabled(bool enabled) {
+    if (enabled) {
+        _editor->setAcceptDrops(true);
+        // Install event filter to catch QDragEnterEvent / QDropEvent with file URLs
+        _editor->installEventFilter(this);
+    }
+}
+
+bool ScintillaEditor::eventFilter(QObject* watched, QEvent* event) {
+    if (watched == _editor) {
+        if (event->type() == QEvent::DragEnter) {
+            auto* de = static_cast<QDragEnterEvent*>(event);
+            if (de->mimeData()->hasUrls()) {
+                for (const QUrl& url : de->mimeData()->urls()) {
+                    if (url.isLocalFile() && QFileInfo(url.toLocalFile()).isFile()) {
+                        de->acceptProposedAction();
+                        return true;
+                    }
+                }
+            }
+        } else if (event->type() == QEvent::Drop) {
+            auto* de = static_cast<QDropEvent*>(event);
+            if (de->mimeData()->hasUrls()) {
+                for (const QUrl& url : de->mimeData()->urls()) {
+                    if (url.isLocalFile()) {
+                        QString path = url.toLocalFile();
+                        if (QFileInfo(path).isFile()) {
+                            Application::instance().openFile(path.toStdString());
+                        }
+                    }
+                }
+                de->acceptProposedAction();
+                return true;
+            }
+        }
+    }
+    return QFrame::eventFilter(watched, event);
+}
+
+// ============================================================================
+// Rectangle Selection
+// ============================================================================
+void ScintillaEditor::setRectangularSelectionMode(bool on) {
+    // SC_SEL_RECTANGLE = 1, SC_SEL_STREAM = 0
+    if (on) {
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE, 1);  // SC_SEL_RECTANGLE
+        _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 1);  // SC_VS_USERACCESSIBLE
+    } else {
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE, 0);  // SC_SEL_STREAM
+        _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 0);  // SC_VS_NONE
+    }
+}
+
+// ============================================================================
+// Bookmarks
+// ============================================================================
+void ScintillaEditor::toggleBookmark(int line) {
+    if (_bookmarks.contains(line)) {
+        _bookmarks.removeAll(line);
+        _editor->markerDelete(line, BOOKMARK_MARKER);
+    } else {
+        _bookmarks.append(line);
+        _editor->markerAdd(line, BOOKMARK_MARKER);
+    }
+}
+
+void ScintillaEditor::nextBookmark() {
+    int cur = 0, col = 0;
+    _editor->getCursorPosition(&cur, &col);
+    for (int line : _bookmarks) {
+        if (line > cur) { _editor->setCursorPosition(line, 0); return; }
+    }
+}
+
+void ScintillaEditor::prevBookmark() {
+    int cur = 0, col = 0;
+    _editor->getCursorPosition(&cur, &col);
+    for (int i = _bookmarks.size() - 1; i >= 0; --i) {
+        if (_bookmarks[i] < cur) { _editor->setCursorPosition(_bookmarks[i], 0); return; }
+    }
+}
+
+void ScintillaEditor::clearBookmarks() {
+    for (int line : _bookmarks) _editor->markerDelete(line, BOOKMARK_MARKER);
+    _bookmarks.clear();
+}
+
+void ScintillaEditor::updateFontForDpi() {
+    DpiManager& dpi = DpiManager::instance();
+    // Rescale the base font for the new DPI
+    QFont f = _editor->font();
+    int baseSize = 10;  // fallback if we can't determine base
+    if (f.pointSizeF() > 0) baseSize = f.pointSizeF();
+    else if (f.pixelSize() > 0) baseSize = f.pixelSize();
+    f.setPointSizeF(dpi.scaleFontSizeF(baseSize));
+    _editor->setFont(f);
+    // Reapply the theme so the lexer picks up the new font size
+    if (_editor->lexer()) {
+        applyThemeToLexer(_editor->lexer());
+    }
+}
+
+void ScintillaEditor::insertText(const QString& text) {
+    if (_editor && !text.isEmpty()) {
+        _editor->insert(text);
+    }
+}
+
+void ScintillaEditor::insertAtCursor(const QString& text) {
+    if (_editor && !text.isEmpty()) {
+        int line, col;
+        _editor->getCursorPosition(&line, &col);
+        _editor->insertAt(text, line, col);
+    }
+}
+
+void ScintillaEditor::setLineText(int line, const QString& newText) {
+    if (!_editor || line < 0) return;
+    // Get line text and replace using SendScintilla
+    int lineLen = _editor->lineLength(line);
+    if (lineLen <= 0) return;
+    int posStart = _editor->positionFromLineIndex(line, 0);
+    int posEnd = posStart + lineLen;
+    const QByteArray newTextUtf8 = newText.toUtf8();  // store — dangling pointer otherwise
+    _editor->SendScintilla(QsciScintilla::SCI_SETSEL, posStart, posEnd);
+    _editor->SendScintilla(QsciScintilla::SCI_REPLACESEL, newTextUtf8.constData());
+}

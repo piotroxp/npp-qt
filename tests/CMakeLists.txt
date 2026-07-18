@@ -20,7 +20,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Xml PrintSupport Test)
 
 # QScintilla / Scintilla includes (must match main project)
-find_path(SCINTILLA_INCLUDE Qsci/qsciscintilla.h PATHS /usr/include/x86_64-linux-gnu/qt6)
+find_path(SCINTILLA_INCLUDE Qsci/qsciscintilla.h PATHS /usr/include/x86_64-linux-gnu/qt6 /usr/include/qt6)
 set(LEXILLA_INCLUDE "")  # not needed for test targets
 
 set(CTEST_ENVIRONMENT "QT_QPA_PLATFORM=offscreen;LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$ENV{LD_LIBRARY_PATH}")
@@ -63,9 +63,11 @@ add_library(npp-qt-test-lib STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/FileHelper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/Util.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/DpiManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/FileWatcherAdapter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/editor/SyntaxHighlighter.cpp
 )
-target_link_libraries(npp-qt-test-lib PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Xml ${QSCINTILLA_LIBRARY})
+set_target_properties(npp-qt-test-lib PROPERTIES AUTOMOC ON)
+target_link_libraries(npp-qt-test-lib PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Xml Qt6::PrintSupport ${QSCINTILLA_LIBRARY})
 target_include_directories(npp-qt-test-lib PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core
@@ -73,6 +75,11 @@ target_include_directories(npp-qt-test-lib PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/MISC/Common
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/uchardet
     ${SCINTILLA_INCLUDE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/dialogs
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/editor
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/panels
+    /usr/include/x86_64-linux-gnu/qt6  # QtPrintSupport subdirs need qt6 root for #include <QtPrintSupport/...>
 )
 
 # ─── GUI test library (requires Qt6::Widgets/Gui) ─────────────────────────────
@@ -104,6 +111,10 @@ target_include_directories(npp-qt-test-lib-gui PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/MISC/Common
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/uchardet
     ${SCINTILLA_INCLUDE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/dialogs
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/editor
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/panels
     ${LEXILLA_INCLUDE}
 )
 
@@ -118,7 +129,7 @@ endif()
 
 function(add_npp_test_pure NAME)
     add_executable(${NAME} EXCLUDE_FROM_ALL ${ARGN})
-    target_link_libraries(${NAME} PRIVATE Qt6::Core Qt6::Test Qt6::Xml npp-qt-test-lib)
+    target_link_libraries(${NAME} PRIVATE Qt6::Core Qt6::Test Qt6::Xml Qt6::PrintSupport npp-qt-test-lib)
     set_target_properties(${NAME} PROPERTIES
         BUILD_RPATH "/usr/lib/x86_64-linux-gnu"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
@@ -190,6 +201,33 @@ endfunction()
 add_npp_test_pure(npp-test-encoding  TestEncodingDetector.cpp)
 add_npp_test_pure(npp-test-string   TestStringHelper.cpp)
 add_npp_test_pure(npp-test-file     TestFileHelper.cpp)
+
+# ─── FileWatcherAdapter standalone test ─────────────────────────────────────────
+# Compiles FileWatcherAdapter.cpp directly into the test executable,
+# bypassing npp-qt-test-lib (which has pre-existing undefined-ref issues
+# from Application.cpp / ScintillaEditor.cpp cross-dependencies).
+add_executable(npp-test-file-watcher EXCLUDE_FROM_ALL
+    ../src/tests/test_file_watcher.cpp
+    ../src/common/FileWatcherAdapter.cpp
+)
+target_link_libraries(npp-test-file-watcher PRIVATE
+    Qt6::Core Qt6::Test
+)
+set_target_properties(npp-test-file-watcher PROPERTIES
+    AUTOMOC ON
+    AUTORCC OFF
+    AUTOUIC OFF
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+)
+target_include_directories(npp-test-file-watcher PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/common
+    ${CMAKE_BINARY_DIR}/npp-qt_autogen/include
+)
+add_test(NAME npp-test-file-watcher COMMAND npp-test-file-watcher)
+set_tests_properties(npp-test-file-watcher PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_TEST_SUBPROCESS=no;LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+)
 
 add_npp_test_gui(npp-test-lexer     TestLexer.cpp)
 add_npp_test_gui(npp-test-statusbar TestStatusBar.cpp)

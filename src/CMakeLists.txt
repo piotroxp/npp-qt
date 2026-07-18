@@ -52,6 +52,9 @@ file(GLOB_RECURSE UI_SOURCES      "src/ui/*.cpp"          "src/ui/*.h")
 file(GLOB_RECURSE WORKERS_SOURCES "src/workers/*.cpp"     "src/workers/*.h")
 file(GLOB_RECURSE PLUGINS_SOURCES "src/plugins/*.cpp"     "src/plugins/*.h")
 file(GLOB_RECURSE COMMON_SOURCES  "src/common/*.cpp"      "src/common/*.h")
+# GLOB_RECURSE doesn't track new files after initial cmake run — add explicitly
+list(APPEND COMMON_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/common/MenuAdapter.cpp")
+list(APPEND COMMON_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/common/FileWatcherAdapter.cpp")
 
 # MISC/Common and MISC/PluginsManager — canonical home for shared utilities
 file(GLOB_RECURSE MISC_COMMON_SOURCES     "src/MISC/Common/*.cpp"         "src/MISC/Common/*.h")
@@ -153,6 +156,9 @@ add_executable(npp-qt WIN32
     ${HEADERS}
 )
 
+# Enable ShortcutManager integration in ShortcutAdapter (links EditorCommandManager for conflict detection)
+target_compile_definitions(npp-qt PRIVATE NPPQT_HAVE_SHORTCUT_MANAGER)
+
 target_link_libraries(npp-qt
     PRIVATE
         Qt6::Widgets
@@ -192,7 +198,7 @@ target_include_directories(npp-qt PRIVATE
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(npp-qt PRIVATE QT_DEBUG)
+    target_compile_definitions(npp-qt PRIVATE QT_DEBUG NPPQT_HAVE_SHORTCUT_MANAGER)
 endif()
 
 if(WIN32)
