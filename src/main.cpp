@@ -137,6 +137,17 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+    // If no display is available and QT_QPA_PLATFORM is not already set,
+    // fall back to offscreen platform so the binary works in headless/CI environments.
+    // Must happen BEFORE QApplication is constructed (QApplication constructor
+    // calls createEventDispatcher() which aborts if xcb can't connect).
+    if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
+        bool displayAvailable = !qEnvironmentVariableIsEmpty("DISPLAY");
+        if (!displayAvailable) {
+            qputenv("QT_QPA_PLATFORM", "offscreen");
+        }
+    }
+
     // Set application identity
     QCoreApplication::setApplicationName(APP_NAME);
     QCoreApplication::setApplicationVersion(APP_VERSION);
