@@ -120,6 +120,8 @@ set(SOURCES
     src/panels/FunctionListXmlParser.cpp
     src/panels/FileBrowserPanel.cpp
     src/common/DpiManager.cpp
+    src/common/MenuAdapter.cpp
+    src/common/FileWatcherAdapter.cpp
     src/plugins/PluginManager.cpp
     src/common/Util.cpp
     src/common/FileHelper.cpp
@@ -194,6 +196,8 @@ set(HEADERS
     src/common/FileHelper.h
     src/common/StringHelper.h
     src/common/DpiManager.h
+    src/common/MenuAdapter.h
+    src/common/FileWatcherAdapter.h
     src/common/NonCopyable.h
     src/common/Observer.h
     src/common/PathHelper.h

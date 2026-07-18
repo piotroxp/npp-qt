@@ -9,6 +9,7 @@
 #include <csignal>
 #include <iostream>
 #include <chrono>
+#include <QOffscreenSurface>
 
 #include "core/Application.h"
 #include "common/Util.h"
@@ -29,6 +30,55 @@ static std::atomic<bool> g_sigtermReceived{false};
 extern "C" void signalHandler(int sig) {
     if (sig == SIGINT) g_sigintReceived = true;
     if (sig == SIGTERM) g_sigtermReceived = true;
+}
+
+// ============================================================================
+// Headless environment detection
+// Runs a minimal Qt lifecycle probe BEFORE QApplication construction.
+// QCoreApplication is safe to construct without a display — QGuiApplication
+// (via QApplication) is what requires a platform plugin. We attempt to create
+// an offscreen surface; if that throws, no display is available and we force
+// the offscreen platform so QApplication's event-dispatcher init won't abort.
+// ============================================================================
+static void detectHeadlessEnvironment(int argc, char* argv[]) {
+    // Skip if the user has already specified a platform.
+    if (!qgetenv("QT_QPA_PLATFORM").isEmpty()) {
+        return;
+    }
+
+    // The probe must use a fresh QCoreApplication. Attempt to create an
+    // offscreen surface. Qt can throw QException if no display is available.
+    int probeArgc = argc;
+    QCoreApplication* const probeApp = new QCoreApplication(probeArgc, argv);
+
+    bool headless = true;
+    try {
+        QOffscreenSurface probeSurface;
+        probeSurface.setFormat(QSurfaceFormat());
+        probeSurface.create();
+        headless = !probeSurface.isValid();
+        // Destroy surface while app is still alive (screenDestroyed signal
+        // requires a living QCoreApplication).
+        probeSurface.destroy();
+    } catch (const std::exception& e) {
+        qWarning() << "[Notepad--] Display probe caught exception:" << e.what();
+        headless = true;
+    } catch (...) {
+        qWarning() << "[Notepad--] Display probe caught unknown exception.";
+        headless = true;
+    }
+
+    delete probeApp;
+
+    if (headless) {
+        // No display / OpenGL surface available. Force the offscreen platform.
+        // This must be set BEFORE NotepadApp (QApplication subclass) is
+        // constructed, because QApplicationPrivate::createEventDispatcher()
+        // is called inside QApplication's constructor and will abort fatally
+        // on xcb/Wayland when no display is present.
+        qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("offscreen"));
+        qWarning() << "[Notepad--] No display detected. Running in headless mode.";
+    }
 }
 
 // ============================================================================
@@ -137,16 +187,9 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    // If no display is available and QT_QPA_PLATFORM is not already set,
-    // fall back to offscreen platform so the binary works in headless/CI environments.
-    // Must happen BEFORE QApplication is constructed (QApplication constructor
-    // calls createEventDispatcher() which aborts if xcb can't connect).
-    if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
-        bool displayAvailable = !qEnvironmentVariableIsEmpty("DISPLAY");
-        if (!displayAvailable) {
-            qputenv("QT_QPA_PLATFORM", "offscreen");
-        }
-    }
+    // Probe for headless environment and set QT_QPA_PLATFORM=offscreen
+    // before QApplication is constructed.
+    detectHeadlessEnvironment(argc, argv);
 
     // Set application identity
     QCoreApplication::setApplicationName(APP_NAME);
