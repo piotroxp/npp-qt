@@ -103,6 +103,7 @@ public:
 
     /// Whether to auto-show completions as user types.
     void setAutoShow(bool on) { _autoShow = on; }
+    void setConstructionComplete(bool v) { _constructionComplete = v; }
     bool autoShow() const { return _autoShow; }
 
     /// Automatically insert the common prefix of all matches.
@@ -224,6 +225,7 @@ private:
     QVector<CompletionItem> _currentItems;
     QString _currentWord;
     bool _completionActive = false;
+    bool _constructionComplete = false;  // set true after widget is shown (valid QScreen exists)
     int _selectedIndex = -1;
 
     InsertedMatchedChars _insertedMatchedChars;

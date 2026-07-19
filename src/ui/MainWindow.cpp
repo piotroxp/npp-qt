@@ -819,6 +819,34 @@ void MainWindow::onOpenFile() {
 }
 
 void MainWindow::openFileInTab(const QString& path) {
+    // Guard: re-entrancy.  When depth > 0 a nested call means either:
+    //   (a) we are inside a ScintillaEditor constructor (events firing back to
+    //       FileBrowserPanel) — suppress it, OR
+    //   (b) a prior call already handled this file — suppress it.
+    // Use > 0 (NOT > 1) to match onNewFile() and to catch the nested call
+    // that arrives while ScintillaEditor's QFrame construction is in progress.
+    if (_openingFileDepth > 0) return;
+    ++_openingFileDepth;
+    auto depthGuard = qScopeGuard([this]() { --_openingFileDepth; });
+
+    // Immediately disconnect the file-browser signal.  ScintillaEditor's
+    // QFrame constructor triggers widget events (style propagation, font
+    // inheritance, etc.) that bubble to FileBrowserPanel.  Those events are
+    // delivered via postEvent() — asynchronously, AFTER depthGuard has already
+    // reset the counter to 0 — so the depth counter alone cannot block them.
+    // Disconnecting here, before any editor construction, is the only reliable
+    // way to prevent the re-entrant call.
+    QObject::disconnect(_fileBrowserConnection);
+    auto reconnectGuard = qScopeGuard([this]() {
+        _fileBrowserConnection = connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
+            this, [this](const QString& path){
+                if (_openingFileDepth > 0) return;
+                ++_openingFileDepth;
+                auto g = qScopeGuard([this]() { --_openingFileDepth; });
+                openFileInTab(path);
+            });
+    });
+
     // Guard: empty path — reject before touching any subsystem
     if (path.isEmpty()) {
         QMessageBox::warning(this, "Open Error", "File path is empty.");
@@ -852,17 +880,6 @@ void MainWindow::openFileInTab(const QString& path) {
         return;
     }
 
-    // Guard: re-entrancy into ScintillaEditor construction.  ScintillaEditor
-    // is a QFrame; its construction triggers Qt widget events (style propagation,
-    // font inheritance, etc.) that bubble up to parent widgets including
-    // FileBrowserPanel.  If the user double-clicks during construction,
-    // onDoubleClicked fires and re-enters openFileInTab, calling
-    // new ScintillaEditor(_tabWidget) while a prior ScintillaEditor is still
-    // being constructed.  The second ScintillaEditor sees a corrupted parent
-    // pointer, and QWidget::setParent crashes with SEGV.
-    // Fix: skip if re-entrant (depth > 1 means this call is nested).
-    if (_openingFileDepth > 1) return;
-
     auto& appRef = Application::instance();
     BufferID buf = appRef.openFile(path.toStdString());
     if (!buf) {
@@ -873,36 +890,12 @@ void MainWindow::openFileInTab(const QString& path) {
     // Check if already open — switch to existing tab
     if (_bufferToTab.contains(buf)) {
         _tabWidget->setCurrentIndex(_bufferToTab[buf]);
-        QObject::disconnect(_fileBrowserConnection);
-        _fileBrowserConnection = connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
-            this, [this](const QString& path){
-                if (_openingFileDepth > 0) return;
-                ++_openingFileDepth;
-                auto guard = qScopeGuard([this]() { --_openingFileDepth; });
-                openFileInTab(path);
-            });
-        return;
+        return;  // reconnectGuard fires — signal reconnected
     }
 
-    // Disconnect the file browser signal while ScintillaEditor is being
-    // constructed.  ScintillaEditor/QFrame construction triggers Qt widget
-    // events that bubble back to FileBrowserPanel.  postEvent() delivers these
-    // asynchronously AFTER _openingFileDepth has reset to 0, so the depth
-    // counter alone cannot block them.  Disconnecting is the only reliable way.
-    QObject::disconnect(_fileBrowserConnection);
-    auto reconnectGuard = qScopeGuard([this]() {
-        _fileBrowserConnection = connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
-            this, [this](const QString& path){
-                if (_openingFileDepth > 0) return;
-                ++_openingFileDepth;
-                auto guard = qScopeGuard([this]() { --_openingFileDepth; });
-                openFileInTab(path);
-            });
-    });
-
-    // Create editor
+    // Create editor (signal is already disconnected above)
     ScintillaEditor* editor = new ScintillaEditor(_tabWidget);
-    reconnectGuard.dismiss();  // normal completion — no need to reconnect
+    reconnectGuard.dismiss();  // normal completion — signal reconnected by scope guard
 
     // Wire cursor position to status bar
     connect(editor, &ScintillaEditor::cursorPositionChanged,

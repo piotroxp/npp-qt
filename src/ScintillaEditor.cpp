@@ -181,11 +181,13 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     connect(_autoCompletion, &AutoCompletion::completionSelected, this, [this](const QString& text) {
         _autoCompletion->recordWordUsed(text);
     });
+    // Defer to showEvent - we need a valid QScreen
 }
 
 ScintillaEditor::~ScintillaEditor() {
     // Explicitly delete _autoCompletion before _editor since it holds a pointer
     // to this ScintillaEditor and may call send() during destruction.
+    _autoCompletion->setConstructionComplete(false);
     delete _autoCompletion;
     _autoCompletion = nullptr;
 
@@ -887,4 +889,23 @@ void ScintillaEditor::setLineText(int line, const QString& newText) {
     const QByteArray newTextUtf8 = newText.toUtf8();  // store — dangling pointer otherwise
     _editor->SendScintilla(QsciScintilla::SCI_SETSEL, posStart, posEnd);
     _editor->SendScintilla(QsciScintilla::SCI_REPLACESEL, newTextUtf8.constData());
+}
+
+void ScintillaEditor::contextMenuEvent(QContextMenuEvent* event) {
+    // Stub: real implementation is in src/editor/ScintillaEditor.cpp
+    QWidget::contextMenuEvent(event);
+}
+
+void ScintillaEditor::showEvent(QShowEvent* event) {
+    static bool first = true;
+    if (first) {
+        _autoCompletion->setConstructionComplete(true);
+        first = false;
+    }
+    QFrame::showEvent(event);
+}
+
+void ScintillaEditor::hideEvent(QHideEvent* event) {
+    _autoCompletion->setConstructionComplete(false);
+    QFrame::hideEvent(event);
 }

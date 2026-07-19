@@ -192,6 +192,10 @@ signals:
     void replaceAllDone(int count);
     void languageChanged(LangType lang);
 
+protected:
+    void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
+
 private:
     // ---- Context menu ----
     /// Right-click context menu.  Mirrors Win32 TrackPopupMenu() behaviour.

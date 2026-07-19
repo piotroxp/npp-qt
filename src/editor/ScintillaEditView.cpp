@@ -85,6 +85,13 @@ QString ScintillaEditView::getLine(int line) const {
 
 QByteArray ScintillaEditView::getTextRange(int start, int end) const {
     if (!_widget || start >= end) return QByteArray();
+    const int docLen = static_cast<int>(sendCommand(SCI_GETLENGTH, 0, 0));
+    if (docLen <= 0) return QByteArray();
+    // Clamp to document bounds — SCI_GETTEXTRANGE with invalid positions
+    // (e.g. start < 0, end > docLen) triggers QsciScintilla::fatal().
+    start = qBound(0, start, docLen);
+    end   = qBound(0, end,   docLen);
+    if (start >= end) return QByteArray();
 
     struct Sci_TextRange {
         struct Sci_CharacterRange {

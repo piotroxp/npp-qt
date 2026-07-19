@@ -620,7 +620,7 @@ void FileBrowserPanel::onDoubleClicked(const QModelIndex& index) {
     if (path.isEmpty()) {
         qWarning() << "FileBrowserPanel: double-clicked item has empty path, ignoring";
         return;
-    })
+    }
     QFileInfo info = _model->fileInfo(index);
 
     // Only regular files trigger openFileInTab
@@ -755,7 +755,7 @@ void FileBrowserPanel::openReadOnly() {
 }
 
 void FileBrowserPanel::openInNewInstance() {
-    if (!_initialized || !_model || !_treeView) return;)
+    if (!_initialized || !_model || !_treeView) return;
     QModelIndex index = _treeView->currentIndex();
     if (!index.isValid()) return;
     QString path = _model->filePath(index);

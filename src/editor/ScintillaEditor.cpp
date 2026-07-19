@@ -1133,3 +1133,17 @@ void ScintillaEditor::contextMenuEvent(QContextMenuEvent* event) {
     menu->exec(event->globalPos());
     menu->deleteLater();
 }
+
+void ScintillaEditor::showEvent(QShowEvent* event) {
+    static bool first = true;
+    if (first) {
+        _autoCompletion->setConstructionComplete(true);
+        first = false;
+    }
+    QFrame::showEvent(event);
+}
+
+void ScintillaEditor::hideEvent(QHideEvent* event) {
+    _autoCompletion->setConstructionComplete(false);
+    QFrame::hideEvent(event);
+}
