@@ -191,7 +191,8 @@ int main(int argc, char* argv[]) {
     QObject::connect(&signalTimer, &QTimer::timeout, [&app, &signalTimer]() {
         if (g_sigintReceived || g_sigtermReceived) {
             signalTimer.stop();
-            app.quit();
+            std::fflush(stderr);
+            std::_Exit(EXIT_SUCCESS);
         }
     });
     signalTimer.start(500);  // Check every 500ms
@@ -211,15 +212,14 @@ int main(int argc, char* argv[]) {
     if (args.files.empty() && isOffscreen) {
         qDebug() << "[Notepad--] Headless mode: auto-exiting after 5 seconds";
         QTimer::singleShot(5000, &app, [&app]() {
-            qDebug() << "[Notepad--] Headless timeout — exiting via app.quit()";
-            // Use app.quit() to let Qt run its normal shutdown sequence
-            // (destructors fire, closeEvent is called, Application cleans up
-            // _mainWindow before the event loop drains).  This prevents
-            // QApplication::closeAllWindows() from firing closeEvent on a
-            // partially-destroyed MainWindow (heap-use-after-free).
-            // std::_Exit() was previously used to avoid Qt offscreen SEGV on
-            // platform teardown, but it caused the closeEvent crash instead.
-            app.quit();
+            qDebug() << "[Notepad--] Headless timeout — exiting";
+            // Use std::_Exit() to terminate immediately, bypassing Qt's shutdown.
+            // This avoids QApplication::closeAllWindows() → closeEvent being called
+            // on a partially-destroyed MainWindow (_tabWidget freed by deleteChildren),
+            // which causes heap-use-after-free.  The GoToLineDialog double-destroy
+            // is guarded by its own static guard, so std::_Exit() is safe here.
+            std::fflush(stderr);
+            std::_Exit(EXIT_SUCCESS);
         });
     }
 

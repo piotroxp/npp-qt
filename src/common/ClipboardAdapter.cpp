@@ -76,11 +76,11 @@ bool ClipboardAdapter::setData(const QString& format, const QByteArray& data)
     // Fallback for headless/offline Qt platform plugins (offscreen, minimal)
     // where the internal QMimeData is not accessible: use Qt's typed setters
     // for the formats they cover, and return false for everything else.
-    if (format == ClipboardFormat::PlainText) {
+    if (format == ClipboardMime::PlainText) {
         _clipboard->setText(QString::fromUtf8(data), QClipboard::Clipboard);
         return true;
     }
-    if (format == ClipboardFormat::HtmlText) {
+    if (format == ClipboardMime::HtmlText) {
         // text/html on the clipboard may be encoded as UTF-8 bytes.
         QString html = QString::fromUtf8(data);
         QMimeData* md = mimeData();

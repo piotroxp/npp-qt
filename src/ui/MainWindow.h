@@ -163,6 +163,12 @@ private:
     FileBrowserPanel* _fileBrowserPanel = nullptr;
     ClipboardHistoryPanel* _clipboardHistoryPanel = nullptr;
     FunctionListPanel* _funcListPanel = nullptr;
+    QPointer<QDockWidget> _projectDock1 = nullptr;
+    QPointer<QDockWidget> _projectDock2 = nullptr;
+    QPointer<QDockWidget> _projectDock3 = nullptr;
+    QPointer<QWidget> _projectPanel1 = nullptr;
+    QPointer<QWidget> _projectPanel2 = nullptr;
+    QPointer<QWidget> _projectPanel3 = nullptr;
     DocumentMapPanel* _docMapPanel = nullptr;
     IncrementalSearchDialog* _incrementalSearch = nullptr;
 

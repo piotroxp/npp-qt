@@ -649,6 +649,40 @@ void Application::closeAllBuffersExcept(BufferID keepId) {
     }
 }
 
+void Application::closeAllFilesButCurrent() {
+    BufferID active = getActiveBuffer();
+    if (!active || !_fileManager) return;
+    size_t count = _fileManager->getBufferCount();
+    std::vector<BufferID> toClose;
+    for (size_t i = 0; i < count; ++i) {
+        BufferID id = _fileManager->getBufferAt(static_cast<int>(i), 0);
+        if (id && id != active) {
+            // Check if modified and prompt user
+            QString path = _fileManager->getBufferPath(id);
+            if (!path.isEmpty()) {
+                QFileInfo fi(path);
+                QString baseName = fi.fileName();
+                QMessageBox::StandardButton reply = QMessageBox::question(
+                    nullptr, "Notepad--",
+                    QString("Save changes to \"%1\" before closing?").arg(baseName),
+                    QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
+                    QMessageBox::Save
+                );
+                if (reply == QMessageBox::Cancel) {
+                    continue;  // skip this buffer
+                }
+                if (reply == QMessageBox::Save) {
+                    saveFile(id);
+                }
+            }
+            toClose.push_back(id);
+        }
+    }
+    for (BufferID id : toClose) {
+        _fileManager->closeFile(id);
+    }
+}
+
 BufferID Application::newFile(const std::string& encoding) {
     (void)encoding;  // encoding determined by file manager defaults
     return _fileManager->createNewFile();
@@ -1138,6 +1172,8 @@ void Application::onMenuCommand(const QString& cmd) {
     else if (cmd == "file.saveAll") { onSaveAll(); }
     else if (cmd == "file.close") { onCloseFile(); }
     else if (cmd == "file.closeAll") { closeAllFiles(); }
+    else if (cmd == "file.closeAll_BUT_THIS") { closeAllFilesButCurrent(); }
+    else if (cmd == "file.saveAsCopy") { onSaveAsCopy(); }
     else if (cmd == "file.exit") { onExit(); }
     else if (cmd == "file.print") { onPrint(); }
     // Edit
@@ -1151,12 +1187,18 @@ void Application::onMenuCommand(const QString& cmd) {
     else if (cmd == "edit.find") { onFind(); }
     else if (cmd == "edit.replace") { onReplace(); }
     else if (cmd == "edit.goto") { onGotoLine(); }
+    else if (cmd == "edit.copyToClipboard") { onCopyToNamedClipboard(); }
+    else if (cmd == "edit.moveToClipboard") { onMoveToNamedClipboard(); }
+    else if (cmd == "edit.pasteFromClipboard") { onPasteFromNamedClipboard(); }
     // Search
     else if (cmd == "search.findNext") { onFindNext(); }
     else if (cmd == "search.findPrev") { onFindPrev(); }
     else if (cmd == "search.count") { onCount(); }
     else if (cmd == "search.markAll") { onMarkAll(); }
     else if (cmd == "search.findInFiles") { onFindInFiles(); }
+    else if (cmd == "search.replaceInFiles") { onReplaceInFiles(); }
+    else if (cmd == "search.findInProjects") { onFindInProjects(); }
+    else if (cmd == "search.replaceInProjects") { onReplaceInProjects(); }
     else if (cmd == "search.incremental") {
         if (auto* is = _mainWindow ? _mainWindow->incrementalSearch() : nullptr) {
             is->setEditor(_activeEditor);
@@ -1338,6 +1380,44 @@ void Application::onSaveFileAs() {
     }
 }
 
+void Application::onSaveAsCopy() {
+    qDebug() << "[App] Save as copy";
+    BufferID buf = getActiveBuffer();
+    if (!buf) return;
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+
+    // Default directory = current file's directory
+    QString currentPath = _fileManager->getBufferPath(buf);
+    QString defaultDir;
+    if (!currentPath.isEmpty()) {
+        QFileInfo fi(currentPath);
+        defaultDir = fi.absolutePath();
+    }
+    if (defaultDir.isEmpty())
+        defaultDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+
+    QString filePath = QFileDialog::getSaveFileName(
+        nullptr, "Save As Copy", defaultDir,
+        "All Files (*);;Text Files (*.txt);;C/C++ (*.cpp *.h)"
+    );
+    if (filePath.isEmpty()) return;
+
+    // Read current content from editor
+    QString text = ed->text();
+
+    // Write to new path with same encoding via FileManager
+    EncodingType enc = getBufferEncoding(buf);
+    EolType eol = getBufferEol(buf);
+    if (_fileManager->saveFile(filePath, text, enc, eol)) {
+        addToRecentFiles(filePath.toStdString());
+        setStatusBarText(("Saved copy: " + filePath).toStdString().c_str());
+    } else {
+        QMessageBox::warning(nullptr, "Save As Copy",
+            QString("Could not write to:\n%1").arg(filePath));
+    }
+}
+
 void Application::onSaveAll() {
     qDebug() << "[App] Save all";
     int count = getBufferCount();
@@ -1437,6 +1517,48 @@ void Application::onPaste() {
     if (ed) ed->paste();
 }
 
+void Application::onCopyToNamedClipboard() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+    bool ok = false;
+    QString name = QInputDialog::getText(nullptr, "Copy to Named Clipboard",
+        "Clipboard name:", QLineEdit::Normal, QString(), &ok);
+    if (!ok || name.isEmpty()) return;
+    _namedClips[name] = ed->selectedText();
+    setStatusBarText(("Copied to: " + name).toStdString().c_str());
+}
+
+void Application::onMoveToNamedClipboard() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+    bool ok = false;
+    QString name = QInputDialog::getText(nullptr, "Move to Named Clipboard",
+        "Clipboard name:", QLineEdit::Normal, QString(), &ok);
+    if (!ok || name.isEmpty()) return;
+    _namedClips[name] = ed->selectedText();
+    ed->send(SCI_CLEAR);
+    setStatusBarText(("Moved to: " + name).toStdString().c_str());
+}
+
+void Application::onPasteFromNamedClipboard() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+    // Show list of available named clips
+    QStringList keys = _namedClips.keys();
+    if (keys.isEmpty()) {
+        QMessageBox::information(nullptr, "Named Clipboard", "No named clips stored yet.");
+        return;
+    }
+    bool ok = false;
+    QString name = QInputDialog::getItem(nullptr, "Paste from Named Clipboard",
+        "Select clipboard:", keys, 0, false, &ok);
+    if (!ok || name.isEmpty()) return;
+    const QString& text = _namedClips[name];
+    const QByteArray textUtf8 = text.toUtf8();  // store — dangling pointer
+    ed->send(SCI_REPLACESEL, 0, reinterpret_cast<sptr_t>(textUtf8.constData()));
+    setStatusBarText(("Pasted from: " + name).toStdString().c_str());
+}
+
 void Application::onDelete() {
     ScintillaEditor* ed = getActiveEditor();
     if (ed) ed->deleteSelection();
@@ -1497,6 +1619,21 @@ void Application::onFindInFiles() {
     _findInFilesDialog->show();
     _findInFilesDialog->raise();
     _findInFilesDialog->activateWindow();
+}
+
+void Application::onReplaceInFiles() {
+    QMessageBox::information(nullptr, "Project Search",
+        "Replace in Files — working in progress");
+}
+
+void Application::onFindInProjects() {
+    QMessageBox::information(nullptr, "Project Search",
+        "Find in Projects — working in progress");
+}
+
+void Application::onReplaceInProjects() {
+    QMessageBox::information(nullptr, "Project Search",
+        "Replace in Projects — working in progress");
 }
 
 void Application::onCount() {

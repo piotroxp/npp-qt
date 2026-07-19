@@ -349,6 +349,12 @@
 			null
 		],
 		[
+			"/home/node/.openclaw/workspace/npp-qt/src/common/ShortcutAdapter.h",
+			"MU",
+			"2PZEZPHIBF/moc_ShortcutAdapter.cpp",
+			null
+		],
+		[
 			"/home/node/.openclaw/workspace/npp-qt/src/common/StringHelper.h",
 			"MU",
 			"2PZEZPHIBF/moc_StringHelper.cpp",
@@ -827,6 +833,11 @@
 		],
 		[
 			"/home/node/.openclaw/workspace/npp-qt/src/common/MenuAdapter.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/node/.openclaw/workspace/npp-qt/src/common/ShortcutAdapter.cpp",
 			"MU",
 			null
 		],

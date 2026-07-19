@@ -7,15 +7,19 @@
 
 #include "core/EncodingDetector.h"
 #include <cassert>
+#include <QDebug>
 #include <cstring>
+#include <QDebug>
 #include <iostream>
+#include <QDebug>
 #include <vector>
+#include <QDebug>
 
 #define TEST(name) void name()
 #define RUN(name) do { std::cout << #name "... "; name(); std::cout << "OK\n"; } while(0)
-#define ASSERT_EQ(a, b) do { if ((a) != (b)) { std::cerr << "FAILED: " << #a << " != " << #b << "\n"; exit(1); } } while(0)
-#define ASSERT_TRUE(x) do { if (!(x)) { std::cerr << "FAILED: " << #x << " is not true\n"; exit(1); } } while(0)
-#define ASSERT_FALSE(x) do { if (x) { std::cerr << "FAILED: " << #x << " is not false\n"; exit(1); } } while(0)
+#define ASSERT_EQ(a, b) do { if ((a) != (b)) { qWarning() << "FAILED: " << #a << " != " << #b << "\n"; exit(1); } } while(0)
+#define ASSERT_TRUE(x) do { if (!(x)) { qWarning() << "FAILED: " << #x << " is not true\n"; exit(1); } } while(0)
+#define ASSERT_FALSE(x) do { if (x) { qWarning() << "FAILED: " << #x << " is not false\n"; exit(1); } } while(0)
 
 // ============================================================================
 // BOM Detection Tests

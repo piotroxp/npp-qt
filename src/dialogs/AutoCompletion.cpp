@@ -327,7 +327,9 @@ bool AutoCompletion::showAutoComplete(int autocType, bool autoInsert)
     // Guard: on Wayland the widget's window may not have a QScreen yet.
     // QsciScintilla's SCI_AUTOCSHOW internally calls QScreen::availableGeometry()
     // which SEGVs when screen() returns nullptr.
-    if (_pEditView->widget() && !_pEditView->window()) return false;
+    if (QWidget* w = dynamic_cast<QWidget*>(_pEditView->widget())) {
+        if (!w->window() || !w->window()->screen()) return false;
+    }
 
     // Guard: skip if document is empty (prevents QsciScintilla::send with invalid positions)
     const int docLen = static_cast<int>(_pEditView->send(SCI_GETLENGTH));

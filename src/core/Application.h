@@ -350,6 +350,14 @@ public slots:
     void onClearRecentFiles();
     void onDeleteFile();
     void onRenameFile();
+    void onSaveAsCopy();
+    void closeAllFilesButCurrent();
+    void onCopyToNamedClipboard();
+    void onMoveToNamedClipboard();
+    void onPasteFromNamedClipboard();
+    void onFindInProjects();
+    void onReplaceInProjects();
+    void onReplaceInFiles();
 
     // Edit commands
     void onUndo();
@@ -525,6 +533,7 @@ private:
     // Clipboard
     std::vector<std::string> _clipboardHistory;
     static constexpr size_t MAX_CLIPBOARD_HISTORY = 50;
+    QMap<QString, QString> _namedClips;
 
     // Auto-save
     QTimer* _autoSaveTimer = nullptr;

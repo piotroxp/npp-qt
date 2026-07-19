@@ -2,7 +2,6 @@
 
 enable_testing()
 
-# Paths relative to this file (src/tests/)
 set(REL_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
 set(TEST_INC
@@ -14,12 +13,51 @@ set(TEST_INC
     ${REL_ROOT}/uchardet
 )
 
-# Test library — includes all core sources that need Buffer
+# ── MOC generation for Q_OBJECT classes not found by AUTOMOC ───────────────────
+set(MOC_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/moc_gen")
+file(MAKE_DIRECTORY "${MOC_GEN_DIR}")
+
+function(add_moc HDR OUT_NAME)
+    set(MOC_OUT "${MOC_GEN_DIR}/moc_${OUT_NAME}.cpp")
+    add_custom_command(
+        OUTPUT "${MOC_OUT}"
+        COMMAND Qt6::moc ARGS "${REL_ROOT}/${HDR}" -o "${MOC_OUT}"
+        DEPENDS "${REL_ROOT}/${HDR}"
+        COMMENT "Running moc on ${HDR}"
+        VERBATIM
+    )
+    list(APPEND MOC_SOURCES "${MOC_OUT}")
+    set(MOC_SOURCES "${MOC_SOURCES}" PARENT_SCOPE)
+endfunction()
+
+add_moc("core/Application.h" Application)
+add_moc("common/DpiManager.h" DpiManager)
+add_moc("core/ThemeManager.h" ThemeManager)
+add_moc("panels/FileBrowserPanel.h" FileBrowserPanel)
+add_moc("panels/DocumentMapPanel.h" DocumentMapPanel)
+
+# ── Stub library (SHARED so AUTOMOC runs and links moc symbols correctly) ────────
+# Contains: Application/DpiManager/ThemeManager stubs (for MOC vtables) + panel implementations.
+# All panel .cpp files MUST be here (not in test_core) so MOC symbols are in this lib.
+add_library(test_stubs SHARED
+    StubApplication.cpp
+    ${MOC_SOURCES}
+    ${REL_ROOT}/panels/FileBrowserPanel.cpp
+    ${REL_ROOT}/panels/DocumentMapPanel.cpp
+)
+target_include_directories(test_stubs PUBLIC ${TEST_INC} ${QSCINTILLA_INCLUDE_DIR})
+target_link_libraries(test_stubs PUBLIC Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Xml Qt6::PrintSupport)
+target_compile_options(test_stubs PRIVATE -w)
+
+# ── Test library (core sources only — no Q_OBJECT classes) ─────────────────────
 add_library(test_core STATIC
     ${REL_ROOT}/core/Buffer.cpp
     ${REL_ROOT}/core/EncodingDetector.cpp
     ${REL_ROOT}/core/FileManager.cpp
     ${REL_ROOT}/core/LanguageManager.cpp
+    ${REL_ROOT}/core/SessionManager.cpp
+    ${REL_ROOT}/core/MacroManager.cpp
+    ${REL_ROOT}/core/MacroAction.cpp
     ${REL_ROOT}/common/Util.cpp
     ${REL_ROOT}/common/StringHelper.cpp
     ${REL_ROOT}/common/FileHelper.cpp
@@ -27,99 +65,97 @@ add_library(test_core STATIC
     ${REL_ROOT}/common/MenuAdapter.cpp
     ${REL_ROOT}/common/FileWatcherAdapter.cpp
     ${REL_ROOT}/dialogs/LargeFileWarningDialog.cpp
+    ${REL_ROOT}/dialogs/FindInFilesDialog.cpp
+    ${REL_ROOT}/dialogs/FindInFilesWorker.cpp
     ${REL_ROOT}/editor/SyntaxHighlighter.cpp
     ${REL_ROOT}/editor/SyntaxHighlighterImpl.cpp
 )
-target_include_directories(test_core PUBLIC
-    ${TEST_INC}
-    ${QSCINTILLA_INCLUDE_DIR}
-)
-target_link_libraries(test_core PUBLIC
-    Qt6::Core
-    Qt6::Widgets
-    Qt6::Gui
-    ${QSCINTILLA_LIBRARY}
-)
+target_link_libraries(test_core PUBLIC test_stubs Qt6::Core Qt6::Widgets Qt6::Gui ${QSCINTILLA_LIBRARY})
+target_include_directories(test_core PUBLIC ${TEST_INC} ${QSCINTILLA_INCLUDE_DIR})
 target_compile_options(test_core PRIVATE -w)
 
 add_library(test_core_interface INTERFACE)
 target_include_directories(test_core_interface INTERFACE ${TEST_INC})
 
-# EncodingDetector tests
-add_executable(test_encoding_detector ${CMAKE_CURRENT_SOURCE_DIR}/test_encoding_detector.cpp)
+# Helper: tests linking test_core + test_stubs
+macro(add_core_test TARGET)
+    add_executable(${TARGET} ${ARGN})
+    target_include_directories(${TARGET} PRIVATE ${TEST_INC} ${QSCINTILLA_INCLUDE_DIR})
+    target_link_libraries(${TARGET} PRIVATE test_core test_stubs Qt6::Core Qt6::Widgets Qt6::Gui)
+endmacro()
+
+# ── Test executables ───────────────────────────────────────────────────────────
+
+add_executable(test_encoding_detector test_encoding_detector.cpp)
 target_link_libraries(test_encoding_detector PRIVATE test_core)
 add_test(NAME EncodingDetectorTests COMMAND test_encoding_detector)
 
-# StringHelper tests — enabled after fixing string-literal overload ambiguity
-add_executable(test_string_helper ${CMAKE_CURRENT_SOURCE_DIR}/test_string_helper.cpp)
+add_executable(test_string_helper test_string_helper.cpp)
 target_link_libraries(test_string_helper PRIVATE test_core)
 add_test(NAME StringHelperTests COMMAND test_string_helper)
 
-# Buffer/FileManager tests
-add_executable(test_buffer ${CMAKE_CURRENT_SOURCE_DIR}/test_buffer.cpp)
-target_link_libraries(test_buffer PRIVATE test_core)
+add_core_test(test_buffer test_buffer.cpp)
 add_test(NAME BufferTests COMMAND test_buffer)
 
-# SyntaxHighlighter tests — 50-language full implementation
-# Disabled: ${CMAKE_CURRENT_SOURCE_DIR}/test_syntax_highlighter.cpp)
-# Disabled: PRIVATE test_core Qt6::Widgets ${QSCINTILLA_LIBRARY})
-# Disabled: COMMAND test_syntax_highlighter)
-
-# FunctionCallTip tests — disabled: requires Application, DpiManager, ThemeManager, ScintillaEditor
-# (ScintillaEditor pulls in the full Application hierarchy)
-# add_executable(test_functioncalltip ${CMAKE_CURRENT_SOURCE_DIR}/test_functioncalltip.cpp)
-# target_link_libraries(test_functioncalltip PRIVATE test_core Qt6::Widgets ${QSCINTILLA_LIBRARY})
-# add_test(NAME FunctionCallTipTests COMMAND test_functioncalltip)
-
-# AutoCompletion tests — disabled: same reason as FunctionCallTip
-# add_executable(test_autocompletion ${CMAKE_CURRENT_SOURCE_DIR}/test_autocompletion.cpp)
-# target_link_libraries(test_autocompletion PRIVATE test_core Qt6::Widgets ${QSCINTILLA_LIBRARY})
-# add_test(NAME AutoCompletionTests COMMAND test_autocompletion)
-
-# IncrementalSearchDialog tests — disabled: requires ScintillaEditor
-# add_executable(test_incremental_search ${CMAKE_CURRENT_SOURCE_DIR}/test_incremental_search.cpp)
-# target_link_libraries(test_incremental_search PRIVATE test_core Qt6::Widgets ${QSCINTILLA_LIBRARY})
-# add_test(NAME IncrementalSearchDialogTests COMMAND test_incremental_search)
-
-# MenuAdapter / context menu tests — standalone: only MenuAdapter, no Buffer/FileWatcherAdapter
-add_executable(test_menus
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_menus.cpp
-    ${REL_ROOT}/common/MenuAdapter.cpp
-)
+add_executable(test_menus test_menus.cpp ${REL_ROOT}/common/MenuAdapter.cpp)
 target_include_directories(test_menus PRIVATE ${TEST_INC})
 target_link_libraries(test_menus PRIVATE Qt6::Widgets Qt6::Core)
 add_test(NAME MenuTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_menus>)
 set_tests_properties(MenuTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
-# ShortcutAdapter tests — RegisterHotKey → QShortcut adapter (Win32 → Linux/X11)
-# Note: ShortcutAdapter.cpp is compiled directly here so the test binary is self-contained
-# and does NOT link against test_core (which has pre-existing failures in ClipboardAdapter).
 add_executable(test_shortcuts
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_shortcuts.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common/ShortcutAdapter.cpp   # provides ShortcutAdapter symbol definitions
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common/ShortcutAdapter.h     # header for ShortcutAdapter
+    test_shortcuts.cpp
+    ${REL_ROOT}/common/ShortcutAdapter.cpp
+    ${REL_ROOT}/common/ShortcutAdapter.h
 )
 target_compile_definitions(test_shortcuts PRIVATE NPPQT_HAVE_SHORTCUT_MANAGER)
 target_link_libraries(test_shortcuts PRIVATE Qt6::Widgets Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME ShortcutAdapterTests COMMAND test_shortcuts)
 set_tests_properties(ShortcutAdapterTests PROPERTIES
-    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
-)
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}")
 
-# ClipboardAdapter tests
-add_executable(test_clipboard ${CMAKE_CURRENT_SOURCE_DIR}/test_clipboard.cpp)
-target_link_libraries(test_clipboard PRIVATE test_core)
-add_test(NAME ClipboardAdapterTests COMMAND test_clipboard)
-
-# FileWatcherAdapter tests
 add_executable(test_file_watcher
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_file_watcher.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common/FileWatcherAdapter.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common/FileWatcherAdapter.h
+    test_file_watcher.cpp
+    ${REL_ROOT}/common/FileWatcherAdapter.cpp
+    ${REL_ROOT}/common/FileWatcherAdapter.h
 )
 target_link_libraries(test_file_watcher PRIVATE Qt6::Widgets Qt6::Core Qt6::Gui Qt6::Test)
 add_test(NAME FileWatcherAdapterTests COMMAND test_file_watcher)
 
-# Both tests need offscreen Qt platform plugin (no display in CI)
-set_tests_properties(ClipboardAdapterTests FileWatcherAdapterTests
-    PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+add_core_test(test_clipboard test_clipboard.cpp)
+add_test(NAME ClipboardAdapterTests COMMAND test_clipboard)
+
+# 8 new test executables
+add_core_test(test_sessions test_sessions.cpp)
+add_test(NAME SessionTests COMMAND test_sessions)
+set_tests_properties(SessionTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_core_test(test_macros test_macros.cpp)
+add_test(NAME MacroTests COMMAND test_macros)
+set_tests_properties(MacroTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_core_test(test_findinfiles test_findinfiles.cpp)
+add_test(NAME FindInFilesTests COMMAND test_findinfiles)
+set_tests_properties(FindInFilesTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_core_test(test_clipboard_manager test_clipboard_manager.cpp)
+add_test(NAME NamedClipboardTests COMMAND test_clipboard_manager)
+set_tests_properties(NamedClipboardTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(test_snippets test_snippets.cpp)
+target_include_directories(test_snippets PRIVATE ${TEST_INC})
+target_link_libraries(test_snippets PRIVATE Qt6::Core Qt6::Widgets)
+add_test(NAME SnippetTests COMMAND test_snippets)
+set_tests_properties(SnippetTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_core_test(test_project_panels test_project_panels.cpp)
+add_test(NAME ProjectPanelTests COMMAND test_project_panels)
+set_tests_properties(ProjectPanelTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_core_test(test_document_map test_document_map.cpp)
+add_test(NAME DocumentMapTests COMMAND test_document_map)
+set_tests_properties(DocumentMapTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_core_test(test_close_all_but test_close_all_but.cpp)
+add_test(NAME CloseAllButTests COMMAND test_close_all_but)
+set_tests_properties(CloseAllButTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

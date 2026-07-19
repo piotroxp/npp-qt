@@ -23,6 +23,7 @@
 #include "../common/DpiManager.h"
 #include <Qsci/qsciscintilla.h>
 #include <QTabWidget>
+#include <QPointer>
 #include <QVBoxLayout>
 #include <QFileDialog>
 #include <QScopeGuard>
@@ -277,6 +278,21 @@ void MainWindow::createActions() {
     docMapAction->setCheckable(true);
     docMapAction->setChecked(true);
     _actions["view.documentMap"] = docMapAction;
+
+    QAction* projPanel1Action = new QAction("&Project Panel 1", this);
+    projPanel1Action->setCheckable(true);
+    projPanel1Action->setChecked(false);
+    _actions["view.projectPanel_1"] = projPanel1Action;
+
+    QAction* projPanel2Action = new QAction("Project P&anel 2", this);
+    projPanel2Action->setCheckable(true);
+    projPanel2Action->setChecked(false);
+    _actions["view.projectPanel_2"] = projPanel2Action;
+
+    QAction* projPanel3Action = new QAction("Project Pan&el 3", this);
+    projPanel3Action->setCheckable(true);
+    projPanel3Action->setChecked(false);
+    _actions["view.projectPanel_3"] = projPanel3Action;
     
     // Encoding actions
     QAction* convUtf8Action = new QAction("Convert to &UTF-8", this);
@@ -382,6 +398,51 @@ void MainWindow::createPanels() {
     _app->setFileBrowserPanel(_fileBrowserPanel);
     _app->setFunctionListPanel(_funcListPanel);
     _app->setDocumentMapPanel(_docMapPanel);
+
+    // Project Panel 1 (left dock, stacked with File Browser)
+    _projectPanel1 = new QWidget();
+    _projectPanel1->setObjectName("ProjectPanel1");
+    auto* layout1 = new QVBoxLayout(_projectPanel1);
+    layout1->setContentsMargins(0, 0, 0, 0);
+    auto* tree1 = new QTreeWidget();
+    tree1->setHeaderLabel("Project Files");
+    layout1->addWidget(tree1);
+    _projectDock1 = new QDockWidget("Project 1", this);
+    _projectDock1->setObjectName("ProjectDock1");
+    _projectDock1->setWidget(_projectPanel1);
+    addDockWidget(Qt::LeftDockWidgetArea, _projectDock1);
+    tabifyDockWidget(_fileBrowserDock, _projectDock1);
+    _projectDock1->setVisible(false);
+
+    // Project Panel 2 (left dock, hidden initially)
+    _projectPanel2 = new QWidget();
+    _projectPanel2->setObjectName("ProjectPanel2");
+    auto* layout2 = new QVBoxLayout(_projectPanel2);
+    layout2->setContentsMargins(0, 0, 0, 0);
+    auto* tree2 = new QTreeWidget();
+    tree2->setHeaderLabel("Project Files");
+    layout2->addWidget(tree2);
+    _projectDock2 = new QDockWidget("Project 2", this);
+    _projectDock2->setObjectName("ProjectDock2");
+    _projectDock2->setWidget(_projectPanel2);
+    addDockWidget(Qt::LeftDockWidgetArea, _projectDock2);
+    tabifyDockWidget(_projectDock1, _projectDock2);
+    _projectDock2->setVisible(false);
+
+    // Project Panel 3 (left dock, hidden initially)
+    _projectPanel3 = new QWidget();
+    _projectPanel3->setObjectName("ProjectPanel3");
+    auto* layout3 = new QVBoxLayout(_projectPanel3);
+    layout3->setContentsMargins(0, 0, 0, 0);
+    auto* tree3 = new QTreeWidget();
+    tree3->setHeaderLabel("Project Files");
+    layout3->addWidget(tree3);
+    _projectDock3 = new QDockWidget("Project 3", this);
+    _projectDock3->setObjectName("ProjectDock3");
+    _projectDock3->setWidget(_projectPanel3);
+    addDockWidget(Qt::LeftDockWidgetArea, _projectDock3);
+    tabifyDockWidget(_projectDock2, _projectDock3);
+    _projectDock3->setVisible(false);
 }
 
 void MainWindow::setupConnections() {
@@ -390,6 +451,7 @@ void MainWindow::setupConnections() {
     
     // Connect toolbar commands
     connect(_toolBar, &ToolBar::toolBarCommand, this, &MainWindow::onToolBarCommand);
+    connect(&app(), &Application::bufferOpened, this, &MainWindow::onBufferOpened);
 }
 
 void MainWindow::updateRecentFilesMenu() {
@@ -612,6 +674,15 @@ void MainWindow::dispatchCommand(const QString& cmd) {
         if (auto* panel = app().documentMapPanel())
             panel->setVisible(_actions["view.documentMap"]->isChecked());
     }
+    else if (cmd == "view.projectPanel_1") {
+        if (_projectDock1) _projectDock1->setVisible(_actions["view.projectPanel_1"]->isChecked());
+    }
+    else if (cmd == "view.projectPanel_2") {
+        if (_projectDock2) _projectDock2->setVisible(_actions["view.projectPanel_2"]->isChecked());
+    }
+    else if (cmd == "view.projectPanel_3") {
+        if (_projectDock3) _projectDock3->setVisible(_actions["view.projectPanel_3"]->isChecked());
+    }
     // Tab navigation commands (Ctrl+1..Ctrl+8, Ctrl+PgUp/PgDown)
     else if (cmd == "tab.1") { switchToTab(0); }
     else if (cmd == "tab.2") { switchToTab(1); }
@@ -657,8 +728,8 @@ void MainWindow::dispatchCommand(const QString& cmd) {
     else if (cmd == "macro.stop") {
         qInfo() << "[MainWindow] macro.stop -- not yet wired";
     }
-    else if (cmd == "macro.play") {
-        qInfo() << "[MainWindow] macro.play -- not yet wired";
+    else if (cmd == "macro.playback") {
+        qInfo() << "[MainWindow] macro.playback";
     }
     else if (cmd == "tools.run") {
         _app->onRun();
@@ -1546,12 +1617,11 @@ void MainWindow::onTabContextMenu(const QPoint& pos) {
 
 // Drag and drop
 void MainWindow::closeEvent(QCloseEvent* event) {
-    // Guard: snapshot the pointers before any use.  Qt's deleteChildren() during
-    // shutdown can free child widgets (e.g. _tabWidget, _tabBar) while closeEvent
-    // is still running — Qt continues event processing after closeEvent returns.
-    // Reading a dangling pointer (even to read count()) is a heap-use-after-free.
-    // We capture a local copy of _tabWidget and re-check it before every use.
-    QTabWidget* tw = _tabWidget;
+    // Guard: use QPointer so that if _tabWidget is deleted by Qt's deleteChildren()
+    // cascade during this call, tw becomes nullptr and we skip the body safely.
+    // A raw pointer copy (_tabWidget) stays valid even after deletion, causing
+    // heap-use-after-free when accessed after free.
+    QPointer<QTabWidget> tw(_tabWidget);
     if (!tw) {
         event->accept();
         return;

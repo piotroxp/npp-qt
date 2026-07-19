@@ -6,14 +6,19 @@
 #include "core/Buffer.h"
 #include "core/EncodingDetector.h"
 #include <cassert>
+#include <QDebug>
 #include <iostream>
+#include <QDebug>
 #include <fstream>
+#include <QDebug>
 #include <QDir>
+#include <QDebug>
 #include <QFile>
+#include <QDebug>
 
-#define ASSERT_EQ(a, b) do { if ((a) != (b)) { std::cerr << "FAILED: " << #a << " != " << #b << "\n"; exit(1); } } while(0)
-#define ASSERT_TRUE(x) do { if (!(x)) { std::cerr << "FAILED: " << #x << "\n"; exit(1); } } while(0)
-#define ASSERT_FALSE(x) do { if (x) { std::cerr << "FAILED: " << #x << "\n"; exit(1); } } while(0)
+#define ASSERT_EQ(a, b) do { if ((a) != (b)) { qWarning() << "FAILED: " << #a << " != " << #b << "\n"; exit(1); } } while(0)
+#define ASSERT_TRUE(x) do { if (!(x)) { qWarning() << "FAILED: " << #x << "\n"; exit(1); } } while(0)
+#define ASSERT_FALSE(x) do { if (x) { qWarning() << "FAILED: " << #x << "\n"; exit(1); } } while(0)
 
 static void test_file_manager_singleton() {
     FileManager& fm1 = FileManager::instance();

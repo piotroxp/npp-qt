@@ -26,12 +26,12 @@
 // ========================================================================
 
 #define ASSERT_TRUE(x) \
-    do { if (!(x)) { std::cerr << "FAILED: " << #x << " at " << __FILE__ << ":" << __LINE__ << "\n"; exit(1); } } while(0)
+    do { if (!(x)) { qWarning() << "FAILED: " << #x << " at " << __FILE__ << ":" << __LINE__ << "\n"; exit(1); } } while(0)
 #define ASSERT_FALSE(x) \
-    do { if (!!(x)) { std::cerr << "FAILED: " << #x << " at " << __FILE__ << ":" << __LINE__ << "\n"; exit(1); } } while(0)
+    do { if (!!(x)) { qWarning() << "FAILED: " << #x << " at " << __FILE__ << ":" << __LINE__ << "\n"; exit(1); } } while(0)
 #define ASSERT_EQ(a, b) \
     do { auto _a = (a); auto _b = (b); \
-         if (_a != _b) { std::cerr << "FAILED: " << #a << " == " << #b << " at " << __FILE__ << ":" << __LINE__ << "\n"; exit(1); } } while(0)
+         if (_a != _b) { qWarning() << "FAILED: " << #a << " == " << #b << " at " << __FILE__ << ":" << __LINE__ << "\n"; exit(1); } } while(0)
 #define TEST(name) void name()
 #define RUN(name) \
     do { std::cout << #name "... "; name(); std::cout << "OK\n"; } while(0)

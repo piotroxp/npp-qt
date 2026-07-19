@@ -22,35 +22,42 @@
 #include "common/ClipboardAdapter.h"
 #include "clipboardFormats.h"
 #include <QGuiApplication>
+#include <QDebug>
 #include <QClipboard>
+#include <QDebug>
 #include <QImage>
+#include <QDebug>
 #include <QList>
+#include <QDebug>
 #include <QUrl>
+#include <QDebug>
 #include <QStringList>
+#include <QDebug>
 #include <cassert>
-#include <iostream>
+#include <QDebug>
+#include <QDebug>
 
 // ─── Simple test assertions ────────────────────────────────────────────────────
 // Mirrors the pattern used by the other test files in this directory.
 
-#define ASSERT_TRUE(x) do { if (!(x)) { std::cerr << "FAILED: " << #x << "\n"; exit(1); } } while(0)
-#define ASSERT_FALSE(x) do { if (x) { std::cerr << "FAILED: " << #x << " is not false\n"; exit(1); } } while(0)
-#define ASSERT_EQ(a, b) do { if ((a) != (b)) { std::cerr << "FAILED: " << #a << " != " << #b << "\n"; exit(1); } } while(0)
-#define ASSERT_NE(a, b) do { if ((a) == (b)) { std::cerr << "FAILED: " << #a << " == " << #b << "\n"; exit(1); } } while(0)
-#define ASSERT_NULL(x) do { if ((x) != nullptr) { std::cerr << "FAILED: " << #x << " is not nullptr\n"; exit(1); } } while(0)
-#define ASSERT_NOT_NULL(x) do { if ((x) == nullptr) { std::cerr << "FAILED: " << #x << " is nullptr\n"; exit(1); } } while(0)
+#define ASSERT_TRUE(x) do { if (!(x)) { qWarning() << "FAILED: " << #x << "\n"; exit(1); } } while(0)
+#define ASSERT_FALSE(x) do { if (x) { qWarning() << "FAILED: " << #x << " is not false\n"; exit(1); } } while(0)
+#define ASSERT_EQ(a, b) do { if ((a) != (b)) { qWarning() << "FAILED: " << #a << " != " << #b << "\n"; exit(1); } } while(0)
+#define ASSERT_NE(a, b) do { if ((a) == (b)) { qWarning() << "FAILED: " << #a << " == " << #b << "\n"; exit(1); } } while(0)
+#define ASSERT_NULL(x) do { if ((x) != nullptr) { qWarning() << "FAILED: " << #x << " is not nullptr\n"; exit(1); } } while(0)
+#define ASSERT_NOT_NULL(x) do { if ((x) == nullptr) { qWarning() << "FAILED: " << #x << " is nullptr\n"; exit(1); } } while(0)
 #define RUN_TEST(name) \
     do { \
-        std::cerr << "  RUN  " << #name << "... "; \
+        qWarning() << "  RUN  " << #name << "... "; \
         try { \
             name(); \
-            std::cerr << "PASS\n"; \
+            qWarning() << "PASS\n"; \
             ++g_passed; \
         } catch (const std::exception& e) { \
-            std::cerr << "FAIL (" << e.what() << ")\n"; \
+            qWarning() << "FAIL (" << e.what() << ")\n"; \
             ++g_failed; \
         } catch (...) { \
-            std::cerr << "FAIL (unknown)\n"; \
+            qWarning() << "FAIL (unknown)\n"; \
             ++g_failed; \
         } \
     } while(0)
@@ -121,13 +128,13 @@ static void test_set_get_custom_format() {
     // (e.g. offscreen / headless CI environment).  Accept gracefully.
     bool ok = adapter.setData(fmt, data);
     if (!ok) {
-        std::cerr << "  NOTE: setData returned false (headless clipboard backend)\n";
+        qWarning() << "  NOTE: setData returned false (headless clipboard backend)\n";
         return;
     }
     if (adapter.hasFormat(fmt)) {
         ASSERT_EQ(adapter.getData(fmt), data);
     } else {
-        std::cerr << "  NOTE: custom MIME format not propagated (headless/offline platform)\n";
+        qWarning() << "  NOTE: custom MIME format not propagated (headless/offline platform)\n";
     }
 }
 
@@ -164,7 +171,7 @@ static void test_html_set_get() {
         // Full round-trip possible: HTML is preserved by the clipboard backend.
         ASSERT_TRUE(retrievedHtml.contains("world"));
     } else {
-        std::cerr << "  NOTE: HTML not preserved (headless clipboard backend)\n";
+        qWarning() << "  NOTE: HTML not preserved (headless clipboard backend)\n";
         // On headless builds, only plain text companion is available.
         ASSERT_TRUE(adapter.hasFormat(QStringLiteral("text/plain")));
     }
@@ -195,12 +202,12 @@ static void test_image_set_get() {
     img.setPixel(3, 0, 0xFF000000u); // black
     bool ok = adapter.setImage(img);
     if (!ok) {
-        std::cerr << "  NOTE: setImage returned false (headless clipboard backend)\n";
+        qWarning() << "  NOTE: setImage returned false (headless clipboard backend)\n";
         return;
     }
     QImage retrieved = adapter.getImage();
     if (retrieved.isNull()) {
-        std::cerr << "  NOTE: image not propagated (headless clipboard backend)\n";
+        qWarning() << "  NOTE: image not propagated (headless clipboard backend)\n";
         return;
     }
     ASSERT_EQ(retrieved.width(), img.width());
@@ -223,12 +230,12 @@ static void test_urls_set_get() {
     urls.append(QUrl::fromLocalFile(QStringLiteral("/home/user/docs/readme.md")));
     bool ok = adapter.setUrls(urls);
     if (!ok) {
-        std::cerr << "  NOTE: setUrls returned false (headless clipboard backend)\n";
+        qWarning() << "  NOTE: setUrls returned false (headless clipboard backend)\n";
         return;
     }
     QList<QUrl> retrieved = adapter.getUrls();
     if (retrieved.isEmpty()) {
-        std::cerr << "  NOTE: URL list not propagated (headless clipboard backend)\n";
+        qWarning() << "  NOTE: URL list not propagated (headless clipboard backend)\n";
         return;
     }
     ASSERT_TRUE(retrieved.first().isValid());
@@ -252,7 +259,7 @@ static void test_push_pop_empty() {
     // clipboard backend does not expose QMimeData (offscreen plugin).
     bool popped = adapter.popClipboard();
     if (!popped) {
-        std::cerr << "  NOTE: popClipboard returned false (headless clipboard backend)\n";
+        qWarning() << "  NOTE: popClipboard returned false (headless clipboard backend)\n";
     }
     ASSERT_FALSE(adapter.hasPushedState());
 }
@@ -267,7 +274,7 @@ static void test_push_pop_preserves_text() {
     ASSERT_TRUE(adapter.getText().trimmed() == QStringLiteral("corrupted"));
     bool popped = adapter.popClipboard();
     if (!popped) {
-        std::cerr << "  NOTE: popClipboard returned false (headless clipboard backend)\n";
+        qWarning() << "  NOTE: popClipboard returned false (headless clipboard backend)\n";
         // On headless builds, the clipboard cannot be restored — skip assertion.
         return;
     }
@@ -284,7 +291,7 @@ static void test_push_pop_multiple() {
     adapter.setText(QStringLiteral("third"));
     bool popped1 = adapter.popClipboard();
     if (!popped1) {
-        std::cerr << "  NOTE: first popClipboard returned false (headless clipboard backend)\n";
+        qWarning() << "  NOTE: first popClipboard returned false (headless clipboard backend)\n";
         return;
     }
     // On X11 the clipboard may have merged the first and second setText calls
@@ -316,14 +323,14 @@ static void test_clipboard_format_constants() {
 // ─── main ─────────────────────────────────────────────────────────────────────
 
 int main(int argc, char* argv[]) {
-    std::cerr << "\n=== ClipboardAdapter tests ===\n";
+    qWarning() << "\n=== ClipboardAdapter tests ===\n";
 
     // QGuiApplication is needed for QClipboard.
     QGuiApplication app(argc, argv);
 
     // Verify clipboard is accessible.
     if (!QGuiApplication::clipboard()) {
-        std::cerr << "ERROR: QGuiApplication::clipboard() returned nullptr\n";
+        qWarning() << "ERROR: QGuiApplication::clipboard() returned nullptr\n";
         return 1;
     }
 
@@ -349,7 +356,7 @@ int main(int argc, char* argv[]) {
     RUN_TEST(test_pop_empty_stack_returns_false);
     RUN_TEST(test_clipboard_format_constants);
 
-    std::cerr << "\nResults: " << g_passed << " passed, " << g_failed << " failed\n";
+    qWarning() << "\nResults: " << g_passed << " passed, " << g_failed << " failed\n";
     return g_failed > 0 ? 1 : 0;
 }
 

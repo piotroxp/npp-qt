@@ -5,16 +5,21 @@
 #include "dialogs/FunctionCallTip.h"
 #include "common/ScintillaComponent.h"
 #include <QCoreApplication>
+#include <QDebug>
 #include <QString>
+#include <QDebug>
 #include <cassert>
+#include <QDebug>
 #include <iostream>
+#include <QDebug>
 #include <vector>
+#include <QDebug>
 
 #define TEST(name) void name()
 #define RUN(name) do { std::cout << #name "... "; name(); std::cout << "OK\n"; } while(0)
-#define ASSERT_EQ(a, b) do { if ((a) != (b)) { std::cerr << "FAILED: " << #a << " (" << (a) << ") != " << (b) << "\n"; exit(1); } } while(0)
-#define ASSERT_TRUE(x) do { if (!(x)) { std::cerr << "FAILED: " << #x << "\n"; exit(1); } } while(0)
-#define ASSERT_FALSE(x) do { if (x) { std::cerr << "FAILED: " << #x << " (should be false)\n"; exit(1); } } while(0)
+#define ASSERT_EQ(a, b) do { if ((a) != (b)) { qWarning() << "FAILED: " << #a << " (" << (a) << ") != " << (b) << "\n"; exit(1); } } while(0)
+#define ASSERT_TRUE(x) do { if (!(x)) { qWarning() << "FAILED: " << #x << "\n"; exit(1); } } while(0)
+#define ASSERT_FALSE(x) do { if (x) { qWarning() << "FAILED: " << #x << " (should be false)\n"; exit(1); } } while(0)
 
 // ─── Mock ScintillaComponent for testing without Qt widgets ────────────────────
 

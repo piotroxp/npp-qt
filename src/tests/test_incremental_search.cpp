@@ -5,15 +5,20 @@
 #include "dialogs/IncrementalSearchDialog.h"
 #include "editor/ScintillaEditor.h"
 #include <QCoreApplication>
+#include <QDebug>
 #include <QString>
+#include <QDebug>
 #include <QWidget>
+#include <QDebug>
 #include <cassert>
+#include <QDebug>
 #include <iostream>
+#include <QDebug>
 
 #define TEST(name) void name()
 #define RUN(name) do { std::cout << #name "... "; name(); std::cout << "OK\n"; } while(0)
-#define ASSERT_TRUE(x) do { if (!(x)) { std::cerr << "FAILED: " << #x << "\n"; exit(1); } } while(0)
-#define ASSERT_FALSE(x) do { if (x) { std::cerr << "FAILED: " << #x << " (should be false)\n"; exit(1); } } while(0)
+#define ASSERT_TRUE(x) do { if (!(x)) { qWarning() << "FAILED: " << #x << "\n"; exit(1); } } while(0)
+#define ASSERT_FALSE(x) do { if (x) { qWarning() << "FAILED: " << #x << " (should be false)\n"; exit(1); } } while(0)
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 

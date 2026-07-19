@@ -37,7 +37,7 @@
 class QUrl;
 
 // ─── Format constants (mirrors clipboardFormats.h from Win32) ────────────────
-namespace ClipboardFormat {
+namespace ClipboardMime {
     // Standard MIME types used as internal format keys
     constexpr const char* PlainText   = "text/plain";
     constexpr const char* HtmlText    = "text/html";

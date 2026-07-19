@@ -200,10 +200,10 @@ void ToolBar::setupActions() {
     addAction(stopMacroAction);
     
     QAction* playMacroAction = new QAction(style()->standardIcon(QStyle::SP_MediaPlay), "Play Macro", this);
-    playMacroAction->setData("macro.play");
+    playMacroAction->setData("macro.playback");
     playMacroAction->setToolTip("Play Macro (Ctrl+Shift+P)");
     playMacroAction->setShortcut(QKeySequence("Ctrl+Shift+P"));
-    m_actions["macro.play"] = playMacroAction;
+    m_actions["macro.playback"] = playMacroAction;
     addAction(playMacroAction);
     
     addSeparator();
@@ -555,7 +555,7 @@ void ToolBar::onIndent() { emit toolBarCommand("edit.indent"); }
 void ToolBar::onOutdent() { emit toolBarCommand("edit.outdent"); }
 void ToolBar::onRecordMacro() { emit toolBarCommand("macro.record"); }
 void ToolBar::onStopMacro() { emit toolBarCommand("macro.stop"); }
-void ToolBar::onPlayMacro() { emit toolBarCommand("macro.play"); }
+void ToolBar::onPlayMacro() { emit toolBarCommand("macro.playback"); }
 void ToolBar::onRun() { emit toolBarCommand("tools.run"); }
 void ToolBar::onPrint() { emit toolBarCommand("tools.print"); }
 void ToolBar::onWordWrap() { emit toolBarCommand("view.wordWrap"); }
@@ -671,7 +671,7 @@ void ToolBar::onActionTriggered() {
         onRecordMacro();
     } else if (cmd == "macro.stop") {
         onStopMacro();
-    } else if (cmd == "macro.play") {
+    } else if (cmd == "macro.playback") {
         onPlayMacro();
     } else if (cmd == "tools.run") {
         onRun();

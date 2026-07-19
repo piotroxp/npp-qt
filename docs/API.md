@@ -126,3 +126,35 @@ The plugin system is **partially implemented**. Key gaps:
 -  docking messages — not wired
 
 See the semantic lift audit in [HEARTBEAT.md](../HEARTBEAT.md) for the full status.
+
+---
+
+## Application Command Reference
+
+Commands are dispatched via `Application::onMenuCommand(const QString& cmd)`.
+Each command is a dot-separated string, e.g. `"file.save"`.
+
+### File Commands
+
+| Command | Method | Description |
+|---------|--------|-------------|
+| `file.closeAll_BUT_THIS` | `closeAllFilesButCurrent()` | Close all open buffers except the active one. Prompts to save modified files. |
+| `file.saveAsCopy` | `onSaveAsCopy()` | Save a copy of the active buffer to a new path. Does not change the active buffer's path. |
+
+### Edit Commands
+
+| Command | Method | Description |
+|---------|--------|-------------|
+| `edit.copyToClipboard` | `onCopyToNamedClipboard()` | Copy the current selection to a named clipboard. Prompts for a name. |
+| `edit.moveToClipboard` | `onMoveToNamedClipboard()` | Cut the current selection to a named clipboard. Prompts for a name. |
+| `edit.pasteFromClipboard` | `onPasteFromNamedClipboard()` | Paste from a named clipboard. Shows a list of stored clips. |
+
+Named clips are stored in `QMap<QString, QString> _namedClips` and persist for the session.
+
+### Search Commands
+
+| Command | Method | Description |
+|---------|--------|-------------|
+| `search.replaceInFiles` | `onReplaceInFiles()` | Replace text across multiple files. Stub — shows "working in progress". |
+| `search.findInProjects` | `onFindInProjects()` | Search within the current workspace/project. Stub — shows "working in progress". |
+| `search.replaceInProjects` | `onReplaceInProjects()` | Replace text within the current workspace/project. Stub — shows "working in progress". |

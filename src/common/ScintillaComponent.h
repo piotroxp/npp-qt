@@ -70,8 +70,4 @@ public:
     /// Returns the underlying widget, or nullptr if not available.
     /// Override in derived classes that have a widget.
     virtual QWidget* widget() const { return nullptr; }
-
-    /// Returns the window containing the widget, or nullptr if not available.
-    /// Override in derived classes that have a widget.
-    virtual QWidget* window() const { return nullptr; }
 };

@@ -23,6 +23,8 @@ NotepadMinusMinusQt_autogen/timestamp: \
   /home/node/.openclaw/workspace/npp-qt/src/common/Observer.h \
   /home/node/.openclaw/workspace/npp-qt/src/common/PathHelper.h \
   /home/node/.openclaw/workspace/npp-qt/src/common/ScintillaComponent.h \
+  /home/node/.openclaw/workspace/npp-qt/src/common/ShortcutAdapter.cpp \
+  /home/node/.openclaw/workspace/npp-qt/src/common/ShortcutAdapter.h \
   /home/node/.openclaw/workspace/npp-qt/src/common/StringHelper.cpp \
   /home/node/.openclaw/workspace/npp-qt/src/common/StringHelper.h \
   /home/node/.openclaw/workspace/npp-qt/src/common/Types.h \

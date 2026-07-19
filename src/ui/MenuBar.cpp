@@ -263,6 +263,24 @@ void MenuBar::buildMenus() {
     docMapAction->setChecked(true);
     docMapAction->setData("view.documentMap");
     _viewMenu->addAction(docMapAction);
+
+    QAction* projPanel1Action = new QAction("&Project Panel 1", this);
+    projPanel1Action->setCheckable(true);
+    projPanel1Action->setChecked(false);
+    projPanel1Action->setData("view.projectPanel_1");
+    _viewMenu->addAction(projPanel1Action);
+
+    QAction* projPanel2Action = new QAction("Project P&anel 2", this);
+    projPanel2Action->setCheckable(true);
+    projPanel2Action->setChecked(false);
+    projPanel2Action->setData("view.projectPanel_2");
+    _viewMenu->addAction(projPanel2Action);
+
+    QAction* projPanel3Action = new QAction("Project Pan&el 3", this);
+    projPanel3Action->setCheckable(true);
+    projPanel3Action->setChecked(false);
+    projPanel3Action->setData("view.projectPanel_3");
+    _viewMenu->addAction(projPanel3Action);
     
     // Encoding menu
     _encodingMenu = addMenu("&Encoding");
