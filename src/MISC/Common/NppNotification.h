@@ -11,6 +11,9 @@
 #include <QWaitCondition>
 #include <QReadWriteLock>
 
+
+// Bring in SCI_*, SCN_*, SC_MOD_* constants (npp_sci namespace + bare names)
+#include "NppSciCompat.h"
 // Forward declarations
 class Buffer;
 struct Sci_NotifyHeader;
@@ -97,6 +100,8 @@ enum class NppNotificationType {
     SelectionChanged,
     CursorPositionChanged,
     ScrollChanged,
+    CharAdded,
+    StyleNeeded,
 
     // Macro notifications
     MacroRecordingStarted,
@@ -467,119 +472,15 @@ private:
     bool handleZoom(const SCNotification* notification, int bufferId);
     bool handlePainted(const SCNotification* notification, int bufferId);
     bool handleAutoComplete(const SCNotification* notification, int bufferId);
+    bool handleDwell(const SCNotification* notification, int bufferId);
+    bool handleCallTipClick(const SCNotification* notification, int bufferId);
+    bool handleMacroRecord(const SCNotification* notification, int bufferId);
+    bool handleMarginRightClick(const SCNotification* notification, int bufferId);
+    bool handleNeedsShown(const SCNotification* notification, int bufferId);
+    bool handleHotspot(const SCNotification* notification, int bufferId);
+    bool handleIndicator(const SCNotification* notification, int bufferId);
+    bool handleModifyAttemptRO(const SCNotification* notification, int bufferId);
+    bool handleUserListSelection(const SCNotification* notification, int bufferId);
+    bool handleUriDropped(const SCNotification* notification, int bufferId);
+    bool handleStyleNeeded(const SCNotification* notification, int bufferId);
 };
-
-// =============================================================================
-// Scintilla struct definitions (mangled member names to avoid preprocessor conflicts)
-// Qt MOC may macro-expand 'position', 'ch', 'text', 'length', 'line', 'margin',
-// 'x', 'y' — rename to avoid all Win32/WinSDK macro namespaces.
-// =============================================================================
-
-struct Sci_NotifyHeader {
-    void* npHwndFrom = nullptr;
-    uintptr_t npIdFrom = 0;
-    unsigned int npCode = 0;
-};
-
-struct SCNotification {
-    Sci_NotifyHeader npNmhdr;
-    int npPosition = 0;
-    int npCh = 0;
-    int npModifiers = 0;
-    int npModificationType = 0;
-    const char* npText = nullptr;
-    int npLength = 0;
-    int npLinesAdded = 0;
-    int npMessage = 0;
-    uintptr_t npWParam = 0;
-    intptr_t npLParam = 0;
-    int npLine = 0;
-    int npFoldLevelNow = 0;
-    int npFoldLevelPrev = 0;
-    int npMargin = 0;
-    int npListType = 0;
-    int npX = 0;
-    int npY = 0;
-};
-
-// =============================================================================
-// Utility Functions
-// =============================================================================
-
-inline const char* notificationTypeToString(NppNotificationType type) {
-    switch (type) {
-        case NppNotificationType::BufferOpened: return "BufferOpened";
-        case NppNotificationType::BufferClosed: return "BufferClosed";
-        case NppNotificationType::BufferActivated: return "BufferActivated";
-        case NppNotificationType::BufferCreated: return "BufferCreated";
-        case NppNotificationType::BufferDeleted: return "BufferDeleted";
-        case NppNotificationType::BufferModified: return "BufferModified";
-        case NppNotificationType::BufferReloaded: return "BufferReloaded";
-        case NppNotificationType::BufferSaved: return "BufferSaved";
-        case NppNotificationType::BufferDirty: return "BufferDirty";
-        case NppNotificationType::BufferClean: return "BufferClean";
-        case NppNotificationType::BufferEncodingChanged: return "BufferEncodingChanged";
-        case NppNotificationType::BufferLanguageChanged: return "BufferLanguageChanged";
-        case NppNotificationType::BufferReadOnlyChanged: return "BufferReadOnlyChanged";
-        case NppNotificationType::BufferEolChanged: return "BufferEolChanged";
-        case NppNotificationType::BufferTimestampChanged: return "BufferTimestampChanged";
-        case NppNotificationType::FileOpened: return "FileOpened";
-        case NppNotificationType::FileClosed: return "FileClosed";
-        case NppNotificationType::FileSaved: return "FileSaved";
-        case NppNotificationType::FileDeleted: return "FileDeleted";
-        case NppNotificationType::FileRenamed: return "FileRenamed";
-        case NppNotificationType::FileMoved: return "FileMoved";
-        case NppNotificationType::FilePermissionsChanged: return "FilePermissionsChanged";
-        case NppNotificationType::FileMonitorTriggered: return "FileMonitorTriggered";
-        case NppNotificationType::FileExternallyModified: return "FileExternallyModified";
-        case NppNotificationType::FileExternallyDeleted: return "FileExternallyDeleted";
-        case NppNotificationType::FileConflict: return "FileConflict";
-        case NppNotificationType::ThemeChanged: return "ThemeChanged";
-        case NppNotificationType::ThemeLoading: return "ThemeLoading";
-        case NppNotificationType::StyleChanged: return "StyleChanged";
-        case NppNotificationType::LayoutChanged: return "LayoutChanged";
-        case NppNotificationType::PanelVisibilityChanged: return "PanelVisibilityChanged";
-        case NppNotificationType::PanelDocked: return "PanelDocked";
-        case NppNotificationType::PanelUndocked: return "PanelUndocked";
-        case NppNotificationType::ZoomChanged: return "ZoomChanged";
-        case NppNotificationType::DpiChanged: return "DpiChanged";
-        case NppNotificationType::FontChanged: return "FontChanged";
-        case NppNotificationType::LanguageChanged: return "LanguageChanged";
-        case NppNotificationType::SessionLoaded: return "SessionLoaded";
-        case NppNotificationType::SessionSaved: return "SessionSaved";
-        case NppNotificationType::SessionLoadError: return "SessionLoadError";
-        case NppNotificationType::SessionSaveError: return "SessionSaveError";
-        case NppNotificationType::SessionNew: return "SessionNew";
-        case NppNotificationType::PluginLoaded: return "PluginLoaded";
-        case NppNotificationType::PluginUnloaded: return "PluginUnloaded";
-        case NppNotificationType::PluginError: return "PluginError";
-        case NppNotificationType::PluginCommandInvoked: return "PluginCommandInvoked";
-        case NppNotificationType::PluginMessage: return "PluginMessage";
-        case NppNotificationType::ApplicationStarting: return "ApplicationStarting";
-        case NppNotificationType::ApplicationStarted: return "ApplicationStarted";
-        case NppNotificationType::ApplicationShutdown: return "ApplicationShutdown";
-        case NppNotificationType::ApplicationError: return "ApplicationError";
-        case NppNotificationType::EditorFocused: return "EditorFocused";
-        case NppNotificationType::EditorLostFocus: return "EditorLostFocus";
-        case NppNotificationType::SelectionChanged: return "SelectionChanged";
-        case NppNotificationType::CursorPositionChanged: return "CursorPositionChanged";
-        case NppNotificationType::ScrollChanged: return "ScrollChanged";
-        case NppNotificationType::MacroRecordingStarted: return "MacroRecordingStarted";
-        case NppNotificationType::MacroRecordingStopped: return "MacroRecordingStopped";
-        case NppNotificationType::MacroPlaybackStarted: return "MacroPlaybackStarted";
-        case NppNotificationType::MacroPlaybackStopped: return "MacroPlaybackStopped";
-        case NppNotificationType::FindStarted: return "FindStarted";
-        case NppNotificationType::FindCompleted: return "FindCompleted";
-        case NppNotificationType::ReplaceCompleted: return "ReplaceCompleted";
-        case NppNotificationType::Custom: return "Custom";
-        default: return "Unknown";
-    }
-}
-
-inline QString notificationToDebugString(const NppNotification& n) {
-    return QString("[%1] %2 priority=%3 buffer=%4")
-        .arg(n.data.timestamp.toString(Qt::ISODate))
-        .arg(notificationTypeToString(n.type))
-        .arg(static_cast<int>(n.priority))
-        .arg(n.data.bufferId);
-}
