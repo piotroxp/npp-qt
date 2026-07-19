@@ -106,6 +106,8 @@ MainWindow::MainWindow(Application* app) : QMainWindow(nullptr), _app(app)
     // Connections
     connect(_tabWidget, &QTabWidget::currentChanged, this, &MainWindow::onTabChanged);
     connect(_tabWidget, &QTabWidget::tabCloseRequested, this, &MainWindow::onTabCloseRequested);
+    connect(_tabWidget, &QTabWidget::tabBarClicked, this, &MainWindow::onTabBarClicked);
+    connect(_tabWidget->tabBar(), &QTabBar::tabMoved, this, &MainWindow::onTabMoved);
 
     // Tab context menu (right-click on tab)
     _tabWidget->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -681,6 +683,14 @@ void MainWindow::setTabModified(int index, bool modified) {
     if (modified && !title.endsWith('*')) title += '*';
     else if (!modified && title.endsWith('*')) title.chop(1);
     _tabWidget->setTabText(index, title);
+}
+
+void MainWindow::switchToTab(int index) {
+    if (!_tabWidget || _tabWidget->count() == 0) return;
+    // index is 0-based; clamp to valid range
+    int target = qBound(0, index, _tabWidget->count() - 1);
+    _tabWidget->setCurrentIndex(target);
+    updateTitleBar();
 }
 
 int MainWindow::currentTabIndex() const { 
@@ -1454,6 +1464,17 @@ void MainWindow::onTabCloseRequested(int index) {
     if (_tabWidget->count() > 0) {
         onTabChanged(_tabWidget->currentIndex());
     }
+}
+
+void MainWindow::onTabMoved(int from, int to) {
+    // Rebuild the tab to buffer maps so they stay in sync after reordering.
+    rebuildTabToBufferMap();
+    qDebug() << "[MainWindow] Tab moved from" << from << "to" << to;
+}
+
+void MainWindow::onTabBarClicked(int index) {
+    Q_UNUSED(index);
+    // Placeholder for future tab-click behaviour (e.g. middle-click to close).
 }
 
 void MainWindow::onTabContextMenu(const QPoint& pos) {
