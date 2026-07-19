@@ -527,6 +527,14 @@ void MainWindow::dispatchCommand(const QString& cmd) {
         onThemeChanged("dark");
     } else if (cmd == "view.lightMode") {
         onThemeChanged("light");
+    } else if (cmd == "view.alwaysOnTop") {
+        static bool onTop = false;
+        onTop = !onTop;
+        Qt::WindowFlags flags = windowFlags();
+        if (onTop) flags |= Qt::WindowStaysOnTopHint;
+        else flags &= ~Qt::WindowStaysOnTopHint;
+        setWindowFlags(flags);
+        show();
     }
     // Encoding commands
     else if (cmd == "encoding.utf8") {
@@ -603,6 +611,27 @@ void MainWindow::dispatchCommand(const QString& cmd) {
     else if (cmd == "view.docMap") {
         if (auto* panel = app().documentMapPanel())
             panel->setVisible(_actions["view.documentMap"]->isChecked());
+    }
+    // Tab navigation commands (Ctrl+1..Ctrl+8, Ctrl+PgUp/PgDown)
+    else if (cmd == "tab.1") { switchToTab(0); }
+    else if (cmd == "tab.2") { switchToTab(1); }
+    else if (cmd == "tab.3") { switchToTab(2); }
+    else if (cmd == "tab.4") { switchToTab(3); }
+    else if (cmd == "tab.5") { switchToTab(4); }
+    else if (cmd == "tab.6") { switchToTab(5); }
+    else if (cmd == "tab.7") { switchToTab(6); }
+    else if (cmd == "tab.8") { switchToTab(7); }
+    else if (cmd == "tab.next") {
+        int cur = _tabWidget->currentIndex();
+        _tabWidget->setCurrentIndex((cur + 1) % std::max(1, _tabWidget->count()));
+    } else if (cmd == "tab.prev") {
+        int cur = _tabWidget->currentIndex();
+        int count = std::max(1, _tabWidget->count());
+        _tabWidget->setCurrentIndex((cur - 1 + count) % count);
+    }
+    // Search commands
+    else if (cmd == "search.toggleBookmark") {
+        if (auto* ed = currentEditor()) ed->toggleBookmark(ed->currentLine());
     }
     else if (cmd == "eol.windows") {
         if (auto* ed = currentEditor()) ed->setEolType(EolType::EOL_CRLF);
@@ -683,6 +712,13 @@ void MainWindow::setTabModified(int index, bool modified) {
     if (modified && !title.endsWith('*')) title += '*';
     else if (!modified && title.endsWith('*')) title.chop(1);
     _tabWidget->setTabText(index, title);
+}
+
+void MainWindow::switchToTab(int index) {
+    if (!_tabWidget || _tabWidget->count() == 0) return;
+    int target = qBound(0, index, _tabWidget->count() - 1);
+    _tabWidget->setCurrentIndex(target);
+    updateTitleBar();
 }
 
 int MainWindow::currentTabIndex() const { 
@@ -1510,21 +1546,20 @@ void MainWindow::onTabContextMenu(const QPoint& pos) {
 
 // Drag and drop
 void MainWindow::closeEvent(QCloseEvent* event) {
-    // Guard: both _tabWidget and _tabBar may be null or already freed if
-    // shutdown races with Qt's deleteChildren() cascade that begins when
-    // closeAllWindows() triggers QWidget::event() for this window.  ASAN
-    // confirmed a heap-use-after-free on _tabBar (40-byte TabBar object)
-    // at this exact line: Qt's deleteChildren() frees _tabBar (as a child
-    // of this QMainWindow) before closeEvent returns, but execution of this
-    // function continues if the close is accepted mid-stream.
-    if (!_tabWidget || !_tabBar) {
+    // Guard: snapshot the pointers before any use.  Qt's deleteChildren() during
+    // shutdown can free child widgets (e.g. _tabWidget, _tabBar) while closeEvent
+    // is still running — Qt continues event processing after closeEvent returns.
+    // Reading a dangling pointer (even to read count()) is a heap-use-after-free.
+    // We capture a local copy of _tabWidget and re-check it before every use.
+    QTabWidget* tw = _tabWidget;
+    if (!tw) {
         event->accept();
         return;
     }
 
     // Check for unsaved changes
     bool hasUnsaved = false;
-    for (int i = 0; i < _tabWidget->count(); ++i) {
+    for (int i = 0; i < tw->count(); ++i) {
         if (auto* editor = editorAt(i)) {
             if (editor->isModified()) {
                 hasUnsaved = true;

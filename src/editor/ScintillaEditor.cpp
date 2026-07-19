@@ -502,6 +502,49 @@ void ScintillaEditor::setCaretLineBackgroundColor(const QColor& color) {
     _editor->setCaretLineBackgroundColor(color);
 }
 
+// ============================================================================
+// Long-line edge indicator — mirrors N++ Edge settings
+// ============================================================================
+
+void ScintillaEditor::setEdgeColumn(int col) {
+    // SCI_SETEDGECOLUMN (2398): set column at which to draw edge line
+    _editor->SendScintilla(SCI_SETEDGECOLUMN, static_cast<unsigned long>(qMax(0, col)));
+}
+
+void ScintillaEditor::setEdgeMode(int mode) {
+    // SCI_SETEDGEMODE (2711): 0=none, 1=line, 2=background, 3/4=quality
+    _editor->SendScintilla(SCI_SETEDGEMODE, static_cast<unsigned long>(mode));
+}
+
+int ScintillaEditor::edgeColumn() const {
+    return static_cast<int>(_editor->SendScintilla(SCI_GETEDGECOLUMN));
+}
+
+int ScintillaEditor::edgeMode() const {
+    return static_cast<int>(_editor->SendScintilla(SCI_GETEDGEMODE));
+}
+
+// ============================================================================
+// Multi-caret / multi-selection — Ctrl+Click support
+// ============================================================================
+
+void ScintillaEditor::setMultiCaretEnabled(bool enabled) {
+    // SCI_SETADDITIONALCARETSBLINK (2660): allow extra carets to blink.
+    // We also enable/disable multi-caret via selection mode + caret visibility.
+    _editor->SendScintilla(QsciScintilla::SCI_SETADDITIONALCARETSBLINK, enabled ? 1 : 0);
+    if (enabled) {
+        // Enable multiple selections and extra carets
+        _editor->SendScintilla(SCI_SETMULTIPLESELECTION, 1);
+        _editor->SendScintilla(SCI_SETADDITIONALSELECTIONTYPING, 1);
+        // Ensure the cursor is visible during multi-caret
+        _editor->SendScintilla(SCI_SETCARETSTICKY, 0);
+    }
+}
+
+bool ScintillaEditor::isMultiCaretEnabled() const {
+    return _editor->SendScintilla(QsciScintilla::SCI_GETADDITIONALCARETSBLINK) != 0;
+}
+
 void ScintillaEditor::zoomIn() { _editor->zoomIn(); ++_zoomLevel; }
 void ScintillaEditor::zoomOut() { _editor->zoomOut(); --_zoomLevel; }
 void ScintillaEditor::zoomReset() {
@@ -793,7 +836,28 @@ void ScintillaEditor::setFileDropEnabled(bool enabled) {
 
 bool ScintillaEditor::eventFilter(QObject* watched, QEvent* event) {
     if (watched == _editor) {
-        if (event->type() == QEvent::DragEnter) {
+        if (event->type() == QEvent::MouseButtonPress) {
+            auto* me = static_cast<QMouseEvent*>(event);
+            // Ctrl+Click: add a caret at the clicked position (multi-caret editing).
+            // This mirrors N++ ScintillaEditView::Ctrl::mouseAction handlers.
+            if ((me->modifiers() & Qt::ControlModifier) && me->button() == Qt::LeftButton) {
+                // SCI_POSITIONFROMPOINT (2562) expects integer pixel coordinates.
+                // QMouseEvent::position() returns QPointF in Qt6 — convert with qRound().
+                int x = qRound(me->position().x());
+                int y = qRound(me->position().y());
+                int pos = _editor->SendScintilla(SCI_POSITIONFROMPOINT, x, y);
+                if (pos >= 0) {
+                    int curPos = static_cast<int>(_editor->SendScintilla(SCI_GETCURRENTPOS));
+                    // SCI_ADDSELECTION: adds a new selection without removing existing ones.
+                    _editor->SendScintilla(SCI_ADDSELECTION,
+                                          static_cast<unsigned long>(curPos),
+                                          static_cast<unsigned long>(pos));
+                    // Scroll to keep the clicked position visible
+                    _editor->SendScintilla(SCI_GOTOPOS, static_cast<unsigned long>(pos));
+                    return true;  // consume the event
+                }
+            }
+        } else if (event->type() == QEvent::DragEnter) {
             auto* de = static_cast<QDragEnterEvent*>(event);
             if (de->mimeData()->hasUrls()) {
                 for (const QUrl& url : de->mimeData()->urls()) {
