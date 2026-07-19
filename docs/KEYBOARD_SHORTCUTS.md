@@ -8,17 +8,17 @@ Complete reference for Notepad--Qt keyboard shortcuts.
 
 | Shortcut | Command | Notes |
 |----------|---------|-------|
-|  | New file | |
-|  | Open file | |
-|  | Save | |
-|  | Save As | |
-|  | Save a copy | |
-|  | Close tab | |
-|  | Close all tabs | |
-|  | Close tab | Same as  |
-|  | Reopen last closed tab | |
-|  | Print | ⚠️ Not fully wired |
-|  | Command palette | Opens fuzzy-searchable command list |
+| `Ctrl+N` | New file | |
+| `Ctrl+O` | Open file | |
+| `Ctrl+S` | Save | |
+| `Ctrl+Shift+S` | Save As | |
+| `Ctrl+Alt+S` | Save a copy | |
+| `Ctrl+W` | Close tab | |
+| `Ctrl+Shift+W` | Close all tabs | |
+| `Ctrl+F4` | Close tab | Same as `Ctrl+W` |
+| `Ctrl+Shift+T` | Reopen last closed tab | |
+| `Ctrl+P` | Print | ⚠️ Not fully wired |
+| `Ctrl+Shift+P` | Command palette | Opens fuzzy-searchable command list |
 
 ---
 
@@ -26,41 +26,41 @@ Complete reference for Notepad--Qt keyboard shortcuts.
 
 | Shortcut | Command | Notes |
 |----------|---------|-------|
-|  | Undo | |
-|  | Redo | |
-|  | Cut | |
-|  | Copy | |
-|  | Paste | |
-|  | Select all | |
-|  | Duplicate line | |
-|  | Delete current line | |
-|  | Delete selected lines | |
-|  | Transpose current line | Swap with previous |
-|  | Move line up | |
-|  | Move line down | |
-|  | Split selected lines | |
-|  | Join lines | |
-|  | Block comment | |
-|  | Stream comment | |
-|  | Indent | |
-|  | Unindent | |
-|  | Unindent | |
-|  | Convert to lowercase | |
-|  | Convert to uppercase | |
-|  | Toggle line comment | |
-|  | Insert blank line above | |
-|  | Insert newline below | |
-|  | Insert newline above | |
-|  | Column selection | |
-|  | Column selection | |
+| `Ctrl+Z` | Undo | |
+| `Ctrl+Y` | Redo | |
+| `Ctrl+X` | Cut | |
+| `Ctrl+C` | Copy | |
+| `Ctrl+V` | Paste | |
+| `Ctrl+A` | Select all | |
+| `Ctrl+D` | Duplicate line | |
+| `Ctrl+L` | Delete current line | |
+| `Ctrl+Shift+L` | Delete selected lines | |
+| `Ctrl+T` | Transpose current line | Swap with previous |
+| `Ctrl+Shift+Up` | Move line up | |
+| `Ctrl+Shift+Down` | Move line down | |
+| `Ctrl+I` | Split selected lines | |
+| `Ctrl+J` | Join lines | |
+| `Ctrl+Alt+B` | Block comment | |
+| `Ctrl+Shift+Q` | Stream comment | |
+| `Tab` | Indent | |
+| `Shift+Tab` | Unindent | |
+| `Ctrl+Backtab` | Unindent | |
+| `Ctrl+U` | Convert to lowercase | |
+| `Ctrl+Shift+U` | Convert to uppercase | |
+| `Ctrl+Q` | Toggle line comment | |
+| `Ctrl+Shift+K` | Insert blank line above | |
+| `Ctrl+Enter` | Insert newline below | |
+| `Ctrl+Shift+Enter` | Insert newline above | |
+| `Alt+Shift+Arrow` | Column selection | |
+| `Alt+Mouse drag` | Column selection | |
 
 ### Case Conversion
 
 | Shortcut | Command |
 |----------|---------|
-|  | Lowercase |
-|  | UPPERCASE |
-|  | Title Case (proper case) |
+| `Ctrl+U` | Lowercase |
+| `Ctrl+Shift+U` | UPPERCASE |
+| `Ctrl+Alt+U` | Title Case (proper case) |
 | | Sentence case |
 | | iNVERT cASE |
 | | rAnDoM cAsE |
@@ -71,19 +71,19 @@ Complete reference for Notepad--Qt keyboard shortcuts.
 
 | Shortcut | Command |
 |----------|---------|
-|  | Find |
-|  | Find / Replace |
-|  | Find next |
-|  | Find previous |
-|  | Find next (selection) |
-|  | Find previous (selection) |
-|  | Incremental search |
-|  | Select word under cursor |
-|  | Find matching brace |
-|  | Go to matching bracket |
-|  | Select between matching brackets |
-|  | Find in Files |
-|  | Find in Files |
+| `Ctrl+F` | Find |
+| `Ctrl+H` | Find / Replace |
+| `F3` | Find next |
+| `Shift+F3` | Find previous |
+| `Ctrl+F3` | Find next (selection) |
+| `Ctrl+Shift+F3` | Find previous (selection) |
+| `Ctrl+Shift+I` | Incremental search |
+| `Ctrl+D` | Select word under cursor |
+| `Alt+Shift+E` | Find matching brace |
+| `Ctrl+]` | Go to matching bracket |
+| `Ctrl+Shift+]` | Select between matching brackets |
+| `Ctrl+Alt+I` | Find in Files |
+| `Ctrl+Shift+F` | Find in Files |
 
 ---
 
@@ -91,20 +91,20 @@ Complete reference for Notepad--Qt keyboard shortcuts.
 
 | Shortcut | Command | Notes |
 |----------|---------|-------|
-|  | Go to line | |
-|  | Go to function (in Function List panel) | |
-|  | Go to symbol (function) | |
-|  | Go to reference | ⚠️ Not fully wired |
-|  | Start of line | |
-|  | End of line | |
-|  | Start of document | |
-|  | End of document | |
-|  | Previous tab | |
-|  | Next tab | |
-|  | Switch to previous tab | |
-|  | Switch to next tab | |
-|  | Function parameter hint | |
-|  | Auto-complete | |
+| `Ctrl+G` | Go to line | |
+| `Ctrl+P` | Go to function (in Function List panel) | |
+| `Ctrl+R` | Go to symbol (function) | |
+| `Ctrl+Shift+R` | Go to reference | ⚠️ Not fully wired |
+| `Home` | Start of line | |
+| `End` | End of line | |
+| `Ctrl+Home` | Start of document | |
+| `Ctrl+End` | End of document | |
+| `Ctrl+PageUp` | Previous tab | |
+| `Ctrl+PageDown` | Next tab | |
+| `Ctrl+Tab` | Switch to previous tab | |
+| `Ctrl+Shift+Tab` | Switch to next tab | |
+| `Ctrl+Shift+Space` | Function parameter hint | |
+| `Ctrl+Space` | Auto-complete | |
 
 ---
 
@@ -112,18 +112,18 @@ Complete reference for Notepad--Qt keyboard shortcuts.
 
 | Shortcut | Command |
 |----------|---------|
-|  | Toggle fullscreen |
-|  | Zoom in/out |
-|  | Reset zoom |
-|  | Zoom to 1:1 |
-|  | Zoom to 2:1 |
-|  | Fit content to window width |
-|  | Wrap to ruler |
-|  | Toggle right-to-left |
-|  | Toggle document map panel |
-|  | Toggle function list panel |
-|  | Toggle file browser panel |
-|  | Toggle clipboard history panel |
+| `F11` | Toggle fullscreen |
+| `Ctrl+Wheel` | Zoom in/out |
+| `Ctrl+0` | Reset zoom |
+| `Ctrl+Shift+1` | Zoom to 1:1 |
+| `Ctrl+Shift+2` | Zoom to 2:1 |
+| `Ctrl+Shift+Fit Width` | Fit content to window width |
+| `Ctrl+Shift+3` | Wrap to ruler |
+| `Ctrl+Alt+R` | Toggle right-to-left |
+| `View → Document Map` | Toggle document map panel |
+| `View → Function List` | Toggle function list panel |
+| `View → File Browser` | Toggle file browser panel |
+| `View → Clipboard History` | Toggle clipboard history panel |
 
 ---
 
@@ -131,13 +131,13 @@ Complete reference for Notepad--Qt keyboard shortcuts.
 
 | Shortcut | Command |
 |----------|---------|
-|  | Convert to UTF-8 (no BOM) |
-|  | Convert to UTF-8 with BOM |
-|  | Convert to ANSI |
-|  | Convert to Windows-1252 |
-|  | Convert to ISO-8859-1 |
-|  | Show encoding in status bar |
-|  | New file with encoding... |
+| `Ctrl+Shift+I` | Convert to UTF-8 (no BOM) |
+| `Ctrl+Alt+Shift+I` | Convert to UTF-8 with BOM |
+| `Ctrl+Alt+Shift+C` | Convert to ANSI |
+| `Ctrl+Shift+G` | Convert to Windows-1252 |
+| `Ctrl+Alt+Shift+G` | Convert to ISO-8859-1 |
+| `Ctrl+Shift+E` | Show encoding in status bar |
+| `Ctrl+Shift+N` | New file with encoding... |
 
 ---
 
@@ -145,10 +145,10 @@ Complete reference for Notepad--Qt keyboard shortcuts.
 
 | Shortcut | Command |
 |----------|---------|
-|  | Convert to Unix (LF) |
-|  | Convert to Windows (CRLF) |
-|  | Convert to Mac (CR) |
-|  | Show EOL in status bar |
+| `Ctrl+Alt+Shift+P` | Convert to Unix (LF) |
+| `Ctrl+Alt+Shift+D` | Convert to Windows (CRLF) |
+| `Ctrl+Alt+Shift+M` | Convert to Mac (CR) |
+| `Ctrl+Alt+Shift+S` | Show EOL in status bar |
 
 ---
 
@@ -156,9 +156,9 @@ Complete reference for Notepad--Qt keyboard shortcuts.
 
 | Shortcut | Command | Status |
 |----------|---------|--------|
-|  | Start/stop recording macro | ⚠️ Not wired |
-|  | Play recorded macro | ⚠️ Not wired |
-|  | Repeat last macro | ⚠️ Not wired |
+| `Ctrl+Shift+R` | Start/stop recording macro | ⚠️ Not wired |
+| `Ctrl+Shift+P` | Play recorded macro | ⚠️ Not wired |
+| `Ctrl+Alt+Shift+R` | Repeat last macro | ⚠️ Not wired |
 
 ---
 
@@ -166,11 +166,11 @@ Complete reference for Notepad--Qt keyboard shortcuts.
 
 | Shortcut | Command | Status |
 |----------|---------|--------|
-|  | Run | |
-|  | Run (custom 1) | |
-|  | Run (custom 2) | |
-|  | Run in background | |
-|  | Command palette | |
+| `F5` | Run | |
+| `Ctrl+Shift+5` | Run (custom 1) | |
+| `Ctrl+Alt+Shift+5` | Run (custom 2) | |
+| `Ctrl+Alt+Shift+B` | Run in background | |
+| `Ctrl+Alt+Shift+7` | Command palette | |
 
 ---
 
@@ -178,8 +178,8 @@ Complete reference for Notepad--Qt keyboard shortcuts.
 
 | Shortcut | Command |
 |----------|---------|
-|  | Run plugin command... |
-|  | Settings → Plugin Admin | ⚠️ Not implemented |
+| `Alt+Shift+F` | Run plugin command... |
+| `Ctrl+Alt+Shift+P` | Settings → Plugin Admin | ⚠️ Not implemented |
 
 ---
 
@@ -187,16 +187,16 @@ Complete reference for Notepad--Qt keyboard shortcuts.
 
 | Shortcut | Command | Notes |
 |----------|---------|-------|
-|  | Toggle splitter | |
-|  | Move tab to previous view | |
-|  | Move tab to next view | |
-|  | Activate tab 0 | |
-|  | Activate tab 1 | ... |
-|  | Activate tab 9 | |
-|  | Move tab to group 1 | |
-|  | Move tab to group 2 | |
-|  | New window | ⚠️ Not wired |
-|  | Exit | |
+| `Ctrl+Alt+S` | Toggle splitter | |
+| `Ctrl+Alt+Left` | Move tab to previous view | |
+| `Ctrl+Alt+Right` | Move tab to next view | |
+| `Alt+0` | Activate tab 0 | |
+| `Alt+1` | Activate tab 1 | ... |
+| `Alt+9` | Activate tab 9 | |
+| `Alt+Shift+0` | Move tab to group 1 | |
+| `Alt+Shift+1` | Move tab to group 2 | |
+| `Ctrl+Shift+N` | New window | ⚠️ Not wired |
+| `Alt+F4` | Exit | |
 
 ---
 
@@ -204,17 +204,17 @@ Complete reference for Notepad--Qt keyboard shortcuts.
 
 | Shortcut | Command | Notes |
 |----------|---------|-------|
-|  | Preferences | |
-|  | Save all | |
-|  | Open preferences | |
-|  | Toggle toolbar | |
-|  | Toggle menu bar | |
-|  | Toggle word wrap | |
-|  | Toggle line wrap | |
-|  | Toggle line numbers | |
-|  | Toggle all characters | |
-|  | Toggle virtual space | |
-|  | Toggle sync edit | |
+| `Ctrl+Alt+Shift+P` | Preferences | |
+| `Ctrl+Shift+S` | Save all | |
+| `Ctrl+Alt+Shift+O` | Open preferences | |
+| `Ctrl+Alt+Shift+T` | Toggle toolbar | |
+| `Ctrl+Alt+Shift+M` | Toggle menu bar | |
+| `Ctrl+Alt+Shift+W` | Toggle word wrap | |
+| `Ctrl+Alt+Shift+L` | Toggle line wrap | |
+| `Ctrl+Alt+Shift+N` | Toggle line numbers | |
+| `Ctrl+Alt+Shift+E` | Toggle all characters | |
+| `Ctrl+Alt+Shift+V` | Toggle virtual space | |
+| `Ctrl+Alt+Shift+A` | Toggle sync edit | |
 
 ---
 
@@ -224,26 +224,33 @@ Some shortcuts are intercepted by the host desktop environment before Qt sees th
 
 | Shortcut | DE | Issue | Workaround |
 |----------|-----|-------|-----------|
-|  | All | Terminates X server | App does not use it |
-|  | All | Window switcher | Use  for tab nav |
-|  | All | Window switcher (reverse) | Use  |
-|  | GNOME | Screenshot tool | Use  (settings) |
-|  | KDE | Menu bar access | Use  (fullscreen) |
-|  | GNOME | Workspace switch | Use  |
-|  | GNOME | Application launcher | Use  (command palette) |
-|  | KDE | krunner | Unavoidable on KDE; use menu bar |
-|  | GNOME | Activities/launcher | Use  + arrow for window nav |
+| `Ctrl+Alt+Backspace` | All | Terminates X server | App does not use it |
+| `Alt+Tab` | All | Window switcher | Use `Ctrl+Tab` for tab nav |
+| `Alt+Shift+Tab` | All | Window switcher (reverse) | Use `Ctrl+Shift+Tab` |
+| `PrintScreen` | GNOME | Screenshot tool | Use `Ctrl+Alt+P` (settings) |
+| `F10` | KDE | Menu bar access | Use `F11` (fullscreen) |
+| `Ctrl+Alt+Arrow` | GNOME | Workspace switch | Use `Ctrl+PageUp/PageDown` |
+| `Alt+F2` | GNOME | Application launcher | Use `Ctrl+Shift+P` (command palette) |
+| `Alt+Space` | KDE | krunner | Unavoidable on KDE; use menu bar |
+| `Meta` | GNOME | Activities/launcher | Use `Super` + arrow for window nav |
 
-On **macOS**,  is  and  is . The shortcuts use the physical key positions.
+On **macOS**, `Alt` is `Option` and `Ctrl` is `Control`. The shortcuts use the physical key positions.
 
 ---
 
 ## Customizing Shortcuts
 
-Shortcuts are stored in .
+Shortcuts are stored in `~/.config/notepad--qt/shortcuts.json`.
 
 Edit the file directly or use **Settings → Shortcut Mapper**.
 
-To reset to defaults, delete  and restart.
+To reset to defaults, delete `shortcuts.json` and restart.
 
-
+```json
+{
+  "shortcuts": [
+    { "command": "IDM_FILE_NEW", "shortcut": "Ctrl+N" },
+    { "command": "IDM_EDIT_UNDO", "shortcut": "Ctrl+Z" }
+  ]
+}
+```
