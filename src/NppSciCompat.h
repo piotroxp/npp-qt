@@ -587,6 +587,11 @@ namespace npp_sci {
     constexpr int SCI_SETFOLDDISPLAYTEXT    = 2665;
     constexpr int SCI_GETFOLDDISPLAYTEXT    = 2666;
 
+    // ==== Property access (SCI_SETPROPERTY / SCI_GETPROPERTY) ====
+    constexpr int SCI_SETPROPERTY           = 2062;
+    constexpr int SCI_GETPROPERTY           = 2063;
+    constexpr int SCI_GETPROPERTYEXPANDED   = 2064;
+
     // ==== Wrap mode flags (SCI_SETWRAPMODE / SCI_GETWRAPMODE) ====
     constexpr int SC_WRAP_NONE              = 0;
     constexpr int SC_WRAP_CHAR               = 1;
@@ -957,5 +962,8 @@ using npp_sci::SC_WRAPINDENT_FIXED;
 using npp_sci::SC_WRAPINDENT_SAME;
 using npp_sci::SC_WRAPINDENT_INDENT;
 using npp_sci::SC_WRAPINDENT_MAX;
+using npp_sci::SCI_SETPROPERTY;
+using npp_sci::SCI_GETPROPERTY;
+using npp_sci::SCI_GETPROPERTYEXPANDED;
 
 #pragma once
