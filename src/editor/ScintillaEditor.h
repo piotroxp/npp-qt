@@ -177,6 +177,11 @@ public:
     void zoomReset();
     int zoomLevel() const;
 
+    // Per-buffer view settings persistence (QSettings-backed)
+    // Saves zoom, wrap, edge column/mode, multi-caret state for this buffer.
+    void saveViewSettings(const QString& bufferId) const;
+    void restoreViewSettings(const QString& bufferId);
+
     // DPI — rescale fonts when screen DPI changes
     void updateFontForDpi();
 
