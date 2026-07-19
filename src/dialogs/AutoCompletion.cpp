@@ -281,6 +281,7 @@ void AutoCompletion::refreshDocumentWords()
 
 bool AutoCompletion::update(int character)
 {
+    if (!_constructionComplete) return false;
     if (!_pEditView) return false;
     if (!_autoShow) return false;
 
@@ -319,8 +320,13 @@ bool AutoCompletion::update(int character)
 
 bool AutoCompletion::showAutoComplete(int autocType, bool autoInsert)
 {
+    if (!_constructionComplete) return false;
     Q_UNUSED(autocType);  // Reserved for per-type icon/colour schemes (future).
     if (!_pEditView) return false;
+
+    // Guard: skip if document is empty (prevents QsciScintilla::send with invalid positions)
+    const int docLen = static_cast<int>(_pEditView->send(SCI_GETLENGTH));
+    if (docLen <= 0) return false;
 
     QString listStr = currentCompletionList();
     if (listStr.isEmpty()) return false;
@@ -330,7 +336,10 @@ bool AutoCompletion::showAutoComplete(int autocType, bool autoInsert)
     Sci_CharacterRange cr = _pEditView->getSelection();
     const int curPos = static_cast<int>(cr.cpMin);
     const int wordStart = static_cast<int>(_pEditView->send(SCI_WORDSTARTPOSITION, static_cast<intptr_t>(curPos)));
-    _lastWordPrefix = _pEditView->textRange(wordStart, curPos);
+    // Guard: clamp to valid range to prevent QsciScintilla::fatal() from textRange().
+    const int safeStart = (wordStart >= 0 && wordStart < docLen) ? wordStart : 0;
+    const int safeEnd   = (curPos   >= 0 && curPos   <= docLen) ? curPos   : docLen;
+    _lastWordPrefix = (safeEnd > safeStart) ? _pEditView->textRange(safeStart, safeEnd) : QString();
     const int prefixLen = _lastWordPrefix.length();
 
     // SCI_AUTOCSETSEPARATOR sets the separator (default ' ').
@@ -412,6 +421,7 @@ QString AutoCompletion::currentCompletionList() const
 
 bool AutoCompletion::showApiComplete()
 {
+    if (!_constructionComplete) return false;
     if (!_pEditView || _keyWords.empty()) return false;
     return showAutoComplete(0, false);
 }
@@ -504,6 +514,7 @@ void AutoCompletion::showEnvVarCompletion()
 
 bool AutoCompletion::showAllCompletions()
 {
+    if (!_constructionComplete) return false;
     if (!_pEditView) return false;
     updateDocumentWords();
     return showAutoComplete(0, false);

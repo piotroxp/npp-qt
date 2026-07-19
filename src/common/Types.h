@@ -342,7 +342,6 @@ struct NppGUI {
     bool showSpaceAndTab = false;
     bool showWrapSymbol = false;
     int  edgeMode = 0;
-    bool showEdgeLine = false;
     int  edgeColumn = 80;
     bool wrapMode = false;
     int  folderStyle = 0;

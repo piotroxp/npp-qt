@@ -211,13 +211,15 @@ int main(int argc, char* argv[]) {
     if (args.files.empty() && isOffscreen) {
         qDebug() << "[Notepad--] Headless mode: auto-exiting after 5 seconds";
         QTimer::singleShot(5000, &app, [&app]() {
-            qDebug() << "[Notepad--] Headless timeout — exiting";
-            // Use std::_Exit() (POSIX _exit) to terminate immediately without
-            // running Qt destructors.  The offscreen surface cleanup in Qt 6.4
-            // can SEGV when the platform integration is torn down.  _Exit()
-            // bypasses this by terminating without any cleanup.
-            std::fflush(stderr);
-            std::_Exit(EXIT_SUCCESS);
+            qDebug() << "[Notepad--] Headless timeout — exiting via app.quit()";
+            // Use app.quit() to let Qt run its normal shutdown sequence
+            // (destructors fire, closeEvent is called, Application cleans up
+            // _mainWindow before the event loop drains).  This prevents
+            // QApplication::closeAllWindows() from firing closeEvent on a
+            // partially-destroyed MainWindow (heap-use-after-free).
+            // std::_Exit() was previously used to avoid Qt offscreen SEGV on
+            // platform teardown, but it caused the closeEvent crash instead.
+            app.quit();
         });
     }
 

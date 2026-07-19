@@ -188,10 +188,13 @@ public:
     int zoomLevel() const;
 
     // Per-buffer view settings persistence (QSettings-backed)
+    // Saves zoom, wrap, edge column/mode, multi-caret state for this buffer.
     void saveViewSettings(const QString& bufferId) const;
     void restoreViewSettings(const QString& bufferId);
 
-    // Apply global NPP-style settings (wordWrap, edge, multi-caret)
+    // Apply global NPP-style settings from NppGUI (wordWrap, edge, multi-caret, etc.)
+    // Called by Application when creating a new editor.
+    struct NppGUI;  // forward
     void applyGlobalSettings(const NppGUI& gui);
 
     // DPI — rescale fonts when screen DPI changes
@@ -208,6 +211,10 @@ signals:
     void updateUI();
     void replaceAllDone(int count);
     void languageChanged(LangType lang);
+
+protected:
+    void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
 
 private:
     // ---- Context menu ----

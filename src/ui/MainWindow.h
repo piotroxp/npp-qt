@@ -11,11 +11,13 @@ class Application;  // forward declaration
 #include <QStatusBar>
 #include <QMenuBar>
 #include <QDockWidget>
+#include <QPointer>
 #include <QSignalMapper>
 #include <QMap>
 #include <QString>
 #include <QKeyEvent>
 #include "../common/Types.h"
+#include "TabBar.h"
 #include "../core/Application.h"
 #include "../panels/FileBrowserPanel.h"
 #include "../dialogs/ClipboardHistoryPanel.h"
@@ -64,6 +66,7 @@ public:
     MenuBar* menuBar() const { return _menuBar; }
     ToolBar* toolBar() const { return _toolBar; }
     StatusBar* statusBarWidget() const { return _statusBarWidget; }
+    IncrementalSearchDialog* incrementalSearch() const { return _incrementalSearch; }
 
 public slots:
     void onNewFile();
@@ -149,7 +152,7 @@ private:
     int _openingFileDepth = 0;  // call-depth counter: 0 = idle, 1 = first call (allowed), 2+ = re-entrant (blocked)
     QMetaObject::Connection _fileBrowserConnection;  // tracks fileDoubleClicked signal for disconnect/reconnect
     BufferID bufferAtTabIndex(int tabIndex) const;
-    TabBar* _tabBar = nullptr;
+    QPointer<TabBar> _tabBar = nullptr;
     MenuBar* _menuBar = nullptr;
     ToolBar* _toolBar = nullptr;
     StatusBar* _statusBarWidget = nullptr;

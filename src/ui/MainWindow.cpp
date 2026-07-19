@@ -527,6 +527,14 @@ void MainWindow::dispatchCommand(const QString& cmd) {
         onThemeChanged("dark");
     } else if (cmd == "view.lightMode") {
         onThemeChanged("light");
+    } else if (cmd == "view.alwaysOnTop") {
+        static bool onTop = false;
+        onTop = !onTop;
+        Qt::WindowFlags flags = windowFlags();
+        if (onTop) flags |= Qt::WindowStaysOnTopHint;
+        else flags &= ~Qt::WindowStaysOnTopHint;
+        setWindowFlags(flags);
+        show();
     }
     // Encoding commands
     else if (cmd == "encoding.utf8") {
@@ -603,6 +611,27 @@ void MainWindow::dispatchCommand(const QString& cmd) {
     else if (cmd == "view.docMap") {
         if (auto* panel = app().documentMapPanel())
             panel->setVisible(_actions["view.documentMap"]->isChecked());
+    }
+    // Tab navigation commands (Ctrl+1..Ctrl+8, Ctrl+PgUp/PgDown)
+    else if (cmd == "tab.1") { switchToTab(0); }
+    else if (cmd == "tab.2") { switchToTab(1); }
+    else if (cmd == "tab.3") { switchToTab(2); }
+    else if (cmd == "tab.4") { switchToTab(3); }
+    else if (cmd == "tab.5") { switchToTab(4); }
+    else if (cmd == "tab.6") { switchToTab(5); }
+    else if (cmd == "tab.7") { switchToTab(6); }
+    else if (cmd == "tab.8") { switchToTab(7); }
+    else if (cmd == "tab.next") {
+        int cur = _tabWidget->currentIndex();
+        _tabWidget->setCurrentIndex((cur + 1) % std::max(1, _tabWidget->count()));
+    } else if (cmd == "tab.prev") {
+        int cur = _tabWidget->currentIndex();
+        int count = std::max(1, _tabWidget->count());
+        _tabWidget->setCurrentIndex((cur - 1 + count) % count);
+    }
+    // Search commands
+    else if (cmd == "search.toggleBookmark") {
+        if (auto* ed = currentEditor()) ed->toggleBookmark(ed->currentLine());
     }
     else if (cmd == "eol.windows") {
         if (auto* ed = currentEditor()) ed->setEolType(EolType::EOL_CRLF);
@@ -687,7 +716,6 @@ void MainWindow::setTabModified(int index, bool modified) {
 
 void MainWindow::switchToTab(int index) {
     if (!_tabWidget || _tabWidget->count() == 0) return;
-    // index is 0-based; clamp to valid range
     int target = qBound(0, index, _tabWidget->count() - 1);
     _tabWidget->setCurrentIndex(target);
     updateTitleBar();
@@ -829,6 +857,34 @@ void MainWindow::onOpenFile() {
 }
 
 void MainWindow::openFileInTab(const QString& path) {
+    // Guard: re-entrancy.  When depth > 0 a nested call means either:
+    //   (a) we are inside a ScintillaEditor constructor (events firing back to
+    //       FileBrowserPanel) — suppress it, OR
+    //   (b) a prior call already handled this file — suppress it.
+    // Use > 0 (NOT > 1) to match onNewFile() and to catch the nested call
+    // that arrives while ScintillaEditor's QFrame construction is in progress.
+    if (_openingFileDepth > 0) return;
+    ++_openingFileDepth;
+    auto depthGuard = qScopeGuard([this]() { --_openingFileDepth; });
+
+    // Immediately disconnect the file-browser signal.  ScintillaEditor's
+    // QFrame constructor triggers widget events (style propagation, font
+    // inheritance, etc.) that bubble to FileBrowserPanel.  Those events are
+    // delivered via postEvent() — asynchronously, AFTER depthGuard has already
+    // reset the counter to 0 — so the depth counter alone cannot block them.
+    // Disconnecting here, before any editor construction, is the only reliable
+    // way to prevent the re-entrant call.
+    QObject::disconnect(_fileBrowserConnection);
+    auto reconnectGuard = qScopeGuard([this]() {
+        _fileBrowserConnection = connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
+            this, [this](const QString& path){
+                if (_openingFileDepth > 0) return;
+                ++_openingFileDepth;
+                auto g = qScopeGuard([this]() { --_openingFileDepth; });
+                openFileInTab(path);
+            });
+    });
+
     // Guard: empty path — reject before touching any subsystem
     if (path.isEmpty()) {
         QMessageBox::warning(this, "Open Error", "File path is empty.");
@@ -862,17 +918,6 @@ void MainWindow::openFileInTab(const QString& path) {
         return;
     }
 
-    // Guard: re-entrancy into ScintillaEditor construction.  ScintillaEditor
-    // is a QFrame; its construction triggers Qt widget events (style propagation,
-    // font inheritance, etc.) that bubble up to parent widgets including
-    // FileBrowserPanel.  If the user double-clicks during construction,
-    // onDoubleClicked fires and re-enters openFileInTab, calling
-    // new ScintillaEditor(_tabWidget) while a prior ScintillaEditor is still
-    // being constructed.  The second ScintillaEditor sees a corrupted parent
-    // pointer, and QWidget::setParent crashes with SEGV.
-    // Fix: skip if re-entrant (depth > 1 means this call is nested).
-    if (_openingFileDepth > 1) return;
-
     auto& appRef = Application::instance();
     BufferID buf = appRef.openFile(path.toStdString());
     if (!buf) {
@@ -883,36 +928,12 @@ void MainWindow::openFileInTab(const QString& path) {
     // Check if already open — switch to existing tab
     if (_bufferToTab.contains(buf)) {
         _tabWidget->setCurrentIndex(_bufferToTab[buf]);
-        QObject::disconnect(_fileBrowserConnection);
-        _fileBrowserConnection = connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
-            this, [this](const QString& path){
-                if (_openingFileDepth > 0) return;
-                ++_openingFileDepth;
-                auto guard = qScopeGuard([this]() { --_openingFileDepth; });
-                openFileInTab(path);
-            });
-        return;
+        return;  // reconnectGuard fires — signal reconnected
     }
 
-    // Disconnect the file browser signal while ScintillaEditor is being
-    // constructed.  ScintillaEditor/QFrame construction triggers Qt widget
-    // events that bubble back to FileBrowserPanel.  postEvent() delivers these
-    // asynchronously AFTER _openingFileDepth has reset to 0, so the depth
-    // counter alone cannot block them.  Disconnecting is the only reliable way.
-    QObject::disconnect(_fileBrowserConnection);
-    auto reconnectGuard = qScopeGuard([this]() {
-        _fileBrowserConnection = connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
-            this, [this](const QString& path){
-                if (_openingFileDepth > 0) return;
-                ++_openingFileDepth;
-                auto guard = qScopeGuard([this]() { --_openingFileDepth; });
-                openFileInTab(path);
-            });
-    });
-
-    // Create editor
+    // Create editor (signal is already disconnected above)
     ScintillaEditor* editor = new ScintillaEditor(_tabWidget);
-    reconnectGuard.dismiss();  // normal completion — no need to reconnect
+    reconnectGuard.dismiss();  // normal completion — signal reconnected by scope guard
 
     // Wire cursor position to status bar
     connect(editor, &ScintillaEditor::cursorPositionChanged,
@@ -1467,7 +1488,7 @@ void MainWindow::onTabCloseRequested(int index) {
 }
 
 void MainWindow::onTabMoved(int from, int to) {
-    // Rebuild the tab to buffer maps so they stay in sync after reordering.
+    // Rebuild the tab↔buffer maps so they stay in sync after reordering.
     rebuildTabToBufferMap();
     qDebug() << "[MainWindow] Tab moved from" << from << "to" << to;
 }
@@ -1525,9 +1546,20 @@ void MainWindow::onTabContextMenu(const QPoint& pos) {
 
 // Drag and drop
 void MainWindow::closeEvent(QCloseEvent* event) {
+    // Guard: snapshot the pointers before any use.  Qt's deleteChildren() during
+    // shutdown can free child widgets (e.g. _tabWidget, _tabBar) while closeEvent
+    // is still running — Qt continues event processing after closeEvent returns.
+    // Reading a dangling pointer (even to read count()) is a heap-use-after-free.
+    // We capture a local copy of _tabWidget and re-check it before every use.
+    QTabWidget* tw = _tabWidget;
+    if (!tw) {
+        event->accept();
+        return;
+    }
+
     // Check for unsaved changes
     bool hasUnsaved = false;
-    for (int i = 0; i < _tabWidget->count(); ++i) {
+    for (int i = 0; i < tw->count(); ++i) {
         if (auto* editor = editorAt(i)) {
             if (editor->isModified()) {
                 hasUnsaved = true;
@@ -1650,5 +1682,3 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 
     QMainWindow::keyPressEvent(event);
 }
-
-// Private slots and helpers end here

@@ -181,3 +181,11 @@
 23720	32264	1784479216584160310	CMakeFiles/NotepadMinusMinusQt.dir/src/plugins/PluginManager.cpp.o	973b9c4843173d57
 26609	33440	1784479217761180079	CMakeFiles/NotepadMinusMinusQt.dir/src/MISC/Common/NppNotification.cpp.o	9e8ca50cf4def410
 33440	34925	1784479219231204769	NotepadMinusMinusQt	5a42f67138344769
+9	486	1784479376797849006	NotepadMinusMinusQt_autogen/timestamp	1992121b584ed3a2
+9	486	1784479376797849006	NotepadMinusMinusQt_autogen/mocs_compilation.cpp	1992121b584ed3a2
+9	486	1784479376797849006	/home/node/.openclaw/workspace/npp-qt/build-asan/NotepadMinusMinusQt_autogen/timestamp	1992121b584ed3a2
+9	486	1784479376797849006	/home/node/.openclaw/workspace/npp-qt/build-asan/NotepadMinusMinusQt_autogen/mocs_compilation.cpp	1992121b584ed3a2
+487	3174	1784479379491894180	CMakeFiles/NotepadMinusMinusQt.dir/src/main.cpp.o	dd89076b1639dde0
+487	5928	1784479382238940244	CMakeFiles/NotepadMinusMinusQt.dir/src/ui/MainWindow.cpp.o	f240d3865e32982a
+487	8178	1784479384483977890	CMakeFiles/NotepadMinusMinusQt.dir/NotepadMinusMinusQt_autogen/mocs_compilation.cpp.o	44f4687b36f66aa8
+8178	9417	1784479385716998565	NotepadMinusMinusQt	5a42f67138344769
