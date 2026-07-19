@@ -1650,3 +1650,5 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 
     QMainWindow::keyPressEvent(event);
 }
+
+// Private slots and helpers end here

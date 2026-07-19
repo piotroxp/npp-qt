@@ -565,6 +565,30 @@ namespace npp_sci {
 
     // ==== VIEWZONE_* constants (from original N++) ====
     constexpr int VIEWZONE_DOCUMENTMAP       = 1;
+
+    // ==== Edge / long-line indicator (SC_EDGE_*) ====
+    constexpr int SC_EDGE_NONE              = 0;
+    constexpr int SC_EDGE_LINE              = 1;
+    constexpr int SC_EDGE_BACKGROUND       = 2;
+    constexpr int SC_EDGE_QUALITY          = 3;
+    constexpr int SC_EDGE_BACKGROUNDMAX    = 4;
+
+    // ==== Edge column messages (SCI_SETEDGECOLUMN / SCI_SETEDGEMODE) ====
+    constexpr int SCI_GETEDGECOLUMN         = 2399;
+    constexpr int SCI_SETEDGECOLUMN         = 2398;
+    constexpr int SCI_GETEDGEMODE           = 2710;
+    constexpr int SCI_SETEDGEMODE           = 2711;
+
+    // ==== Additional caret/multi-selection messages ====
+    constexpr int SCI_GETADDITIONALCARETSBLINK  = 2655;
+    constexpr int SCI_SETADDITIONALCARETSBLINK  = 2654;
+    constexpr int SCI_GETMULTIPLESELECTION      = 2656;
+    constexpr int SCI_SETMULTIPLESELECTION      = 2657;
+    constexpr int SCI_GETCARETSTICKY            = 2367;
+    constexpr int SCI_SETCARETSTICKY            = 2368;
+    constexpr int SC_CARETSTICKY_OFF            = 0;
+    constexpr int SC_CARETSTICKY_ON             = 1;
+    constexpr int SC_CARETSTICKY_WHITESPACE     = 2;
 }  // namespace npp_sci
 
 // NOTE: `using namespace npp_sci;` is intentionally NOT used here because
@@ -880,6 +904,15 @@ using npp_sci::SC_EFF_QUALITY_LCD_OPTIMIZED;
 using npp_sci::SCI_SETCARETLINEVISIBLEALWAYS;
 using npp_sci::SCI_SETENDATLASTLINE;
 using npp_sci::SCI_SETADDITIONALSELECTIONTYPING;
+using npp_sci::SCI_GETADDITIONALCARETSBLINK;
+using npp_sci::SCI_SETADDITIONALCARETSBLINK;
+using npp_sci::SCI_GETMULTIPLESELECTION;
+using npp_sci::SCI_SETMULTIPLESELECTION;
+using npp_sci::SCI_GETCARETSTICKY;
+using npp_sci::SCI_SETCARETSTICKY;
+using npp_sci::SC_CARETSTICKY_OFF;
+using npp_sci::SC_CARETSTICKY_ON;
+using npp_sci::SC_CARETSTICKY_WHITESPACE;
 using npp_sci::SCVS_NONE;
 using npp_sci::SCVS_RECTANGULARSELECTION;
 using npp_sci::SCVS_USERACCESSIBLE;
@@ -904,6 +937,15 @@ using npp_sci::SC_MARKNUM_HISTORY_SAVED;
 using npp_sci::SC_MARKNUM_HISTORY_MODIFIED;
 using npp_sci::SC_MARKNUM_HISTORY_REVERTED_TO_MODIFIED;
 using npp_sci::SC_UNDO_SELECTION_HISTORY_ENABLED;
+using npp_sci::SCI_GETEDGECOLUMN;
+using npp_sci::SCI_SETEDGECOLUMN;
+using npp_sci::SCI_GETEDGEMODE;
+using npp_sci::SCI_SETEDGEMODE;
+using npp_sci::SC_EDGE_NONE;
+using npp_sci::SC_EDGE_LINE;
+using npp_sci::SC_EDGE_BACKGROUND;
+using npp_sci::SC_EDGE_QUALITY;
+using npp_sci::SC_EDGE_BACKGROUNDMAX;
 using npp_sci::SC_UNDO_SELECTION_HISTORY_SCROLL;
 
 #pragma once
