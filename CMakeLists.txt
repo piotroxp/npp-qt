@@ -247,18 +247,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 if(NPP_HAVE_WEBENGINE)
     target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::WebEngineWidgets)
 endif()
-
-# ─── Post-build: copy binary to /workspace/ ──────────────────────────────────
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-        $<TARGET_FILE:${PROJECT_NAME}>
-        /workspace/NotepadMinusMinusQt
-    COMMENT "Copying binary to /workspace/"
-)
-
-# ─── Installation ─────────────────────────────────────────────────────────────
-include(GNUInstallDirs)
-
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(DIRECTORY themes/ DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/notepad--qt/themes OPTIONAL)
 install(FILES README.md DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/notepad--qt)
