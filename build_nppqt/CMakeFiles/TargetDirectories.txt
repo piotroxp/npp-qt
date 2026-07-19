@@ -1,0 +1,2 @@
+/workspace/.openclaw/workspace/npp-qt/build_nppqt/CMakeFiles/edit_cache.dir
+/workspace/.openclaw/workspace/npp-qt/build_nppqt/CMakeFiles/rebuild_cache.dir

@@ -704,9 +704,6 @@ void ToolBar::onActionTriggered() {
     } else if (cmd == "settings.toolbarCustomize") {
         showCustomizationDialog();
     }
-
-    // Emit the command for any additional listeners
-    emit toolBarCommand(cmd);
 }
 
 void ToolBar::updateForDpi() {

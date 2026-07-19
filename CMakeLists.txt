@@ -128,6 +128,7 @@ set(SOURCES
     src/common/StringHelper.cpp
     src/core/NppNotificationHandler.cpp
     src/core/NppSciNotificationBridge.cpp
+    src/MISC/Common/NppNotification.cpp
     # src/ui/Accelerator.cpp            # disabled: duplicate impl in shortcut.cpp
     # src/ui/ScintillaAccelerator.cpp   # disabled: duplicate impl in shortcut.cpp
 )

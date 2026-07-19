@@ -109,6 +109,9 @@ public slots:
 
     // DPI
     void onDpiChanged(int dpi);
+    void onShowAllCharacters();
+    void onRun();
+    void doPrint();
 
 protected:
     void closeEvent(QCloseEvent* event) override;

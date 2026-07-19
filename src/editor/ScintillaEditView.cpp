@@ -154,10 +154,10 @@ void ScintillaEditView::sortLines(int mode) {
 
 void ScintillaEditView::setRectangularSelection(bool on) {
     if (on) {
-        sendCommand(SCI_SETSELECTIONMODE, SC_SEL_RECTANGLE);
+        sendCommand(SCI_SETSELECTIONMODE, QsciScintillaBase::SC_SEL_RECTANGLE);
         sendCommand(SCI_SETVIRTUALSPACEOPTIONS, SCVS_USERACCESSIBLE);
     } else {
-        sendCommand(SCI_SETSELECTIONMODE, SC_SEL_STREAM);
+        sendCommand(SCI_SETSELECTIONMODE, QsciScintillaBase::SC_SEL_STREAM);
         sendCommand(SCI_SETVIRTUALSPACEOPTIONS, SCVS_NONE);
     }
 }
@@ -167,7 +167,7 @@ int ScintillaEditView::selectionMode() const {
 }
 
 bool ScintillaEditView::isRectangularSelection() const {
-    return selectionMode() == SC_SEL_RECTANGLE;
+    return selectionMode() == QsciScintillaBase::SC_SEL_RECTANGLE;
 }
 
 // ---------------------------------------------------------------------------
@@ -405,7 +405,7 @@ void ScintillaEditView::toggleFoldAt(int line) {
     if (!_widget || line < 0 || line >= _widget->lines()) return;
     // Only toggle if this line has a fold point (header line)
     int level = getFoldLevel(line);
-    if (level & SC_FOLDLEVELHEADERFLAG) {
+    if (level & QsciScintillaBase::SC_FOLDLEVELHEADERFLAG) {
         _widget->foldLine(line);
     }
 }
@@ -425,18 +425,18 @@ void ScintillaEditView::toggleAllFolds() {
     // Collapse/fold all headers
     for (int line = 0; line < _widget->lines(); ++line) {
         int level = getFoldLevel(line);
-        if (level & SC_FOLDLEVELHEADERFLAG) {
+        if (level & QsciScintillaBase::SC_FOLDLEVELHEADERFLAG) {
             int headerLine = line;
             int ln = headerLine;
-            bool isExpanded = (getFoldLevel(ln) & SC_FOLDLEVELHEADERFLAG) != 0;
+            bool isExpanded = (getFoldLevel(ln) & QsciScintillaBase::SC_FOLDLEVELHEADERFLAG) != 0;
             (void)isExpanded;
             // Check if it's expanded
-            if ((getFoldLevel(ln) & SC_FOLDLEVELHEADERFLAG) &&
+            if ((getFoldLevel(ln) & QsciScintillaBase::SC_FOLDLEVELHEADERFLAG) &&
                 (sendCommand(SCI_GETFOLDEXPANDED, static_cast<uptr_t>(ln), 0) == 0)) {
                 // Already collapsed, unfold it
                 sendCommand(SCI_SETFOLDEXPANDED, static_cast<uptr_t>(ln), 1);
                 sendCommand(SCI_FOLDCHILDREN, static_cast<uptr_t>(ln),
-                            SC_FOLDACTION_EXPAND);
+                            QsciScintillaBase::SC_FOLDACTION_EXPAND);
             }
         }
     }
@@ -449,10 +449,10 @@ void ScintillaEditView::collapseLevel(int level) {
     // Fold all nodes at or below the given level
     for (int line = 0; line < _widget->lines(); ++line) {
         int lvl = getFoldLevel(line);
-        int depth = lvl & SC_FOLDLEVELNUMBERMASK;
-        if ((lvl & SC_FOLDLEVELHEADERFLAG) && depth >= static_cast<int>(level)) {
+        int depth = lvl & QsciScintillaBase::SC_FOLDLEVELNUMBERMASK;
+        if ((lvl & QsciScintillaBase::SC_FOLDLEVELHEADERFLAG) && depth >= static_cast<int>(level)) {
             sendCommand(SCI_SETFOLDEXPANDED, static_cast<uptr_t>(line), 0);
-            sendCommand(SCI_FOLDCHILDREN, static_cast<uptr_t>(line), SC_FOLDACTION_CONTRACT);
+            sendCommand(SCI_FOLDCHILDREN, static_cast<uptr_t>(line), QsciScintillaBase::SC_FOLDACTION_CONTRACT);
         }
     }
 }
@@ -461,10 +461,10 @@ void ScintillaEditView::unfoldLevel(int level) {
     if (!_widget) return;
     for (int line = 0; line < _widget->lines(); ++line) {
         int lvl = getFoldLevel(line);
-        int depth = lvl & SC_FOLDLEVELNUMBERMASK;
+        int depth = lvl & QsciScintillaBase::SC_FOLDLEVELNUMBERMASK;
         if (depth >= static_cast<int>(level)) {
             sendCommand(SCI_SETFOLDEXPANDED, static_cast<uptr_t>(line), 1);
-            sendCommand(SCI_FOLDCHILDREN, static_cast<uptr_t>(line), SC_FOLDACTION_EXPAND);
+            sendCommand(SCI_FOLDCHILDREN, static_cast<uptr_t>(line), QsciScintillaBase::SC_FOLDACTION_EXPAND);
         }
     }
 }
@@ -474,7 +474,7 @@ int ScintillaEditView::maxFoldLevel() const {
     int maxLevel = 0;
     for (int line = 0; line < _widget->lines(); ++line) {
         int level = getFoldLevel(line);
-        int depth = level & SC_FOLDLEVELNUMBERMASK;
+        int depth = level & QsciScintillaBase::SC_FOLDLEVELNUMBERMASK;
         if (depth > maxLevel) maxLevel = depth;
     }
     return maxLevel;
@@ -513,7 +513,7 @@ void ScintillaEditView::addFindMarks(int indicator,
 
 void ScintillaEditView::columnEdit(int line, int startCol, int endCol) {
     // Set rectangular selection
-    sendCommand(SCI_SETSELECTIONMODE, SC_SEL_RECTANGLE);
+    sendCommand(SCI_SETSELECTIONMODE, QsciScintillaBase::SC_SEL_RECTANGLE);
     sendCommand(SCI_SETVIRTUALSPACEOPTIONS, SCVS_USERACCESSIBLE);
     int startPos = static_cast<int>(sendCommand(SCI_POSITIONFROMLINE,
                                                static_cast<uptr_t>(line), 0)) + startCol;
@@ -524,7 +524,7 @@ void ScintillaEditView::columnEdit(int line, int startCol, int endCol) {
 }
 
 void ScintillaEditView::setColumnSelection(int startPos, int endPos) {
-    sendCommand(SCI_SETSELECTIONMODE, SC_SEL_RECTANGLE);
+    sendCommand(SCI_SETSELECTIONMODE, QsciScintillaBase::SC_SEL_RECTANGLE);
     sendCommand(SCI_SETSELECTION, static_cast<uptr_t>(startPos),
                 static_cast<uptr_t>(endPos));
 }
@@ -553,7 +553,7 @@ void ScintillaEditView::columnDelete() {
 }
 
 bool ScintillaEditView::isColumnSelection() const {
-    return selectionMode() == SC_SEL_RECTANGLE;
+    return selectionMode() == QsciScintillaBase::SC_SEL_RECTANGLE;
 }
 
 // ---------------------------------------------------------------------------

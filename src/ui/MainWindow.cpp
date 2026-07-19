@@ -12,6 +12,8 @@
 #include "../core/FileManager.h"
 #include "../core/LanguageManager.h"
 #include "../dialogs/FindReplaceDialog.h"
+#include <QPrintDialog>
+#include <QPrinter>
 #include "../dialogs/IncrementalSearchDialog.h"
 #include "../dialogs/GoToLineDialog.h"
 #include "../dialogs/PreferenceDialog.h"
@@ -304,11 +306,8 @@ void MainWindow::createActions() {
     _actions["help.about"] = aboutAction;
     
     // Connect all actions to dispatchCommand
-    for (auto it = _actions.constBegin(); it != _actions.constEnd(); ++it) {
-        connect(it.value(), &QAction::triggered, this, [this, key = it.key()]() {
-            dispatchCommand(key);
-        });
-    }
+    // Menu/toolbar commands flow through menuCommand/toolBarCommand signals.
+    // _actions map maintained for state (enabled/disabled, check state) only.
 }
 
 void MainWindow::createMenus() {
@@ -422,9 +421,8 @@ void MainWindow::updateRecentFilesMenu() {
                 for (const auto& file : recentFiles) {
                     QAction* recentAction = submenu->addAction(QString::fromStdString(file));
                     recentAction->setData(QString::fromStdString(file));
-                    connect(recentAction, &QAction::triggered, _recentFileMapper, [this, file]() {
-                        _recentFileMapper->setMapping(qobject_cast<QAction*>(sender()), QString::fromStdString(file));
-                        _recentFileMapper->mappedString(QString::fromStdString(file));
+                    connect(recentAction, &QAction::triggered, this, [this, file]() {
+                        openFileInTab(QString::fromStdString(file));
                     });
                 }
             }
@@ -526,7 +524,7 @@ void MainWindow::dispatchCommand(const QString& cmd) {
     } else if (cmd == "view.functionList") {
         _funcListDock->setVisible(_actions["view.functionList"]->isChecked());
     } else if (cmd == "view.documentMap") {
-        app().documentMapPanel()->setVisible(_actions["view.documentMap"]->isChecked());
+        if (auto* panel = app().documentMapPanel()) panel->setVisible(_actions["view.documentMap"]->isChecked());
     } else if (cmd == "view.darkMode") {
         onThemeChanged("dark");
     } else if (cmd == "view.lightMode") {
@@ -585,6 +583,64 @@ void MainWindow::dispatchCommand(const QString& cmd) {
     // Help commands
     else if (cmd == "help.about") {
         onAbout();
+    }
+    else if (cmd == "view.wordWrap") {
+        if (auto* ed = currentEditor()) ed->setWrapMode(_actions["view.wordWrap"]->isChecked());
+    }
+    else if (cmd == "view.showAllChars") {
+        onShowAllCharacters();
+    }
+    else if (cmd == "view.zoomIn") {
+        if (auto* ed = currentEditor()) ed->zoomIn();
+    }
+    else if (cmd == "view.zoomOut") {
+        if (auto* ed = currentEditor()) ed->zoomOut();
+    }
+    else if (cmd == "view.zoomReset") {
+        if (auto* ed = currentEditor()) ed->zoomReset();
+    }
+    else if (cmd == "view.readOnly") {
+        if (auto* ed = currentEditor()) ed->setReadOnly(_actions["view.readOnly"]->isChecked());
+    }
+    else if (cmd == "view.docMap") {
+        if (auto* panel = app().documentMapPanel())
+            panel->setVisible(_actions["view.documentMap"]->isChecked());
+    }
+    else if (cmd == "eol.windows") {
+        if (auto* ed = currentEditor()) ed->setEolType(EolType::EOL_CRLF);
+    }
+    else if (cmd == "eol.unix") {
+        if (auto* ed = currentEditor()) ed->setEolType(EolType::EOL_LF);
+    }
+    else if (cmd == "eol.mac") {
+        if (auto* ed = currentEditor()) ed->setEolType(EolType::EOL_CR);
+    }
+    else if (cmd.startsWith("encoding.charset.")) {
+        onEncodingChanged(cmd.mid(17));
+    }
+    else if (cmd == "encoding.ansi") {
+        onEncodingChanged("ANSI");
+    }
+    else if (cmd == "encoding.utf8bom") {
+        onEncodingChanged("UTF-8 BOM");
+    }
+    else if (cmd == "macro.record") {
+        qInfo() << "[MainWindow] macro.record -- not yet wired";
+    }
+    else if (cmd == "macro.stop") {
+        qInfo() << "[MainWindow] macro.stop -- not yet wired";
+    }
+    else if (cmd == "macro.play") {
+        qInfo() << "[MainWindow] macro.play -- not yet wired";
+    }
+    else if (cmd == "tools.run") {
+        _app->onRun();
+    }
+    else if (cmd == "tools.print") {
+        doPrint();
+    }
+    else {
+        qWarning() << "[MainWindow] Unknown command:" << cmd;
     }
 }
 
@@ -1017,12 +1073,12 @@ void MainWindow::onGoto() {
 }
 
 void MainWindow::onFindNext() {
+    ScintillaEditor* ed = currentEditor();
+    if (!ed) return;
     if (auto* dlg = _app->findReplaceDialog()) {
         QString text = dlg->lastSearchText();
         if (!text.isEmpty()) {
-            if (auto* editor = currentEditor()) {
-                editor->findNext(text, dlg->lastSearchOptions());
-            }
+            ed->findNext(text, dlg->lastSearchOptions());
         } else {
             // No last search — open the dialog
             onFind();
@@ -1031,12 +1087,12 @@ void MainWindow::onFindNext() {
 }
 
 void MainWindow::onFindPrevious() {
+    ScintillaEditor* ed = currentEditor();
+    if (!ed) return;
     if (auto* dlg = _app->findReplaceDialog()) {
         QString text = dlg->lastSearchText();
         if (!text.isEmpty()) {
-            if (auto* editor = currentEditor()) {
-                editor->findPrevious(text, dlg->lastSearchOptions());
-            }
+            ed->findPrevious(text, dlg->lastSearchOptions());
         }
     }
 }
@@ -1255,6 +1311,30 @@ void MainWindow::onBufferChanged() {
     }
     updateStatusBar();
 }
+// View: Show All Characters
+void MainWindow::onShowAllCharacters() {
+    if (auto* ed = currentEditor()) {
+        ed->setWhitespaceVisibility(true);
+        ed->setEolVisibility(true);
+    }
+}
+
+// Tools: Run current file
+void MainWindow::onRun() {
+    _app->onRun();
+}
+
+// Tools: Print
+void MainWindow::doPrint() {
+    if (auto* ed = currentEditor()) {
+        QPrinter printer(QPrinter::HighResolution);
+        QPrintDialog dialog(&printer, this);
+        if (dialog.exec() == QDialog::Accepted) {
+            ed->print(&printer);
+        }
+    }
+}
+
 
 // Theme
 void MainWindow::onThemeChanged(const QString& theme) {
