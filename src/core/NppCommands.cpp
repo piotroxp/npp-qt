@@ -277,7 +277,7 @@ void NppCommands::closeAllButCurrent() {
  */
 void NppCommands::print() {
     // Delegate to Application which manages the print dialog
-    if (m_app) m_app->onMenuCommand("print");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("print"));
 }
 
 // ============================================================================
@@ -290,14 +290,14 @@ void NppCommands::cut()    { if (m_app) m_app->onCut(); }
 void NppCommands::copy()    { if (m_app) m_app->onCopy(); }
 void NppCommands::paste()   { if (m_app) m_app->onPaste(); }
 void NppCommands::selectAll() { if (m_app) m_app->onSelectAll(); }
-void NppCommands::deleteChar() { if (m_app) m_app->onMenuCommand(QStringLiteral("delete")); }
+void NppCommands::deleteChar() { if (m_app) m_app->onMenuCommand("deleteSelection"); }
 void NppCommands::deleteLine() { if (m_app) m_app->onMenuCommand("deleteLine"); }
-void NppCommands::joinLines()  { if (m_app) m_app->onMenuCommand("joinLines"); }
+void NppCommands::joinLines() { if (m_app) m_app->onMenuCommand("joinLines"); }
 void NppCommands::trimTrailing() { if (m_app) m_app->onMenuCommand("trimTrailing"); }
-void NppCommands::trimLeading()  { if (m_app) m_app->onMenuCommand("trimLeading"); }
-void NppCommands::sortLinesLengthAsc()  { if (m_app) m_app->onMenuCommand("sortLengthAsc"); }
+void NppCommands::trimLeading() { if (m_app) m_app->onMenuCommand("trimLeading"); }
+void NppCommands::sortLinesLengthAsc() { if (m_app) m_app->onMenuCommand("sortLengthAsc"); }
 void NppCommands::sortLinesLengthDesc() { if (m_app) m_app->onMenuCommand("sortLengthDesc"); }
-void NppCommands::sortLinesLocaleAsc()  { if (m_app) m_app->onMenuCommand("sortAsc"); }
+void NppCommands::sortLinesLocaleAsc() { if (m_app) m_app->onMenuCommand("sortAsc"); }
 void NppCommands::sortLinesLocaleDesc() { if (m_app) m_app->onMenuCommand("sortDesc"); }
 
 /**
@@ -305,7 +305,7 @@ void NppCommands::sortLinesLocaleDesc() { if (m_app) m_app->onMenuCommand("sortD
  * Win32: IDM_EDIT_REMOVE_DUPLICATES
  */
 void NppCommands::removeDuplicateLines() {
-    if (m_app) m_app->onMenuCommand("removeDuplicateLines");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("removeDuplicateLines"));
 }
 
 // ============================================================================
@@ -318,7 +318,7 @@ void NppCommands::removeDuplicateLines() {
  * Qt: ScintillaComponent marker API (SC_MARKERADD, SC_MARKERDELETE, SC_MARKERGET)
  */
 void NppCommands::toggleBookmark() {
-    if (m_app) m_app->onMenuCommand("toggleBookmark");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("toggleBookmark"));
 }
 
 /**
@@ -326,7 +326,7 @@ void NppCommands::toggleBookmark() {
  * Win32: IDM_BOOKMARK_NEXT → markerNext()
  */
 void NppCommands::nextBookmark() {
-    if (m_app) m_app->onMenuCommand("nextBookmark");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("nextBookmark"));
 }
 
 /**
@@ -334,7 +334,7 @@ void NppCommands::nextBookmark() {
  * Win32: IDM_BOOKMARK_PREV → markerPrevious()
  */
 void NppCommands::prevBookmark() {
-    if (m_app) m_app->onMenuCommand("prevBookmark");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("prevBookmark"));
 }
 
 /**
@@ -342,7 +342,7 @@ void NppCommands::prevBookmark() {
  * Win32: IDM_BOOKMARK_CLEAR_ALL → markerDeleteAll(MARKER_BOOKMARK)
  */
 void NppCommands::clearBookmarks() {
-    if (m_app) m_app->onMenuCommand("clearBookmarks");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("clearBookmarks"));
 }
 
 // ============================================================================
@@ -389,7 +389,7 @@ void NppCommands::markAll(const QString& text, int styleId) {
  */
 void NppCommands::unmarkAll(int styleId) {
     Q_UNUSED(styleId);
-    if (m_app) m_app->onMenuCommand("unmarkAll");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("unmarkAll"));
 }
 
 /**
@@ -405,17 +405,17 @@ void NppCommands::findInFiles(const QString& dir, const QString& pattern) {
 // View commands
 // ============================================================================
 
-void NppCommands::zoomIn()          { if (m_app) m_app->onMenuCommand("zoomIn"); }
-void NppCommands::zoomOut()         { if (m_app) m_app->onMenuCommand("zoomOut"); }
-void NppCommands::zoomRestore()     { if (m_app) m_app->onMenuCommand("zoomRestore"); }
-void NppCommands::toggleWordWrap()  { if (m_app) m_app->onMenuCommand("toggleWordWrap"); }
+void NppCommands::zoomIn()          { if (m_app) m_app->onMenuCommand(QString::fromUtf8("zoomIn")); }
+void NppCommands::zoomOut()         { if (m_app) m_app->onMenuCommand(QString::fromUtf8("zoomOut")); }
+void NppCommands::zoomRestore()     { if (m_app) m_app->onMenuCommand(QString::fromUtf8("zoomRestore")); }
+void NppCommands::toggleWordWrap()  { if (m_app) m_app->onMenuCommand(QString::fromUtf8("toggleWordWrap")); }
 
 /**
  * Toggle EOL symbol visibility (show/hide CRLF, LF, CR glyphs).
  * Win32: IDM_VIEW_EOL → SCI_SETVEOLDISPLAY
  */
 void NppCommands::toggleEolVisibility() {
-    if (m_app) m_app->onMenuCommand("toggleEol");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("toggleEol"));
 }
 
 /**
@@ -423,12 +423,12 @@ void NppCommands::toggleEolVisibility() {
  * Win32: IDM_VIEW_ALLCHAR → SCI_SETVIEWWS
  */
 void NppCommands::toggleShowAllChars() {
-    if (m_app) m_app->onMenuCommand("showAllChars");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("showAllChars"));
 }
 
-void NppCommands::toggleDocumentMap()   { if (m_app) m_app->onMenuCommand("toggleDocMap"); }
-void NppCommands::toggleFunctionList() { if (m_app) m_app->onMenuCommand("toggleFuncList"); }
-void NppCommands::toggleFileBrowser()  { if (m_app) m_app->onMenuCommand("toggleFileBrowser"); }
+void NppCommands::toggleDocumentMap()   { if (m_app) m_app->onMenuCommand(QString::fromUtf8("toggleDocMap")); }
+void NppCommands::toggleFunctionList() { if (m_app) m_app->onMenuCommand(QString::fromUtf8("toggleFuncList")); }
+void NppCommands::toggleFileBrowser()  { if (m_app) m_app->onMenuCommand(QString::fromUtf8("toggleFileBrowser")); }
 
 /**
  * Toggle fullscreen mode (no title bar, no menu bar).
@@ -441,8 +441,8 @@ void NppCommands::toggleFullscreen() {
 
 void NppCommands::switchToMainView() { if (m_app) m_app->switchToView(0); }
 void NppCommands::switchToSubView()  { if (m_app) m_app->switchToView(1); }
-void NppCommands::cloneToOtherView(){ if (m_app) m_app->onMenuCommand("cloneToOtherView"); }
-void NppCommands::moveToOtherView() { if (m_app) m_app->onMenuCommand("moveToOtherView"); }
+void NppCommands::cloneToOtherView(){ if (m_app) m_app->onMenuCommand(QString::fromUtf8("cloneToOtherView")); }
+void NppCommands::moveToOtherView() { if (m_app) m_app->onMenuCommand(QString::fromUtf8("moveToOtherView")); }
 
 // ============================================================================
 // Column / Box selection mode commands
@@ -454,7 +454,7 @@ void NppCommands::moveToOtherView() { if (m_app) m_app->onMenuCommand("moveToOth
  * Qt: ScintillaComponent setSelectionMode(Scintilla::SelectionRectangle)
  */
 void NppCommands::enableColumnMode() {
-    if (m_app) m_app->onMenuCommand("columnMode");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("columnMode"));
 }
 
 /**
@@ -463,7 +463,7 @@ void NppCommands::enableColumnMode() {
  * Qt: Scintilla cut with column selection active
  */
 void NppCommands::cutColumn() {
-    if (m_app) m_app->onMenuCommand("cutColumn");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("cutColumn"));
 }
 
 /**
@@ -472,7 +472,7 @@ void NppCommands::cutColumn() {
  * Qt: Scintilla copy with column selection active
  */
 void NppCommands::copyColumn() {
-    if (m_app) m_app->onMenuCommand("copyColumn");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("copyColumn"));
 }
 
 /**
@@ -481,7 +481,7 @@ void NppCommands::copyColumn() {
  * Qt: Scintilla paste with column selection active
  */
 void NppCommands::pasteColumn() {
-    if (m_app) m_app->onMenuCommand("pasteColumn");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("pasteColumn"));
 }
 
 // ============================================================================
@@ -560,7 +560,7 @@ void NppCommands::convertToWindows1252() {
     // Windows-1252 is not directly supported by QStringConverter.
     // Map to ISO-8859-1 with the understanding that bytes 0x80-0x9F
     // will be rendered differently. True W1252 support requires QTextCodec.
-    if (m_app) m_app->onMenuCommand("encoding:windows-1252");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("encoding:windows-1252"));
 }
 
 /**
@@ -582,7 +582,7 @@ void NppCommands::convertToIso88591() {
  * Qt: EolType::EOL_CRLF
  */
 void NppCommands::convertToWindowsEol() {
-    if (m_app) m_app->onMenuCommand("eol:CRLF");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("eol:CRLF"));
 }
 
 /**
@@ -591,7 +591,7 @@ void NppCommands::convertToWindowsEol() {
  * Qt: EolType::EOL_LF
  */
 void NppCommands::convertToUnixEol() {
-    if (m_app) m_app->onMenuCommand("eol:LF");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("eol:LF"));
 }
 
 /**
@@ -600,7 +600,7 @@ void NppCommands::convertToUnixEol() {
  * Qt: EolType::EOL_CR
  */
 void NppCommands::convertToMacEol() {
-    if (m_app) m_app->onMenuCommand("eol:CR");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("eol:CR"));
 }
 
 // ============================================================================
@@ -613,7 +613,7 @@ void NppCommands::convertToMacEol() {
  * Qt: MacroManager::startRecording() + Scintilla recording
  */
 void NppCommands::startMacroRecording() {
-    if (m_app) m_app->onMenuCommand("macroRecord");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("macroRecord"));
 }
 
 /**
@@ -622,7 +622,7 @@ void NppCommands::startMacroRecording() {
  * Qt: MacroManager::stopRecording()
  */
 void NppCommands::stopMacroRecording() {
-    if (m_app) m_app->onMenuCommand("macroStop");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("macroStop"));
 }
 
 /**
@@ -631,7 +631,7 @@ void NppCommands::stopMacroRecording() {
  * Qt: MacroManager::playback()
  */
 void NppCommands::playMacro() {
-    if (m_app) m_app->onMenuCommand("macroPlayback");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("macroPlayback"));
 }
 
 /**
@@ -640,7 +640,7 @@ void NppCommands::playMacro() {
  * Qt: MacroManager::saveMacro() → prompts for name
  */
 void NppCommands::saveMacro() {
-    if (m_app) m_app->onMenuCommand("macroSave");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("macroSave"));
 }
 
 // ============================================================================
@@ -653,7 +653,7 @@ void NppCommands::saveMacro() {
  * Qt: PreferenceDialog (tabbed dialog for all settings)
  */
 void NppCommands::showPreferences() {
-    if (m_app) m_app->onMenuCommand("preferences");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("preferences"));
 }
 
 /**
@@ -661,7 +661,7 @@ void NppCommands::showPreferences() {
  * Win32: IDM_SETTING_SHORTCUT_MAPPER → ShortcutMapper
  */
 void NppCommands::showShortcutMapper() {
-    if (m_app) m_app->onMenuCommand("shortcutMapper");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("shortcutMapper"));
 }
 
 /**
@@ -670,7 +670,7 @@ void NppCommands::showShortcutMapper() {
  * Qt: MainWindow::toggleToolbar()
  */
 void NppCommands::toggleToolbar() {
-    if (m_app) m_app->onMenuCommand("toggleToolbar");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("toggleToolbar"));
 }
 
 /**
@@ -679,7 +679,7 @@ void NppCommands::toggleToolbar() {
  * Qt: MainWindow::toggleStatusBar()
  */
 void NppCommands::toggleStatusBar() {
-    if (m_app) m_app->onMenuCommand("toggleStatusBar");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("toggleStatusBar"));
 }
 
 // ============================================================================
@@ -721,7 +721,7 @@ void NppCommands::maximizeWindow() {
  * Qt: QWindow::setFlag(Qt::WindowStaysOnTopHint)
  */
 void NppCommands::toggleAlwaysOnTop() {
-    if (m_app) m_app->onMenuCommand("toggleAlwaysOnTop");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("toggleAlwaysOnTop"));
 }
 
 /**
@@ -729,7 +729,7 @@ void NppCommands::toggleAlwaysOnTop() {
  * Win32: IDM_WINDOW_SWITCH → nextDocument()
  */
 void NppCommands::switchToNextDocument() {
-    if (m_app) m_app->onMenuCommand("nextDocument");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("nextDocument"));
 }
 
 /**
@@ -737,7 +737,7 @@ void NppCommands::switchToNextDocument() {
  * Win32: IDM_WINDOW_SWITCH → prevDocument()
  */
 void NppCommands::switchToPrevDocument() {
-    if (m_app) m_app->onMenuCommand("prevDocument");
+    if (m_app) m_app->onMenuCommand(QString::fromUtf8("prevDocument"));
 }
 
 // ============================================================================
@@ -827,18 +827,19 @@ void NppCommands::showRunDialog() {
 
 
 // Stubs for missing methods referenced in dispatch
-void NppCommands::uppercase() { if (m_app) m_app->onMenuCommand(QStringLiteral("uppercase")); }
-void NppCommands::lowercase() { if (m_app) m_app->onMenuCommand(QStringLiteral("lowercase")); }
-void NppCommands::trimBoth() { if (m_app) m_app->onMenuCommand(QStringLiteral("trimAll")); }
-void NppCommands::removeEmptyLines() { if (m_app) m_app->onMenuCommand(QStringLiteral("removeEmptyLines")); }
-void NppCommands::sortLinesDecimalCommaAsc() { if (m_app) m_app->onMenuCommand(QStringLiteral("sortDecimalCommaAsc")); }
-void NppCommands::sortLinesDecimalCommaDesc() { if (m_app) m_app->onMenuCommand(QStringLiteral("sortDecimalCommaDesc")); }
-void NppCommands::sortLinesDecimalDotAsc() { if (m_app) m_app->onMenuCommand(QStringLiteral("sortDecimalDotAsc")); }
-void NppCommands::sortLinesDecimalDotDesc() { if (m_app) m_app->onMenuCommand(QStringLiteral("sortDecimalDotDesc")); }
-void NppCommands::sortLinesRandom() { if (m_app) m_app->onMenuCommand(QStringLiteral("sortRandom")); }
-void NppCommands::sortLinesReverse() { if (m_app) m_app->onMenuCommand(QStringLiteral("sortReverse")); }
-void NppCommands::copyAllNames() { if (m_app) m_app->onMenuCommand(QStringLiteral("copyAllNames")); }
-void NppCommands::copyAllPaths() { if (m_app) m_app->onMenuCommand(QStringLiteral("copyAllPaths")); }
-void NppCommands::multiSelect() { if (m_app) m_app->onMenuCommand(QStringLiteral("multiSelect")); }
-void NppCommands::findChar() { if (m_app) m_app->onMenuCommand(QStringLiteral("findChar")); }
-void NppCommands::toggleMonitoring() { if (m_app) m_app->onMenuCommand(QStringLiteral("monitoring")); }
+void NppCommands::uppercase() { if (m_app) m_app->onMenuCommand("uppercase"); }
+
+void NppCommands::lowercase() { if (m_app) m_app->onMenuCommand("lowercase"); }
+void NppCommands::trimBoth() { if (m_app) m_app->onMenuCommand("trimAll"); }
+void NppCommands::removeEmptyLines() { if (m_app) m_app->onMenuCommand("removeEmptyLines"); }
+void NppCommands::sortLinesDecimalCommaAsc() { if (m_app) m_app->onMenuCommand("sortDecimalCommaAsc"); }
+void NppCommands::sortLinesDecimalCommaDesc() { if (m_app) m_app->onMenuCommand("sortDecimalCommaDesc"); }
+void NppCommands::sortLinesDecimalDotAsc() { if (m_app) m_app->onMenuCommand("sortDecimalDotAsc"); }
+void NppCommands::sortLinesDecimalDotDesc() { if (m_app) m_app->onMenuCommand("sortDecimalDotDesc"); }
+void NppCommands::sortLinesRandom() { if (m_app) m_app->onMenuCommand("sortRandom"); }
+void NppCommands::sortLinesReverse() { if (m_app) m_app->onMenuCommand("sortReverse"); }
+void NppCommands::copyAllNames() { if (m_app) m_app->onMenuCommand("copyAllNames"); }
+void NppCommands::copyAllPaths() { if (m_app) m_app->onMenuCommand("copyAllPaths"); }
+void NppCommands::multiSelect() { if (m_app) m_app->onMenuCommand("multiSelect"); }
+void NppCommands::findChar() { if (m_app) m_app->onMenuCommand("findChar"); }
+void NppCommands::toggleMonitoring() { if (m_app) m_app->onMenuCommand("monitoring"); }
