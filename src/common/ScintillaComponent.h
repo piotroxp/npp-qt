@@ -5,6 +5,7 @@
 #pragma once
 
 #include <QByteArray>
+#include <QWidget>
 #include <QtGlobal>  // qMax
 #include "NppSciCompat.h"  // SCI_GETSELECTION, SCI_GETTEXTRANGE, etc.
 
@@ -65,4 +66,12 @@ public:
         buf.truncate(static_cast<int>(strlen(buf.data())));
         return buf;
     }
+
+    /// Returns the underlying widget, or nullptr if not available.
+    /// Override in derived classes that have a widget.
+    virtual QWidget* widget() const { return nullptr; }
+
+    /// Returns the window containing the widget, or nullptr if not available.
+    /// Override in derived classes that have a widget.
+    virtual QWidget* window() const { return nullptr; }
 };

@@ -324,6 +324,11 @@ bool AutoCompletion::showAutoComplete(int autocType, bool autoInsert)
     Q_UNUSED(autocType);  // Reserved for per-type icon/colour schemes (future).
     if (!_pEditView) return false;
 
+    // Guard: on Wayland the widget's window may not have a QScreen yet.
+    // QsciScintilla's SCI_AUTOCSHOW internally calls QScreen::availableGeometry()
+    // which SEGVs when screen() returns nullptr.
+    if (_pEditView->widget() && !_pEditView->window()) return false;
+
     // Guard: skip if document is empty (prevents QsciScintilla::send with invalid positions)
     const int docLen = static_cast<int>(_pEditView->send(SCI_GETLENGTH));
     if (docLen <= 0) return false;

@@ -284,6 +284,7 @@ public:
 
     // ---- Direct access to the underlying QsciScintilla widget ----
     QsciScintilla* widget() const { return _widget; }
+    QWidget* window() const override { return _widget ? _widget->window() : nullptr; }
 
 private:
     QsciScintilla* _widget = nullptr;
