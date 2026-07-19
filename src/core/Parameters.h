@@ -118,7 +118,6 @@ public:
 
     // Encoding conversion (QTextCodec wrapper)
     QString convertEncoding(const QString& text, int fromSciCp, int toSciCp);
-    static int scintillaCpToMib(int sciCp);
 
     // Font list
     QStringList getFontList() const;

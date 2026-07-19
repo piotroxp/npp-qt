@@ -347,7 +347,7 @@ void NppParameters::loadShortcutsFromXml(const QString& path) {
         xml.readNext();
         if (xml.isStartElement() && xml.name().toString() == QStringLiteral("Shortcut")) {
             ShortcutDef sc;
-            sc.name = xml.attributes().value("name").toString().toStdString();
+            sc.name = xml.attributes().value(QLatin1StringView("name")).toString().toStdString();
             sc.id = xml.attributes().value("id").toString().toInt();
             sc.ctrl = xml.attributes().value("ctrl").toString().toInt();
             sc.alt = xml.attributes().value("alt").toString().toInt();
@@ -382,7 +382,7 @@ void NppParameters::loadThemes() {
             xml.readNext();
             if (xml.isStartElement() && xml.name().toString() == QStringLiteral("LexerType")) {
                 NppStyle style;
-                style.name = xml.attributes().value("name").toString();
+                style.name = xml.attributes().value(QLatin1StringView("name")).toString();
                 style.fgColor = xml.attributes().value("fgColor").toInt(nullptr, 16);
                 style.bgColor = xml.attributes().value("bgColor").toInt(nullptr, 16);
                 style.fontStyle = xml.attributes().value("fontStyle").toInt();
@@ -547,4 +547,54 @@ void NppParameters::saveShortcuts() {
     xml.writeEndElement();
     xml.writeEndElement();
     xml.writeEndDocument();
+}
+
+// Private helper: load theme files from a directory
+void NppParameters::loadThemesFromDir(const QString& dir) {
+    QDir d(dir);
+    for (const QString& file : d.entryList({ "*.theme", "*.xml" }, QDir::Files)) {
+        QString path = d.filePath(file);
+        QFile f(path);
+        if (f.open(QIODevice::ReadOnly)) {
+            QXmlStreamReader xml(&f);
+            while (!xml.atEnd()) {
+                xml.readNext();
+                if (xml.isStartElement() && xml.name().toString() == QLatin1String("LexerType")) {
+                    // Theme lexer — parse name for theme collection
+                    NppStyle style;
+                    style.name = xml.attributes().value(QLatin1String("name")).toString();
+                    if (!style.name.isEmpty() && style.name != "Default") {
+                        if (!_themes.empty() || style.name == "Global") {
+                            // Only add if not duplicating global theme
+                        }
+                    }
+                }
+            }
+            f.close();
+        }
+    }
+}
+
+// Private helper: parse a single theme style from XML
+NppStyle NppParameters::parseStyleFromXml(const QString& styleXml) {
+    NppStyle style;
+    QXmlStreamReader xml(styleXml);
+    while (!xml.atEnd()) {
+        xml.readNext();
+        if (xml.isStartElement()) {
+            auto name = xml.name();
+            if (name.compare(QLatin1String("name")) == 0)
+                style.name = xml.readElementText();
+            else if (name.compare(QLatin1String("fgColor")) == 0)
+                style.fgColor = QColor(xml.readElementText()).rgba();
+            else if (name.compare(QLatin1String("bgColor")) == 0)
+                style.bgColor = QColor(xml.readElementText()).rgba();
+            else if (name.compare(QLatin1String("colorSet")) == 0) {
+                bool ok;
+                int set = xml.readElementText().toInt(&ok);
+                if (ok) style.fontStyle = set;
+            }
+        }
+    }
+    return style;
 }
