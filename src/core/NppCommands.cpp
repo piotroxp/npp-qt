@@ -52,122 +52,127 @@ void NppCommands::command(int id) {
     Q_EMIT commandExecuted(id);
     switch (id) {
 
-    // ── File commands (40001–40049) ────────────────────────────────────────
-    case 40001: newFile(); break;
-    case 40002: openFile(); break;
-    case 40003: closeFile(); break;
-    case 40004: save(); break;
-    case 40005: saveAs(); break;
-    case 40006: saveAll(); break;
-    case 40007: reload(); break;
-    case 40008: app()->onDeleteFile(); break;
-    case 40009: app()->onRenameFile(); break;
-    case 40010: print(); break;
-    case 40015: closeAll(); break;
-    case 40016: closeAllButCurrent(); break;
-    case 40019: loadSession(); break;
-    case 40020: saveSession(); break;
+// ── File commands (base=40000) ────────────────────────────────────────────
+    case 40001: newFile(); break;           // IDM_FILE_NEW
+    case 40002: openFile(); break;          // IDM_FILE_OPEN
+    case 40003: closeFile(); break;         // IDM_FILE_CLOSE
+    case 40004: closeAll(); break;          // IDM_FILE_CLOSEALL
+    case 40005: closeAllButCurrent(); break; // IDM_FILE_CLOSEALL_BUT_CURRENT
+    case 40006: save(); break;              // IDM_FILE_SAVE
+    case 40007: saveAll(); break;            // IDM_FILE_SAVEALL
+    case 40008: saveAs(); break;             // IDM_FILE_SAVEAS
+    case 40010: print(); break;              // IDM_FILE_PRINT
+    case 40012: loadSession(); break;        // IDM_FILE_LOADSESSION
+    case 40013: saveSession(); break;        // IDM_FILE_SAVESESSION
+    case 40014: reload(); break;             // IDM_FILE_RELOAD
+    case 40015: saveAs(); break;            // IDM_FILE_SAVECOPYAS
+    case 40016: openInFolder(); break;       // IDM_FILE_DELETE
+    case 40017: openInFolder(); break;      // IDM_FILE_RENAME
+    case 40019: openContainingFolder(); break; // IDM_FILE_OPENFOLDER
+    case 40022: openFolderAsWorkspace(); break; // IDM_FILE_OPENFOLDERASWORKSPACE
 
-    // ── Edit commands (40110–40199) ─────────────────────────────────────────
-    case 40110: undo(); break;
-    case 40111: redo(); break;
-    case 40120: cut(); break;
-    case 40121: copy(); break;
-    case 40122: paste(); break;
-    case 40123: /* delete — handled by editor */ break;
-    case 40130: selectAll(); break;
-    case 40140: deleteLine(); break;
-    case 40150: joinLines(); break;
-    case 40160: trimTrailing(); break;
-    case 40161: trimLeading(); break;
-    case 40180: sortLinesLocaleAsc(); break;
-    case 40181: sortLinesLocaleDesc(); break;
-    case 40184: sortLinesLengthAsc(); break;
-    case 40185: sortLinesLengthDesc(); break;
-    case 40186: removeDuplicateLines(); break;
-    case 40190: openContainingFolder(); break;
-    case 40192: searchOnInternet(); break;
+    // ── Edit commands (base=41000) ────────────────────────────────────────────
+    case 41001: cut(); break;                // IDM_EDIT_CUT
+    case 41002: copy(); break;               // IDM_EDIT_COPY
+    case 41003: undo(); break;               // IDM_EDIT_UNDO
+    case 41004: redo(); break;               // IDM_EDIT_REDO
+    case 41005: paste(); break;               // IDM_EDIT_PASTE
+    case 41006: deleteChar(); break;           // IDM_EDIT_DELETE
+    case 41007: selectAll(); break;          // IDM_EDIT_SELECTALL
+    case 41010: deleteLine(); break;         // IDM_EDIT_DUP_LINE
+    case 41013: joinLines(); break;           // IDM_EDIT_JOIN_LINES
+    case 41016: uppercase(); break;           // IDM_EDIT_UPPERCASE
+    case 41017: lowercase(); break;           // IDM_EDIT_LOWERCASE
+    case 41024: trimTrailing(); break;        // IDM_EDIT_TRIMTRAILING
+    case 41028: convertToWindowsEol(); break; // IDM_EOL_DOS
+    case 41029: convertToUnixEol(); break;    // IDM_EOL_UNIX
+    case 41030: convertToMacEol(); break;     // IDM_EOL_MAC
+    case 41034: enableColumnMode(); break;    // IDM_EDIT_COLUMNMODE
+    case 41035: convertToAnsi(); break;      // IDM_CONV_ANSI
+    case 41036: convertToUtf8(); break;       // IDM_CONV_UTF8
+    case 41037: convertToUtf8Bom(); break;    // IDM_CONV_UTF8_BOM
+    case 41038: convertToUtf16Le(); break;    // IDM_CONV_UTF16_LE
+    case 41039: convertToUtf16Be(); break;    // IDM_CONV_UTF16_BE
+    case 41040: convertToUtf16Be(); break;    // IDM_CONV_UTF16_BE_BOM
+    case 41042: trimLeading(); break;          // IDM_EDIT_TRIMLINEHEAD
+    case 41043: trimBoth(); break;            // IDM_EDIT_TRIM_BOTH
+    case 41055: removeEmptyLines(); break;    // IDM_EDIT_REMOVEEMPTYLINES
+    case 41056: removeEmptyLines(); break;    // IDM_EDIT_REMOVEEMPTYLINESWITHBLANK
+    case 41059: sortLinesLocaleAsc(); break;   // IDM_EDIT_SORTLINES_LEXICOGRAPHIC_ASCENDING
+    case 41060: sortLinesLocaleDesc(); break;  // IDM_EDIT_SORTLINES_LEXICOGRAPHIC_DESCENDING
+    case 41061: sortLinesLengthAsc(); break;   // IDM_EDIT_SORTLINES_INTEGER_ASCENDING
+    case 41062: sortLinesLengthDesc(); break;  // IDM_EDIT_SORTLINES_INTEGER_DESCENDING
+    case 41063: sortLinesDecimalCommaAsc(); break; // IDM_EDIT_SORTLINES_DECIMALCOMMA_ASCENDING
+    case 41064: sortLinesDecimalCommaDesc(); break; // IDM_EDIT_SORTLINES_DECIMALCOMMA_DESCENDING
+    case 41065: sortLinesDecimalDotAsc(); break; // IDM_EDIT_SORTLINES_DECIMALDOT_ASCENDING
+    case 41066: sortLinesDecimalDotDesc(); break; // IDM_EDIT_SORTLINES_DECIMALDOT_DESCENDING
+    case 41073: openInFolder(); break;        // IDM_EDIT_OPENASFILE
+    case 41074: openContainingFolder(); break; // IDM_EDIT_OPENINFOLDER
+    case 41075: searchOnInternet(); break;    // IDM_EDIT_SEARCHONINTERNET
+    case 41077: removeDuplicateLines(); break; // IDM_EDIT_REMOVE_CONSECUTIVE_DUP_LINES
+    case 41078: sortLinesRandom(); break;     // IDM_EDIT_SORTLINES_RANDOMLY
+    case 41079: removeDuplicateLines(); break; // IDM_EDIT_REMOVE_ANY_DUP_LINES
+    case 41080: sortLinesLocaleAsc(); break;  // IDM_EDIT_SORTLINES_LEXICO_CASE_INSENS_ASCENDING
+    case 41081: sortLinesLocaleDesc(); break; // IDM_EDIT_SORTLINES_LEXICO_CASE_INSENS_DESCENDING
+    case 41083: sortLinesReverse(); break;   // IDM_EDIT_SORTLINES_REVERSE_ORDER
+    case 41087: copyAllNames(); break;        // IDM_EDIT_COPY_ALL_NAMES
+    case 41088: copyAllPaths(); break;        // IDM_EDIT_COPY_ALL_PATHS
+    case 41090: multiSelect(); break;          // IDM_EDIT_MULTISELECTALL
 
-    // ── Bookmark commands (41000–41099) ────────────────────────────────────
-    case 41000: toggleBookmark(); break;
-    case 41001: nextBookmark(); break;
-    case 41002: prevBookmark(); break;
-    case 41003: clearBookmarks(); break;
+    // ── Bookmark / Search (base=42000) ───────────────────────────────────────
+    case 42001: showFind(); break;           // IDM_SEARCH_FIND
+    case 42002: findNext(); break;           // IDM_SEARCH_FINDNEXT
+    case 42003: showReplace(); break;         // IDM_SEARCH_REPLACE
+    case 42004: goToLine(); break;          // IDM_SEARCH_GOTOLINE
+    case 42005: toggleBookmark(); break;      // IDM_SEARCH_TOGGLE_BOOKMARK
+    case 42006: nextBookmark(); break;       // IDM_SEARCH_NEXT_BOOKMARK
+    case 42007: prevBookmark(); break;       // IDM_SEARCH_PREV_BOOKMARK
+    case 42008: clearBookmarks(); break;     // IDM_SEARCH_CLEAR_BOOKMARKS
+    case 42010: findPrevious(); break;       // IDM_SEARCH_FINDPREV
+    case 42013: findInFiles({}, {}); break;  // IDM_SEARCH_FINDINFILES
+    case 42038: findChar(); break;           // IDM_SEARCH_FINDCHAR
+    case 42022: markAll({}); break;          // IDM_SEARCH_MARKALLEXT1
+    case 42024: markAll({}); break;          // IDM_SEARCH_MARKALLEXT2
+    case 42026: markAll({}); break;          // IDM_SEARCH_MARKALLEXT3
+    case 42028: markAll({}); break;          // IDM_SEARCH_MARKALLEXT4
+    case 42030: markAll({}); break;          // IDM_SEARCH_MARKALLEXT5
+    case 42032: unmarkAll(); break;          // IDM_SEARCH_CLEARALLMARKS
 
-    // ── Search commands (40200–40299) ──────────────────────────────────────
-    case 40200: showFind(); break;
-    case 40201: showReplace(); break;
-    case 40202: findNext(); break;
-    case 40203: findPrevious(); break;
-    case 40210: goToLine(); break;
-    case 40220: markAll({}); break;
-    case 40221: unmarkAll(); break;
-    case 40230: findInFiles({}, {}); break;
+    // ── View commands (base=43000) ────────────────────────────────────────────
+    case 43001: zoomIn(); break;             // IDM_VIEW_ZOOMIN
+    case 43002: zoomOut(); break;            // IDM_VIEW_ZOOMOUT
+    case 43003: zoomRestore(); break;        // IDM_VIEW_ZOOMRESTORE
+    case 43033: toggleFullscreen(); break;    // IDM_VIEW_FULLSCREEN
+    case 43037: toggleDocumentMap(); break;    // IDM_VIEW_DOC_MAP
+    case 43039: toggleFunctionList(); break;   // IDM_VIEW_FUNC_LIST
+    case 43040: toggleFileBrowser(); break;   // IDM_VIEW_FILE_BROWSER
+    case 43043: toggleMonitoring(); break;   // IDM_VIEW_MONITORING
+    case 43046: toggleEolVisibility(); break; // IDM_VIEW_EOL
+    case 43047: toggleWordWrap(); break;     // IDM_VIEW_WORDWRAP
+    case 43048: toggleShowAllChars(); break; // IDM_VIEW_ALL_CHARACTERS
+    case 43056: cloneToOtherView(); break;   // IDM_VIEW_CLONE
+    case 43057: switchToSubView(); break;   // IDM_VIEW_SWITCH_VIEW
+    case 46001: showPreferences(); break;    // IDM_PREFS
+    case 46003: showRunDialog(); break;      // IDM_RUN_LAUNCH
+    case 46009: showShortcutMapper(); break;  // IDM_SETTING_SHORTCUT_MAPPER
 
-    // ── View commands (40300–40399) ─────────────────────────────────────────
-    case 40300: zoomIn(); break;
-    case 40301: zoomOut(); break;
-    case 40302: zoomRestore(); break;
-    case 40310: toggleWordWrap(); break;
-    case 40320: toggleShowAllChars(); break;
-    case 40321: toggleEolVisibility(); break;
-    case 40350: toggleDocumentMap(); break;
-    case 40351: toggleFunctionList(); break;
-    case 40352: toggleFileBrowser(); break;
-    case 40353: toggleFullscreen(); break;
-    case 40360: switchToMainView(); break;
-    case 40361: switchToSubView(); break;
-    case 40362: cloneToOtherView(); break;
-    case 40363: moveToOtherView(); break;
+    // ── Macro commands (base=47000) ──────────────────────────────────────────
+    case 47001: startMacroRecording(); break; // IDM_MACRO_STARTRECORDINGMACRO
+    case 47002: stopMacroRecording(); break;  // IDM_MACRO_STOPRECORDINGMACRO
+    case 47003: playMacro(); break;          // IDM_MACRO_PLAYBACKRECORDEDMACRO
+    case 47004: saveMacro(); break;         // IDM_MACRO_SAVECURRENTMACRO
 
-    // ── Encoding commands (40500–40599) ─────────────────────────────────────
-    case 40500: convertToAnsi(); break;
-    case 40501: convertToUtf8(); break;
-    case 40502: convertToUtf8Bom(); break;
-    case 40503: convertToUtf16Le(); break;
-    case 40504: convertToUtf16Be(); break;
-    case 40505: convertToUtf32(); break;
-    case 40506: convertToUtf32Be(); break;
-    case 40507: convertToWindows1252(); break;
-    case 40508: convertToIso88591(); break;
-
-    // ── EOL commands (40600–40699) ───────────────────────────────────────
-    case 40600: convertToWindowsEol(); break;
-    case 40601: convertToUnixEol(); break;
-    case 40602: convertToMacEol(); break;
-
-    // ── Selection mode commands (40700–40799) ─────────────────────────────
-    case 40700: enableColumnMode(); break;
-    case 40701: cutColumn(); break;
-    case 40702: copyColumn(); break;
-    case 40703: pasteColumn(); break;
-
-    // ── Macro commands (43000–43099) ───────────────────────────────────────
-    case 43000: startMacroRecording(); break;
-    case 43001: stopMacroRecording(); break;
-    case 43002: playMacro(); break;
-    case 43003: saveMacro(); break;
-
-    // ── Settings commands (42000–42099) ────────────────────────────────────
-    case 42000: showPreferences(); break;
-    case 42001: showShortcutMapper(); break;
-    case 42010: toggleToolbar(); break;
-    case 42011: toggleStatusBar(); break;
-
-    // ── Window commands (43000 range repurposed) ────────────────────────────
-    case 43010: minimizeWindow(); break;
-    case 43011: maximizeWindow(); break;
-    case 43012: toggleAlwaysOnTop(); break;
-    case 43020: switchToNextDocument(); break;
-    case 43021: switchToPrevDocument(); break;
-
-    // ── Run commands (44000–44099) ─────────────────────────────────────────
-    case 44001: showRunDialog(); break;
+    // ── Window commands (base=49000) ─────────────────────────────────────────
+    case 49001: minimizeWindow(); break;     // IDM_WINDOW_MINIMIZE
+    case 49002: maximizeWindow(); break;    // IDM_WINDOW_MAXIMIZE
+    case 49004: toggleAlwaysOnTop(); break; // IDM_WINDOW_ALWAYSONTOP
+    case 49010: switchToNextDocument(); break; // IDM_DOCLIST_SHOW_TAB_LIST
 
     default:
         qDebug() << "[NppCommands] Unknown command:" << id;
         break;
     }
+
 }
 
 // ============================================================================
@@ -285,6 +290,7 @@ void NppCommands::cut()    { if (m_app) m_app->onCut(); }
 void NppCommands::copy()    { if (m_app) m_app->onCopy(); }
 void NppCommands::paste()   { if (m_app) m_app->onPaste(); }
 void NppCommands::selectAll() { if (m_app) m_app->onSelectAll(); }
+void NppCommands::deleteChar() { if (m_app) m_app->onMenuCommand(QStringLiteral("delete")); }
 void NppCommands::deleteLine() { if (m_app) m_app->onMenuCommand("deleteLine"); }
 void NppCommands::joinLines()  { if (m_app) m_app->onMenuCommand("joinLines"); }
 void NppCommands::trimTrailing() { if (m_app) m_app->onMenuCommand("trimTrailing"); }
@@ -818,3 +824,21 @@ void NppCommands::showRunDialog() {
                                 {QStringLiteral("-c"), cmd});
     }
 }
+
+
+// Stubs for missing methods referenced in dispatch
+void NppCommands::uppercase() { if (m_app) m_app->onMenuCommand(QStringLiteral("uppercase")); }
+void NppCommands::lowercase() { if (m_app) m_app->onMenuCommand(QStringLiteral("lowercase")); }
+void NppCommands::trimBoth() { if (m_app) m_app->onMenuCommand(QStringLiteral("trimAll")); }
+void NppCommands::removeEmptyLines() { if (m_app) m_app->onMenuCommand(QStringLiteral("removeEmptyLines")); }
+void NppCommands::sortLinesDecimalCommaAsc() { if (m_app) m_app->onMenuCommand(QStringLiteral("sortDecimalCommaAsc")); }
+void NppCommands::sortLinesDecimalCommaDesc() { if (m_app) m_app->onMenuCommand(QStringLiteral("sortDecimalCommaDesc")); }
+void NppCommands::sortLinesDecimalDotAsc() { if (m_app) m_app->onMenuCommand(QStringLiteral("sortDecimalDotAsc")); }
+void NppCommands::sortLinesDecimalDotDesc() { if (m_app) m_app->onMenuCommand(QStringLiteral("sortDecimalDotDesc")); }
+void NppCommands::sortLinesRandom() { if (m_app) m_app->onMenuCommand(QStringLiteral("sortRandom")); }
+void NppCommands::sortLinesReverse() { if (m_app) m_app->onMenuCommand(QStringLiteral("sortReverse")); }
+void NppCommands::copyAllNames() { if (m_app) m_app->onMenuCommand(QStringLiteral("copyAllNames")); }
+void NppCommands::copyAllPaths() { if (m_app) m_app->onMenuCommand(QStringLiteral("copyAllPaths")); }
+void NppCommands::multiSelect() { if (m_app) m_app->onMenuCommand(QStringLiteral("multiSelect")); }
+void NppCommands::findChar() { if (m_app) m_app->onMenuCommand(QStringLiteral("findChar")); }
+void NppCommands::toggleMonitoring() { if (m_app) m_app->onMenuCommand(QStringLiteral("monitoring")); }

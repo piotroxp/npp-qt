@@ -74,6 +74,7 @@ public:
     void selectAll();
     /** Delete the current line. Win32: IDM_EDIT_DELETELINE */
     void deleteLine();
+    void deleteChar();
     /** Join current and next line. Win32: IDM_EDIT_JOINLINES */
     void joinLines();
     /** Remove trailing whitespace on each line. Win32: IDM_EDIT_TRIM_TRAILING */
@@ -90,6 +91,21 @@ public:
     void sortLinesLocaleDesc();
     /** Remove duplicate lines from selection. Win32: IDM_EDIT_REMOVE_DUPLICATES */
     void removeDuplicateLines();
+    void removeEmptyLines();
+    void trimBoth();
+    void uppercase();
+    void lowercase();
+    void sortLinesDecimalCommaAsc();
+    void sortLinesDecimalCommaDesc();
+    void sortLinesDecimalDotAsc();
+    void sortLinesDecimalDotDesc();
+    void sortLinesRandom();
+    void sortLinesReverse();
+    void copyAllNames();
+    void copyAllPaths();
+    void findChar();
+    void toggleMonitoring();
+    void multiSelect();
 
     // ── Bookmark commands (IDM_BOOKMARK_*) ─────────────────────────────────
     /** Toggle bookmark on current line. Win32: IDM_BOOKMARK_TOGGLE */

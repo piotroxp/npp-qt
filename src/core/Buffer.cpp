@@ -41,12 +41,14 @@ namespace {
 // Construction / Lifecycle
 // ============================================================================
 
-Buffer::Buffer(FileManager* pManager, BufferID id, const QString& fileName, bool isLargeFile)
+Buffer::Buffer(FileManager* pManager, const QString& fileName, bool isLargeFile)
     : QObject()
     , _pManager(pManager)
-    , _id(id)
     , _isLargeFile(isLargeFile)
 {
+    // ID is now the Buffer's own address (this)
+    // Do NOT set _id here — it's a Buffer* and default-initialized to nullptr
+    // getID() returns this pointer directly
     _currentStatus = DocFileStatus::DOC_REGULAR;
 
     // Set the filename which also determines language
@@ -599,9 +601,12 @@ void Buffer::startMonitoring() {
     }
 
     if (!_fullPathName.isEmpty()) {
-        // watchFile() is idempotent — safe to call if already watched
+        // watchFile() is idempotent — safe to call if already watched.
         // FileWatcherAdapter handles debounce internally (500 ms).
-        _fileWatcher->watchFile(_fullPathName, nullptr);
+        // Pass a no-op callback; the real work is done via the fileChanged
+        // signal connected above.  watchFile() must receive a non-null
+        // callback or it rejects the addPath call entirely.
+        _fileWatcher->watchFile(_fullPathName, [](const QString&) {});
     }
 }
 

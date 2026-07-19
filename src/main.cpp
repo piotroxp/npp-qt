@@ -196,6 +196,31 @@ int main(int argc, char* argv[]) {
     });
     signalTimer.start(500);  // Check every 500ms
 
+    // In headless/offscreen mode with no file arguments, auto-exit after
+    // initialisation.  This prevents the app from hanging forever when
+    // invoked as a headless file processor (e.g. `npp-qt --no-plugins file.txt`).
+    // A long timeout is used to give the window time to initialise before exiting.
+    // When file arguments are provided, we let the event loop run normally
+    // (the app will exit when all files are processed and the window is closed,
+    // or timeout kills it).
+    // Check: if QT_QPA_PLATFORM=offscreen, or if no display is available.
+    bool isOffscreen = (qgetenv("QT_QPA_PLATFORM") == "offscreen")
+                           || (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")
+                               && qgetenv("DISPLAY").isEmpty()
+                               && qgetenv("WAYLAND_DISPLAY").isEmpty());
+    if (args.files.empty() && isOffscreen) {
+        qDebug() << "[Notepad--] Headless mode: auto-exiting after 5 seconds";
+        QTimer::singleShot(5000, &app, [&app]() {
+            qDebug() << "[Notepad--] Headless timeout — exiting";
+            // Use std::_Exit() (POSIX _exit) to terminate immediately without
+            // running Qt destructors.  The offscreen surface cleanup in Qt 6.4
+            // can SEGV when the platform integration is torn down.  _Exit()
+            // bypasses this by terminating without any cleanup.
+            std::fflush(stderr);
+            std::_Exit(EXIT_SUCCESS);
+        });
+    }
+
     // Initialize application
     auto& application = Application::instance();
     if (!args.configDir.empty()) {

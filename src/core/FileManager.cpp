@@ -301,7 +301,7 @@ int64_t FileManager::getFileSize(const QString& path) const {
 // ============================================================================
 
 BufferID FileManager::createBuffer(const QString& fileName, bool isLargeFile) {
-    Buffer* buf = new Buffer(this, _nextBufferId, fileName, isLargeFile);
+    Buffer* buf = new Buffer(this, fileName, isLargeFile);
     _buffers.push_back(buf);
     ++_nextBufferId;
     emit bufferCreated(buf->getID());
@@ -323,7 +323,7 @@ BufferID FileManager::openFile(const QString& path, bool readOnly) {
         return nullptr;
     }
 
-    Buffer* buf = new Buffer(this, _nextBufferId, path, false);
+    Buffer* buf = new Buffer(this, path, false);
     ++_nextBufferId;
     QFileInfo fileInfo(path);
     qint64 fileSize = fileInfo.size();
@@ -430,7 +430,7 @@ BufferID FileManager::duplicateBuffer(BufferID buffer) {
     if (!src)
         return BUFFER_INVALID;
 
-    Buffer* dup = new Buffer(this, _nextBufferId, src->getFileName(), src->isLargeFile());
+    Buffer* dup = new Buffer(this, src->getFileName(), src->isLargeFile());
     ++_nextBufferId;
 
     dup->setLangType(src->getLangType());
