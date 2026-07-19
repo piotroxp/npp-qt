@@ -304,10 +304,6 @@ void MainWindow::createActions() {
     // Help actions
     QAction* aboutAction = new QAction("&About", this);
     _actions["help.about"] = aboutAction;
-    
-    // Connect all actions to dispatchCommand
-    // Menu/toolbar commands flow through menuCommand/toolBarCommand signals.
-    // _actions map maintained for state (enabled/disabled, check state) only.
 }
 
 void MainWindow::createMenus() {
@@ -374,10 +370,10 @@ void MainWindow::createPanels() {
 
     // Document Map panel (right dock, tabified with Function List)
     _docMapPanel = new DocumentMapPanel(this);
-    QDockWidget* docMapDock = new QDockWidget("Document Map", this);
-    docMapDock->setWidget(_docMapPanel);
-    addDockWidget(Qt::RightDockWidgetArea, docMapDock);
-    tabifyDockWidget(_funcListDock, docMapDock);
+    _docMapDock = new QDockWidget("Document Map", this);
+    _docMapDock->setWidget(_docMapPanel);
+    addDockWidget(Qt::RightDockWidgetArea, _docMapDock);
+    tabifyDockWidget(_funcListDock, _docMapDock);
     _funcListDock->raise();
 
     // Sync pointers to Application so both sides reference the same objects

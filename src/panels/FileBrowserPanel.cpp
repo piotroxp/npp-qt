@@ -617,14 +617,23 @@ void FileBrowserPanel::onDoubleClicked(const QModelIndex& index) {
     if (!_initialized || !_model || !_treeView || !index.isValid()) return;
 
     QString path = _model->filePath(index);
-    if (path.isEmpty()) return;
+    if (path.isEmpty()) {
+        qWarning() << "FileBrowserPanel: double-clicked item has empty path, ignoring";
+        return;
+    })
     QFileInfo info = _model->fileInfo(index);
 
-    if (info.isFile()) {
+    // Only regular files trigger openFileInTab
+    if (info.isFile() && !info.isSymLink()) {
         _activeFilePath = path;
         emit fileDoubleClicked(path);
+    } else if (info.isSymLink()) {
+        qWarning() << "FileBrowserPanel: double-clicked symlink, ignoring:" << path;
     } else if (info.isDir()) {
-        setRootDirectory(path);
+        // Directories are intentionally ignored — no navigation on double-click
+        qWarning() << "FileBrowserPanel: double-clicked directory, ignoring:" << path;
+    } else {
+        qWarning() << "FileBrowserPanel: double-clicked unsupported item type:" << path;
     }
 }
 
@@ -746,7 +755,7 @@ void FileBrowserPanel::openReadOnly() {
 }
 
 void FileBrowserPanel::openInNewInstance() {
-    if (!_initialized || !_model || !_treeView) return;
+    if (!_initialized || !_model || !_treeView) return;)
     QModelIndex index = _treeView->currentIndex();
     if (!index.isValid()) return;
     QString path = _model->filePath(index);

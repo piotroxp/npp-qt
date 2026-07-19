@@ -41,6 +41,7 @@
 #include <QMimeData>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QWidget>   // QWidget for Q_ASSERT parent check
 #include <QContextMenuEvent>
 #include <QApplication>
 #include <QClipboard>
@@ -71,6 +72,10 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     , _editor(new QsciScintilla(parent))
     , _highlighter(nullptr)  // QsciScintilla handles highlighting via lexers, not QSyntaxHighlighter
 {
+    // Guard against null parent — QFrame must have a valid parent to be added to a layout.
+    // If parent is nullptr, fall back to this widget so _editor still gets a parent.
+    Q_ASSERT_X(parent != nullptr, "ScintillaEditor", "ScintillaEditor must be constructed with a non-null parent widget");
+
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(_editor);
