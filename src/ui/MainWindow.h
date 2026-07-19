@@ -52,6 +52,7 @@ public:
     void removeEditorTab(int index, BufferID closingBuffer = BUFFER_INVALID);
     void setTabText(int index, const QString& title);
     void setTabModified(int index, bool modified);
+    void switchToTab(int index);  // 0-based; Ctrl+1..Ctrl+8 shortcuts
 
     int currentTabIndex() const;
     ScintillaEditor* currentEditor() const;
@@ -128,6 +129,8 @@ private slots:
     void onBufferChanged();
     void onRecentFileSelected(const QString& file);
     void onTabContextMenu(const QPoint& pos);
+    void onTabMoved(int from, int to);
+    void onTabBarClicked(int index);
     void onMacroCommand(const QString& macroName);
 
 private:

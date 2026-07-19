@@ -29,8 +29,14 @@ static std::atomic<bool> g_sigintReceived{false};
 static std::atomic<bool> g_sigtermReceived{false};
 
 extern "C" void signalHandler(int sig) {
-    if (sig == SIGINT) g_sigintReceived = true;
-    if (sig == SIGTERM) g_sigtermReceived = true;
+    // Call std::_Exit() directly instead of setting flags.  The original approach
+    // of setting flags and calling app.quit() triggers QApplication::closeAllWindows()
+    // during Qt's shutdown sequence, which causes heap-use-after-free in
+    // MainWindow::closeEvent when _tabWidget has already been destroyed.
+    // std::_Exit() terminates the process immediately without running any destructors
+    // or Qt shutdown, bypassing this entirely.
+    std::fflush(stderr);
+    std::_Exit(128 + sig);  // 130 = SIGTERM
 }
 
 // ============================================================================
@@ -189,9 +195,13 @@ int main(int argc, char* argv[]) {
     // periodic timer to poll signal flags and exit app.exec() cleanly.
     QTimer signalTimer;
     QObject::connect(&signalTimer, &QTimer::timeout, [&app, &signalTimer]() {
+        // The signal handler now calls std::_Exit() directly, so this timer
+        // only fires if the signal flag was set but the handler didn't _Exit.
+        // In practice this block is never reached, but keep it as a fallback.
         if (g_sigintReceived || g_sigtermReceived) {
             signalTimer.stop();
-            app.quit();
+            std::fflush(stderr);
+            std::_Exit(EXIT_FAILURE);
         }
     });
     signalTimer.start(500);  // Check every 500ms
@@ -212,10 +222,12 @@ int main(int argc, char* argv[]) {
         qDebug() << "[Notepad--] Headless mode: auto-exiting after 5 seconds";
         QTimer::singleShot(5000, &app, [&app]() {
             qDebug() << "[Notepad--] Headless timeout — exiting";
-            // Use std::_Exit() (POSIX _exit) to terminate immediately without
-            // running Qt destructors.  The offscreen surface cleanup in Qt 6.4
-            // can SEGV when the platform integration is torn down.  _Exit()
-            // bypasses this by terminating without any cleanup.
+            // Use std::_Exit() to terminate immediately, bypassing Qt's shutdown
+            // sequence entirely.  This avoids QApplication::closeAllWindows() being
+            // called on a partially-destroyed widget tree (which causes
+            // MainWindow::closeEvent to fire with a dangling _tabWidget pointer —
+            // heap-use-after-free).  The GoToLineDialog double-destroy crash is
+            // fixed by its own static guard, so std::_Exit() is safe here.
             std::fflush(stderr);
             std::_Exit(EXIT_SUCCESS);
         });

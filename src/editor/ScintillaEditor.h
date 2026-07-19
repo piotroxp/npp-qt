@@ -167,6 +167,16 @@ public:
     void setCaretForegroundColor(const QColor& color);
     void setCaretLineBackgroundColor(const QColor& color);
 
+    // Long-line edge indicator (mirrors N++ Edge settings)
+    void setEdgeColumn(int col);
+    void setEdgeMode(int mode);
+    int edgeColumn() const;
+    int edgeMode() const;
+
+    // Multi-caret / multi-selection (Ctrl+Click support)
+    void setMultiCaretEnabled(bool enabled);
+    bool isMultiCaretEnabled() const;
+
     // Theme application — applies colors from ThemeManager to the editor surface
     void applyTheme(const QString& themeName);
     void applyThemeToLexer(QsciLexer* lexer);
@@ -176,6 +186,16 @@ public:
     void zoomOut();
     void zoomReset();
     int zoomLevel() const;
+
+    // Per-buffer view settings persistence (QSettings-backed)
+    // Saves zoom, wrap, edge column/mode, multi-caret state for this buffer.
+    void saveViewSettings(const QString& bufferId) const;
+    void restoreViewSettings(const QString& bufferId);
+
+    // Apply global NPP-style settings from NppGUI (wordWrap, edge, multi-caret, etc.)
+    // Called by Application when creating a new editor.
+    struct NppGUI;  // forward
+    void applyGlobalSettings(const NppGUI& gui);
 
     // DPI — rescale fonts when screen DPI changes
     void updateFontForDpi();
