@@ -378,6 +378,9 @@ BufferID FileManager::openFile(const QString& path, bool readOnly) {
     QString content;
     loadFile(path, content, detectedEnc);
 
+    // Store decoded text in the buffer map — getBufferText() reads from here
+    _bufferText[buf->getID()] = content;
+
     // Detect EOL from decoded content
     EolType eol = EolType::EOL_LF;
     if (content.contains("\r\n")) eol = EolType::EOL_CRLF;
