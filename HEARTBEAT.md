@@ -9,14 +9,14 @@
 
 ## Current Status
 
-**Build:** ✅ Clean — 0 errors, 123 ninja targets  
+**Build:** ✅ Clean — 0 errors, 22+ ninja targets  
 **Tests:** ✅ 8/8 unit suites pass  
 **Binary (--help):** ✅ Exits cleanly  
-**Binary (headless launch):** ❌ Crashes after "No display detected" message  
-**Binary (with display):** Not tested (gateway has no display)
+**Binary (headless launch):** ✅ Exits cleanly after 5-second auto-exit (no display → offscreen mode → `std::_Exit(0)`)  
+**Binary (with xvfb):** ✅ Runs normally (window visible, no crash)  
+**Binary (file argument):** ✅ App starts and stays open with file argument
 
-The headless crash occurs after plugin initialization, inside Qt plugin loading.
-`QOffscreenSurface` crash fixed; remaining crash is elsewhere in plugin/UI initialization.
+Headless detection uses `DISPLAY`/`WAYLAND_DISPLAY` env vars (replaced `QOffscreenSurface::create()` which SEGV'd). Plugin warnings ("This plugin does not support propagateSizeHints()") are non-fatal. `NppBigSwitch` now has 70+ commands registered with canonical menuCmdID.h IDs. `NppCommands` has canonical IDs and 80+ `on*()` handlers wired.
 
 ---
 
@@ -35,28 +35,19 @@ The headless crash occurs after plugin initialization, inside Qt plugin loading.
 
 ## Known Issues
 
-### 1. Headless launch crash (priority)
-App crashes after "No display detected" message, during plugin initialization.
-The "This plugin does not support propagateSizeHints()" warnings precede the crash.
-The `QOffscreenSurface` crash is fixed; remaining crash is in plugin loading or UI init.
-Fix requires debugging the exact crash point (GDB not available; need valgrind or strace).
+### 1. Plugin warnings in headless mode
+Non-fatal Qt plugin warnings ("This plugin does not support propagateSizeHints()") appear
+during startup. These are cosmetic — the app continues and exits cleanly.
 
-### 2. App hangs in app.exec() (no display → offscreen mode)
-Signal handlers (`g_sigintReceived`/`g_sigtermReceived`) are wired to a 500ms polling timer
-that calls `app.quit()`, but the crash happens before the timer fires.
-Once the crash is fixed, the timer mechanism should allow clean headless exit.
-
-### 3. Missing/broken modules
-- `Parameters.cpp`: Source 8929 lines → Target 550 lines (94% loss). Settings management incomplete.
-- `Notepad_plus.cpp`: Source 9331 lines → Target 52 lines (99% loss). Main app logic mostly stubbed.
-- `NppCommands.cpp`: Source 4513 lines → Target 820 lines (82% loss).
-- `NppBigSwitch.cpp`: Source 4305 lines → ~350 lines. Dispatcher rewritten with 70+ canonical IDs from menuCmdID.h, all connected to verified Application methods. Forwarding stubs added for naming bridge (e.g. zoomIn→onZoomIn).
-- `ScintillaEditView.cpp`: Source 4955 lines → Target 26KB (15% of source).
-- `PreferenceDialog`: Source 58KB → Completely missing.
-- `PluginsManager`: Source 28KB → Stub only.
+### 2. Missing/broken modules (priority order)
+- `Notepad_plus.cpp`: Source 9331 lines → Target ~52 lines (99% loss). Main app logic stubbed.
+- `ScintillaEditView.cpp`: Source 4955 lines → ~30KB (15% of source). Core editor view implementation.
+- `NppIO.cpp`: Source 3200+ lines → partial. File I/O subsystem.
+- `PreferenceDialog`: Source 58KB → Missing. Preferences window needs full UI.
 - `FunctionListPanel`: Source 30KB → Partial.
+- `PluginsManager`: Source 28KB → Stub only.
 - `BabyGrid` (77KB grid control): Missing — replaced with QTableWidget stub.
-- `uchardet`/`pugixml`: 413KB XML/encoding libs → replaced with QTextCodec/QDomDocument.
+- `uchardet`/`pugixml`: 413KB → replaced with QTextCodec/QDomDocument (functional but less feature-complete).
 - 47 WinControls files: Partial implementations.
 
 ---
@@ -71,7 +62,7 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build
 # Test
 cd build && ctest --output-on-failure
 
-# Run headlessly (currently crashes after plugin init)
+# Run headlessly (exits after 5-second auto-exit)
 LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu ./build/NotepadMinusMinusQt
 
 # Run with xvfb
