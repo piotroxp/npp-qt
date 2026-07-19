@@ -22,7 +22,7 @@ The headless crash occurs after plugin initialization, inside Qt plugin loading.
 
 ## Architecture
 
-- `src/core/` — Application, Buffer, FileManager, NppIO, Parameters, EncodingDetector, LanguageManager, ShortcutManager, ThemeManager, UdlManager, SessionManager, MacroManager
+- `src/core/` — Application, Buffer, FileManager, NppIO, Parameters, EncodingDetector, LanguageManager, ShortcutManager, ThemeManager, UdlManager, SessionManager, MacroManager, NppBigSwitch (command dispatcher — 70+ commands registered)
 - `src/editor/` — ScintillaEditor, ScintillaEditView, DocTabView, ScintillaCtrls
 - `src/ui/` — MainWindow, MenuBar
 - `src/dialogs/` — FindReplaceDialog, PreferenceDialog, ShortcutMapperDialog, AnsiCharPanel, FindCharsInRangeDialog, CommandPaletteDialog
@@ -50,7 +50,7 @@ Once the crash is fixed, the timer mechanism should allow clean headless exit.
 - `Parameters.cpp`: Source 8929 lines → Target 550 lines (94% loss). Settings management incomplete.
 - `Notepad_plus.cpp`: Source 9331 lines → Target 52 lines (99% loss). Main app logic mostly stubbed.
 - `NppCommands.cpp`: Source 4513 lines → Target 820 lines (82% loss).
-- `NppBigSwitch.cpp`: Source 4305 lines → Target 205 lines (95% loss).
+- `NppBigSwitch.cpp`: Source 4305 lines → ~350 lines. Dispatcher rewritten with 70+ canonical IDs from menuCmdID.h, all connected to verified Application methods. Forwarding stubs added for naming bridge (e.g. zoomIn→onZoomIn).
 - `ScintillaEditView.cpp`: Source 4955 lines → Target 26KB (15% of source).
 - `PreferenceDialog`: Source 58KB → Completely missing.
 - `PluginsManager`: Source 28KB → Stub only.
