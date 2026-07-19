@@ -342,29 +342,29 @@ inline constexpr int EolUnknown = 0;  // default
 
 // NumBase enum is defined in Parameters.h (with BASE_10, BASE_16, BASE_16_UPPERCASE, BASE_08, BASE_02)
 
-// Line wrap method
-enum class LineWrapMethod { WrapNone = 0, WrapByFont = 1, WrapByWindow = 2 };
-enum lineWrapMethod { WrapNone = 0, WrapByFont = 1, WrapByWindow = 2 };
+// Line wrap method — int constants (Scintilla values)
+// canonical: lineWrap_none=0, lineWrap_byFont=1, lineWrap_byWindow=2
+// Scintilla SC_WRAPINDENT_FIXED=3
+using LineWrapMethod = int;
 inline constexpr int LINEWRAP_ALIGNED = 3;   // Scintilla SC_WRAPINDENT_FIXED
 
-// Line highlight mode
-enum class LineHiliteMode { LineHiliteNone = 0, LineHiliteCurrent = 1, LineHiliteAll = 2,
-    LINEHILITE_NONE = 0, LINEHILITE_HILITE = 1, LINEHILITE_FRAME = 2 };
-enum lineHiliteMode { LineHiliteNone = 0, LineHiliteCurrent = 1, LineHiliteAll = 2,
-    LINEHILITE_NONE = 0, LINEHILITE_HILITE = 1, LINEHILITE_FRAME = 2 };
+// Line highlight mode — int constants
+// canonical: LINEHILITE_NONE=0, LINEHILITE_HILITE=1, LINEHILITE_FRAME=2
+using LineHiliteMode = int;
+inline constexpr int LineHiliteNone = 0;
+inline constexpr int LineHiliteCurrent = 1;
+inline constexpr int LineHiliteAll = 2;
 
-// Folder style
-enum class FolderStyle { FolderSymbolNone = 0, FolderSymbolArrow = 1, FolderSymbolBox = 2, FolderSymbolCircle = 3 };
-enum folderStyle {
-    FOLDER_TYPE = 0,
-    FOLDER_STYLE_SIMPLE = 1,
-    FOLDER_STYLE_ARROW = 2,
-    FOLDER_STYLE_CIRCLE = 3,
-    FOLDER_STYLE_BOX = 4,
-    FOLDER_STYLE_NONE = 5,
-    // aliases
-    FolderSymbolNone = 0, FolderSymbolArrow = 1, FolderSymbolBox = 2, FolderSymbolCircle = 3
-};
+// Folder style — int constants (Scintilla SC_FOLDERSYMBOL values)
+// canonical: FOLDER_TYPE=0, FOLDER_STYLE_SIMPLE=1, FOLDER_STYLE_ARROW=2,
+//            FOLDER_STYLE_CIRCLE=3, FOLDER_STYLE_BOX=4, FOLDER_STYLE_NONE=5
+using FolderStyle = int;
+inline constexpr int FOLDER_TYPE = 0;
+inline constexpr int FOLDER_STYLE_SIMPLE = 1;
+inline constexpr int FOLDER_STYLE_ARROW = 2;
+inline constexpr int FOLDER_STYLE_CIRCLE = 3;
+inline constexpr int FOLDER_STYLE_BOX = 4;
+inline constexpr int FOLDER_STYLE_NONE = 5;
 
 // URL mode
 enum class UrlMode { URL_NONE = 0, URL_HTML = 1, URL_XML = 2, URL_JS = 4, URL_CSS = 8 };

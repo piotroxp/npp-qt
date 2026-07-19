@@ -497,8 +497,12 @@ void Application::setupConnections() {
         connect(_fileManager, &FileManager::loadingProgress, this, [this](int pct) {
             _statusBarWidget->setMessage(QString("Loading... %1%").arg(pct));
         });
-        connect(_fileManager, &FileManager::fileLoaded, this, [this](bool, BufferID, const QString&) {
-            // status bar will be updated by onBufferActivated
+        connect(_fileManager, &FileManager::fileLoaded, this, [this](bool, BufferID id, const QString&) {
+            // Start file monitoring so external changes trigger the reload prompt.
+            if (id) {
+                auto* buf = static_cast<Buffer*>(id);
+                buf->startMonitoring();
+            }
         });
     }
 

@@ -6,10 +6,11 @@
 #include <QMessageBox>
 #include <QStyleFactory>
 #include <QFileOpenEvent>
+#include <QTimer>
+#include <QThread>
 #include <csignal>
 #include <iostream>
 #include <chrono>
-#include <QOffscreenSurface>
 
 #include "core/Application.h"
 #include "common/Util.h"
@@ -46,38 +47,16 @@ static void detectHeadlessEnvironment(int argc, char* argv[]) {
         return;
     }
 
-    // The probe must use a fresh QCoreApplication. Attempt to create an
-    // offscreen surface. Qt can throw QException if no display is available.
-    int probeArgc = argc;
-    QCoreApplication* const probeApp = new QCoreApplication(probeArgc, argv);
+    // Use DISPLAY/WAYLAND_DISPLAY as a proxy for display availability.
+    // This avoids creating QOffscreenSurface (which crashes when no screen exists).
+    // QCoreApplication requires a display to exist, so we can't probe with Qt.
+    bool displayAvailable = (!qgetenv("DISPLAY").isEmpty()
+                            || !qgetenv("WAYLAND_DISPLAY").isEmpty());
 
-    bool headless = true;
-    try {
-        QOffscreenSurface probeSurface;
-        probeSurface.setFormat(QSurfaceFormat());
-        probeSurface.create();
-        headless = !probeSurface.isValid();
-        // Destroy surface while app is still alive (screenDestroyed signal
-        // requires a living QCoreApplication).
-        probeSurface.destroy();
-    } catch (const std::exception& e) {
-        qWarning() << "[Notepad--] Display probe caught exception:" << e.what();
-        headless = true;
-    } catch (...) {
-        qWarning() << "[Notepad--] Display probe caught unknown exception.";
-        headless = true;
-    }
-
-    delete probeApp;
-
-    if (headless) {
-        // No display / OpenGL surface available. Force the offscreen platform.
-        // This must be set BEFORE NotepadApp (QApplication subclass) is
-        // constructed, because QApplicationPrivate::createEventDispatcher()
-        // is called inside QApplication's constructor and will abort fatally
-        // on xcb/Wayland when no display is present.
+    if (!displayAvailable) {
         qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("offscreen"));
-        qWarning() << "[Notepad--] No display detected. Running in headless mode.";
+        qWarning() << "[Notepad--] No display detected (no DISPLAY/WAYLAND_DISPLAY)."
+                      " Running in headless mode.";
     }
 }
 
@@ -202,9 +181,20 @@ int main(int argc, char* argv[]) {
 
     NotepadApp app(argc, argv);
 
-    // Set up signal handlers
+    // Set up signal handlers that exit the Qt event loop
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
+
+    // In headless/offscreen mode the window won't close to quit, so use a
+    // periodic timer to poll signal flags and exit app.exec() cleanly.
+    QTimer signalTimer;
+    QObject::connect(&signalTimer, &QTimer::timeout, [&app, &signalTimer]() {
+        if (g_sigintReceived || g_sigtermReceived) {
+            signalTimer.stop();
+            app.quit();
+        }
+    });
+    signalTimer.start(500);  // Check every 500ms
 
     // Initialize application
     auto& application = Application::instance();
