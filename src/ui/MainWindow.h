@@ -128,6 +128,8 @@ private slots:
     void onBufferChanged();
     void onRecentFileSelected(const QString& file);
     void onTabContextMenu(const QPoint& pos);
+    void onTabMoved(int from, int to);
+    void onTabBarClicked(int index);
     void onMacroCommand(const QString& macroName);
 
 private:
