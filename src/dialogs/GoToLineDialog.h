@@ -11,7 +11,6 @@ class GoToLineDialog : public QDialog {
 public:
     explicit GoToLineDialog(QWidget* parent = nullptr);
     ~GoToLineDialog() override;
-
     void setMaxLineNumber(int maxLine);
     void setMaxColumnNumber(int maxCol);
     int getTargetLine() const { return lineSpinBox->value(); }
@@ -19,8 +18,10 @@ public:
     bool goToOffset() const { return offsetCheckBox->isChecked(); }
 
 protected:
+    bool event(QEvent* event) override;
     void showEvent(QShowEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
+    void setVisible(bool visible) override;
 
 private slots:
     void onGoClicked();
@@ -31,6 +32,7 @@ private:
     void setupUi();
     void updateStatusLabel();
     void applyStyle();
+    bool _destructing = false;
 
     QSpinBox* lineSpinBox = nullptr;
     QSpinBox* columnSpinBox = nullptr;

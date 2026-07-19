@@ -54,7 +54,7 @@ MainWindow::MainWindow(Application* app) : QMainWindow(nullptr), _app(app)
     setWindowTitle("Notepad--Qt");
     setAcceptDrops(true);
     resize(1200, 800);
-    
+
     // MenuBar
     _menuBar = new MenuBar(this);
     setMenuBar(_menuBar);
@@ -62,20 +62,20 @@ MainWindow::MainWindow(Application* app) : QMainWindow(nullptr), _app(app)
     // Connect macro command signal from ShortcutManager
     connect(&ShortcutManager::instance(), &ShortcutManager::macroCommandRequested,
             this, &MainWindow::onMacroCommand);
-    
-    // Toolbar  
+
+    // Toolbar
     _toolBar = new ToolBar(this);
     addToolBar(_toolBar);
-    
+
     // Tab bar above tab widget
     _tabBar = new TabBar(this);
-    
+
     // Central widget is the tab widget
     _tabWidget = new QTabWidget(this);
     _tabWidget->setTabsClosable(true);
     _tabWidget->setMovable(true);
     _tabWidget->setDocumentMode(true);
-    
+
     // Stack tab bar and tab widget
     QWidget* centralContainer = new QWidget(this);
     QVBoxLayout* centralLayout = new QVBoxLayout(centralContainer);
@@ -83,17 +83,17 @@ MainWindow::MainWindow(Application* app) : QMainWindow(nullptr), _app(app)
     centralLayout->setSpacing(0);
     centralLayout->addWidget(_tabBar);
     centralLayout->addWidget(_tabWidget);
-    
+
     setCentralWidget(centralContainer);
-    
+
     // Status bar
     _statusBarWidget = new StatusBar(this);
     setStatusBar(_statusBarWidget);
-    
+
     // Recent file mapper
     _recentFileMapper = new QSignalMapper(this);
     connect(_recentFileMapper, &QSignalMapper::mappedString, this, &MainWindow::onRecentFileSelected);
-    
+
     // Create actions, menus, toolbar
     createActions();
     createMenus();
@@ -101,7 +101,7 @@ MainWindow::MainWindow(Application* app) : QMainWindow(nullptr), _app(app)
     createStatusBar();
     createPanels();
     setupConnections();
-    
+
     // Connections
     connect(_tabWidget, &QTabWidget::currentChanged, this, &MainWindow::onTabChanged);
     connect(_tabWidget, &QTabWidget::tabCloseRequested, this, &MainWindow::onTabCloseRequested);
@@ -158,167 +158,167 @@ void MainWindow::createActions() {
     newAction->setShortcut(QKeySequence::New);
     newAction->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
     _actions["file.new"] = newAction;
-    
+
     QAction* openAction = new QAction("&Open...", this);
     openAction->setShortcut(QKeySequence::Open);
     openAction->setIcon(style()->standardIcon(QStyle::SP_DirOpenIcon));
     _actions["file.open"] = openAction;
-    
+
     QAction* saveAction = new QAction("&Save", this);
     saveAction->setShortcut(QKeySequence::Save);
     saveAction->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
     _actions["file.save"] = saveAction;
-    
+
     QAction* saveAsAction = new QAction("Save &As...", this);
     saveAsAction->setShortcut(QKeySequence::SaveAs);
     _actions["file.saveAs"] = saveAsAction;
-    
+
     QAction* saveAllAction = new QAction("Save A&ll", this);
     saveAllAction->setShortcut(QKeySequence("Ctrl+Shift+S"));
     _actions["file.saveAll"] = saveAllAction;
-    
+
     QAction* closeAction = new QAction("&Close", this);
     closeAction->setShortcut(QKeySequence("Ctrl+W"));
     _actions["file.close"] = closeAction;
-    
+
     QAction* closeAllAction = new QAction("Clos&e All", this);
     _actions["file.closeAll"] = closeAllAction;
-    
+
     QAction* exitAction = new QAction("E&xit", this);
     exitAction->setShortcut(QKeySequence("Alt+F4"));
     _actions["file.exit"] = exitAction;
-    
+
     // Edit actions
     QAction* undoAction = new QAction("&Undo", this);
     undoAction->setShortcut(QKeySequence::Undo);
     undoAction->setIcon(style()->standardIcon(QStyle::SP_ArrowBack));
     _actions["edit.undo"] = undoAction;
-    
+
     QAction* redoAction = new QAction("&Redo", this);
     redoAction->setShortcut(QKeySequence::Redo);
     redoAction->setIcon(style()->standardIcon(QStyle::SP_ArrowForward));
     _actions["edit.redo"] = redoAction;
-    
+
     QAction* cutAction = new QAction("Cu&t", this);
     cutAction->setShortcut(QKeySequence::Cut);
     _actions["edit.cut"] = cutAction;
-    
+
     QAction* copyAction = new QAction("&Copy", this);
     copyAction->setShortcut(QKeySequence::Copy);
     _actions["edit.copy"] = copyAction;
-    
+
     QAction* pasteAction = new QAction("&Paste", this);
     pasteAction->setShortcut(QKeySequence::Paste);
     _actions["edit.paste"] = pasteAction;
-    
+
     QAction* deleteAction = new QAction("&Delete", this);
     deleteAction->setShortcut(QKeySequence::Delete);
     _actions["edit.delete"] = deleteAction;
-    
+
     QAction* selectAllAction = new QAction("Select &All", this);
     selectAllAction->setShortcut(QKeySequence::SelectAll);
     _actions["edit.selectAll"] = selectAllAction;
-    
+
     QAction* findAction = new QAction("&Find...", this);
     findAction->setShortcut(QKeySequence::Find);
     findAction->setIcon(style()->standardIcon(QStyle::SP_FileDialogContentsView));
     _actions["edit.find"] = findAction;
-    
+
     QAction* replaceAction = new QAction("&Replace...", this);
     replaceAction->setShortcut(QKeySequence("Ctrl+H"));
     _actions["edit.replace"] = replaceAction;
-    
+
     QAction* gotoAction = new QAction("&Go to Line...", this);
     gotoAction->setShortcut(QKeySequence("Ctrl+G"));
     _actions["edit.goto"] = gotoAction;
-    
+
     // Search actions
     QAction* findNextAction = new QAction("Find &Next", this);
     findNextAction->setShortcut(QKeySequence::FindNext);
     _actions["search.findNext"] = findNextAction;
-    
+
     QAction* findPrevAction = new QAction("Find &Previous", this);
     findPrevAction->setShortcut(QKeySequence("Shift+F3"));
     _actions["search.findPrev"] = findPrevAction;
-    
+
     QAction* findInFilesAction = new QAction("Find in Fi&les...", this);
     findInFilesAction->setShortcut(QKeySequence("Ctrl+Shift+F"));
     _actions["search.findInFiles"] = findInFilesAction;
-    
+
     QAction* countAction = new QAction("&Count", this);
     _actions["search.count"] = countAction;
-    
+
     QAction* markAllAction = new QAction("Mark &All", this);
     _actions["search.markAll"] = markAllAction;
-    
+
     // View actions
     QAction* fullScreenAction = new QAction("Toggle F&ull Screen", this);
     fullScreenAction->setShortcut(QKeySequence("F11"));
     _actions["view.fullScreen"] = fullScreenAction;
-    
+
     QAction* distractionFreeAction = new QAction("Toggle &Distraction-Free Mode", this);
     distractionFreeAction->setShortcut(QKeySequence("F12"));
     _actions["view.distractionFree"] = distractionFreeAction;
-    
+
     QAction* showTabBarAction = new QAction("Show &Tab Bar", this);
     showTabBarAction->setCheckable(true);
     showTabBarAction->setChecked(true);
     _actions["view.showTabBar"] = showTabBarAction;
-    
+
     QAction* showStatusBarAction = new QAction("Show &Status Bar", this);
     showStatusBarAction->setCheckable(true);
     showStatusBarAction->setChecked(true);
     _actions["view.showStatusBar"] = showStatusBarAction;
-    
+
     QAction* showToolBarAction = new QAction("Show &Tool Bar", this);
     showToolBarAction->setCheckable(true);
     showToolBarAction->setChecked(true);
     _actions["view.showToolBar"] = showToolBarAction;
-    
+
     QAction* fileBrowserAction = new QAction("&File Browser", this);
     fileBrowserAction->setCheckable(true);
     fileBrowserAction->setChecked(true);
     _actions["view.fileBrowser"] = fileBrowserAction;
-    
+
     QAction* funcListAction = new QAction("F&unction List", this);
     funcListAction->setCheckable(true);
     funcListAction->setChecked(true);
     _actions["view.functionList"] = funcListAction;
-    
+
     QAction* docMapAction = new QAction("&Document Map", this);
     docMapAction->setCheckable(true);
     docMapAction->setChecked(true);
     _actions["view.documentMap"] = docMapAction;
-    
+
     // Encoding actions
     QAction* convUtf8Action = new QAction("Convert to &UTF-8", this);
     _actions["encoding.utf8"] = convUtf8Action;
-    
+
     QAction* convUtf8BomAction = new QAction("Convert to UTF-8 &BOM", this);
     _actions["encoding.utf8bom"] = convUtf8BomAction;
-    
+
     QAction* convUtf16LeAction = new QAction("Convert to UTF-16 LE", this);
     _actions["encoding.utf16le"] = convUtf16LeAction;
-    
+
     QAction* convUtf16BeAction = new QAction("Convert to UTF-16 BE", this);
     _actions["encoding.utf16be"] = convUtf16BeAction;
-    
+
     // Settings actions
     QAction* prefsAction = new QAction("&Preferences...", this);
     prefsAction->setShortcut(QKeySequence("Ctrl+Alt+P"));
     _actions["settings.preferences"] = prefsAction;
-    
+
     QAction* shortcutMapperAction = new QAction("&Shortcut Mapper...", this);
     _actions["settings.shortcutMapper"] = shortcutMapperAction;
-    
+
     QAction* commandPaletteAction = new QAction("&Command Palette...", this);
     commandPaletteAction->setShortcut(QKeySequence("Ctrl+Shift+P"));
     _actions["settings.commandPalette"] = commandPaletteAction;
-    
+
     // Help actions
     QAction* aboutAction = new QAction("&About", this);
     _actions["help.about"] = aboutAction;
-    
+
     // Connect all actions to dispatchCommand
     for (auto it = _actions.constBegin(); it != _actions.constEnd(); ++it) {
         connect(it.value(), &QAction::triggered, this, [this, key = it.key()]() {
@@ -338,13 +338,13 @@ void MainWindow::createMenus() {
         (void)mb->encodingMenu();
         (void)mb->settingsMenu();
         (void)mb->helpMenu();
-        
+
         // File menu items
         if (fileMenu) {
             // The menu bar already has its own File menu with actions
             // We could add additional file menu items here if needed
         }
-        
+
         // Update recent files
         updateRecentFilesMenu();
     }
@@ -363,7 +363,7 @@ void MainWindow::createStatusBar() {
 }
 
 void MainWindow::createPanels() {
-    // File Browser panel (left dock) — created HERE so panels exist during construction
+    // File Browser panel (left dock) - created HERE so panels exist during construction
     _fileBrowserPanel = new FileBrowserPanel(this);
     _fileBrowserDock = new QDockWidget("File Browser", this);
     _fileBrowserDock->setWidget(_fileBrowserPanel);
@@ -406,17 +406,17 @@ void MainWindow::createPanels() {
 void MainWindow::setupConnections() {
     // Connect menu bar commands
     connect(_menuBar, &MenuBar::menuCommand, this, &MainWindow::onMenuCommand);
-    
+
     // Connect toolbar commands
     connect(_toolBar, &ToolBar::toolBarCommand, this, &MainWindow::onToolBarCommand);
 }
 
 void MainWindow::updateRecentFilesMenu() {
     if (!_menuBar) return;
-    
+
     QMenu* fileMenu = _menuBar->fileMenu();
     if (!fileMenu) return;
-    
+
     // Find and clear old Open Recent menu items
     QList<QAction*> fileActions = fileMenu->actions();
     for (int i = 0; i < fileActions.size(); ++i) {
@@ -432,7 +432,7 @@ void MainWindow::updateRecentFilesMenu() {
                         delete subAct;
                     }
                 }
-                
+
                 // Add recent files
                 auto recentFiles = _app->getRecentFiles();
                 for (const auto& file : recentFiles) {
@@ -647,8 +647,8 @@ void MainWindow::setTabModified(int index, bool modified) {
     _tabWidget->setTabText(index, title);
 }
 
-int MainWindow::currentTabIndex() const { 
-    return _tabWidget->currentIndex(); 
+int MainWindow::currentTabIndex() const {
+    return _tabWidget->currentIndex();
 }
 
 ScintillaEditor* MainWindow::currentEditor() const {
@@ -668,13 +668,13 @@ BufferID MainWindow::bufferAtTabIndex(int tabIndex) const {
     return _tabToBuffer.value(tabIndex, BUFFER_INVALID);
 }
 
-void MainWindow::updateTabBar() { 
-    if (_tabBar) _tabBar->updateFrom(_tabWidget); 
+void MainWindow::updateTabBar() {
+    if (_tabBar) _tabBar->updateFrom(_tabWidget);
 }
 
 void MainWindow::updateStatusBar() {
     if (!_statusBarWidget) return;
-    
+
     auto* editor = currentEditor();
     if (editor) {
         _statusBarWidget->setPosition(editor->currentLine() + 1, editor->currentColumn() + 1);
@@ -783,7 +783,7 @@ void MainWindow::onOpenFile() {
 }
 
 void MainWindow::openFileInTab(const QString& path) {
-    // Guard: empty path — reject before touching any subsystem
+    // Guard: empty path - reject before touching any subsystem
     if (path.isEmpty()) {
         QMessageBox::warning(this, "Open Error", "File path is empty.");
         return;
@@ -834,7 +834,7 @@ void MainWindow::openFileInTab(const QString& path) {
         return;
     }
 
-    // Check if already open — switch to existing tab
+    // Check if already open - switch to existing tab
     if (_bufferToTab.contains(buf)) {
         _tabWidget->setCurrentIndex(_bufferToTab[buf]);
         QObject::disconnect(_fileBrowserConnection);
@@ -866,7 +866,7 @@ void MainWindow::openFileInTab(const QString& path) {
 
     // Create editor
     ScintillaEditor* editor = new ScintillaEditor(_tabWidget);
-    reconnectGuard.dismiss();  // normal completion — no need to reconnect
+    reconnectGuard.dismiss();  // normal completion - no need to reconnect
 
     // Wire cursor position to status bar
     connect(editor, &ScintillaEditor::cursorPositionChanged,
@@ -979,37 +979,37 @@ void MainWindow::onCloseFile() {
     }
 }
 
-void MainWindow::onExit() { 
-    close(); 
+void MainWindow::onExit() {
+    close();
 }
 
 // Edit operations
-void MainWindow::onUndo() { 
-    if (auto* e = currentEditor()) e->undo(); 
+void MainWindow::onUndo() {
+    if (auto* e = currentEditor()) e->undo();
 }
 
-void MainWindow::onRedo() { 
-    if (auto* e = currentEditor()) e->redo(); 
+void MainWindow::onRedo() {
+    if (auto* e = currentEditor()) e->redo();
 }
 
-void MainWindow::onCut() { 
-    if (auto* e = currentEditor()) e->cut(); 
+void MainWindow::onCut() {
+    if (auto* e = currentEditor()) e->cut();
 }
 
-void MainWindow::onCopy() { 
-    if (auto* e = currentEditor()) e->copy(); 
+void MainWindow::onCopy() {
+    if (auto* e = currentEditor()) e->copy();
 }
 
-void MainWindow::onPaste() { 
-    if (auto* e = currentEditor()) e->paste(); 
+void MainWindow::onPaste() {
+    if (auto* e = currentEditor()) e->paste();
 }
 
 void MainWindow::onDelete() {
     if (auto* e = currentEditor()) e->deleteSelection();
 }
 
-void MainWindow::onSelectAll() { 
-    if (auto* e = currentEditor()) e->selectAll(); 
+void MainWindow::onSelectAll() {
+    if (auto* e = currentEditor()) e->selectAll();
 }
 
 void MainWindow::onFind() {
@@ -1040,7 +1040,7 @@ void MainWindow::onFindNext() {
                 editor->findNext(text, dlg->lastSearchOptions());
             }
         } else {
-            // No last search — open the dialog
+            // No last search - open the dialog
             onFind();
         }
     }
@@ -1098,13 +1098,13 @@ void MainWindow::onShowToolBar(bool show) {
 void MainWindow::onEncodingChanged(const QString& encoding) {
     BufferID buffer = app().getActiveBuffer();
     if (!buffer) return;
-    
+
     EncodingType enc = EncodingType::ANSI;
     if (encoding == "UTF-8") enc = EncodingType::UTF_8;
     else if (encoding == "UTF-8-BOM") enc = EncodingType::UTF_8_BOM;
     else if (encoding == "UTF-16-LE") enc = EncodingType::UTF_16_LE;
     else if (encoding == "UTF-16-BE") enc = EncodingType::UTF_16_BE;
-    
+
     app().setBufferEncoding(buffer, enc);
     if (auto* editor = currentEditor()) {
         editor->setEncoding(enc);
@@ -1120,7 +1120,7 @@ void MainWindow::onPreferences() {
 }
 
 void MainWindow::onAbout() {
-    QMessageBox::about(this, "About Notepad--Qt", 
+    QMessageBox::about(this, "About Notepad--Qt",
         "<h3>Notepad--Qt</h3>"
         "<p>Version 1.0.0</p>"
         "<p>A Qt-based text editor, inspired by Notepad++.</p>"
@@ -1146,7 +1146,7 @@ void MainWindow::onBufferOpened(BufferID buffer) {
     if (!_tabWidget) return;
     if (!_tabBar) return;
 
-    // Check if already open — switch to existing tab
+    // Check if already open - switch to existing tab
     if (_bufferToTab.contains(buffer)) {
         int idx = _bufferToTab[buffer];
         _tabWidget->setCurrentIndex(idx);
@@ -1210,7 +1210,7 @@ void MainWindow::onBufferOpened(BufferID buffer) {
 
 void MainWindow::onFileExternallyModified(const QString& filePath) {
     FileReloadDialog::Action action = FileReloadDialog::prompt(filePath, this);
-    
+
     if (action == FileReloadDialog::Action::Reload) {
         BufferID buf = app().getBufferForPath(filePath.toStdString());
         if (buf) {
@@ -1364,7 +1364,7 @@ void MainWindow::onTabCloseRequested(int index) {
             if (buf != BUFFER_INVALID) Application::instance().syncEditorToBuffer(editor, buf);
             QString path = Application::instance().fileManager()->getBufferPath(buf);
             if (path.isEmpty()) {
-                // New file — use Save As
+                // New file - use Save As
                 onSaveFileAs();
             } else {
                 Application::instance().saveFile(buf, path.toStdString());
@@ -1454,23 +1454,25 @@ void MainWindow::closeEvent(QCloseEvent* event) {
             }
         }
     }
-    
+
     if (hasUnsaved) {
         QMessageBox::StandardButton btn = QMessageBox::question(this, "Unsaved Changes",
             "Some files have unsaved changes. Exit anyway?",
             QMessageBox::Yes | QMessageBox::No);
-        
+
         if (btn == QMessageBox::No) {
             event->ignore();
             return;
         }
     }
-    
-    // Save window geometry and state
+
+    // Save window geometry and state BEFORE accept() — after accept(), Qt may
+    // begin deferred deletion of child widgets (e.g. _tabBar), making any access
+    // to them a heap-use-after-free (ASAN-confirmed crash at line ~1513).
     QSettings s;
     s.setValue("window/geometry", saveGeometry());
     s.setValue("window/state", saveState());
-    
+
     event->accept();
 }
 

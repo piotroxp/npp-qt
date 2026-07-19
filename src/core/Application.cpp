@@ -51,8 +51,8 @@
 #include "dialogs/CommandPaletteDialog.h"
 #include "dialogs/FindInFilesDialog.h"
 #include "dialogs/FindInFilesWorker.h"
-#include "dialogs/GoToLineDialog.h"
 #include "dialogs/IncrementalSearchDialog.h"
+#include "dialogs/GoToLineDialog.h"
 #include "dialogs/PreferenceDialog.h"
 #include "dialogs/ShortcutMapperDialog.h"
 #include "EditorCommandManager.h"
@@ -123,14 +123,17 @@ Application::~Application() {
     }
     _viewContainers.clear();
 
-    // Delete main window last — this triggers Qt's parent-child cascade delete
-    // for all dock widgets, panels, and dialogs that are children of MainWindow.
-    // After this, _findReplaceDialog, _docMapPanel, etc. are already deleted.
-    delete _mainWindow;
+    // Delete dialogs — owned by Application (nullptr parent), not children of
+    // _mainWindow, so no double-delete from Qt's cascade.
+    delete _findReplaceDialog;
+    delete _findInFilesDialog;
+    delete _gotoLineDialog;
+    delete _preferenceDialog;
+    delete _aboutDialog;
 
-    // These are now nullptr after _mainWindow deletion — do NOT delete again:
-    // _findReplaceDialog, _gotoLineDialog, _preferenceDialog,
-    // _aboutDialog, _docMapPanel, _funcListPanel, _fileBrowserPanel
+    // Delete main window last.
+    delete _mainWindow;
+    _mainWindow = nullptr;
 }
 
 // ============================================================================
@@ -206,14 +209,8 @@ bool Application::initialize() {
             if (!state.isEmpty() && _mainWindow) _mainWindow->restoreState(state);
         }
 
-        // Incremental search dialog
-        _incrementalSearch = new IncrementalSearchDialog(_mainWindow);
-        connect(_incrementalSearch, &IncrementalSearchDialog::searchNext,
-            this, [this](const QString&) { onFindNext(); });
-        connect(_incrementalSearch, &IncrementalSearchDialog::searchPrev,
-            this, [this](const QString&) { onFindPrev(); });
-        connect(_incrementalSearch, &IncrementalSearchDialog::closeRequested,
-            this, [this]() { /* nothing needed */ });
+        // Incremental search dialog — owned by MainWindow, accessed via getter.
+        // NOTE: signals are wired in MainWindow::MainWindow() to avoid double-fire.
 
         // Clipboard encoding auto-detection on paste
         connect(QApplication::clipboard(), &QClipboard::changed, this,
@@ -379,12 +376,16 @@ void Application::setupUI() {
     setupStatusBar();
     setupDockingPanels();
 
-    // Create dialogs
-    _findReplaceDialog = new FindReplaceDialog(_mainWindow);
-    _findInFilesDialog = new FindInFilesDialog(_mainWindow);
-    _gotoLineDialog = new GoToLineDialog(_mainWindow);
-    _preferenceDialog = new PreferenceDialog(_mainWindow);
-    _aboutDialog = new AboutDialog(_mainWindow);
+    // Create dialogs — parented to nullptr so Application exclusively owns them.
+    // If they were children of _mainWindow, Qt's deleteChildren() cascade would
+    // double-delete them (CRASH).  Application::initializeDialogs() below must be
+    // called AFTER _mainWindow is created; destruction order is handled in
+    // ~Application() where we delete dialogs before _mainWindow.
+    _findReplaceDialog = new FindReplaceDialog(nullptr);
+    _findInFilesDialog = new FindInFilesDialog(nullptr);
+    _gotoLineDialog = new GoToLineDialog(nullptr);
+    _preferenceDialog = new PreferenceDialog(nullptr);
+    _aboutDialog = new AboutDialog(nullptr);
 }
 
 void Application::setupMenuBar() {
@@ -938,8 +939,8 @@ void Application::setActiveEditor(ScintillaEditor* editor) {
         emit activeEditorChanged(editor);
     }
     // Keep incremental search dialog in sync with the active editor
-    if (_incrementalSearch) {
-        _incrementalSearch->setEditor(editor);
+    if (auto* is = _mainWindow ? _mainWindow->incrementalSearch() : nullptr) {
+        is->setEditor(editor);
     }
 }
 
@@ -1157,9 +1158,9 @@ void Application::onMenuCommand(const QString& cmd) {
     else if (cmd == "search.markAll") { onMarkAll(); }
     else if (cmd == "search.findInFiles") { onFindInFiles(); }
     else if (cmd == "search.incremental") {
-        if (_incrementalSearch) {
-            _incrementalSearch->setEditor(_activeEditor);
-            _incrementalSearch->showAtTop();
+        if (auto* is = _mainWindow ? _mainWindow->incrementalSearch() : nullptr) {
+            is->setEditor(_activeEditor);
+            is->showAtTop();
         }
     }
     // Bookmarks

@@ -32,7 +32,35 @@ GoToLineDialog::GoToLineDialog(QWidget* parent)
     validateInput();
 }
 
-GoToLineDialog::~GoToLineDialog() = default;
+bool GoToLineDialog::event(QEvent* event) {
+    // Intercept QEvent::DeferredDelete to hide the dialog before Qt's destructor
+    // chain calls setVisible(false).  QDialog::setVisible(false) crashes when
+    // windowHandle() is nullptr (parent window already destroyed) — this guards
+    // against that by making the dialog invisible before the crash can happen.
+    if (event->type() == QEvent::DeferredDelete && isVisible()) {
+        hide();
+    }
+    return QDialog::event(event);
+}
+
+void GoToLineDialog::setVisible(bool visible) {
+    // Guard: during destruction, windowHandle() may be nullptr (parent window
+    // already destroyed) causing SEGV in QWidget::isActiveWindow() called by
+    // QDialog::setVisible.  Also guard against re-entrancy: QDialog::~QDialog()
+    // calls setVisible(false) on child widgets, which would call back into this
+    // setVisible, potentially re-entering the destructor.  Break the cycle by
+    // using _destructing flag so the recursive call is a no-op.
+    if (_destructing) return;
+    if (!visible) _destructing = true;
+    QDialog::setVisible(visible);
+}
+
+GoToLineDialog::~GoToLineDialog() {
+    // The _destructing flag set by setVisible(false) above prevents any
+    // re-entrancy from QDialog::~QDialog() cascading setVisible(false) to
+    // child widgets and re-entering this destructor.  Qt's normal object
+    // tree handles child widget cleanup.
+}
 
 void GoToLineDialog::setupUi() {
     QVBoxLayout* mainLayout = new QVBoxLayout(this);

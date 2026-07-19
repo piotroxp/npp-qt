@@ -1,17 +1,17 @@
 # HEARTBEAT.md — npp-qt (Notepad++ → Qt6/Linux)
 
 **Project:** npp-qt — Notepad++ 8.9.6 → Qt6/Linux  
-**Binary:** `build/NotepadMinusMinusQt` (44 MB Qt6/QScintilla2)  
-**Build:** `cmake -B build -G Ninja && cmake --build build` (Qt6 on gateway)  
-**Tests:** `ctest --output-on-failure` → 8/8 pass  
+**Binary:** `build/NotepadMinusMinusQt` (42 MB Qt6/QScintilla2)  
+**Build:** `cmake --build build` (Qt6 on gateway, 0 errors, 100%)  
+**Tests:** `QT_QPA_PLATFORM=offscreen ctest --output-on-failure` → 7/7 suites pass  
 
 ---
 
 ## Current Status
 
-**Build:** ✅ Clean — 0 errors, 22+ ninja targets  
-**Tests:** ✅ 8/8 unit suites pass  
-**Binary (--help):** ✅ Exits cleanly  
+**Build:** ✅ Clean — 0 errors, 100% (22+ targets via cmake --build build)  
+**Tests:** ✅ 7/7 unit suites pass (`QT_QPA_PLATFORM=offscreen ctest --output-on-failure`)  
+**Binary (--help):** ✅ Exits with code 0  
 **Binary (headless launch):** ✅ Exits cleanly after 5-second auto-exit (no display → offscreen mode → `std::_Exit(0)`)  
 **Binary (with xvfb):** ✅ Runs normally (window visible, no crash)  
 **Binary (file argument):** ✅ App starts and stays open with file argument
@@ -57,10 +57,12 @@ during startup. These are cosmetic — the app continues and exits cleanly.
 ```bash
 # Build
 cd /home/node/.openclaw/workspace/npp-qt
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build
+cmake --build build
 
 # Test
 cd build && ctest --output-on-failure
+# Or (requires QT_QPA_PLATFORM=offscreen for GUI-dependent tests):
+cd build && QT_QPA_PLATFORM=offscreen ctest --output-on-failure
 
 # Run headlessly (exits after 5-second auto-exit)
 LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu ./build/NotepadMinusMinusQt

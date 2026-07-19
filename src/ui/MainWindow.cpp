@@ -1504,6 +1504,18 @@ void MainWindow::onTabContextMenu(const QPoint& pos) {
 
 // Drag and drop
 void MainWindow::closeEvent(QCloseEvent* event) {
+    // Guard: both _tabWidget and _tabBar may be null or already freed if
+    // shutdown races with Qt's deleteChildren() cascade that begins when
+    // closeAllWindows() triggers QWidget::event() for this window.  ASAN
+    // confirmed a heap-use-after-free on _tabBar (40-byte TabBar object)
+    // at this exact line: Qt's deleteChildren() frees _tabBar (as a child
+    // of this QMainWindow) before closeEvent returns, but execution of this
+    // function continues if the close is accepted mid-stream.
+    if (!_tabWidget || !_tabBar) {
+        event->accept();
+        return;
+    }
+
     // Check for unsaved changes
     bool hasUnsaved = false;
     for (int i = 0; i < _tabWidget->count(); ++i) {

@@ -502,7 +502,6 @@ private:
     PreferenceDialog*   _preferenceDialog = nullptr;
     AboutDialog*        _aboutDialog = nullptr;
     FindInFilesDialog*  _findInFilesDialog = nullptr;
-    IncrementalSearchDialog* _incrementalSearch = nullptr;
 
     // Panels
     DocumentMapPanel*   _docMapPanel = nullptr;

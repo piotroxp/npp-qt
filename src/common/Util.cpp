@@ -198,7 +198,7 @@ void IniParser::set(const std::string& section, const std::string& key, int val)
 }
 
 void IniParser::set(const std::string& section, const std::string& key, bool val) {
-    set(section, key, val ? "1" : "0");
+    set(section, key, val ? std::string("1") : std::string("0"));
 }
 
 void IniParser::set(const std::string& section, const std::string& key, const QString& val) {
