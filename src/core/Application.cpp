@@ -2621,3 +2621,13 @@ void Application::onSearchOnInternet() {
     QString query = QUrl::toPercentEncoding(text);
     QDesktopServices::openUrl(QUrl("https://www.google.com/search?q=" + query));
 }
+
+// Forwarding stubs for methods called by NppBigSwitch but implemented as on*()
+// in Application.cpp. These bridge the naming convention.
+void Application::zoomIn()    { onZoomIn(); }
+void Application::zoomOut()   { onZoomOut(); }
+void Application::zoomRestore() { onZoomRestore(); }
+void Application::toggleWordWrap() { onToggleWordWrap(); }
+void Application::toggleEolVisibility() { onToggleEolVisibility(); }
+void Application::toggleFunctionList() { onToggleFunctionList(); }
+void Application::toggleFileBrowser() { onToggleFileBrowser(); }

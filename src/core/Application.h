@@ -192,7 +192,7 @@ public:
     void zoomRestore();                       // IDM_VIEW_ZOOMRESTORE
     void toggleWordWrap();                    // IDM_VIEW_WORDWRAP
     void toggleEolVisibility();              // IDM_VIEW_EOL
-    void showAllCharacters();                  // IDM_VIEW_SHOW_ALL_CHARS
+    inline void showAllCharacters() { onShowAllCharacters(); }  // IDM_VIEW_SHOW_ALL_CHARS
     void toggleDocMap();                      // IDM_VIEW_DOCMAP
     void toggleFunctionList();                // IDM_VIEW_FUNC_LIST
     void toggleFileBrowser();                  // IDM_VIEW_FILEBROWSER

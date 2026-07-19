@@ -61,7 +61,7 @@ public:
 
     // Constructor: creates a buffer with given ID and document
     // type must be either DOC_REGULAR or DOC_UNNAMED
-    Buffer(FileManager* pManager, BufferID id, const QString& fileName, bool isLargeFile = false);
+    Buffer(FileManager* pManager, const QString& fileName, bool isLargeFile = false);
     ~Buffer() = default;
 
     // Disable copying
@@ -72,7 +72,7 @@ public:
     // Identification
     // ========================================================================
 
-    BufferID getID() const { return _id; }
+    BufferID getID() const { return const_cast<Buffer*>(this); }
 
     // ========================================================================
     // File name/path management
@@ -371,7 +371,6 @@ private:
     FileManager* _pManager = nullptr;
     bool _canNotify = false;
     int _references = 0;
-    BufferID _id = nullptr;
     void* _document = nullptr;
 
     // Document properties
