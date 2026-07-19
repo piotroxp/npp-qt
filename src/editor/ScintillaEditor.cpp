@@ -47,6 +47,7 @@
 #include <QClipboard>
 #include "../dialogs/GoToLineDialog.h"
 #include "../dialogs/FindReplaceDialog.h"
+#include <QSettings>
 
 // NOTE: SEGV root cause investigation (2026-07-17).
 //
@@ -125,13 +126,23 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     setFileDropEnabled(true);
 
     // Code folding — boxed tree style with fold margin
+    // Enable Scintilla's fold property (required for proper fold rendering)
+    _editor->SendScintilla(QsciScintilla::SCI_SETPROPERTY,
+                           reinterpret_cast<unsigned long>("fold"),
+                           reinterpret_cast<long>("1"));
     _editor->setFolding(QsciScintilla::BoxedTreeFoldStyle);
     _editor->setMarginType(2, QsciScintilla::SymbolMargin);
+    // Width = "0" means Scintilla computes it from the font size;
+    // we override with explicit pixels below after font is set.
     _editor->setMarginWidth(2, "0");
     _editor->setMarginSensitivity(2, true);
     _editor->setMarkerForegroundColor(QColor("#cccccc"), 0);
     _editor->setMarkerBackgroundColor(QColor("#e0e0e0"), 0);
     _editor->setFoldMarginColors(QColor("#888888"), QColor("#f0f0f0"));
+    // Auto-fold: show fold on open (SC_AUTOMATICFOLD_SHOW) and on
+    // change (SC_AUTOMATICFOLD_CHANGE) — mirrors N++ behavior.
+    _editor->SendScintilla(SCI_SETAUTOMATICFOLD,
+                            SC_AUTOMATICFOLD_SHOW | SC_AUTOMATICFOLD_CHANGE);
 
     // Pre-configure indicators for match highlighting.
     // Indicator 0: for current-selection highlight (yellow)
@@ -497,6 +508,7 @@ void ScintillaEditor::zoomReset() {
     while (_zoomLevel > 0) { _editor->zoomOut(); --_zoomLevel; }
     while (_zoomLevel < 0) { _editor->zoomIn(); ++_zoomLevel; }
 }
+int ScintillaEditor::zoomLevel() const { return _zoomLevel; }
 
 void ScintillaEditor::setWrapMode(bool wrap) {
     _editor->setWrapMode(wrap ? QsciScintilla::WrapWord : QsciScintilla::WrapNone);
@@ -1146,4 +1158,52 @@ void ScintillaEditor::showEvent(QShowEvent* event) {
 void ScintillaEditor::hideEvent(QHideEvent* event) {
     _autoCompletion->setConstructionComplete(false);
     QFrame::hideEvent(event);
+}
+
+// ============================================================================
+// Per-buffer view settings persistence (QSettings)
+// Stores zoom, wrap, edge column, edge mode, and multi-caret state per file.
+// ============================================================================
+
+void ScintillaEditor::saveViewSettings(const QString& bufferId) const {
+    QSettings settings("notepad--qt", "editor");
+    settings.beginGroup("Buffers/" + bufferId);
+    settings.setValue("zoom", _zoomLevel);
+    settings.setValue("wrap", wrapMode());
+    settings.setValue("edgeColumn", static_cast<int>(_editor->SendScintilla(SCI_GETEDGECOLUMN)));
+    settings.setValue("edgeMode", static_cast<int>(_editor->SendScintilla(SCI_GETEDGEMODE)));
+    settings.setValue("multiCaret",
+        static_cast<int>(_editor->SendScintilla(QsciScintilla::SCI_GETADDITIONALCARETSBLINK)));
+    settings.endGroup();
+}
+
+void ScintillaEditor::restoreViewSettings(const QString& bufferId) {
+    QSettings settings("notepad--qt", "editor");
+    if (!settings.contains("Buffers/" + bufferId + "/zoom")) return;
+
+    settings.beginGroup("Buffers/" + bufferId);
+
+    // Restore zoom
+    int zoom = settings.value("zoom", 0).toInt();
+    if (zoom != 0) {
+        if (zoom > 0) { while (_zoomLevel < zoom) { _editor->zoomIn(); ++_zoomLevel; } }
+        else           { while (_zoomLevel > zoom) { _editor->zoomOut(); --_zoomLevel; } }
+    }
+
+    // Restore word wrap
+    bool wrap = settings.value("wrap", false).toBool();
+    setWrapMode(wrap);
+
+    // Restore long-line edge column + mode
+    int edgeCol = settings.value("edgeColumn", 80).toInt();
+    int edgeMode = settings.value("edgeMode", 0).toInt();
+    _editor->SendScintilla(SCI_SETEDGECOLUMN, static_cast<unsigned long>(edgeCol));
+    _editor->SendScintilla(SCI_SETEDGEMODE, static_cast<unsigned long>(edgeMode));
+
+    // Restore multi-caret state
+    int multiCaret = settings.value("multiCaret", 1).toInt();
+    _editor->SendScintilla(QsciScintilla::SCI_SETADDITIONALCARETSBLINK, multiCaret);
+    setMultipleSelectionEnabled(multiCaret != 0);
+
+    settings.endGroup();
 }

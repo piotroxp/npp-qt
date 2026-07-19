@@ -122,6 +122,7 @@ set(SOURCES
     src/common/DpiManager.cpp
     src/common/MenuAdapter.cpp
     src/common/FileWatcherAdapter.cpp
+    src/common/ShortcutAdapter.cpp
     src/plugins/PluginManager.cpp
     src/common/Util.cpp
     src/common/FileHelper.cpp
@@ -197,6 +198,7 @@ set(HEADERS
     src/common/FileHelper.h
     src/common/StringHelper.h
     src/common/DpiManager.h
+    src/common/ShortcutAdapter.h
     src/common/MenuAdapter.h
     src/common/FileWatcherAdapter.h
     src/common/NonCopyable.h

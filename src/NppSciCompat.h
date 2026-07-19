@@ -582,15 +582,6 @@ namespace npp_sci {
     // ==== Multi-caret / multi-selection additions ====
     constexpr int SCI_SETMOUSEDOWNCAPTURE   = 2385;
     constexpr int SCI_GETMOUSEDOWNCAPTURE   = 2386;
-    constexpr int SCI_SETMULTIPLESELECTION  = 2578;
-    constexpr int SCI_GETMULTIPLESELECTION  = 2579;
-    constexpr int SCI_SETADDITIONALCARETSBLINK = 2660;
-    constexpr int SCI_GETADDITIONALCARETSBLINK = 2661;
-    constexpr int SCI_SETCARETSTICKY        = 2345;
-    constexpr int SCI_GETCARETSTICKY        = 2346;
-    constexpr int SC_CARETSTICKY_OFF        = 0;
-    constexpr int SC_CARETSTICKY_ON         = 1;
-    constexpr int SC_CARETSTICKY_WIDGET     = 2;
 
     // ==== Fold display text (SCI_FOLDDISPLAYTEXT) ====
     constexpr int SCI_SETFOLDDISPLAYTEXT    = 2665;
@@ -961,15 +952,6 @@ using npp_sci::SCI_GETEDGEMODE;
 using npp_sci::SCI_SETEDGEMODE;
 using npp_sci::SCI_SETMOUSEDOWNCAPTURE;
 using npp_sci::SCI_GETMOUSEDOWNCAPTURE;
-using npp_sci::SCI_SETMULTIPLESELECTION;
-using npp_sci::SCI_GETMULTIPLESELECTION;
-using npp_sci::SCI_SETADDITIONALCARETSBLINK;
-using npp_sci::SCI_GETADDITIONALCARETSBLINK;
-using npp_sci::SCI_SETCARETSTICKY;
-using npp_sci::SCI_GETCARETSTICKY;
-using npp_sci::SC_CARETSTICKY_OFF;
-using npp_sci::SC_CARETSTICKY_ON;
-using npp_sci::SC_CARETSTICKY_WIDGET;
 using npp_sci::SCI_SETFOLDDISPLAYTEXT;
 using npp_sci::SCI_GETFOLDDISPLAYTEXT;
 using npp_sci::SC_WRAP_NONE;

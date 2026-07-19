@@ -56,10 +56,13 @@ void GoToLineDialog::setVisible(bool visible) {
 }
 
 GoToLineDialog::~GoToLineDialog() {
-    // The _destructing flag set by setVisible(false) above prevents any
-    // re-entrancy from QDialog::~QDialog() cascading setVisible(false) to
-    // child widgets and re-entering this destructor.  Qt's normal object
-    // tree handles child widget cleanup.
+    // Guard: Qt's deleteChildren() in QObject::~QObject() can call this
+    // destructor twice if the object tree has circular references.  The
+    // _destructing flag is set by setVisible(false) above, but we also guard
+    // here to handle any remaining double-destruction scenarios.
+    static bool _guard = false;
+    if (_guard) return;
+    _guard = true;
 }
 
 void GoToLineDialog::setupUi() {
