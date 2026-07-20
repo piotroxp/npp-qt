@@ -380,6 +380,9 @@ public slots:
     void onSearchOnInternet();
     void onFind();
     void onReplace();
+    void onReplaceAll();
+    void onPurge();
+    void onBookmarkAll();
     void onGotoLine();
 
     // Search commands
@@ -389,6 +392,8 @@ public slots:
     void onCount();
     void onMarkAll();
     void onUnmarkAll();
+    void onGoToNextMark();
+    void onGoToPrevMark();
     void showFindInFilesResults(const QList<FindResult>& results);
 
     // View commands
@@ -402,6 +407,7 @@ public slots:
     void onZoomRestore();
     void onToggleWordWrap();
     void onToggleEolVisibility();
+    void onToggleShowSymbol();
     void onShowAllCharacters();
     void onToggleDocMap();
     void onToggleFunctionList();
@@ -409,6 +415,7 @@ public slots:
     void onToggleClipboardHistory();
     void onCloneToOtherView();
     void onMoveToSubView();
+    void onActivatePane(int paneIndex);
     void onConvertEncoding(EncodingType enc);
     void onSetEol(EolType format);
 
@@ -446,6 +453,9 @@ public slots:
     void onShowShortcutMapper();
     void onReloadFile();
     void onShowCommandPalette();
+    void onMinimizeToTray();
+    void onSwitchToOther();
+    void onToolbarCustomize();
 
     // Workspace commands
     void openFolderAsWorkspace(const std::string& dir);

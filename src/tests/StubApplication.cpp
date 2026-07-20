@@ -158,3 +158,14 @@ void Application::onShowCommandPalette() {}
 void Application::openFolderAsWorkspace(const std::string&) {}
 void Application::onRun() {}
 void Application::onShowAbout() {}
+// === Wave 1: Additional Application stubs ===
+void Application::onGoToNextMark() {}
+void Application::onGoToPrevMark() {}
+void Application::onToggleShowSymbol() {}
+void Application::onSwitchToOther() {}
+void Application::onToolbarCustomize() {}
+void Application::onMinimizeToTray() {}
+void Application::onActivatePane(int) {}
+void Application::onReplaceAll() {}
+void Application::onPurge() {}
+void Application::onBookmarkAll() {}

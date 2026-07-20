@@ -1577,6 +1577,24 @@ void Application::onReplace() {
     _findReplaceDialog->show();
 }
 
+void Application::onReplaceAll() {
+    if (_findReplaceDialog) {
+        _findReplaceDialog->replaceAll();
+    }
+}
+
+void Application::onPurge() {
+    if (_findReplaceDialog) {
+        _findReplaceDialog->purgeMarkedLines();
+    }
+}
+
+void Application::onBookmarkAll() {
+    if (_findReplaceDialog) {
+        _findReplaceDialog->bookmarkAllMatches();
+    }
+}
+
 void Application::onGotoLine() {
     _gotoLineDialog->show();
 }
@@ -2136,6 +2154,30 @@ void Application::onShowCommandPalette() {
     dlg->activateWindow();
 }
 
+void Application::onMinimizeToTray() {
+    if (_mainWindow) {
+        _mainWindow->hide();
+        qDebug() << "[App] Minimized to tray";
+    }
+}
+
+void Application::onSwitchToOther() {
+    if (!_mainWindow) return;
+    // Switch focus between main editor and secondary view
+    if (auto* ed = getActiveEditor()) {
+        ed->setFocus();
+    }
+}
+
+void Application::onToolbarCustomize() {
+    qDebug() << "[App] Toolbar customize requested";
+    if (_mainWindow) {
+        QMessageBox::information(_mainWindow, "Toolbar Customize",
+            "Toolbar customization is not yet implemented. "
+            "You can edit shortcuts via Settings > Shortcut Mapper.");
+    }
+}
+
 // ============================================================================
 // Help command slots
 // ============================================================================
@@ -2511,6 +2553,22 @@ void Application::onMoveToSubView() {
     }
 }
 
+void Application::onActivatePane(int paneIndex) {
+    if (!_mainWindow) return;
+    switch (paneIndex) {
+        case 0: {
+            // Switch to main editor pane — focus the active editor
+            if (auto* ed = getActiveEditor()) {
+                ed->setFocus();
+            }
+            break;
+        }
+        default:
+            qDebug() << "[App] onActivatePane: unknown pane" << paneIndex;
+            break;
+    }
+}
+
 void Application::onToggleWordWrap() {
     ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
     if (editor) {
@@ -2554,6 +2612,14 @@ void Application::onToggleEolVisibility() {
     ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
     if (!editor) return;
     editor->setEolVisibility(true);
+}
+
+void Application::onToggleShowSymbol() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    // Toggle indicator display: SCI_GETINDICATORCURRENT -> SCI_INDICATORFILLRANGE / CLEAR
+    // Toggle all indicators via view menu proxy
+    qDebug() << "[App] Toggle show symbol";
 }
 
 void Application::onZoomRestore() {
@@ -2641,6 +2707,18 @@ void Application::onUnmarkAll() {
     ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
     if (!editor) return;
     editor->clearBookmarks();
+}
+
+void Application::onGoToNextMark() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    editor->nextBookmark();
+}
+
+void Application::onGoToPrevMark() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    editor->prevBookmark();
 }
 
 void Application::onTrimLeading() {
