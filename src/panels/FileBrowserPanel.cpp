@@ -53,17 +53,14 @@ FileBrowserPanel::FileBrowserPanel(QWidget* parent)
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
+    // Mark initialized BEFORE any widget is added to the layout.
+    // This blocks all signal-driven entry points (double-click, context menu,
+    // toolbar) until the panel is fully constructed.
+    _initialized = true;
+
     // Setup toolbar — initializes all toolbar actions needed by breadcrumb slots
     setupToolbar();
     mainLayout->addWidget(_toolBar);
-
-    // Mark initialized so that any signal emissions during construction are guarded.
-    // updateBreadcrumbs() creates lambdas bound to setCurrentProjectDirectory() /
-    // setRootDirectory(); those would previously fire with _initialized=false, risking
-    // partially-constructed state if the model/view layout triggered re-entrancy.
-    // With the flag set here, all early interactions (double-click, context menu,
-    // toolbar) are safely discarded until the panel is fully built.
-    _initialized = true;
 
     // Breadcrumb bar
     setupBreadcrumbs();

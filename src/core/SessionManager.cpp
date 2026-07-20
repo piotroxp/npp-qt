@@ -361,11 +361,27 @@ void SessionManager::triggerAutoSave() {
 // ============================================================================
 
 void SessionManager::captureCurrentSession() {
-    // Capture from Application state
-    // This would be called when saving a session interactively
-    // The actual population of _session happens in Application::saveSession
+    // This method is called by Application::saveSession() to populate _session
+    // from the current Application state. The Application owns FileManager,
+    // so this shim exists as an extension point for future direct integration.
+    // Currently, Application::saveSession() builds the session directly and
+    // calls setCurrentSession(), so this method is a no-op shim.
 }
 
 void SessionManager::applySession(const NppSession& session) {
+    // Validate session version
+    if (session.version > 2) {
+        qWarning() << "[SessionManager] Unknown session version:" << session.version;
+        // Continue anyway - we can attempt to restore what we understand
+    }
+
+    // Check that files in session still exist
+    // Missing files will be skipped during restoration in Application::loadSession
+    for (const SessionBuffer& buf : session.buffers) {
+        if (!buf.path.isEmpty() && !QFile::exists(buf.path)) {
+            qWarning() << "[SessionManager] Session file missing:" << buf.path;
+        }
+    }
+
     _session = session;
 }

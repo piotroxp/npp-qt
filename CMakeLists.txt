@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # ─── Qt6 ────────────────────────────────────────────────────────────────────
-find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core Sql Network Xml PrintSupport)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core Network Xml PrintSupport)
 find_package(Qt6 QUIET COMPONENTS WebEngineWidgets)
 if(Qt6WebEngineWidgets_FOUND)
     set(NPP_HAVE_WEBENGINE TRUE)
@@ -239,7 +239,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Widgets
     Qt6::Gui
     Qt6::Core
-    Qt6::Sql
     Qt6::Network
     Qt6::Xml
     Qt6::PrintSupport

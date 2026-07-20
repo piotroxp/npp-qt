@@ -569,8 +569,14 @@ bool FileManager::saveFile(BufferID buffer, const QString& path) {
     if (savePath.isEmpty())
         return false;
 
-    // In real implementation, would get text from Scintilla editor
-    QString content;  // Would come from Scintilla
+    // Retrieve the stored text content from the buffer map
+    // This is the text that was loaded/decoded when the file was opened
+    QString content;
+    auto it = _bufferText.find(buffer);
+    if (it != _bufferText.end()) {
+        content = it->second;
+    }
+    // content is empty if file was never loaded (e.g. session placeholder)
     return saveFile(savePath, content, buf->getEncoding(), buf->getEolFormat());
 }
 

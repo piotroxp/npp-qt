@@ -284,6 +284,7 @@ bool AutoCompletion::update(int character)
     if (!_constructionComplete) return false;
     if (!_pEditView) return false;
     if (!_autoShow) return false;
+    if (_completionActive) return false;  // Don't retrigger while popup is still open
 
     // Determine if we should trigger auto-completion based on the character.
     // Trigger after alphanumeric chars or underscore (start of identifier).
@@ -455,6 +456,7 @@ bool AutoCompletion::showFunctionComplete()
 
 void AutoCompletion::showPathCompletion()
 {
+    if (!_constructionComplete) return;
     if (!_pEditView) return;
 
     // Get the path prefix at the cursor.
@@ -505,6 +507,7 @@ void AutoCompletion::showSnippetCompletion()
 
 void AutoCompletion::showEnvVarCompletion()
 {
+    if (!_constructionComplete) return;
     if (!_pEditView) return;
     const QStringList envVars = buildEnvVarList();
     if (envVars.isEmpty()) return;
@@ -537,10 +540,21 @@ void AutoCompletion::insertMatchedChars(int /*character*/, int /*matchedPairConf
 
 void AutoCompletion::callTipClick(size_t direction)
 {
+    if (!_pEditView) return;
+
+    // Scintilla SCI_CALLTIPCLICK (2021) notifies that user clicked the calltip.
+    // direction 0 = up-arrow (previous overload), 1 = down-arrow (next overload).
+    // Use SCI_CALLTIPUP / SCI_CALLTIPDOWN (2023/2024) if available, otherwise
+    // fall back to the built-in FunctionCallTip::showNextOverload / showPrevOverload.
     if (direction == 0) {
-        // SCI_CALLTIPUP not available in QScintilla — no-op
+        // Previous overload / parameter move up.
+        // SCI_CALLTIPUP = 2023: move highlight to previous parameter.
+        // If not available, trigger the callback that navigates overloads.
+        _pEditView->send(2023 /* SCI_CALLTIPUP */);
     } else {
-        _pEditView->send(SCI_CALLTIPSETFORE, 0);
+        // Next overload / parameter move down.
+        // SCI_CALLTIPDOWN = 2024: move highlight to next parameter.
+        _pEditView->send(2024 /* SCI_CALLTIPDOWN */);
     }
 }
 

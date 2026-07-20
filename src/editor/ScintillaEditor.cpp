@@ -374,7 +374,54 @@ void ScintillaEditor::applyThemeToLexer(QsciLexer* lexer) {
     // L_TEXT and other unhandled lexers: base colour already set above
     Q_UNUSED(c);
 }
-void ScintillaEditor::setEncoding(EncodingType enc) { _encoding = enc; }
+void ScintillaEditor::setEncoding(EncodingType enc) {
+    _encoding = enc;
+    int codePage = 65001; // UTF-8 default
+    switch (enc) {
+        case EncodingType::UTF_8:
+        case EncodingType::UTF_8_BOM:
+            codePage = 65001;
+            break;
+        case EncodingType::UTF_16_LE:
+        case EncodingType::UTF_16_LE_BOM:
+            codePage = 1200;
+            break;
+        case EncodingType::UTF_16_BE:
+        case EncodingType::UTF_16_BE_BOM:
+            codePage = 1201;
+            break;
+        case EncodingType::UTF_32_LE:
+        case EncodingType::UTF_32_BE:
+            // Scintilla handles UTF-32 via UTF-8 conversion internally
+            codePage = 65001;
+            break;
+        case EncodingType::ANSI:
+            // System ANSI codepage — use Windows-1252 as western default
+            codePage = 1252;
+            break;
+        case EncodingType::Windows1252:
+            codePage = 1252;
+            break;
+        case EncodingType::OEM:
+            // DOS OEM codepage 437
+            codePage = 437;
+            break;
+        case EncodingType::ASCII_7:
+            // Pure 7-bit ASCII — valid as subset of UTF-8
+            codePage = 65001;
+            break;
+        case EncodingType::ISO88591:
+            codePage = 28591;
+            break;
+        case EncodingType::Other:
+        case EncodingType::NONE:
+        case EncodingType::EBCDIC:
+        default:
+            codePage = 65001;
+            break;
+    }
+    _editor->SendScintilla(SCI_SETCODEPAGE, static_cast<unsigned long>(codePage));
+}
 void ScintillaEditor::setEolType(EolType eol) {
     _eolType = eol;
     switch (eol) {
