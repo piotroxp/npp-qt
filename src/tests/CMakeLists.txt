@@ -36,15 +36,15 @@ add_moc("core/ThemeManager.h" ThemeManager)
 add_moc("panels/FileBrowserPanel.h" FileBrowserPanel)
 add_moc("panels/DocumentMapPanel.h" DocumentMapPanel)
 
-# ── Stub library (SHARED so AUTOMOC runs and links moc symbols correctly) ────────
-# Contains: Application/DpiManager/ThemeManager stubs (for MOC vtables) + panel implementations.
-# All panel .cpp files MUST be here (not in test_core) so MOC symbols are in this lib.
+# ── Stub library — AUTOMOC OFF (our explicit moc provides all Q_OBJECT symbols) ───────
+# Panel .cpp files are here (not test_core) so MOC vtables link into this SHARED lib.
 add_library(test_stubs SHARED
     StubApplication.cpp
     ${MOC_SOURCES}
     ${REL_ROOT}/panels/FileBrowserPanel.cpp
     ${REL_ROOT}/panels/DocumentMapPanel.cpp
 )
+set_target_properties(test_stubs PROPERTIES AUTOMOC OFF)
 target_include_directories(test_stubs PUBLIC ${TEST_INC} ${QSCINTILLA_INCLUDE_DIR})
 target_link_libraries(test_stubs PUBLIC Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Xml Qt6::PrintSupport)
 target_compile_options(test_stubs PRIVATE -w)
@@ -67,6 +67,8 @@ add_library(test_core STATIC
     ${REL_ROOT}/dialogs/LargeFileWarningDialog.cpp
     ${REL_ROOT}/dialogs/FindInFilesDialog.cpp
     ${REL_ROOT}/dialogs/FindInFilesWorker.cpp
+    ${REL_ROOT}/dialogs/AutoCompletion.cpp
+    ${REL_ROOT}/dialogs/FunctionCallTip.cpp
     ${REL_ROOT}/editor/SyntaxHighlighter.cpp
     ${REL_ROOT}/editor/SyntaxHighlighterImpl.cpp
 )
@@ -77,7 +79,6 @@ target_compile_options(test_core PRIVATE -w)
 add_library(test_core_interface INTERFACE)
 target_include_directories(test_core_interface INTERFACE ${TEST_INC})
 
-# Helper: tests linking test_core + test_stubs
 macro(add_core_test TARGET)
     add_executable(${TARGET} ${ARGN})
     target_include_directories(${TARGET} PRIVATE ${TEST_INC} ${QSCINTILLA_INCLUDE_DIR})
@@ -88,14 +89,14 @@ endmacro()
 
 add_executable(test_encoding_detector test_encoding_detector.cpp)
 target_link_libraries(test_encoding_detector PRIVATE test_core)
-add_test(NAME EncodingDetectorTests COMMAND test_encoding_detector)
+add_test(NAME EncodingDetectorTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_encoding_detector>)
 
 add_executable(test_string_helper test_string_helper.cpp)
 target_link_libraries(test_string_helper PRIVATE test_core)
-add_test(NAME StringHelperTests COMMAND test_string_helper)
+add_test(NAME StringHelperTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_string_helper>)
 
 add_core_test(test_buffer test_buffer.cpp)
-add_test(NAME BufferTests COMMAND test_buffer)
+add_test(NAME BufferTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_buffer>)
 
 add_executable(test_menus test_menus.cpp ${REL_ROOT}/common/MenuAdapter.cpp)
 target_include_directories(test_menus PRIVATE ${TEST_INC})
@@ -110,7 +111,7 @@ add_executable(test_shortcuts
 )
 target_compile_definitions(test_shortcuts PRIVATE NPPQT_HAVE_SHORTCUT_MANAGER)
 target_link_libraries(test_shortcuts PRIVATE Qt6::Widgets Qt6::Core Qt6::Gui Qt6::Test)
-add_test(NAME ShortcutAdapterTests COMMAND test_shortcuts)
+add_test(NAME ShortcutAdapterTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_shortcuts>)
 set_tests_properties(ShortcutAdapterTests PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}")
 
@@ -120,42 +121,64 @@ add_executable(test_file_watcher
     ${REL_ROOT}/common/FileWatcherAdapter.h
 )
 target_link_libraries(test_file_watcher PRIVATE Qt6::Widgets Qt6::Core Qt6::Gui Qt6::Test)
-add_test(NAME FileWatcherAdapterTests COMMAND test_file_watcher)
+add_test(NAME FileWatcherAdapterTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_file_watcher>)
 
 add_core_test(test_clipboard test_clipboard.cpp)
-add_test(NAME ClipboardAdapterTests COMMAND test_clipboard)
+add_test(NAME ClipboardAdapterTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_clipboard>)
 
 # 8 new test executables
 add_core_test(test_sessions test_sessions.cpp)
-add_test(NAME SessionTests COMMAND test_sessions)
+add_test(NAME SessionTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_sessions>)
 set_tests_properties(SessionTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_core_test(test_macros test_macros.cpp)
-add_test(NAME MacroTests COMMAND test_macros)
+add_test(NAME MacroTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_macros>)
 set_tests_properties(MacroTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_core_test(test_findinfiles test_findinfiles.cpp)
-add_test(NAME FindInFilesTests COMMAND test_findinfiles)
+add_test(NAME FindInFilesTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_findinfiles>)
 set_tests_properties(FindInFilesTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_core_test(test_clipboard_manager test_clipboard_manager.cpp)
-add_test(NAME NamedClipboardTests COMMAND test_clipboard_manager)
+add_test(NAME NamedClipboardTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_clipboard_manager>)
 set_tests_properties(NamedClipboardTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(test_snippets test_snippets.cpp)
 target_include_directories(test_snippets PRIVATE ${TEST_INC})
 target_link_libraries(test_snippets PRIVATE Qt6::Core Qt6::Widgets)
-add_test(NAME SnippetTests COMMAND test_snippets)
+add_test(NAME SnippetTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_snippets>)
 set_tests_properties(SnippetTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_core_test(test_project_panels test_project_panels.cpp)
-add_test(NAME ProjectPanelTests COMMAND test_project_panels)
+add_test(NAME ProjectPanelTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_project_panels>)
 set_tests_properties(ProjectPanelTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_core_test(test_document_map test_document_map.cpp)
-add_test(NAME DocumentMapTests COMMAND test_document_map)
+add_test(NAME DocumentMapTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_document_map>)
 set_tests_properties(DocumentMapTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_core_test(test_close_all_but test_close_all_but.cpp)
-add_test(NAME CloseAllButTests COMMAND test_close_all_but)
+add_test(NAME CloseAllButTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_close_all_but>)
 set_tests_properties(CloseAllButTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_core_test(test_syntax_highlighter test_syntax_highlighter.cpp)
+add_test(NAME SyntaxHighlighterTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_syntax_highlighter>)
+set_tests_properties(SyntaxHighlighterTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_core_test(test_util test_util.cpp)
+add_test(NAME UtilTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_util>)
+set_tests_properties(UtilTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_core_test(test_autocompletion test_autocompletion.cpp)
+add_test(NAME AutoCompletionTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_autocompletion>)
+set_tests_properties(AutoCompletionTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_core_test(test_functioncalltip test_functioncalltip.cpp)
+add_test(NAME FunctionCallTipTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_functioncalltip>)
+set_tests_properties(FunctionCallTipTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# IncrementalSearchDialog requires ScintillaEditor — too heavy for test_core; requires
+# integration test setup. Mark as pending until proper fixture exists.
+# add_core_test(test_incremental_search test_incremental_search.cpp)
+# add_test(NAME IncrementalSearchTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_incremental_search>)
+

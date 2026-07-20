@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Agent Army | GPL v3
 
 #include "MacroAction.h"
-class ScintillaEditor;   // forward decl — no full header needed
+class ScintillaEditor;   // forward decl
 class QsciScintilla;    // forward decl
 
 // ============================================================================
@@ -15,12 +15,9 @@ MacroAction::MacroAction(int sciCommand, int param)
 MacroAction::MacroAction(int sciCommand, const QString& stringParam)
     : _command(sciCommand), _hasStringParam(true), _intParam(0), _stringParam(stringParam) {}
 
-MacroAction::MacroAction() = default;
-MacroAction::~MacroAction() = default;
-
 void MacroAction::playback(ScintillaEditor* editor) const {
-    // Stub: playback needs ScintillaEditor linkage, skipping for unit tests
     Q_UNUSED(editor);
+    // playback needs ScintillaEditor linkage — stubbed for unit tests
 }
 
 QVariantMap MacroAction::toJson() const {
@@ -55,11 +52,11 @@ void MacroAction::fromJson(const QVariantMap& map) {
 QVariantMap MacroActionList::toJson() const {
     QVariantMap m;
     m["name"] = name;
-    QVariantList actions;
+    QVariantList actionsList;
     for (const auto& a : actions) {
-        actions.append(a.toJson());
+        actionsList.append(a.toJson());
     }
-    m["actions"] = actions;
+    m["actions"] = actionsList;
     return m;
 }
 

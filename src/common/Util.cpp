@@ -207,7 +207,7 @@ void IniParser::set(const std::string& section, const std::string& key, const QS
 
 QStringList IniParser::getStringList(const std::string& section, const std::string& key,
                                      const QStringList& defaultVal) const {
-    std::string raw = get(section, key, "");
+    std::string raw = get(section, key, std::string());
     if (raw.empty()) return defaultVal;
     QStringList out;
     for (const QString& s : QString::fromUtf8(raw.c_str()).split(',')) {
@@ -219,7 +219,7 @@ QStringList IniParser::getStringList(const std::string& section, const std::stri
 
 void IniParser::setStringList(const std::string& section, const std::string& key,
                               const QStringList& val) {
-    set(section, key, val.join(",").toUtf8().constData());
+    set(section, key, std::string(val.join(",").toUtf8().constData()));
 }
 
 bool IniParser::hasSection(const std::string& section) const {

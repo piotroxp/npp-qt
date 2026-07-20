@@ -3,7 +3,8 @@
 
 #include "panels/FileBrowserPanel.h"
 #include "Application.h"
-#include <QCoreApplication>
+#include <QApplication>
+#include <QGuiApplication>
 #include <QDebug>
 #include <cassert>
 
@@ -82,7 +83,11 @@ static void test_dock_areas() {
 }
 
 int main(int argc, char* argv[]) {
-    QCoreApplication app(argc, argv);
+    QApplication app(argc, argv);
+    if (!QGuiApplication::primaryScreen()) {
+        qWarning("SKIP: No display available (offscreen mode)");
+        return 0;
+    }
     qDebug() << "\n=== Project Panel tests ===";
     RUN_TEST(test_panel_construction);
     RUN_TEST(test_panel_title);

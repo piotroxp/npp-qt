@@ -186,9 +186,22 @@ inline std::string fromDouble(double v, int precision = 6) {
 // QString numeric conversion
 // ============================================================================
 inline int toInt(const QString& s, int def = 0) {
-    bool ok = false;
-    int val = s.toInt(&ok);
-    return ok ? val : def;
+    // Match std::stoi semantics: skip leading whitespace, partial parse
+    if (s.isEmpty()) return def;
+    int i = 0;
+    for (; i < s.size() && s[i].isSpace(); ++i) {}  // skip leading ws
+    if (i >= s.size()) return def;
+    bool neg = false;
+    if (s[i] == '-' || s[i] == '+') { neg = s[i] == '-'; ++i; }
+    if (i >= s.size() || !s[i].isDigit()) return def;
+    int val = 0;
+    for (; i < s.size() && s[i].isDigit(); ++i) {
+        val = val * 10 + s[i].digitValue();
+    }
+    // "3.14" or "3abc" → invalid (unlike std::stoi which would parse 3)
+    for (; i < s.size() && s[i].isSpace(); ++i) {}  // skip trailing ws
+    if (i < s.size() && (s[i].isLetter() || s[i] == '.')) return def;
+    return neg ? -val : val;
 }
 inline int64_t toLong(const QString& s, int64_t def = 0) {
     bool ok = false;

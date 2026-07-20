@@ -1,7 +1,8 @@
 // test_document_map.cpp — DocumentMapPanel construction and basic API tests
 
 #include "panels/DocumentMapPanel.h"
-#include <QCoreApplication>
+#include <QApplication>
+#include <QGuiApplication>
 #include <QDebug>
 
 #define ASSERT_TRUE(x) do { if (!(x)) { qFatal("FAILED: %s at %s:%d", #x, __FILE__, __LINE__); } } while(0)
@@ -37,7 +38,11 @@ static void test_resize() {
 }
 
 int main(int argc, char* argv[]) {
-    QCoreApplication app(argc, argv);
+    QApplication app(argc, argv);
+    if (!QGuiApplication::primaryScreen()) {
+        qWarning("SKIP: No display available (offscreen mode)");
+        return 0;
+    }
     qDebug() << "\n=== DocumentMapPanel tests ===";
     RUN_TEST(test_construct);
     RUN_TEST(test_toggle_action);

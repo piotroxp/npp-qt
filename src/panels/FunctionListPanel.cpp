@@ -983,7 +983,7 @@ void FunctionListPanel::parseClassRange(const QStringList& lines,
 
         // Count lines to get absolute line numbers
         int classLine = text.left(matchStart).count('\n') + 1;
-        int bodyEndLine = text.left(bodyEnd).count('\n') + 1;
+        [[maybe_unused]] int bodyEndLine = text.left(bodyEnd).count('\n') + 1;
 
         // Extract the class body and find methods within
         QString bodyText = text.mid(bodyStart + 1, bodyEnd - bodyStart - 1);

@@ -7,6 +7,10 @@ src/tests/*.a
 *.o
 *.a
 *.exe
+*.dll
+*.so
+*.dylib
+build-asan/
 
 # OS
 .DS_Store
@@ -42,3 +46,4 @@ delete_duplicates.sh
 deleted_files.log
 sessions/
 Testing/
+.DS_Store
