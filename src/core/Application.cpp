@@ -131,9 +131,12 @@ Application::~Application() {
     delete _preferenceDialog;
     delete _aboutDialog;
 
-    // Delete main window last.
-    delete _mainWindow;
-    _mainWindow = nullptr;
+    // NOTE: Do NOT delete _mainWindow directly. It is a child of Application
+    // (created with 'new MainWindow(this)'). Qt's parent-child ownership means
+    // _mainWindow is destroyed when Application is destroyed. Deleting it explicitly
+    // would cascade-delete _menuBar, _toolBar, and _statusBarWidget — all of which
+    // are Qt children of _mainWindow — leading to heap-use-after-free crashes.
+    // _mainWindow = nullptr;  // unnecessary; set automatically by Qt
 }
 
 // ============================================================================
@@ -159,6 +162,24 @@ bool Application::initialize() {
 
         // Initialize core managers
         _fileManager = new FileManager();
+        // Register the Scintilla editor as the live text provider for saveFile().
+        // _bufferToEditor is populated by openFile() and bufferActivated().
+        _fileManager->setBufferTextProvider([this](BufferID buffer, QString& outText) -> bool {
+            ScintillaEditor* ed = nullptr;
+            auto it = _bufferToEditor.find(buffer);
+            if (it != _bufferToEditor.end()) {
+                ed = it->second;
+            } else {
+                // Fallback: scan all editors if map isn't populated yet
+                for (QWidget* container : _viewContainers) {
+                    auto* e = container->findChild<ScintillaEditor*>();
+                    if (e) { ed = e; break; }
+                }
+            }
+            if (!ed) return false;
+            outText = ed->text();
+            return true;
+        });
         _encodingDetector = new EncodingDetector();
         _languageManager = new LanguageManager();
         _sessionManager = new SessionManager();
@@ -484,7 +505,7 @@ void Application::setupConnections() {
 
     // StatusBar updates — encoding/EOL on buffer switch
     connect(this, &Application::bufferActivated, this, [this](BufferID buf) {
-        if (buf) {
+        if (buf && _statusBarWidget) {
             auto enc = getBufferEncoding(buf);
             auto encStr = encodingToString(enc);
             QString eolStr = "Unix (LF)";
@@ -496,7 +517,9 @@ void Application::setupConnections() {
     // Loading progress → status bar
     if (_fileManager) {
         connect(_fileManager, &FileManager::loadingProgress, this, [this](int pct) {
-            _statusBarWidget->setMessage(QString("Loading... %1%").arg(pct));
+            if (_statusBarWidget) {
+                _statusBarWidget->setMessage(QString("Loading... %1%").arg(pct));
+            }
         });
         connect(_fileManager, &FileManager::fileLoaded, this, [this](bool, BufferID id, const QString&) {
             // Start file monitoring so external changes trigger the reload prompt.
@@ -509,10 +532,10 @@ void Application::setupConnections() {
 
     // Cursor position → StatusBar position
     connect(this, &Application::activeEditorChanged, this, [this](ScintillaEditor* ed) {
-        if (ed) {
+        if (ed && _statusBarWidget) {
             connect(ed, &ScintillaEditor::cursorPositionChanged, _statusBarWidget,
                 [this](int line, int col) {
-                    _statusBarWidget->setPosition(line, col);
+                    if (_statusBarWidget) _statusBarWidget->setPosition(line, col);
                 });
         }
     });
@@ -910,7 +933,14 @@ bool Application::saveSession(const std::string& path) {
         sb.language = QString();  // Language auto-detected on open
         sb.isActive = (buf == activeBuf);
 
-        ScintillaEditor* ed = getEditor();
+        // Look up the editor that holds this buffer (fall back to active editor)
+        ScintillaEditor* ed = nullptr;
+        auto it = _bufferToEditor.find(buf);
+        if (it != _bufferToEditor.end()) {
+            ed = it->second;
+        } else {
+            ed = getActiveEditor();
+        }
         if (ed) {
             int line = 0, col = 0;
             ed->getCursorPosition(&line, &col);
@@ -1126,16 +1156,21 @@ void Application::setThemeProfile(const std::string& profile) { _options.themePr
 // Buffer lifecycle slots — connected to Application's own signals
 // ============================================================================
 void Application::onBufferOpened(BufferID buffer) {
+    if (!buffer) return;
     qDebug() << "[App] Buffer opened:" << buffer;
     // MainWindow listens to bufferOpened and creates the tab
+    Q_UNUSED(buffer);
 }
 
 void Application::onBufferActivated(BufferID buffer) {
-    qDebug() << "[App] Buffer activated:" << buffer;
     if (!buffer) return;
+    qDebug() << "[App] Buffer activated:" << buffer;
 
     ScintillaEditor* ed = getActiveEditor();
     if (!ed) return;
+
+    // Keep _bufferToEditor in sync so saveFile() can find the right editor
+    _bufferToEditor[buffer] = ed;
 
     Buffer* buf = buffer;
     if (!buf) return;
@@ -1144,20 +1179,23 @@ void Application::onBufferActivated(BufferID buffer) {
     ed->setEncoding(buf->getEncoding());
     ed->setEolType(buf->getEolFormat());
 
-    // Partial load indicator in status bar
-    if (buf->isPartialLoad()) {
-        _statusBarWidget->setMessage(
-            QString("Partial load: %1 / %2 MB")
-                .arg(static_cast<double>(buf->getDocumentLength()) / 1e6, 0, 'f', 1)
-                .arg(static_cast<double>(buf->totalFileSize()) / 1e6, 0, 'f', 1));
-    } else {
-        _statusBarWidget->clearMessage();
+    // Partial load indicator in status bar — guard against null _statusBarWidget
+    if (_statusBarWidget) {
+        if (buf->isPartialLoad()) {
+            _statusBarWidget->setMessage(
+                QString("Partial load: %1 / %2 MB")
+                    .arg(static_cast<double>(buf->getDocumentLength()) / 1e6, 0, 'f', 1)
+                    .arg(static_cast<double>(buf->totalFileSize()) / 1e6, 0, 'f', 1));
+        } else {
+            _statusBarWidget->clearMessage();
+        }
     }
 
     updateUI();
 }
 
 void Application::onBufferClosed(BufferID buffer) {
+    if (!buffer) return;
     qDebug() << "[App] Buffer closed:" << buffer;
     // Nothing to do here — MainWindow removes the tab
     Q_UNUSED(buffer);

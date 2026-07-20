@@ -55,12 +55,30 @@ public:
         return cr;
     }
 
-    /// Retrieve text in [start, end] range
+    /// Retrieve text in [start, end] range.
+    /// Returns an empty QByteArray if start > end or either position is negative,
+    /// preventing heap corruption in SCI_GETTEXTRANGE when Scintilla writes
+    /// beyond an undersized buffer.
     QByteArray textRange(int start, int end) const {
+        // Guard against invalid ranges: start must be <= end, both must be >= 0.
+        if (start < 0 || end < 0 || start > end)
+            return QByteArray();
+
+        // Clamp to document length to prevent Scintilla from writing past the buffer.
+        const int docLen = static_cast<int>(const_cast<ScintillaComponent*>(this)->send(SCI_GETLENGTH));
+        if (start >= docLen)
+            return QByteArray();
+
+        // Cap end at docLen to ensure buffer is always large enough.
+        const int safeEnd = qMin(end, docLen);
+        const int rangeLen = safeEnd - start;
+        if (rangeLen <= 0)
+            return QByteArray();
+
         Sci_TextRange tr;
         tr.chrg.cpMin = static_cast<Sci_PositionCR>(start);
-        tr.chrg.cpMax = static_cast<Sci_PositionCR>(end);
-        QByteArray buf(qMax(0, end - start) + 1, Qt::Uninitialized);
+        tr.chrg.cpMax = static_cast<Sci_PositionCR>(safeEnd);
+        QByteArray buf(rangeLen + 1, Qt::Uninitialized);
         tr.lpstrText = buf.data();
         const_cast<ScintillaComponent*>(this)->send(SCI_GETTEXTRANGE, 0, reinterpret_cast<intptr_t>(&tr));
         buf.truncate(static_cast<int>(strlen(buf.data())));

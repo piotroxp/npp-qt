@@ -360,28 +360,46 @@ void SessionManager::triggerAutoSave() {
 // Build Session from Current State
 // ============================================================================
 
-void SessionManager::captureCurrentSession() {
-    // This method is called by Application::saveSession() to populate _session
-    // from the current Application state. The Application owns FileManager,
-    // so this shim exists as an extension point for future direct integration.
-    // Currently, Application::saveSession() builds the session directly and
-    // calls setCurrentSession(), so this method is a no-op shim.
+void SessionManager::captureCurrentSession(NppSession& out) {
+    // NOTE: FileManager, ScintillaEditor, and panel state live in Application,
+    // not SessionManager.  Application::saveSession() calls captureCurrentSession()
+    // and then fills in the editor-specific fields (geometry, cursor, scroll, panels)
+    // before calling setCurrentSession() / saveSession().
+    //
+    // Here we only capture what SessionManager owns: recent files.
+    Q_UNUSED(out);
 }
 
-void SessionManager::applySession(const NppSession& session) {
+void SessionManager::captureCurrentSession() {
+    // No-arg convenience overload.  Delegates to the out-param flavour with the
+    // internal `_session` so that `currentSession()` immediately reflects the
+    // capture (used by SessionManager unit tests).
+    captureCurrentSession(_session);
+}
+
+bool SessionManager::applySession(const NppSession& session) {
     // Validate session version
     if (session.version > 2) {
         qWarning() << "[SessionManager] Unknown session version:" << session.version;
-        // Continue anyway - we can attempt to restore what we understand
+        // Continue anyway — we can restore what we understand
     }
 
     // Check that files in session still exist
-    // Missing files will be skipped during restoration in Application::loadSession
+    int missing = 0;
     for (const SessionBuffer& buf : session.buffers) {
         if (!buf.path.isEmpty() && !QFile::exists(buf.path)) {
             qWarning() << "[SessionManager] Session file missing:" << buf.path;
+            ++missing;
         }
     }
 
+    // Store for downstream use by Application::loadSession()
     _session = session;
+
+    // Return false only if ALL files are missing (useless session)
+    if (!session.buffers.isEmpty() && missing == session.buffers.size()) {
+        qWarning() << "[SessionManager] All session files missing — skipping restore";
+        return false;
+    }
+    return true;
 }

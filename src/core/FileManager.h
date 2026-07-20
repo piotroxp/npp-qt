@@ -142,6 +142,15 @@ public:
     void disableAutoDetectEncoding() { _autoDetectEncoding = false; }
     bool isAutoDetectEncodingEnabled() const { return _autoDetectEncoding; }
 
+    // ============================================================================
+    // Buffer→Editor sync (used by saveFile to retrieve live document text)
+    // ============================================================================
+
+    // Returned function should fill `outText` with the current editor content
+    // for the given buffer. Return true if content was filled, false to skip.
+    using BufferTextProvider = std::function<bool(BufferID buffer, QString& outText)>;
+    void setBufferTextProvider(BufferTextProvider fn) { _bufferTextProvider = std::move(fn); }
+
 signals:
     void bufferChanged(BufferID buffer, int changeMask);
     void bufferCreated(BufferID buffer);
@@ -171,4 +180,5 @@ private:
     BufferID _activeBuffer = BUFFER_INVALID;
     bool _autoDetectEncoding = true;
     std::unordered_map<BufferID, QString> _bufferText;
+    BufferTextProvider _bufferTextProvider;
 };

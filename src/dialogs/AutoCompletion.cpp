@@ -306,6 +306,9 @@ bool AutoCompletion::update(int character)
 
     if (prefixLen < _triggerThreshold) return false;
 
+    // Guard: textRange() handles invalid ranges, but be explicit here too.
+    if (wordStart < 0 || wordEnd < 0 || wordStart > wordEnd) return false;
+
     // Capture the current word prefix for SCI_AUTOCSHOW.
     _currentWord = _pEditView->textRange(wordStart, wordEnd);
 

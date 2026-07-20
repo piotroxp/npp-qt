@@ -15,6 +15,7 @@
 #include <QTextStream>
 #include <QSaveFile>
 #include <QApplication>
+#include <functional>
 
 // ============================================================================
 // Construction / Lifecycle
@@ -569,14 +570,21 @@ bool FileManager::saveFile(BufferID buffer, const QString& path) {
     if (savePath.isEmpty())
         return false;
 
-    // Retrieve the stored text content from the buffer map
-    // This is the text that was loaded/decoded when the file was opened
+    // Primary: retrieve live content from the Scintilla editor via registered provider.
+    // This returns what the user is currently looking at (including unsaved edits).
+    // Fallback: the _bufferText map stores the last loaded/reloaded content.
     QString content;
-    auto it = _bufferText.find(buffer);
-    if (it != _bufferText.end()) {
-        content = it->second;
+    bool fromEditor = false;
+    if (_bufferTextProvider) {
+        fromEditor = _bufferTextProvider(buffer, content);
     }
-    // content is empty if file was never loaded (e.g. session placeholder)
+    if (!fromEditor) {
+        auto it = _bufferText.find(buffer);
+        if (it != _bufferText.end()) {
+            content = it->second;
+        }
+        // content is empty if file was never loaded (e.g. session placeholder)
+    }
     return saveFile(savePath, content, buf->getEncoding(), buf->getEolFormat());
 }
 
