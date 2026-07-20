@@ -177,6 +177,11 @@ add_core_test(test_functioncalltip test_functioncalltip.cpp)
 add_test(NAME FunctionCallTipTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_functioncalltip>)
 set_tests_properties(FunctionCallTipTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+add_executable(test_udl_keywords test_udl_keywords.cpp)
+target_link_libraries(test_udl_keywords PRIVATE test_core Qt6::Core)
+add_test(NAME UdlKeywordTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_udl_keywords>)
+set_tests_properties(UdlKeywordTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 # IncrementalSearchDialog requires ScintillaEditor — too heavy for test_core; requires
 # integration test setup. Mark as pending until proper fixture exists.
 # add_core_test(test_incremental_search test_incremental_search.cpp)

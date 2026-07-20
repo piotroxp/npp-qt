@@ -38,6 +38,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <array>
 #include <QProgressDialog>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -1174,6 +1175,31 @@ void Application::onBufferActivated(BufferID buffer) {
 
     Buffer* buf = buffer;
     if (!buf) return;
+
+    // Wave 6: if this buffer is associated with a User-Defined Language, register
+    // its keyword sets with LanguageManager so AutoCompletion picks them up,
+    // and mark it as active so the L_USER branch in getKeywords() can find them.
+    const QString udlName = buf->getUserDefineLangName();
+    if (!udlName.isEmpty() && _udlManager) {
+        if (const UdlDefinition* def = _udlManager->getUdl(udlName)) {
+            std::array<QString, 9> sets = {
+                def->keywords.words0,
+                def->keywords.words1,
+                def->keywords.words2,
+                def->keywords.words3,
+                def->keywords.words4,
+                def->keywords.words5,
+                def->keywords.words6,
+                def->keywords.words7,
+                def->keywords.words8
+            };
+            _languageManager->registerUdlKeywords(udlName, sets);
+            _languageManager->setActiveUdlName(udlName);
+        }
+    } else {
+        // Clear active UDL so L_USER buffers without a known UDL get no keywords
+        _languageManager->setActiveUdlName(QString());
+    }
 
     ed->setLanguage(buf->getLangType());
     ed->setEncoding(buf->getEncoding());

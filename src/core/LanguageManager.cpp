@@ -187,6 +187,21 @@ std::unordered_map<int, std::string> LanguageManager::getKeywords(LangType lang)
         case LangType::L_BATCH:
             kws[0] = "if then else elif fi case esac for select while until do done in function time coproc subshell background bang negate export readonly declare local typeset unset shift set source return exit break continue eval exec builtin command pushd popd dirs logout";
             break;
+        case LangType::L_USER: {
+            // Pull keywords for the currently-active UDL (if any) from the
+            // registry populated by Application via UdlManager on buffer
+            // activation. Without an active UDL we fall back to an empty set
+            // (no autocomplete).
+            const QString udlName = _activeUdlName;
+            if (udlName.isEmpty()) break;
+            for (int i = 0; i < 9; ++i) {
+                const QString s = getUdlKeywordSet(udlName, i);
+                if (!s.isEmpty()) {
+                    kws[i] = s.toStdString();
+                }
+            }
+            break;
+        }
         default: break;
     }
     return kws;
@@ -342,4 +357,32 @@ QsciLexer* LanguageManager::createLexer(LangType lang) {
         case LangType::L_OBJC:      return new QsciLexerBash;     // Shell/ObjC scripts use Bash lexer
         default:                     return nullptr;
     }
+}
+
+// ============================================================================
+// UDL keyword registry
+// ============================================================================
+
+void LanguageManager::registerUdlKeywords(const QString& udlName,
+                                           const std::array<QString, 9>& keywordSets) {
+    if (udlName.isEmpty()) return;
+    _udlKeywordSets[udlName] = keywordSets;
+}
+
+bool LanguageManager::hasUdlKeywords(const QString& udlName) const {
+    if (udlName.isEmpty()) return false;
+    auto it = _udlKeywordSets.find(udlName);
+    if (it == _udlKeywordSets.end()) return false;
+    // Treat as "has keywords" only if at least one set is non-empty.
+    for (const auto& s : it->second) {
+        if (!s.isEmpty()) return true;
+    }
+    return false;
+}
+
+QString LanguageManager::getUdlKeywordSet(const QString& udlName, int setIndex) const {
+    if (setIndex < 0 || setIndex >= 9) return QString();
+    auto it = _udlKeywordSets.find(udlName);
+    if (it == _udlKeywordSets.end()) return QString();
+    return it->second[setIndex];
 }
