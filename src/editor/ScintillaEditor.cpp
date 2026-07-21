@@ -210,6 +210,21 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
         _autoCompletion->close();
     });
     connect(_autoCompletion, &AutoCompletion::completionSelected, this, [this](const QString& text) {
+        // Replace the word being completed with the user's selected text.
+        // Without this, QsciScintilla only inserts whatever it auto-guessed
+        // from the typed prefix, not the actual item the user clicked.
+        long curPos = _editor->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
+        long wordStart = _editor->SendScintilla(QsciScintilla::SCI_WORDSTARTPOSITION, curPos);
+        if (wordStart < curPos) {
+            _editor->SendScintilla(QsciScintilla::SCI_SETSELECTION,
+                                   static_cast<unsigned long>(wordStart),
+                                   static_cast<unsigned long>(curPos));
+            // SCI_REPLACESEL overload set on QsciScintillaBase is ambiguous for
+            // literal 0; disambiguate by spelling the type of the second arg.
+            _editor->SendScintilla(QsciScintilla::SCI_REPLACESEL,
+                                   static_cast<unsigned long>(0),
+                                   text.toUtf8().constData());
+        }
         _autoCompletion->recordWordUsed(text);
     });
 }

@@ -211,6 +211,7 @@ signals:
     void updateUI();
     void replaceAllDone(int count);
     void languageChanged(LangType lang);
+    void autoCompleted(const QString& word);
 
 protected:
     void showEvent(QShowEvent* event) override;
