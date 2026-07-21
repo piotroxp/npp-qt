@@ -4,6 +4,7 @@
 #include "FunctionCallTip.h"
 #include "../editor/ScintillaEditor.h"
 #include "../core/LanguageManager.h"
+#include "../core/SnippetManager.h"
 #include <Qsci/qsciscintilla.h>
 #include <Qsci/qsciapis.h>
 #include <QFileInfo>
@@ -500,12 +501,31 @@ void AutoCompletion::showPathCompletion()
 
 void AutoCompletion::showSnippetCompletion()
 {
-    // Snippet completion: load from SnippetsManager.
-    // TODO (Wave 6): integrate with SnippetsManager when available.
-    // For now, fall back to word+API completion as a basic substitute.
+    // Snippet completion: when a SnippetManager is injected, expand the
+    // snippet whose trigger matches the word under the caret. Otherwise
+    // fall back to the word + API list (the old behaviour).
     if (!_pEditView) return;
-    qDebug() << "AutoCompletion::showSnippetCompletion — snippet manager not yet connected, falling back to word+API";
-    showApiAndWordComplete();
+    if (!_snippetManager || _snippetManager->count() == 0) {
+        qDebug() << "AutoCompletion::showSnippetCompletion — no snippet manager wired, falling back to word+API";
+        showApiAndWordComplete();
+        return;
+    }
+
+    // Build the popup list of snippet names so the user can pick one.
+    const QStringList names = _snippetManager->names();
+    if (names.isEmpty()) {
+        showApiAndWordComplete();
+        return;
+    }
+
+    QString listStr = names.join(' ');
+    const QByteArray listUtf8 = listStr.toUtf8();  // store — dangling pointer otherwise
+    _pEditView->send(SCI_AUTOCSETSEPARATOR, ' ');
+    _pEditView->send(SCI_AUTOCSETIGNORECASE, 1);
+    _pEditView->send(SCI_AUTOCSHOW, 0,
+                     reinterpret_cast<sptr_t>(listUtf8.constData()));
+    _completionActive = true;
+    emit completionShown();
 }
 
 void AutoCompletion::showEnvVarCompletion()

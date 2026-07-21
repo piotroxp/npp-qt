@@ -199,6 +199,11 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
 
     // ── Auto-completion ─────────────────────────────────────────────────────
     _autoCompletion = new AutoCompletion(this);
+    // Wire the SnippetManager so showSnippetCompletion() expands real
+    // snippets instead of falling back to word+API. Safe even before
+    // Application::setupUI() returns — the manager pointer is read-only
+    // here; if it's null the fallback still works.
+    _autoCompletion->setSnippetManager(Application::instance().snippetManager());
     connect(_editor, &QsciScintilla::SCN_CHARADDED, _autoCompletion, [this](int ch) {
         _autoCompletion->update(ch);
     });

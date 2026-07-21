@@ -77,6 +77,7 @@ set(SOURCES
     src/MISC/Common/shortcut.cpp
     src/core/MacroManager.cpp
     src/core/MacroAction.cpp
+    src/core/SnippetManager.cpp
     src/core/RecentFilesManager.cpp
     src/core/ThemeManager.cpp
     src/core/NppIO.cpp

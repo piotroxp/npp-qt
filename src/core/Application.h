@@ -41,6 +41,7 @@ class SessionManager;
 class MacroManager;
 class RecentFilesManager;
 class EditorCommandManager;
+class SnippetManager;
 class UdlManager;
 class MainWindow;
 class SyntaxHighlighter;
@@ -283,6 +284,7 @@ public:
     void executeCommand(int commandId);
     EditorCommandManager* commandManager() const { return _commandManager; }
     MacroManager* macroManager() const { return _macroManager; }
+    SnippetManager* snippetManager() const { return _snippetManager; }
     RecentFilesManager* recentFilesManager() const { return _recentFilesManager; }
 
     // Notifications / observers
@@ -514,6 +516,7 @@ private:
     SessionManager*         _sessionManager = nullptr;
     EditorCommandManager*   _commandManager = nullptr;
     UdlManager*             _udlManager = nullptr;
+    SnippetManager*         _snippetManager = nullptr;
 
     // Dialogs
     FindReplaceDialog*   _findReplaceDialog = nullptr;

@@ -1,5 +1,6 @@
 // Application.cpp - Main application controller implementation
 #include "Application.h"
+#include "SnippetManager.h"
 
 #include <cstdio>
 #include <unistd.h>
@@ -219,6 +220,18 @@ bool Application::initialize() {
         _macroManager = new MacroManager();
         _recentFilesManager = &RecentFilesManager::instance();
         _udlManager = new UdlManager(this);
+        _snippetManager = new SnippetManager(this);
+        // Try the XDG-style config path first, then the legacy home path.
+        // setDefaultDirectory() is a no-op if the file does not yet exist,
+        // so this is safe on first launch (the manager starts empty).
+        for (const QString& p : SnippetManager::defaultSearchPaths()) {
+            if (p.isEmpty()) continue;
+            QFileInfo fi(p);
+            if (fi.exists() && fi.isReadable()) {
+                _snippetManager->loadFromFile(p);
+                break;
+            }
+        }
         _commandManager->registerAll(this);
 
         // Setup UI

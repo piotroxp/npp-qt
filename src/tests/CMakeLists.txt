@@ -65,6 +65,7 @@ add_library(test_core STATIC
     ${REL_ROOT}/core/SessionManager.cpp
     ${REL_ROOT}/core/MacroManager.cpp
     ${REL_ROOT}/core/MacroAction.cpp
+    ${REL_ROOT}/core/SnippetManager.cpp
     ${REL_ROOT}/common/Util.cpp
     ${REL_ROOT}/common/StringHelper.cpp
     ${REL_ROOT}/common/FileHelper.cpp
@@ -152,7 +153,7 @@ set_tests_properties(NamedClipboardTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM
 
 add_executable(test_snippets test_snippets.cpp)
 target_include_directories(test_snippets PRIVATE ${TEST_INC} ${REL_ROOT}/workers)
-target_link_libraries(test_snippets PRIVATE Qt6::Core Qt6::Widgets)
+target_link_libraries(test_snippets PRIVATE test_core test_stubs Qt6::Core Qt6::Widgets Qt6::Gui)
 add_test(NAME SnippetTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_snippets>)
 set_tests_properties(SnippetTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 

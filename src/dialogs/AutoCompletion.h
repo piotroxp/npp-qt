@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include "common/ScintillaComponent.h"
 
+class SnippetManager;
+
 struct MatchedCharInserted {
     MatchedCharInserted() = delete;
     char _c;
@@ -90,6 +92,12 @@ public:
     // ── Construction ────────────────────────────────────────────────────────
     explicit AutoCompletion(ScintillaComponent* pEditView);
     ~AutoCompletion() override;
+
+    /// Inject a SnippetManager. If non-null, `showSnippetCompletion()`
+    /// expands triggers via this manager; otherwise it falls back to
+    /// the word + API list (the old behaviour).
+    void setSnippetManager(SnippetManager* mgr) { _snippetManager = mgr; }
+    SnippetManager* snippetManager() const { return _snippetManager; }
 
     // ── Language setup ──────────────────────────────────────────────────────
     bool setLanguage(int language);
@@ -233,4 +241,7 @@ private:
     // Environment variables (lazy-populated)
     mutable QStringList _cachedEnvVars;
     mutable bool _envVarCacheValid = false;
+
+    // Optional snippet source. Not owned.
+    SnippetManager* _snippetManager = nullptr;
 };
