@@ -834,8 +834,17 @@ void Application::closeAllFilesButCurrent() {
 }
 
 BufferID Application::newFile(const std::string& encoding) {
+    qDebug() << "[App] newFile ENTER";
     (void)encoding;  // encoding determined by file manager defaults
-    return _fileManager->createNewFile();
+    BufferID id = _fileManager->createNewFile();
+    qDebug() << "[App] newFile id=" << (void*)(uintptr_t)id;
+    if (id) {
+        // Same rationale as openFile(): emit here so every caller path
+        // (onNewFile, Ctrl+N, "New" menu item) creates a tab consistently.
+        emit bufferOpened(id);
+        emit bufferActivated(id);
+    }
+    return id;
 }
 
 BufferID Application::duplicateBuffer(BufferID buffer) {

@@ -848,6 +848,7 @@ void MainWindow::updateTitleBar(const QString& fileName) {
 
 // File operations
 void MainWindow::onNewFile() {
+    qDebug() << "[MainWindow] onNewFile ENTER";
     // Guard: _tabWidget may be null during early initialization.
     if (!_tabWidget) return;
 
@@ -920,6 +921,7 @@ void MainWindow::onNewFile() {
     editor->setFocus();
 }
 void MainWindow::onOpenFile() {
+    qDebug() << "[MainWindow] onOpenFile ENTER";
     QString file = QFileDialog::getOpenFileName(this, "Open File", _lastOpenedDirectory);
     if (!file.isEmpty()) {
         _lastOpenedDirectory = QFileInfo(file).absolutePath();
@@ -928,6 +930,7 @@ void MainWindow::onOpenFile() {
 }
 
 void MainWindow::openFileInTab(const QString& path) {
+    qDebug() << "[MainWindow] openFileInTab ENTER path=" << path << "depth=" << _openingFileDepth;
     // Guard: re-entrancy.  When depth > 0 a nested call means either:
     //   (a) we are inside a ScintillaEditor constructor (events firing back to
     //       FileBrowserPanel) — suppress it, OR
@@ -1077,6 +1080,9 @@ void MainWindow::openFileInTab(const QString& path) {
         app().setActiveEditor(editor);
         app().setActiveBuffer(buf);
     }
+
+    qDebug() << "[MainWindow] openFileInTab DONE tab=" << idx << "file=" << fileName
+             << "totalTabs=" << _tabWidget->count();
 
     // Connect Function List panel to the new editor
     if (app().functionListPanel()) {
@@ -1306,9 +1312,11 @@ void MainWindow::onMacroCommand(const QString& macroName) {
 
 // Buffer notifications
 void MainWindow::onBufferOpened(BufferID buffer) {
-    if (!buffer) return;
-    if (!_tabWidget) return;
-    if (!_tabBar) return;
+    qDebug() << "[MainWindow] onBufferOpened ENTER buffer=" << (void*)(uintptr_t)buffer
+             << "tabWidget=" << (void*)_tabWidget << "tabBar=" << (void*)_tabBar;
+    if (!buffer) { qDebug() << "[MainWindow] onBufferOpened early-return: !buffer"; return; }
+    if (!_tabWidget) { qDebug() << "[MainWindow] onBufferOpened early-return: !_tabWidget"; return; }
+    if (!_tabBar) { qDebug() << "[MainWindow] onBufferOpened early-return: !_tabBar"; return; }
 
     // Check if already open — switch to existing tab
     if (_bufferToTab.contains(buffer)) {
@@ -1367,6 +1375,9 @@ void MainWindow::onBufferOpened(BufferID buffer) {
     updateTabBar();
     updateTitleBar();
     updateStatusBar();
+
+    qDebug() << "[MainWindow] onBufferOpened DONE tab=" << idx << "title=" << title
+             << "totalTabs=" << _tabWidget->count();
 
     // Register this editor as the active one
     app().setActiveEditor(editor);
