@@ -258,6 +258,35 @@ static void test_capture_apply_session() {
     ASSERT_TRUE(captured.buffers.isEmpty() || captured.buffers.size() >= 0); // No crash
 }
 
+// ─── Test: UDL-style language name roundtrips through save/load ─────────────
+// Regression for Wave 10: Application::saveSession now populates SessionBuffer::language
+// from Buffer::getLangType() / LanguageManager::getLanguageName(), or from
+// Buffer::getUserDefineLangName() when the language is a UDL. This test confirms
+// a non-trivial language string (including the UDL case) survives save→load.
+static void test_session_language_roundtrip_udl() {
+    NppSession session;
+    session.version = 1;
+    SessionBuffer buf;
+    buf.path = QStringLiteral("/tmp/example.mydsl");
+    buf.language = QStringLiteral("MyCustomLang");  // UDL name preserved as-is
+    buf.cursor.line = 1;
+    buf.cursor.column = 1;
+    buf.isActive = true;
+    session.buffers.append(buf);
+
+    SessionManager mgr;
+    mgr.setCurrentSession(session);
+    const QString path = makeTempFile();
+    ASSERT_TRUE(mgr.saveSessionToJson(path));
+
+    SessionManager mgr2;
+    ASSERT_TRUE(mgr2.loadSessionFromJson(path));
+    NppSession loaded = mgr2.currentSession();
+    ASSERT_EQ(loaded.buffers.size(), 1);
+    ASSERT_EQ(loaded.buffers[0].language, QStringLiteral("MyCustomLang"));
+    QFile::remove(path);
+}
+
 // ─── main ─────────────────────────────────────────────────────────────────────
 int main(int argc, char* argv[]) {
     qWarning() << "\n=== SessionManager tests ===\n";
@@ -273,6 +302,7 @@ int main(int argc, char* argv[]) {
     RUN_TEST(test_recent_files);
     RUN_TEST(test_max_recent_sessions_change);
     RUN_TEST(test_capture_apply_session);
+    RUN_TEST(test_session_language_roundtrip_udl);
 
     qWarning() << "\nResults: " << g_passed << " passed, " << g_failed << " failed\n";
     return g_failed > 0 ? 1 : 0;

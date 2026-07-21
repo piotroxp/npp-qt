@@ -931,7 +931,16 @@ bool Application::saveSession(const std::string& path) {
 
         SessionBuffer sb;
         sb.path = _fileManager->getBufferPath(buf);
-        sb.language = QString();  // Language auto-detected on open
+
+        // Resolve language name (UDL name when user-defined, otherwise standard name)
+        if (Buffer* b = _fileManager->getBufferByIndex(static_cast<size_t>(i))) {
+            LangType lt = b->getLangType();
+            if (lt == LangType::L_USER) {
+                sb.language = b->getUserDefineLangName();
+            } else if (_languageManager) {
+                sb.language = QString::fromStdString(_languageManager->getLanguageName(lt));
+            }
+        }
         sb.isActive = (buf == activeBuf);
 
         // Look up the editor that holds this buffer (fall back to active editor)
