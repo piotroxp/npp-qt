@@ -2,8 +2,9 @@
 // Copyright (C) 2026 Agent Army | GPL v3
 
 #include "MacroAction.h"
-class ScintillaEditor;   // forward decl
-class QsciScintilla;    // forward decl
+#include "editor/ScintillaEditor.h"
+#include <Qsci/qsciscintilla.h>
+#include <QByteArray>
 
 // ============================================================================
 // MacroAction
@@ -16,8 +17,21 @@ MacroAction::MacroAction(int sciCommand, const QString& stringParam)
     : _command(sciCommand), _hasStringParam(true), _intParam(0), _stringParam(stringParam) {}
 
 void MacroAction::playback(ScintillaEditor* editor) const {
-    Q_UNUSED(editor);
-    // playback needs ScintillaEditor linkage — stubbed for unit tests
+    if (!editor) return;
+    QsciScintilla* qs = editor->qsciEditor();
+    if (!qs) return;
+    if (_hasStringParam) {
+        // Most recorded string-param macros are SCI_REPLACESEL / SCI_ADDTEXT /
+        // SCI_INSERTTEXT — all of which take a (const char*) pointer as the
+        // sptr_t arg. SCI_REPLACESEL is the safest replay target because it
+        // replaces the current selection (or inserts at cursor with no sel),
+        // matching how Notepad++ macros are recorded.
+        QByteArray utf8 = _stringParam.toUtf8();
+        qs->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+                          reinterpret_cast<sptr_t>(utf8.constData()));
+    } else {
+        qs->SendScintilla(_command, _intParam);
+    }
 }
 
 QVariantMap MacroAction::toJson() const {

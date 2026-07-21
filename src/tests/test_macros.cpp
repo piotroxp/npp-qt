@@ -1,6 +1,9 @@
 // test_macros.cpp — Macro recording and playback tests
 
 #include "core/MacroManager.h"
+#include "core/MacroAction.h"
+#include "editor/ScintillaEditor.h"
+#include <Qsci/qsciscintilla.h>
 #include <QCoreApplication>
 #include <QDebug>
 
@@ -55,6 +58,79 @@ static void test_macro_names() {
     Q_UNUSED(names);
 }
 
+// ─── MacroAction::playback tests ─────────────────────────────────────────────
+//
+// MacroAction::playback used to be a stub (the comment said "playback needs
+// ScintillaEditor linkage — stubbed for unit tests"). These tests exercise
+// the real wiring: integer-param actions forward to SendScintilla(cmd, int),
+// string-param actions become SCI_REPLACESEL with the UTF-8 payload, and
+// null-editor input is safe.
+
+static void test_macro_action_null_editor_safe() {
+    MacroAction cut(QsciScintilla::SCI_CUT, 0);
+    cut.playback(nullptr);   // must not crash
+    ASSERT_TRUE(true);
+}
+
+static void test_macro_action_int_param_dispatches() {
+    // SCI_LINEDOWN moves the cursor down one line. Use SCI_GETCURRENTPOS
+    // before/after to verify the message was actually delivered to the
+    // underlying QsciScintilla.
+    ScintillaEditor* ed = new ScintillaEditor();
+    ed->setText("alpha\nbeta\ngamma\n");
+
+    long before = ed->qsciEditor()->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
+    MacroAction lineDown(QsciScintilla::SCI_LINEDOWN, 0);
+    lineDown.playback(ed);
+    long after = ed->qsciEditor()->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
+    ASSERT_TRUE(after != before);  // cursor advanced
+
+    delete ed;
+}
+
+static void test_macro_action_string_param_replaces_selection() {
+    ScintillaEditor* ed = new ScintillaEditor();
+    ed->setText("hello world");
+
+    // Move cursor to start, no selection, then playback "HI ".
+    long startPos = 0;
+    ed->qsciEditor()->SendScintilla(QsciScintilla::SCI_SETSELECTION, startPos, startPos);
+
+    MacroAction insertText(QsciScintilla::SCI_REPLACESEL, QStringLiteral("HI "));
+    insertText.playback(ed);
+
+    QString after = ed->text();
+    ASSERT_EQ(after, QStringLiteral("HI hello world"));
+
+    delete ed;
+}
+
+static void test_macro_action_serialization_roundtrip() {
+    // Int-param action: must survive toJson -> fromJson with the same kind.
+    MacroAction intAction(QsciScintilla::SCI_PAGEDOWN, 7);
+    QVariantMap m = intAction.toJson();
+    ASSERT_EQ(m["id"].toInt(), QsciScintilla::SCI_PAGEDOWN);
+    ASSERT_EQ(m["param"].toInt(), 7);
+
+    MacroAction intClone;
+    intClone.fromJson(m);
+    ASSERT_EQ(intClone.command(), QsciScintilla::SCI_PAGEDOWN);
+    ASSERT_FALSE(intClone.hasStringParam());
+    ASSERT_EQ(intClone.intParam(), 7);
+
+    // String-param action: same shape, different kind.
+    MacroAction strAction(QsciScintilla::SCI_REPLACESEL, QStringLiteral("xyz"));
+    QVariantMap ms = strAction.toJson();
+    ASSERT_EQ(ms["id"].toInt(), QsciScintilla::SCI_REPLACESEL);
+    ASSERT_TRUE(ms["param"].canConvert<QString>());
+    ASSERT_EQ(ms["param"].toString(), QStringLiteral("xyz"));
+
+    MacroAction strClone;
+    strClone.fromJson(ms);
+    ASSERT_TRUE(strClone.hasStringParam());
+    ASSERT_EQ(strClone.stringParam(), QStringLiteral("xyz"));
+}
+
 int main(int argc, char* argv[]) {
     QCoreApplication app(argc, argv);
     qDebug() << "\n=== MacroManager tests ===";
@@ -63,6 +139,10 @@ int main(int argc, char* argv[]) {
     RUN_TEST(test_delete_macro);
     RUN_TEST(test_signals);
     RUN_TEST(test_macro_names);
+    RUN_TEST(test_macro_action_null_editor_safe);
+    RUN_TEST(test_macro_action_int_param_dispatches);
+    RUN_TEST(test_macro_action_string_param_replaces_selection);
+    RUN_TEST(test_macro_action_serialization_roundtrip);
     qDebug() << "\nResults:" << g_passed << "passed";
     return 0;
 }
