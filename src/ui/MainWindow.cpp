@@ -1456,8 +1456,12 @@ void MainWindow::onThemeChanged(const QString& theme) {
     if (_menuBar)
         _menuBar->setStyleSheet(ThemeManager::instance().getThemeQss(theme, "menu"));
     _tabWidget->setStyleSheet(ThemeManager::instance().getThemeQss(theme, "tabs"));
-    // Reload current theme resource
-    app().loadTheme(theme.toStdString());
+    // NOTE: do NOT call app().loadTheme() here — it emits themeChanged, which
+    // is connected back to this slot, creating infinite recursion that
+    // crashes the app on Wayland (MenuBar QTextEngine::itemize stack overflow
+    // via repeated QFontMetrics::size calls during changeEvent). The actual
+    // theme resource is already loaded by the preceding
+    // ThemeManager::instance().loadTheme(theme) call.
 }
 
 // DPI
