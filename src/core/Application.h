@@ -10,6 +10,7 @@
 #include <QStatusBar>
 #include <QString>
 #include <QTimer>
+#include <QColor>
 #include <memory>
 #include <vector>
 #include <unordered_map>

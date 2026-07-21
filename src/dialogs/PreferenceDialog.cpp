@@ -11,11 +11,13 @@
 #include <QVBoxLayout>
 #include <QMenuBar>
 #include <QToolBar>
+#include <QTabWidget>
 #include <QHBoxLayout>
 #include <QGridLayout>
 #include <QLabel>
 #include <QGroupBox>
 #include <QPushButton>
+#include <QColorDialog>
 #include <QMessageBox>
 #include <QListWidget>
 #include <QTableWidget>
@@ -495,11 +497,23 @@ QWidget* PreferenceDialog::createMarginsPage() {
         "Highlight current line background", curLineGroup);
     curLineGrid->addWidget(_chkHighlightCurrentLine, 0, 0);
     curLineGrid->addWidget(new QLabel("Highlight color:", curLineGroup), 1, 0);
-    // Color indicator — a read-only line showing the color
-    QLabel* colorPreview = new QLabel(curLineGroup);
-    colorPreview->setFixedHeight(22);
-    colorPreview->setStyleSheet("background: #FFFFD0; border: 1px solid gray; border-radius: 3px;");
-    curLineGrid->addWidget(colorPreview, 1, 1);
+    // Color swatch button — clicking it opens a QColorDialog so the user can
+    // actually pick a color (the old code had a read-only QLabel here that
+    // did nothing on click; users had no way to change the highlight color).
+    _btnCurrentLineColor = new QPushButton(curLineGroup);
+    _btnCurrentLineColor->setFixedHeight(22);
+    _btnCurrentLineColor->setFixedWidth(60);
+    _btnCurrentLineColor->setToolTip("Click to pick a custom highlight color");
+    connect(_btnCurrentLineColor, &QPushButton::clicked, this, [this]() {
+        QColor picked = QColorDialog::getColor(_currentLineColor, this,
+                                               "Pick highlight color",
+                                               QColorDialog::DontUseNativeDialog);
+        if (picked.isValid() && picked != _currentLineColor) {
+            _currentLineColor = picked;
+            setHighlightColorSwatch();
+        }
+    });
+    curLineGrid->addWidget(_btnCurrentLineColor, 1, 1);
     layout->addWidget(curLineGroup);
 
     // Border Edge
@@ -716,6 +730,38 @@ QWidget* PreferenceDialog::createSearchPage() {
 // ============================================================================
 // Load Settings
 // ============================================================================
+
+// Re-style the highlight-color swatch button so it reflects _currentLineColor.
+void PreferenceDialog::setHighlightColorSwatch() {
+    if (!_btnCurrentLineColor) return;
+    _btnCurrentLineColor->setStyleSheet(
+        QString("background: %1; border: 1px solid gray; border-radius: 3px;")
+            .arg(_currentLineColor.name()));
+}
+
+// Push _currentLineColor to every open editor's caret-line background.
+// Safe with zero open tabs.  Walks MainWindow's _tabWidget, which is the
+// only place editors are tracked.  Avoids adding a new getAllEditors()
+// to Application just for this.
+void PreferenceDialog::applyHighlightColorToEditors() {
+    QWidget* mw = app().mainWindow();
+    if (!mw) return;
+    // The MainWindow has exactly one QTabWidget (the editor dock); for safety
+    // take the first child widget of class QTabWidget under MainWindow to
+    // avoid hitting docks/panels if any are added later.
+    auto tabs = mw->findChildren<QTabWidget*>();
+    if (tabs.isEmpty()) return;
+    QTabWidget* tab = tabs.first();
+    if (!tab) return;
+    for (int i = 0; i < tab->count(); ++i) {
+        QWidget* w = tab->widget(i);
+        if (!w) continue;
+        if (auto* ed = qobject_cast<ScintillaEditor*>(w)) {
+            ed->setCaretLineBackgroundColor(_currentLineColor);
+        }
+    }
+}
+
 void PreferenceDialog::loadSettings() {
     const AppOptions& opts = app().options();
 
@@ -753,6 +799,15 @@ void PreferenceDialog::loadSettings() {
     _chkShowStatusbar->setChecked(opts.showStatusBar);
     _chkShowMenubar->setChecked(opts.showMenuBar);
     _chkShowIndentGuide->setChecked(opts.showIndentGuide);
+
+    // Highlight color picker — populate backing color and paint the swatch
+    // to match.  Fall back to the legacy cream if the saved value is invalid.
+    if (opts.currentLineHighlightColor.isValid()) {
+        _currentLineColor = opts.currentLineHighlightColor;
+    } else {
+        _currentLineColor = QColor("#FFFFD0");
+    }
+    setHighlightColorSwatch();
 
     // File Associations
     _extListWidget->clear();
@@ -826,6 +881,7 @@ void PreferenceDialog::loadSettings() {
     _originalSettings.showTabbar = opts.showTabBar;
     _originalSettings.showStatusbar = opts.showStatusBar;
     _originalSettings.showMenubar = opts.showMenuBar;
+    _originalSettings.currentLineColor = _currentLineColor;
 }
 
 // ============================================================================
@@ -944,6 +1000,12 @@ void PreferenceDialog::applySettings() {
         app().mainWindow()->statusBar()->setVisible(opts.showStatusBar);
     }
 
+    // Apply user-chosen highlight color to every open editor.  This is the
+    // wire that was missing — before this, changing the swatch and hitting
+    // Apply stored the value in opts but did nothing visible; the actual
+    // Scintilla caret-line background was still driven only by the theme.
+    applyHighlightColorToEditors();
+
     // Load theme if changed
     QString newTheme = _cmbTheme->currentData().toString();
     if (newTheme != _originalSettings.theme) {
@@ -974,6 +1036,7 @@ void PreferenceDialog::applySettings() {
     _originalSettings.showTabbar = opts.showTabBar;
     _originalSettings.showStatusbar = opts.showStatusBar;
     _originalSettings.showMenubar = opts.showMenuBar;
+    _originalSettings.currentLineColor = _currentLineColor;
 }
 
 // ============================================================================

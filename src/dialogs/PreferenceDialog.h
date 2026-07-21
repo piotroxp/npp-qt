@@ -20,6 +20,7 @@
 #include <QRadioButton>
 #include <QPushButton>
 #include <QFileDialog>
+#include <QColor>
 
 class PreferenceDialog : public QDialog {
     Q_OBJECT
@@ -49,6 +50,8 @@ private:
     void loadSettings();
     void saveDialogGeometry();
     void restoreDialogGeometry();
+    void setHighlightColorSwatch();
+    void applyHighlightColorToEditors();
     QWidget* createGeneralPage();
     QWidget* createEditorPage();
     QWidget* createAppearancePage();
@@ -91,6 +94,9 @@ private:
     QCheckBox* _chkShowStatusbar = nullptr;
     QCheckBox* _chkShowMenubar = nullptr;
     QCheckBox* _chkShowIndentGuide = nullptr;
+    QPushButton* _btnCurrentLineColor = nullptr;   // clickable color swatch
+    QColor        _currentLineColor = QColor("#FFFFD0");  // backing store for the swatch
+
 
     // File Associations page widgets
     QListWidget* _extListWidget = nullptr;
@@ -159,6 +165,7 @@ private:
         bool showStatusbar;
         bool showMenubar;
         bool showIndentGuide;
+        QColor currentLineColor;
         int lineNumberWidth;
         bool showSymbols;
         bool showFolder;

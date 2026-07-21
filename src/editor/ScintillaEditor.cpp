@@ -90,7 +90,17 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     _editor->setIndentationsUseTabs(false);
     _editor->setAutoIndent(true);
     _editor->setCaretLineVisible(true);
-    _editor->setCaretLineBackgroundColor(QColor("#2c313a"));  // One Dark default
+    // Default highlight color — the user-configured one (loaded from
+    // AppOptions) takes precedence so a saved preference survives across
+    // editor instances.  Falls back to the One Dark default if unset.
+    {
+        QColor saved = Application::instance().options().currentLineHighlightColor;
+        if (saved.isValid()) {
+            _editor->setCaretLineBackgroundColor(saved);
+        } else {
+            _editor->setCaretLineBackgroundColor(QColor("#2c313a"));  // One Dark default
+        }
+    }
     _editor->setIndentationGuides(true);
     _editor->setTabIndents(true);
     _editor->setBackspaceUnindents(true);
@@ -259,8 +269,18 @@ void ScintillaEditor::applyTheme(const QString& themeName) {
     _editor->setColor(QColor(c.foreground));
     _editor->setPaper(QColor(c.background));
     _editor->setCaretForegroundColor(QColor(c.caretColor));
-    _editor->setCaretLineBackgroundColor(QColor(c.currentLineBackground));
     _editor->setSelectionBackgroundColor(QColor(c.selectionBackground));
+
+    // Highlight color: prefer the user-chosen color from Preferences over the
+    // theme's default.  Without this, theme reloads would wipe a color the
+    // user explicitly picked.  Theme wins only if the user hasn't set one.
+    QColor userColor = Application::instance().options().currentLineHighlightColor;
+    if (userColor.isValid()) {
+        _editor->setCaretLineBackgroundColor(userColor);
+    } else {
+        _editor->setCaretLineBackgroundColor(QColor(c.currentLineBackground));
+    }
+
     // Re-apply lexer colors if a lexer is active
     if (_editor->lexer()) {
         applyThemeToLexer(_editor->lexer());

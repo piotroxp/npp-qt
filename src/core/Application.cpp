@@ -330,6 +330,15 @@ bool Application::loadConfig() {
     _options.showEdgeLine       = ini.getBool("Margins", "ShowEdgeLine", false);
     _options.edgeColumn         = ini.getInt("Margins", "EdgeColumn", 80);
 
+    // User-chosen highlight color (Preferences → Current Line group).  Stored
+    // as a QColor::name() string under "Editor".  Missing key → the default
+    // baked into AppOptions (cream) takes over.
+    {
+        std::string colorStr = ini.get("Editor", "CurrentLineHighlightColor", "");
+        QColor saved(QString::fromStdString(colorStr));
+        if (saved.isValid()) _options.currentLineHighlightColor = saved;
+    }
+
     // File Associations
     _options.fileAssociations   = ini.getStringList("General", "FileAssociations", {});
 
@@ -376,6 +385,10 @@ bool Application::saveConfig(const std::string& path) {
     ini.set("Margins", "HighlightCurrentLine",_options.highlightCurrentLine);
     ini.set("Margins", "ShowEdgeLine",       _options.showEdgeLine);
     ini.set("Margins", "EdgeColumn",          _options.edgeColumn);
+
+    // Persist user-chosen highlight color as #RRGGBB.  Reapply on next launch.
+    ini.set("Editor", "CurrentLineHighlightColor",
+            _options.currentLineHighlightColor.name());
 
     // File Associations
     ini.setStringList("General", "FileAssociations", _options.fileAssociations);
