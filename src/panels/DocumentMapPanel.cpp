@@ -236,6 +236,7 @@ void DocumentMapPanel::setEditor(ScintillaEditor* editor) {
     // call, so applying it verbatim would leave an unmatched '});' and break
     // the build. The bug fix (no early updateCursorMarker()) is preserved;
     // the structural deferral would need a separate, hand-written port.
+});
 }
 
 // -----------------------------------------------------------------------------
