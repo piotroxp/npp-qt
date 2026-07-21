@@ -46,7 +46,9 @@ static QString detectBomCharset(const char* data, size_t len) {
 }
 
 // Helper: count null bytes (indicates UTF-16 or binary content)
-static int countNullChars(const char* data, size_t len) {
+// Currently unused — kept as a documented utility for future callers
+// and silenced with [[maybe_unused]] to avoid -Wunused-function.
+[[maybe_unused]] static int countNullChars(const char* data, size_t len) {
     int count = 0;
     for (size_t i = 0; i < len; ++i) {
         if (data[i] == '\0')
