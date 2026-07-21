@@ -187,12 +187,18 @@ int main(int argc, char* argv[]) {
 
     // In headless/offscreen mode the window won't close to quit, so use a
     // periodic timer to poll signal flags and exit app.exec() cleanly.
+    //
+    // FIX: previously called std::_Exit(EXIT_SUCCESS) which skips destructors
+    // and atexit handlers, so Application::shutdown() never ran and config.xml
+    // was never saved when the user killed the app. QCoreApplication::quit()
+    // returns from app.exec() cleanly so main()'s post-exec shutdown path
+    // runs (which calls Application::shutdown() → saveConfig()).
     QTimer signalTimer;
     QObject::connect(&signalTimer, &QTimer::timeout, [&app, &signalTimer]() {
         if (g_sigintReceived || g_sigtermReceived) {
             signalTimer.stop();
             std::fflush(stderr);
-            std::_Exit(EXIT_SUCCESS);
+            QCoreApplication::quit();
         }
     });
     signalTimer.start(500);  // Check every 500ms

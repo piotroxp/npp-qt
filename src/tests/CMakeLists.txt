@@ -201,6 +201,14 @@ target_link_libraries(test_config_persistence PRIVATE stdc++fs)
 add_test(NAME ConfigPersistenceTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_config_persistence>)
 set_tests_properties(ConfigPersistenceTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+# NOTE: A test_shutdown_persistence binary would have been the right test
+# here, but src/core/Application.cpp is intentionally not part of test_core.a
+# (the active test build uses TestStubs' minimal Application, which lacks
+# loadConfig() and the full AppOptions struct). Instead, the SIGTERM-clean-
+# shutdown path is verified operationally: launch the real NotepadMinusMinusQt
+# binary, send SIGTERM, confirm config.xml appears on disk. See
+# docs/ai-ai-qa/v3/syntax-highlight-fix.md for the procedure.
+
 add_core_test(test_util test_util.cpp)
 add_test(NAME UtilTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_util>)
 set_tests_properties(UtilTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
