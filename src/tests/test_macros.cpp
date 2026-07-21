@@ -4,7 +4,11 @@
 #include "core/MacroAction.h"
 #include "common/ScintillaComponent.h"   // for sptr_t
 #include <Qsci/qsciscintilla.h>
-#include <QCoreApplication>
+#include <QApplication>                  // QApplication, not QCoreApplication:
+                                         // the playback tests instantiate
+                                         // QsciScintilla, which asserts
+                                         // QApplication::instance() != nullptr
+                                         // in its constructor under Qt6.
 #include <QDebug>
 
 #define ASSERT_TRUE(x) do { if (!(x)) { qFatal("FAILED: %s at %s:%d", #x, __FILE__, __LINE__); } } while(0)
@@ -140,7 +144,7 @@ static void test_macro_action_serialization_roundtrip() {
 }
 
 int main(int argc, char* argv[]) {
-    QCoreApplication app(argc, argv);
+    QApplication app(argc, argv);
     qDebug() << "\n=== MacroManager tests ===";
     RUN_TEST(test_record_start_stop);
     RUN_TEST(test_recorded_commands);
