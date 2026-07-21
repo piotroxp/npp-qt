@@ -6,6 +6,8 @@
 
 #include "common/NonCopyable.h"
 #include "../common/Types.h"
+#include <QString>
+#include <array>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -16,6 +18,12 @@ class LanguageManager : public NonCopyable {
 public:
     // Singleton access
     static LanguageManager& instance() { static LanguageManager m; return m; }
+
+    // Create and return a QsciLexer for the given language (caller owns it, may be nullptr)
+    QsciLexer* getLexer(LangType lang) const;
+
+    // Map a string name (e.g. "c++", "python", "javascript") to LangType
+    static LangType mapStringToLang(const QString& name);
 
     // Static convenience: detect language from file extension (e.g. ".cpp")
     static LangType detect(const std::string& fileExtension);
@@ -37,10 +45,22 @@ public:
     LangType getLanguageForExtension(const std::string& ext) const;
 
     std::vector<LangType> getAllLanguages() const;
-    std::vector<std::string> getKeywords(LangType lang) const;
+    std::unordered_map<int, std::string> getKeywords(LangType lang) const;
 
     bool isCaseSensitive(LangType lang) const;
     int getIndentSize(LangType lang) const;
+
+    // ---- User-Defined Language (UDL) support ----
+    // Register keyword sets for a UDL by name. Pass space-separated words.
+    // Keywords sets are indexed 0..8 (matching Notepad++'s primary + 8 sub-sets).
+    void registerUdlKeywords(const QString& udlName, const std::array<QString, 9>& keywordSets);
+    // Lookup: returns true if the UDL has registered keywords.
+    bool hasUdlKeywords(const QString& udlName) const;
+    // Get keyword string for a specific set index (0..8) of a UDL.
+    QString getUdlKeywordSet(const QString& udlName, int setIndex) const;
+    // Active UDL name (set by Application on buffer activation).
+    void setActiveUdlName(const QString& udlName) { _activeUdlName = udlName; }
+    QString activeUdlName() const { return _activeUdlName; }
 
     // Comment symbol helpers (for Buffer integration)
     std::string getCommentLine(LangType lang) const;
@@ -51,4 +71,8 @@ private:
     void initDefaultMappings();
     std::unordered_map<std::string, LangType> _extToLang;
     std::unordered_map<LangType, std::string> _langNames;
+
+    // UDL keyword storage: udlName → array of 9 keyword strings
+    std::unordered_map<QString, std::array<QString, 9>> _udlKeywordSets;
+    QString _activeUdlName;
 };

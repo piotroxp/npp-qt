@@ -10,6 +10,11 @@
 #include <QDir>
 #include <QApplication>
 
+ThemeManager& ThemeManager::instance() {
+    static ThemeManager inst;
+    return inst;
+}
+
 ThemeManager::ThemeManager() {
     // Initialize with default dark theme
     applyDefaultDark();
@@ -125,6 +130,10 @@ void ThemeManager::applyDefaultDark() {
 
     // Dark QSS for toolbar and statusbar
     _themeQss["toolbar"] = "QToolBar { background: #1e1e1e; border: none; }";
+    _themeQss["tabs"] = "QTabWidget::pane { border: 1px solid #3e4451; background: #1e1e1e; }"
+                       "QTabBar::tab { background: #2c313a; color: #abb2bf; padding: 6px 12px; }"
+                       "QTabBar::tab:selected { background: #1e1e1e; border-bottom: 2px solid #528bff; }"
+                       "QTabBar::tab:hover { background: #3e4451; }";
     _themeQss["statusbar"] = "QStatusBar { background: #1e1e1e; color: #abb2bf; }";
     _themeQss["menu"] = "QMenuBar { background: #1e1e1e; color: #abb2bf; }"
                         "QMenuBar::item:selected { background: #3e4451; }"
@@ -148,6 +157,10 @@ void ThemeManager::applyDefaultLight() {
 
     // Light QSS for toolbar and statusbar
     _themeQss["toolbar"] = "QToolBar { background: #fafafa; border: none; }";
+    _themeQss["tabs"] = "QTabWidget::pane { border: 1px solid #e5ebf4; background: #fafafa; }"
+                       "QTabBar::tab { background: #f0f0f0; color: #383a42; padding: 6px 12px; }"
+                       "QTabBar::tab:selected { background: #fafafa; border-bottom: 2px solid #4078f2; }"
+                       "QTabBar::tab:hover { background: #e5ebf4; }";
     _themeQss["statusbar"] = "QStatusBar { background: #fafafa; color: #383a42; }";
     _themeQss["menu"] = "QMenuBar { background: #fafafa; color: #383a42; }"
                         "QMenuBar::item:selected { background: #e5ebf4; }"

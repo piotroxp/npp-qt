@@ -20,9 +20,12 @@ public:
     // Playback
     void playback();
     void playback(int macroIndex);
+    void playback(const QString& macroName);
 
     // Storage
     void saveMacro(const QString& name);
+    void saveMacro(const QString& name, const QString& path);
+    bool loadMacro(const QString& path);
     void loadMacros();
     void deleteMacro(int index);
 

@@ -9,14 +9,17 @@
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QString>
+#include <QTimer>
+#include <QColor>
 #include <memory>
 #include <vector>
 #include <unordered_map>
 #include <mutex>
 #include "common/Types.h"
 #include "common/Util.h"
-#include "../dialogs/FindInFilesWorker.h"
 #include "dialogs/FindInFilesWorker.h"
+#include "dialogs/FindInFilesDialog.h"
+#include "plugins/PluginManager.h"
 
 // Forward declarations
 class ScintillaEditor;
@@ -38,16 +41,19 @@ class SessionManager;
 class MacroManager;
 class RecentFilesManager;
 class EditorCommandManager;
+class SnippetManager;
 class UdlManager;
 class MainWindow;
 class SyntaxHighlighter;
 class FindReplaceDialog;
 class GoToLineDialog;
+class IncrementalSearchDialog;
 class PreferenceDialog;
 class AboutDialog;
 class DocumentMapPanel;
 class FunctionListPanel;
 class FileBrowserPanel;
+class ClipboardHistoryPanel;
 class MenuBar;
 class ToolBar;
 
@@ -66,6 +72,7 @@ struct AppOptions {
     bool         rememberSession = true;
     int          maxRecentFiles = 50;
     int          defaultTabWidth = 4;
+    int          indentWidth = 4;
     bool         defaultTabAsSpaces = false;
     EolType      defaultEolType = EolType::EOL_LF;
     EncodingType defaultEncoding = EncodingType::UTF_8_BOM;
@@ -74,6 +81,45 @@ struct AppOptions {
     bool         smartHighlighting = true;
     int          maxHighlightingWords = 1000;
     bool         wrapWithQuotes = false;
+    // Editor behavior
+    bool         wordWrap = false;
+    bool         virtualSpace = true;
+    bool         smartHome = true;
+    bool         autoIndent = true;
+    bool         backspaceUnindent = false;
+    bool         showEol = false;
+    bool         showSpaceTab = false;
+    // File Associations
+    QStringList  fileAssociations;
+    bool         warnOnShortcutConflict = true;
+    // Margins
+    bool         showLineNumbers = true;
+    int          lineNumberWidth = 4;
+    bool         showSymbols = false;
+    bool         showFolderMargin = true;
+    int          symbolMarginWidth = 1;
+    bool         highlightCurrentLine = true;
+    bool         showEdgeLine = false;
+    int          edgeColumn = 80;
+    // Backup / Auto-Save
+    QString      backupDir;
+    int          backupStyle = 0;
+    int          maxBackups = 10;
+    bool         autoSave = false;
+    int          autoSaveInterval = 5;
+    bool         autoSaveCurrentOnly = false;
+    bool         autoSaveInBackground = true;
+    // Editor Appearance
+    bool         showIndentGuide = false;
+    QColor       currentLineHighlightColor = QColor("#FFFFD0");  // user-selected highlight color
+    // Search
+    int          maxHighlightWords = 1000;
+    bool         matchCaseDefault = false;
+    bool         matchWholeWordDefault = false;
+    bool         wrapAroundDefault = true;
+    int          findHistoryCount = 10;
+    // Language
+    bool         autoDetectLanguage = true;
 };
 
 // ============================================================================
@@ -121,7 +167,9 @@ public:
     void setConfigDirectory(const std::string& dir);
     void setPluginDirectory(const std::string& dir);
     void setThemeProfile(const std::string& profile);
+    void setSkipPlugins(bool skip) { _skipPlugins = skip; }
     bool saveConfig(const std::string& path = "");
+    bool loadConfig();
     const AppOptions& options() const { return _options; }
     AppOptions& options() { return _options; }
 
@@ -130,8 +178,43 @@ public:
     BufferID openFiles(const std::vector<std::string>& paths);
     bool saveFile(BufferID buffer, const std::string& path = "");
     bool saveAllFiles();
+    bool reloadFile(BufferID buffer);
     bool closeFile(BufferID buffer, bool force = false);
     bool closeAllFiles();
+    void closeAllButCurrent();              // IDM_FILE_CLOSEALL_BUT_CURRENT
+
+    // File operations
+    bool deleteFile(BufferID buffer);       // IDM_FILE_DELETE
+    bool renameFile(BufferID buffer, const QString& newName = QString()); // IDM_FILE_RENAME
+
+    // View/editor operations
+    void cloneToOtherView(BufferID buffer);   // IDM_VIEW_CLONE_TO_OTHER_VIEW
+    void moveToSubView(BufferID buffer);      // IDM_VIEW_MOVETO_SUBVIEW
+    void zoomIn();                            // IDM_VIEW_ZOOMIN
+    void zoomOut();                           // IDM_VIEW_ZOOMOUT
+    void zoomRestore();                       // IDM_VIEW_ZOOMRESTORE
+    void toggleWordWrap();                    // IDM_VIEW_WORDWRAP
+    void toggleEolVisibility();              // IDM_VIEW_EOL
+    inline void showAllCharacters() { onShowAllCharacters(); }  // IDM_VIEW_SHOW_ALL_CHARS
+    void toggleDocMap();                      // IDM_VIEW_DOCMAP
+    void toggleFunctionList();                // IDM_VIEW_FUNC_LIST
+    void toggleFileBrowser();                  // IDM_VIEW_FILEBROWSER
+    void toggleClipboardHistory();            // IDM_VIEW_CLIPBOARDHISTORY
+
+    // Edit operations
+    void deleteLine();                       // IDM_EDIT_DELETELINE
+    void joinLines();                        // IDM_EDIT_JOINLINES
+    void trimTrailing();                     // IDM_EDIT_TRIM_TRAILING
+    void trimLeading();                       // IDM_EDIT_TRIM_LEADING
+    void sortAscending();                    // IDM_EDIT_SORT_ASC
+    void sortDescending();                    // IDM_EDIT_SORT_DESC
+    void sortIntAscending();                  // IDM_EDIT_SORT_INT_ASC
+    void sortIntDescending();                 // IDM_EDIT_SORT_INT_DESC
+    void sortReverse();                       // IDM_EDIT_SORT_REVERSE
+    void unmarkAll();                        // IDM_EDIT_UNMARK_ALL
+    void openContainingFolder(BufferID buffer); // IDM_FILE_OPEN_CONTAINING_FOLDER
+    void searchOnInternet();                  // IDM_EDIT_SEARCHONINTERNET
+
     BufferID newFile(const std::string& encoding = "");
     BufferID duplicateBuffer(BufferID buffer);
     std::optional<std::string> getFileName(BufferID buffer) const;
@@ -139,6 +222,7 @@ public:
     // Buffer management
     BufferID getActiveBuffer() const;
     BufferID getBufferAt(int index, int view = 0) const;
+    BufferID getBufferForPath(const std::string& path) const;
     int getBufferCount() const;
     void setActiveBuffer(BufferID buffer);
     bool isBufferModified(BufferID buffer) const;
@@ -146,11 +230,13 @@ public:
     bool setBufferText(BufferID buffer, const std::string& text);
     EncodingType getBufferEncoding(BufferID buffer) const;
     bool setBufferEncoding(BufferID buffer, EncodingType enc);
+    EolType getBufferEol(BufferID buffer) const;
+    bool setBufferEol(BufferID buffer, EolType eol);
 
     // View management
     int currentView() const;
     void switchToView(int viewId);
-    int addView();
+    ScintillaEditor* addView();
     void closeView(int viewId);
     int activeViewId() const { return _activeViewId; }
 
@@ -168,18 +254,25 @@ public:
     void toggleDistractionFree();
     bool isFullScreen() const { return _isFullScreen; }
     bool isDistractionFree() const { return _isDistractionFree; }
-    QMainWindow* mainWindow() const { return _mainWindow; }
+    MainWindow* mainWindow() const { return _mainWindow; }
 
     // Dialogs
-    FindReplaceDialog* findReplaceDialog() const { return _findReplaceDialog; }
-    GoToLineDialog* gotoLineDialog() const { return _gotoLineDialog; }
-    PreferenceDialog* preferenceDialog() const { return _preferenceDialog; }
-    AboutDialog* aboutDialog() const { return _aboutDialog; }
+    FindReplaceDialog*  findReplaceDialog() const { return _findReplaceDialog; }
+    GoToLineDialog*    gotoLineDialog() const { return _gotoLineDialog; }
+    PreferenceDialog*  preferenceDialog() const { return _preferenceDialog; }
+    AboutDialog*       aboutDialog() const { return _aboutDialog; }
+    FindInFilesDialog* findInFilesDialog() const { return _findInFilesDialog; }
 
     // Panels
     DocumentMapPanel* documentMapPanel() const { return _docMapPanel; }
     FunctionListPanel* functionListPanel() const { return _funcListPanel; }
     FileBrowserPanel* fileBrowserPanel() const { return _fileBrowserPanel; }
+    class ClipboardHistoryPanel* clipboardHistoryPanel() const { return _clipboardHistoryPanel; }
+
+    void setFileBrowserPanel(FileBrowserPanel* p) { _fileBrowserPanel = p; }
+    void setFunctionListPanel(FunctionListPanel* p) { _funcListPanel = p; }
+    void setDocumentMapPanel(DocumentMapPanel* p) { _docMapPanel = p; }
+    void setClipboardHistoryPanel(ClipboardHistoryPanel* p) { _clipboardHistoryPanel = p; }
 
     // Editors
     ScintillaEditor* getEditor(int viewId = -1) const;
@@ -192,9 +285,11 @@ public:
     void executeCommand(int commandId);
     EditorCommandManager* commandManager() const { return _commandManager; }
     MacroManager* macroManager() const { return _macroManager; }
+    SnippetManager* snippetManager() const { return _snippetManager; }
     RecentFilesManager* recentFilesManager() const { return _recentFilesManager; }
 
     // Notifications / observers
+    void updateWindowTitle();
     Observer<BufferNotification>& bufferObserver() { return _bufferObserver; }
     Observer<FileNotification>& fileWatcherObserver() { return _fileWatcherObserver; }
     Observer<ThemeNotification>& themeObserver() { return _themeObserver; }
@@ -205,7 +300,7 @@ public:
     void setStatusBarEol(const std::string& eol);
     void setStatusBarLanguage(const std::string& lang);
     void setStatusBarPosition(int line, int col);
-    void setStatusBarSelection(int selStart, int selEnd);
+    void setStatusBarSelection(int chars, int lines);
 
     // Encoding detection
     EncodingDetector* encodingDetector() const { return _encodingDetector; }
@@ -222,6 +317,9 @@ public:
 
     // Language
     void setLanguage(LangType lang);
+
+    // Encoding helpers
+    std::string encodingToString(EncodingType enc) const;
 
     // Theme
     void loadTheme(const std::string& themeName);
@@ -240,6 +338,7 @@ public slots:
     void onToolBarCommand(const QString& cmd);
     void onFileSaved(const std::string& path);
     void onFileModifiedExternally(const std::string& path);
+    void onExternalFileChanged(const QString& path);
     void onThemeChanged(const std::string& themeName);
 
     // File commands
@@ -250,8 +349,19 @@ public slots:
     void onSaveAll();
     void onCloseFile();
     void onCloseAll();
+    void onCloseAllButCurrent();
     void onExit();
     void onClearRecentFiles();
+    void onDeleteFile();
+    void onRenameFile();
+    void onSaveAsCopy();
+    void closeAllFilesButCurrent();
+    void onCopyToNamedClipboard();
+    void onMoveToNamedClipboard();
+    void onPasteFromNamedClipboard();
+    void onFindInProjects();
+    void onReplaceInProjects();
+    void onReplaceInFiles();
 
     // Edit commands
     void onUndo();
@@ -261,8 +371,22 @@ public slots:
     void onPaste();
     void onDelete();
     void onSelectAll();
+    void onDeleteLine();
+    void onJoinLines();
+    void onTrimTrailing();
+    void onTrimLeading();
+    void onSortAscending();
+    void onSortDescending();
+    void onSortIntAscending();
+    void onSortIntDescending();
+    void onSortReverse();
+    void onOpenContainingFolder();
+    void onSearchOnInternet();
     void onFind();
     void onReplace();
+    void onReplaceAll();
+    void onPurge();
+    void onBookmarkAll();
     void onGotoLine();
 
     // Search commands
@@ -271,6 +395,9 @@ public slots:
     void onFindInFiles();
     void onCount();
     void onMarkAll();
+    void onUnmarkAll();
+    void onGoToNextMark();
+    void onGoToPrevMark();
     void showFindInFilesResults(const QList<FindResult>& results);
 
     // View commands
@@ -279,11 +406,34 @@ public slots:
     void onToggleTabBar();
     void onToggleStatusBar();
     void onToggleToolBar();
+    void onZoomIn();
+    void onZoomOut();
+    void onZoomRestore();
+    void onToggleWordWrap();
+    void onToggleEolVisibility();
+    void onToggleShowSymbol();
+    void onShowAllCharacters();
+    void onToggleDocMap();
+    void onToggleFunctionList();
+    void onToggleFileBrowser();
+    void onToggleClipboardHistory();
+    void onCloneToOtherView();
+    void onMoveToSubView();
+    void onActivatePane(int paneIndex);
+    void onConvertEncoding(EncodingType enc);
+    void onSetEol(EolType format);
 
     // Macro commands
     void onMacroStartRecording();
     void onMacroStopRecording();
     void onMacroPlaybackLast();
+    void onMacroRecord();
+    void onMacroStop();
+    void onMacroPlayback();
+    void onMacroSave();
+    void playbackMacroStep(int message, uintptr_t wParam, uintptr_t lParam,
+                           const char* sParam, int macroType);
+    void onPrint();
 
     // Import/Export (Notepad++ compatibility)
     ApplicationImportResult importFromNpp();
@@ -295,15 +445,27 @@ public slots:
     bool loadUdlsFromNpp();
 
     // Encoding commands
-    void onConvertEncoding(EncodingType enc);
+    void onConvertToCharset(const QString& charsetName);
+    void onEolConversion(const QString& eolCmd);
 
     // Language commands
     void onSetLanguage(LangType lang);
+    void onManageUserLanguages();
 
     // Settings commands
     void onShowPreferences();
     void onShowShortcutMapper();
+    void onReloadFile();
     void onShowCommandPalette();
+    void onMinimizeToTray();
+    void onSwitchToOther();
+    void onToolbarCustomize();
+
+    // Workspace commands
+    void openFolderAsWorkspace(const std::string& dir);
+
+    // Run commands
+    void onRun();
 
     // Help commands
     void onShowAbout();
@@ -313,6 +475,7 @@ signals:
     void bufferClosed(BufferID buffer);
     void bufferActivated(BufferID buffer);
     void fileSaved(const std::string& path);
+    void bufferModifiedChanged(BufferID buffer);
     void themeChanged(const std::string& themeName);
     void commandExecuted(int commandId);
     void activeEditorChanged(ScintillaEditor* editor);
@@ -322,7 +485,6 @@ protected:
     ~Application() override;
 
 private:
-    bool loadConfig();
     bool setupDirectories();
     void setupUI();
     void setupMenuBar();
@@ -339,8 +501,9 @@ private:
     std::string     _currentTheme = "default";
     bool            _isFullScreen = false;
     bool            _isDistractionFree = false;
+    bool            _skipPlugins = false;
 
-    QMainWindow*    _mainWindow = nullptr;
+    MainWindow*     _mainWindow = nullptr;
     QWidget*        _centralWidget = nullptr;
     QStackedWidget* _viewStack = nullptr;
 
@@ -353,30 +516,41 @@ private:
     SessionManager*         _sessionManager = nullptr;
     EditorCommandManager*   _commandManager = nullptr;
     UdlManager*             _udlManager = nullptr;
+    SnippetManager*         _snippetManager = nullptr;
 
     // Dialogs
-    FindReplaceDialog*  _findReplaceDialog = nullptr;
+    FindReplaceDialog*   _findReplaceDialog = nullptr;
     GoToLineDialog*     _gotoLineDialog = nullptr;
     PreferenceDialog*   _preferenceDialog = nullptr;
     AboutDialog*        _aboutDialog = nullptr;
+    FindInFilesDialog*  _findInFilesDialog = nullptr;
 
     // Panels
     DocumentMapPanel*   _docMapPanel = nullptr;
     FunctionListPanel*  _funcListPanel = nullptr;
     FileBrowserPanel*   _fileBrowserPanel = nullptr;
+    class ClipboardHistoryPanel* _clipboardHistoryPanel = nullptr;
 
     // UI components (typed for signal access)
     MenuBar*    _menuBar = nullptr;
     ToolBar*    _toolBar = nullptr;
+    class StatusBar* _statusBarWidget = nullptr;
 
     // Views
     std::vector<QWidget*>    _viewContainers;
     int                       _activeViewId = 0;
     ScintillaEditor*          _activeEditor = nullptr;
 
+    // Buffer → Editor mapping (for file change monitoring)
+    std::unordered_map<BufferID, ScintillaEditor*> _bufferToEditor;
+
     // Clipboard
     std::vector<std::string> _clipboardHistory;
     static constexpr size_t MAX_CLIPBOARD_HISTORY = 50;
+    QMap<QString, QString> _namedClips;
+
+    // Auto-save
+    QTimer* _autoSaveTimer = nullptr;
 
     // Observers
     Observer<BufferNotification> _bufferObserver;
@@ -384,9 +558,14 @@ private:
     Observer<ThemeNotification>  _themeObserver;
 
     std::mutex _mutex;
+
+// ── NppBigSwitch compatibility bridges ────────────────────────────────────
+
+
 };
 
 // ============================================================================
 // Inline singleton accessor
 // ============================================================================
+
 inline Application& app() { return Application::instance(); }

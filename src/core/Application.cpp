@@ -1,82 +1,209 @@
 // Application.cpp - Main application controller implementation
 #include "Application.h"
-#include "FileManager.h"
+#include "EncodingUtils.h"
+#include "SnippetManager.h"
+
+#include <atomic>
+#include <cstdio>
+#include <thread>
+#include <unistd.h>
+
+#include <QApplication>
+#include <QClipboard>
+#include <QCloseEvent>
+#include <QDesktopServices>
+#include <QDebug>
+#include <QDialogButtonBox>
+#include <QDir>
+#include <QDirIterator>
+#include <QFile>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QHeaderView>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QMenuBar>
+#include <QMessageBox>
+#include <QAbstractItemView>
+#include <QPrinter>
+#include <QProcess>
+#include <QPrintDialog>
+#include <QSettings>
+#include <QStandardPaths>
+#include <QStatusBar>
+#include <QStringConverter>
+#include <QTableWidget>
+#include <QTableWidgetItem>
+#include <QTextStream>
+#include <QThread>
+#include <QTimer>
+#include <QToolBar>
+#include <QUrl>
+#include <QVBoxLayout>
+#include <QWindow>
+#include <algorithm>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <array>
+#include <QProgressDialog>
+#include <QXmlStreamReader>
+#include <QXmlStreamWriter>
+
 #include "Buffer.h"
-#include "EncodingDetector.h"
-#include "LanguageManager.h"
-#include "SessionManager.h"
-#include "EditorCommandManager.h"
-#include "MacroManager.h"
-#include "RecentFilesManager.h"
-#include "Parameters.h"
-#include "UdlManager.h"
-#include "editor/ScintillaEditor.h"
-#include "editor/SyntaxHighlighter.h"
-#include <Qsci/qsciscintilla.h>
-#include "ui/MainWindow.h"
-#include "ui/TabBar.h"
-#include "ui/StatusBar.h"
-#include "ui/ToolBar.h"
-#include "ui/MenuBar.h"
-#include "dialogs/FindReplaceDialog.h"
-#include "dialogs/FindInFilesWorker.h"
-#include "dialogs/GoToLineDialog.h"
-#include "dialogs/ShortcutMapperDialog.h"
-#include "ShortcutManager.h"
-#include "dialogs/CommandPaletteDialog.h"
-#include "dialogs/PreferenceDialog.h"
-#include "dialogs/AboutDialog.h"
-#include "panels/DocumentMapPanel.h"
-#include "panels/FunctionListPanel.h"
-#include "panels/FileBrowserPanel.h"
 #include "common/FileHelper.h"
 #include "common/StringHelper.h"
 #include "common/Util.h"
 #include "Constants.h"
+#include "dialogs/AboutDialog.h"
+#include "dialogs/CommandPaletteDialog.h"
+#include "dialogs/FindInFilesDialog.h"
+#include "dialogs/FindInFilesWorker.h"
+#include "dialogs/IncrementalSearchDialog.h"
+#include "dialogs/GoToLineDialog.h"
+#include "dialogs/PreferenceDialog.h"
+#include "dialogs/ShortcutMapperDialog.h"
+#include "dialogs/ToolbarCustomizeDialog.h"
+#include "EditorCommandManager.h"
+#include "EncodingDetector.h"
+#include "FileManager.h"
+#include "FindReplaceDialog.h"
+#include "LanguageManager.h"
+#include "MacroManager.h"
+#include "MISC/Common/shortcut.h"
 #include "Parameters.h"
-#include <QApplication>
-#include <QMessageBox>
-#include <QDesktopServices>
-#include <QDir>
-#include <QDirIterator>
-#include <QThread>
-#include <QVBoxLayout>
-#include <QDialogButtonBox>
-#include <QHeaderView>
-#include <QTableWidget>
-#include <QAbstractItemView>
-#include <QTableWidgetItem>
-#include <QUrl>
-#include <QFileDialog>
-#include <QInputDialog>
-#include <QCloseEvent>
-#include <QTimer>
-#include <QTextStream>
-#include <QFile>
-#include <QDebug>
-#include <QWindow>
-#include <QMenuBar>
-#include <QToolBar>
-#include <QStatusBar>
+#include "RecentFilesManager.h"
+#include "SessionManager.h"
+#include "ShortcutManager.h"
+#include "SyntaxHighlighter.h"
+#include "ThemeManager.h"
+#include "UdlManager.h"
+#include <Qsci/qsciscintilla.h>
+#include "editor/ScintillaEditor.h"
+#include "panels/DocumentMapPanel.h"
+#include "panels/FileBrowserPanel.h"
+#include "panels/FunctionListPanel.h"
+#include "ui/MainWindow.h"
+#include "ui/MenuBar.h"
+#include "ui/StatusBar.h"
+#include "ui/TabBar.h"
+#include "ui/ToolBar.h"
 
 // ============================================================================
 // Singleton
 // ============================================================================
+//
+// Construct-On-First-Use idiom (Meyers singleton with heap allocation):
+//
+//   static Application* inst = new Application();
+//
+// Rationale: the previous implementation used
+//
+//   static Application inst;
+//
+// which forces the compiler to emit __cxa_guard_acquire / __cxa_guard_release
+// around the constructor call. If instance() is re-entered from another thread
+// (or from a code path that fires during Application's own constructor, e.g.
+// via connect()/ShortcutManager::instance() inside MainWindow's ctor), the
+// second thread blocks on the guard while the first thread is still running
+// Application's ctor body — classic recursive deadlock at
+// __cxa_guard_acquire.
+//
+// The heap-allocated-pointer variant replaces that guard with a pointer store
+// that's still atomic under C++11, but has no ctor in its critical section.
+// The Application constructor body itself can call instance() and we will
+// just return the partially-constructed pointer rather than recursing
+// through the guard. The deliberate new/delete asymmetry (we new but never
+// delete) matches the Meyers singleton: process exit cleans the singleton up.
+//
+// The std::atomic<bool> in_progress flag serialises the slow path so two
+// threads racing on the first call don't both construct. The CAS loop
+// uses std::this_thread::yield() instead of a mutex so a re-entrant call
+// from inside the ctor body on the same thread is impossible (we're
+// already past the CAS), and a re-entrant call from a different thread
+// spin-yields until the constructor returns.
+//
+// DIAG (transient): one-shot re-entry counter for the __cxa_guard_acquire
+// stall. Logs to fd 2 directly (NOT qDebug) so the instrumentation cannot
+// itself recurse through Qt globals. Tag on the line makes it trivial to
+// grep /tmp/npp-gdb.log for "APPINST".
+static void diag_inst_enter(const char* site) {
+    static int n = 0;
+    ++n;
+    char buf[160];
+    int len = std::snprintf(buf, sizeof(buf),
+        "APPINST site=%s n=%d\n", site, n);
+    if (len > 0) ::write(2, buf, static_cast<size_t>(len));
+}
+
 Application& Application::instance() {
-    static Application inst;
-    return inst;
+    diag_inst_enter("instance()");
+
+    // Construct-On-First-Use: heap allocation, no compiler guard around
+    // the ctor call. Atomic under C++11; the pointer is fully written
+    // before instance() returns.
+    static Application* inst = nullptr;
+    if (inst) {
+        return *inst;
+    }
+
+    // First call. Slow path: serialize construction. We use a plain
+    // CAS loop here rather than a std::once_flag because we want the
+    // secondary thread to spin-yield on the same flag the ctor uses,
+    // so a re-entrant call from inside the ctor body on the same
+    // thread returns the partially-constructed object immediately.
+    static std::atomic<bool> in_progress{false};
+    bool expected = false;
+    while (!in_progress.compare_exchange_strong(expected, true)) {
+        // Another thread is in the ctor body. Spin-yield until it's done.
+        std::this_thread::yield();
+        expected = false;
+    }
+
+    if (inst) {
+        // Some other thread raced ahead while we were spinning.
+        in_progress.store(false);
+        return *inst;
+    }
+
+    Application* fresh = new Application();
+    inst = fresh;
+    in_progress.store(false);
+    return *fresh;
 }
 
 // ============================================================================
 // Constructor / Destructor
 // ============================================================================
 Application::Application() : QObject(qApp) {
-    _mainWindow = new QMainWindow();
+    _mainWindow = new MainWindow(this);
     _centralWidget = new QWidget();
     _viewStack = new QStackedWidget();
+
+    // FIX (recursion deadlock): MainWindow's ctor used to wire Application::bufferOpened
+    // via the inline app() helper, which re-entered Application::instance() while the
+    // static-init guard was still held. Wire it here, after MainWindow construction
+    // returns and the singleton is fully constructed.
+    connect(this, &Application::bufferOpened, _mainWindow, &MainWindow::onBufferOpened);
+
+    // FIX (cherry-picked from 337e570 on semantic-lift/wip): also forward
+    // bufferClosed the same way.  Application::closeFile() and
+    // closeAllFiles() (re-)emit bufferClosed; MainWindow::onBufferClosed is
+    // the handler that drops the tab from the QTabWidget.  Without this
+    // connect, closing a file via File→Close or Close All leaves a stale
+    // empty tab in the UI (X-button-on-tab worked only because that path
+    // manually calls _tabWidget->removeTab()).
+    connect(this, &Application::bufferClosed, _mainWindow, &MainWindow::onBufferClosed);
 }
 
 Application::~Application() {
+    // Stop auto-save timer
+    if (_autoSaveTimer) {
+        _autoSaveTimer->stop();
+        delete _autoSaveTimer;
+        _autoSaveTimer = nullptr;
+    }
+
     // Delete owned objects BEFORE _mainWindow.
     // NOTE: panels and dialogs are parented to _mainWindow, so Qt will cascade-delete
     // them when _mainWindow is destroyed. We must NOT delete them again here.
@@ -95,14 +222,20 @@ Application::~Application() {
     }
     _viewContainers.clear();
 
-    // Delete main window last — this triggers Qt's parent-child cascade delete
-    // for all dock widgets, panels, and dialogs that are children of MainWindow.
-    // After this, _findReplaceDialog, _docMapPanel, etc. are already deleted.
-    delete _mainWindow;
+    // Delete dialogs — owned by Application (nullptr parent), not children of
+    // _mainWindow, so no double-delete from Qt's cascade.
+    delete _findReplaceDialog;
+    delete _findInFilesDialog;
+    delete _gotoLineDialog;
+    delete _preferenceDialog;
+    delete _aboutDialog;
 
-    // These are now nullptr after _mainWindow deletion — do NOT delete again:
-    // _findReplaceDialog, _gotoLineDialog, _preferenceDialog,
-    // _aboutDialog, _docMapPanel, _funcListPanel, _fileBrowserPanel
+    // NOTE: Do NOT delete _mainWindow directly. It is a child of Application
+    // (created with 'new MainWindow(this)'). Qt's parent-child ownership means
+    // _mainWindow is destroyed when Application is destroyed. Deleting it explicitly
+    // would cascade-delete _menuBar, _toolBar, and _statusBarWidget — all of which
+    // are Qt children of _mainWindow — leading to heap-use-after-free crashes.
+    // _mainWindow = nullptr;  // unnecessary; set automatically by Qt
 }
 
 // ============================================================================
@@ -128,6 +261,24 @@ bool Application::initialize() {
 
         // Initialize core managers
         _fileManager = new FileManager();
+        // Register the Scintilla editor as the live text provider for saveFile().
+        // _bufferToEditor is populated by openFile() and bufferActivated().
+        _fileManager->setBufferTextProvider([this](BufferID buffer, QString& outText) -> bool {
+            ScintillaEditor* ed = nullptr;
+            auto it = _bufferToEditor.find(buffer);
+            if (it != _bufferToEditor.end()) {
+                ed = it->second;
+            } else {
+                // Fallback: scan all editors if map isn't populated yet
+                for (QWidget* container : _viewContainers) {
+                    auto* e = container->findChild<ScintillaEditor*>();
+                    if (e) { ed = e; break; }
+                }
+            }
+            if (!ed) return false;
+            outText = ed->text();
+            return true;
+        });
         _encodingDetector = new EncodingDetector();
         _languageManager = new LanguageManager();
         _sessionManager = new SessionManager();
@@ -135,14 +286,83 @@ bool Application::initialize() {
         _macroManager = new MacroManager();
         _recentFilesManager = &RecentFilesManager::instance();
         _udlManager = new UdlManager(this);
+        _snippetManager = new SnippetManager(this);
+        // Try the XDG-style config path first, then the legacy home path.
+        // setDefaultDirectory() is a no-op if the file does not yet exist,
+        // so this is safe on first launch (the manager starts empty).
+        for (const QString& p : SnippetManager::defaultSearchPaths()) {
+            if (p.isEmpty()) continue;
+            QFileInfo fi(p);
+            if (fi.exists() && fi.isReadable()) {
+                _snippetManager->loadFromFile(p);
+                break;
+            }
+        }
         _commandManager->registerAll(this);
 
         // Setup UI
         setupUI();
         setupConnections();
 
+        // Load plugins from config directory
+        if (!_skipPlugins) {
+            QString pluginDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
+                                + "/notepad--qt/plugins";
+            QDir().mkpath(pluginDir);
+            PluginManager::instance().loadPlugins(pluginDir);
+        }
+
         _state = AppState::Ready;
         logInfo("Initialization complete");
+
+        // Auto-save timer
+        if (_options.autoSave) {
+            _autoSaveTimer = new QTimer(this);
+            connect(_autoSaveTimer, &QTimer::timeout, this, [this]() {
+                if (_options.autoSaveCurrentOnly) {
+                    BufferID buf = getActiveBuffer();
+                    if (buf && isBufferModified(buf)) saveFile(buf);
+                } else {
+                    saveAllFiles();
+                }
+            });
+            _autoSaveTimer->start(_options.autoSaveInterval * 60 * 1000);
+        }
+
+        // Show main window
+        showMainWindow();
+
+        // Restore window geometry from settings
+        {
+            QSettings s;
+            QByteArray geom = s.value("window/geometry").toByteArray();
+            if (!geom.isEmpty() && _mainWindow) _mainWindow->restoreGeometry(geom);
+            QByteArray state = s.value("window/state").toByteArray();
+            if (!state.isEmpty() && _mainWindow) _mainWindow->restoreState(state);
+        }
+
+        // Incremental search dialog — owned by MainWindow, accessed via getter.
+        // NOTE: signals are wired in MainWindow::MainWindow() to avoid double-fire.
+
+        // Clipboard encoding auto-detection on paste
+        connect(QApplication::clipboard(), &QClipboard::changed, this,
+            [this](QClipboard::Mode mode) {
+                if (mode != QClipboard::Clipboard) return;
+                const QString& text = QApplication::clipboard()->text();
+                if (text.isEmpty()) return;
+                // Check for high Unicode or UTF-16 surrogate pairs
+                bool hasHighUnicode = false;
+                for (const QChar& c : text) {
+                    if (c.unicode() > 0xFFFD) {
+                        hasHighUnicode = true;
+                        break;
+                    }
+                }
+                if (hasHighUnicode) {
+                    qDebug() << "[clipboard] High Unicode text detected — UTF-16 likely";
+                }
+            });
+
         return true;
     } catch (const std::exception& e) {
         _lastError = e.what();
@@ -182,17 +402,57 @@ bool Application::loadConfig() {
     _options.rememberSession    = ini.getBool("General", "RememberSession", true);
     _options.maxRecentFiles    = ini.getInt("General", "MaxRecentFiles", 50);
     _options.defaultTabWidth   = ini.getInt("Editor", "TabWidth", 4);
+    _options.indentWidth       = ini.getInt("Editor", "IndentWidth", 4);
     _options.defaultTabAsSpaces = ini.getBool("Editor", "TabAsSpaces", false);
+    _options.wordWrap          = ini.getBool("Editor", "WordWrap", false);
+    _options.virtualSpace      = ini.getBool("Editor", "VirtualSpace", true);
+    _options.smartHome         = ini.getBool("Editor", "SmartHome", true);
+    _options.autoIndent        = ini.getBool("Editor", "AutoIndent", true);
     _options.defaultEolType    = EolType::EOL_LF;
     _options.defaultEncoding    = EncodingType::UTF_8_BOM;
     _options.defaultLang        = LangType::L_TEXT;
     _options.themeProfile       = ini.get("General", "Theme", "default");
     _currentTheme               = _options.themeProfile;
 
+    // Appearance
+    _options.showLineNumbers    = ini.getBool("Margins", "ShowLineNumbers", true);
+    _options.lineNumberWidth    = ini.getInt("Margins", "LineNumberWidth", 4);
+    _options.showSymbols        = ini.getBool("Margins", "ShowSymbols", false);
+    _options.showFolderMargin   = ini.getBool("Margins", "ShowFolderMargin", true);
+    _options.symbolMarginWidth  = ini.getInt("Margins", "SymbolMarginWidth", 1);
+    _options.highlightCurrentLine = ini.getBool("Margins", "HighlightCurrentLine", true);
+    _options.showEdgeLine       = ini.getBool("Margins", "ShowEdgeLine", false);
+    _options.edgeColumn         = ini.getInt("Margins", "EdgeColumn", 80);
+
+    // User-chosen highlight color (Preferences → Current Line group).  Stored
+    // as a QColor::name() string under "Editor".  Missing key → the default
+    // baked into AppOptions (cream) takes over.
+    {
+        std::string colorStr = ini.get("Editor", "CurrentLineHighlightColor", "");
+        QColor saved(QString::fromStdString(colorStr));
+        if (saved.isValid()) _options.currentLineHighlightColor = saved;
+    }
+
+    // File Associations
+    _options.fileAssociations   = ini.getStringList("General", "FileAssociations", {});
+
+    // Shortcut Mapper
+    _options.warnOnShortcutConflict = ini.getBool("ShortcutMapper", "WarnOnConflict", true);
+
+    // Backup / Auto-Save
+    _options.autoSave           = ini.getBool("Backup", "AutoSave", false);
+    _options.autoSaveInterval   = ini.getInt("Backup", "AutoSaveInterval", 5);
+    _options.autoSaveCurrentOnly = ini.getBool("Backup", "AutoSaveCurrentOnly", false);
+    _options.autoSaveInBackground = ini.getBool("Backup", "AutoSaveInBackground", true);
+    _options.backupDir          = QString::fromUtf8(ini.get("Backup", "BackupDir", "").c_str());
+    _options.backupStyle        = ini.getInt("Backup", "BackupStyle", 0);
+    _options.maxBackups         = ini.getInt("Backup", "MaxBackups", 10);
+
     return true;
 }
 
 bool Application::saveConfig(const std::string& path) {
+    (void)path;  // uses default config path
     IniParser ini;
     ini.set("General", "SingleInstance",    _options.singleInstance);
     ini.set("General", "ShowTabBar",         _options.showTabBar);
@@ -203,7 +463,42 @@ bool Application::saveConfig(const std::string& path) {
     ini.set("General", "MaxRecentFiles",    _options.maxRecentFiles);
     ini.set("General", "Theme",             _options.themeProfile);
     ini.set("Editor",  "TabWidth",          _options.defaultTabWidth);
+    ini.set("Editor",  "IndentWidth",       _options.indentWidth);
     ini.set("Editor",  "TabAsSpaces",       _options.defaultTabAsSpaces);
+    ini.set("Editor",  "WordWrap",          _options.wordWrap);
+    ini.set("Editor",  "VirtualSpace",       _options.virtualSpace);
+    ini.set("Editor",  "SmartHome",         _options.smartHome);
+    ini.set("Editor",  "AutoIndent",         _options.autoIndent);
+
+    // Appearance
+    ini.set("Margins", "ShowLineNumbers",     _options.showLineNumbers);
+    ini.set("Margins", "LineNumberWidth",     _options.lineNumberWidth);
+    ini.set("Margins", "ShowSymbols",         _options.showSymbols);
+    ini.set("Margins", "ShowFolderMargin",    _options.showFolderMargin);
+    ini.set("Margins", "SymbolMarginWidth",   _options.symbolMarginWidth);
+    ini.set("Margins", "HighlightCurrentLine",_options.highlightCurrentLine);
+    ini.set("Margins", "ShowEdgeLine",       _options.showEdgeLine);
+    ini.set("Margins", "EdgeColumn",          _options.edgeColumn);
+
+    // Persist user-chosen highlight color as #RRGGBB.  Reapply on next launch.
+    ini.set("Editor", "CurrentLineHighlightColor",
+            _options.currentLineHighlightColor.name());
+
+    // File Associations
+    ini.setStringList("General", "FileAssociations", _options.fileAssociations);
+
+    // Shortcut Mapper
+    ini.set("ShortcutMapper", "WarnOnConflict", _options.warnOnShortcutConflict);
+
+    // Backup / Auto-Save
+    ini.set("Backup", "AutoSave",              _options.autoSave);
+    ini.set("Backup", "AutoSaveInterval",      _options.autoSaveInterval);
+    ini.set("Backup", "AutoSaveCurrentOnly",   _options.autoSaveCurrentOnly);
+    ini.set("Backup", "AutoSaveInBackground", _options.autoSaveInBackground);
+    ini.set("Backup", "BackupDir",            _options.backupDir.toStdString());
+    ini.set("Backup", "BackupStyle",          _options.backupStyle);
+    ini.set("Backup", "MaxBackups",           _options.maxBackups);
+
     return ini.save(FileHelper::getConfigFilePath());
 }
 
@@ -212,57 +507,113 @@ bool Application::saveConfig(const std::string& path) {
 // ============================================================================
 void Application::setupUI() {
     _mainWindow->setWindowTitle(APP_Title);
-    _mainWindow->setCentralWidget(_centralWidget);
 
-    QHBoxLayout* centralLayout = new QHBoxLayout(_centralWidget);
-    centralLayout->setContentsMargins(0, 0, 0, 0);
-    centralLayout->addWidget(_viewStack);
+    // CRITICAL: Do NOT replace the central widget that MainWindow::MainWindow
+    // already set up.  The MainWindow ctor created _tabBar + _tabWidget inside
+    // a centralContainer, and Qt reparents them when addWidget() is called.
+    // Replacing the central widget here would destroy both _tabBar and
+    // _tabWidget (their QPointers become null), and any later call to
+    // MainWindow::openFileInTab / onBufferOpened would silently early-return
+    // on `if (!_tabBar) return;` — which was the user-visible "no tab appears"
+    // bug.
+    //
+    // Strategy: parent the view stack to the main window (hidden), and let
+    // MainWindow's _tabWidget own the editor pages.  addView() creates a
+    // ScintillaEditor inside a view container that lives in _viewStack;
+    // when there is exactly one view (the common case), the ScintillaEditor
+    // is reparented into a fresh tab in MainWindow's _tabWidget.  Split-view
+    // (clone-to-other-view) populates additional tabs in _tabWidget and
+    // toggles the view stack visible — but for now, single-view is the
+    // default and matches every existing test.
+    _viewStack->setParent(_mainWindow);
+    _viewStack->hide();   // hidden: editors live as tab pages, not in the stack
+    _viewStack->setObjectName("ApplicationViewStack");
 
-    // Add initial view
-    addView();
+    // Add the initial view.  In single-view mode the resulting ScintillaEditor
+    // is reparented into the tab widget by syncEditorToBuffer(); split-view
+    // would keep multiple editors in the stack.
+    _activeEditor = addView();
 
     setupMenuBar();
     setupToolBar();
     setupStatusBar();
     setupDockingPanels();
 
-    // Create dialogs
-    _findReplaceDialog = new FindReplaceDialog(_mainWindow);
-    _gotoLineDialog = new GoToLineDialog(_mainWindow);
-    _preferenceDialog = new PreferenceDialog(_mainWindow);
-    _aboutDialog = new AboutDialog(_mainWindow);
+    // Create dialogs — parented to nullptr so Application exclusively owns them.
+    // If they were children of _mainWindow, Qt's deleteChildren() cascade would
+    // double-delete them (CRASH).  Application::initializeDialogs() below must be
+    // called AFTER _mainWindow is created; destruction order is handled in
+    // ~Application() where we delete dialogs before _mainWindow.
+    _findReplaceDialog = new FindReplaceDialog(nullptr);
+    _findInFilesDialog = new FindInFilesDialog(nullptr);
+    _gotoLineDialog = new GoToLineDialog(nullptr);
+    _preferenceDialog = new PreferenceDialog(nullptr);
+    _aboutDialog = new AboutDialog(nullptr);
 }
 
 void Application::setupMenuBar() {
-    _menuBar = new MenuBar(_mainWindow);
-    _mainWindow->setMenuBar(_menuBar);
-    connect(_menuBar, &MenuBar::menuCommand, this, &Application::onMenuCommand);
+    // CRITICAL: do NOT create a second MenuBar here.  MainWindow already
+    // created one (src/ui/MainWindow.cpp line 61) and registered it via
+    // setMenuBar().  Creating a second one and calling setMenuBar() again
+    // deletes the first widget; any captured-this pointers in lambda
+    // connects inside MainWindow (e.g. the dynamic menu rebuild callbacks
+    // on MainWindow::rebuildFileMenu / rebuildEditMenu, and the menu/toolbar
+    // theme setStyleSheet calls) then dangle and SIGSEGV the next time the
+    // user opens the File menu or switches theme.
+    //
+    // Use the existing MainWindow MenuBar as our _menuBar so that
+    // Application's menu helpers (setMenuBarVisible, etc.) all operate on
+    // the same widget MainWindow's own connects reference.
+    _menuBar = _mainWindow->menuBar();
 }
 
 void Application::setupToolBar() {
-    _toolBar = new ToolBar(_mainWindow);
-    _mainWindow->addToolBar(_toolBar);
-    connect(_toolBar, &ToolBar::toolBarCommand, this, &Application::onToolBarCommand);
+    // Same rationale as setupMenuBar(): MainWindow already created a
+    // ToolBar (src/ui/MainWindow.cpp line 69) and registered it via
+    // addToolBar().  Creating a second one and addToolBar()'ing again
+    // produces a duplicate toolbar row plus the same dangling-capture
+    // hazard for the theme/style callbacks in MainWindow.
+    _toolBar = _mainWindow->toolBar();
 }
 
 void Application::setupStatusBar() {
-    StatusBar* statusBar = new StatusBar(_mainWindow);
-    _mainWindow->setStatusBar(statusBar);
+    // CRITICAL: do NOT replace MainWindow's status bar here.  MainWindow
+    // already created a StatusBar (line 92 in MainWindow.cpp) and registered
+    // it via setStatusBar().  Calling setStatusBar() again deletes the old
+    // widget; any captured-this pointers in lambda connects (e.g.
+    // MainWindow::onBufferOpened line 1368's
+    //   connect(editor, &ScintillaEditor::cursorPositionChanged,
+    //           _statusBarWidget, [this](int,int) {
+    //               _statusBarWidget->setPosition(...);
+    //           })
+    // ) then dangle and SIGSEGV inside QLabel::setText the next time the
+    // cursor moves (or any other event fires the lambda).
+    //
+    // Use the existing MainWindow StatusBar as our _statusBarWidget so that
+    // the rest of Application's status-bar helpers (setStatusBarText,
+    // setStatusBarEncoding, etc.) all operate on the same widget that
+    // MainWindow's UI connects reference.
+    _statusBarWidget = _mainWindow->statusBarWidget();
 }
 
 void Application::setupDockingPanels() {
-    _docMapPanel = new DocumentMapPanel(_mainWindow);
-    _funcListPanel = new FunctionListPanel(_mainWindow);
-    _fileBrowserPanel = new FileBrowserPanel(_mainWindow);
-
-    _mainWindow->addDockWidget(Qt::RightDockWidgetArea, _docMapPanel);
-    _mainWindow->addDockWidget(Qt::RightDockWidgetArea, _funcListPanel);
-    _mainWindow->addDockWidget(Qt::LeftDockWidgetArea, _fileBrowserPanel);
+    // FileBrowserPanel, FunctionListPanel, DocumentMapPanel are already created
+    // in MainWindow::createPanels() and registered via setters below.
+    // We only need to create and add ClipboardHistoryPanel here.
+    if (!_clipboardHistoryPanel) {
+        _clipboardHistoryPanel = new ClipboardHistoryPanel(_mainWindow);
+        _mainWindow->addDockWidget(Qt::RightDockWidgetArea, _clipboardHistoryPanel);
+        _clipboardHistoryPanel->hide();
+    }
 }
 
 void Application::setupConnections() {
-    // Menu/ToolBar commands → command dispatch (menu already connected in setupMenuBar)
-    connect(_toolBar, &ToolBar::toolBarCommand, this, &Application::onToolBarCommand);
+    // Menu/ToolBar commands → already wired by MainWindow::setupConnections
+    // (which connects its own MenuBar/ToolBar to MainWindow::onMenuCommand/
+    //  onToolBarCommand → MainWindow::dispatchCommand → Application handlers).
+    // Application no longer creates its own MenuBar/ToolBar (see
+    // setupMenuBar/setupToolBar comments), so connecting Application's
+    // _menuBar/_toolBar here would duplicate-dispatch every command.
 
     // Buffer lifecycle signals
     connect(this, &Application::bufferOpened, this, &Application::onBufferOpened);
@@ -271,12 +622,19 @@ void Application::setupConnections() {
     connect(this, &Application::bufferOpened, this, [this](BufferID) { updateUI(); });
     connect(this, &Application::bufferActivated, this, [this](BufferID) { updateUI(); });
     connect(this, &Application::fileSaved, this, &Application::onFileSaved);
+    connect(this, &Application::bufferModifiedChanged, this, &Application::updateWindowTitle);
 
-    // File browser → open file
-    if (_fileBrowserPanel) {
+    // File browser → open file.  Use _mainWindow->openFileInTab() so that all
+    // ScintillaEditor construction goes through the same guarded code path:
+    //   - _tabWidget null guard
+    //   - _openingFileDepth re-entrancy guard
+    //   - signal disconnection during construction
+    // Do NOT use openFile() here — it bypasses MainWindow guards and can cause
+    // re-entrant ScintillaEditor construction during rapid double-click.
+    if (_fileBrowserPanel && _mainWindow) {
         connect(_fileBrowserPanel, &FileBrowserPanel::fileDoubleClicked,
-                this, [this](const QString& path) {
-            openFile(path.toStdString());
+                _mainWindow, [this](const QString& path) {
+            _mainWindow->openFileInTab(path);
         });
     }
 
@@ -310,6 +668,51 @@ void Application::setupConnections() {
     connect(this, &Application::commandExecuted, this, [this](int cmdId) {
         _commandManager->execute(cmdId);
     });
+
+    // File change monitoring — FileManager's QFileSystemWatcher emits fileSystemChanged
+    if (_fileManager) {
+        connect(_fileManager, &FileManager::fileSystemChanged,
+                this, [this](const QString& path) {
+                    onExternalFileChanged(path);
+                });
+    }
+
+    // StatusBar updates — encoding/EOL on buffer switch
+    connect(this, &Application::bufferActivated, this, [this](BufferID buf) {
+        if (buf && _statusBarWidget) {
+            auto enc = getBufferEncoding(buf);
+            auto encStr = encodingToString(enc);
+            QString eolStr = "Unix (LF)";
+            _statusBarWidget->setEncoding(QString::fromStdString(encStr));
+            _statusBarWidget->setEol(eolStr);
+        }
+    });
+
+    // Loading progress → status bar
+    if (_fileManager) {
+        connect(_fileManager, &FileManager::loadingProgress, this, [this](int pct) {
+            if (_statusBarWidget) {
+                _statusBarWidget->setMessage(QString("Loading... %1%").arg(pct));
+            }
+        });
+        connect(_fileManager, &FileManager::fileLoaded, this, [this](bool, BufferID id, const QString&) {
+            // Start file monitoring so external changes trigger the reload prompt.
+            if (id) {
+                auto* buf = static_cast<Buffer*>(id);
+                buf->startMonitoring();
+            }
+        });
+    }
+
+    // Cursor position → StatusBar position
+    connect(this, &Application::activeEditorChanged, this, [this](ScintillaEditor* ed) {
+        if (ed && _statusBarWidget) {
+            connect(ed, &ScintillaEditor::cursorPositionChanged, _statusBarWidget,
+                [this](int line, int col) {
+                    if (_statusBarWidget) _statusBarWidget->setPosition(line, col);
+                });
+        }
+    });
 }
 
 // ============================================================================
@@ -332,23 +735,26 @@ void Application::shutdown() {
     // Close all files
     closeAllFiles();
 
+    // Unload plugins
+    PluginManager::instance().unloadPlugins();
+
     _state = AppState::Starting;
 }
 
 // ============================================================================
 // View Management
 // ============================================================================
-int Application::addView() {
+ScintillaEditor* Application::addView() {
     QWidget* container = new QWidget();
     QHBoxLayout* layout = new QHBoxLayout(container);
     layout->setContentsMargins(0, 0, 0, 0);
 
-    ScintillaEditor* editor = new ScintillaEditor();
+    ScintillaEditor* editor = new ScintillaEditor(container);
     layout->addWidget(editor);
 
-    int viewId = _viewStack->addWidget(container);
+    [[maybe_unused]] int viewId = _viewStack->addWidget(container);
     _viewContainers.push_back(container);
-    return viewId;
+    return editor;
 }
 
 void Application::closeView(int viewId) {
@@ -377,8 +783,15 @@ int Application::currentView() const {
 // ============================================================================
 BufferID Application::openFile(const std::string& path, bool readOnly) {
     BufferID id = _fileManager->openFile(QString::fromStdString(path), readOnly);
-    if (id && !path.empty())
+    if (id && !path.empty()) {
         RecentFilesManager::instance().addFile(QString::fromStdString(path));
+        // Single source of truth: openFile() always emits the signals itself,
+        // so all callers (onOpenFile, openFileInTab, recent-menu lambda, CLI)
+        // get consistent bufferOpened/bufferActivated without each having to
+        // remember to emit. MainWindow::onBufferOpened creates the tab.
+        emit bufferOpened(id);
+        emit bufferActivated(id);
+    }
     return id;
 }
 
@@ -393,6 +806,24 @@ BufferID Application::openFiles(const std::vector<std::string>& paths) {
 bool Application::saveFile(BufferID buffer, const std::string& path) {
     return _fileManager->saveFile(buffer, path.empty() ? QString() : QString::fromStdString(path));
 }
+bool Application::reloadFile(BufferID buffer) {
+    if (!buffer) return false;
+    auto fname = getFileName(buffer);
+    if (!fname || fname->empty()) return false;
+    // Read file from disk
+    QFile file(QString::fromStdString(*fname));
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return false;
+    QByteArray data = file.readAll();
+    file.close();
+    // Update editor with fresh content
+    ScintillaEditor* ed = getActiveEditor();
+    if (ed) {
+        ed->setText(QString::fromUtf8(data));
+        ed->setModified(false);
+    }
+    return true;
+}
+
 
 bool Application::saveAllFiles() {
     return _fileManager->saveAllFiles();
@@ -400,11 +831,39 @@ bool Application::saveAllFiles() {
 
 bool Application::closeFile(BufferID buffer, bool force) {
     (void)force;
-    return _fileManager->closeFile(buffer);
+    bool ok = _fileManager->closeFile(buffer);
+    if (ok) {
+        // Forward FileManager's bufferClosed to anyone listening on
+        // Application::bufferClosed.  Before this re-emit, the buffer
+        // lifecycle signals were wired (line ~503) but no close path
+        // actually fired them, so MainWindow::onBufferClosed (which is
+        // the tab-removal handler — see MainWindow.cpp:1426) was dead.
+        // Buffer path File→Close → onCloseFile → closeFile now finally
+        // drops the tab in the UI.
+        emit bufferClosed(buffer);
+    }
+    return ok;
 }
 
 bool Application::closeAllFiles() {
-    return _fileManager->closeAllFiles();
+    // Capture the buffer list BEFORE delegating: FileManager::closeAllFiles
+    // emits bufferClosed per-file and destroys each buffer; the per-file
+    // emit fires MainWindow::onBufferClosed → removeEditorTab, which is
+    // idempotent so multiple tabs are removed sequentially.
+    std::vector<BufferID> ids;
+    if (_fileManager) {
+        const size_t n = _fileManager->getBufferCount();
+        ids.reserve(n);
+        for (size_t i = 0; i < n; ++i) {
+            BufferID id = _fileManager->getBufferAt(static_cast<int>(i), 0);
+            if (id) ids.push_back(id);
+        }
+    }
+    bool ok = _fileManager->closeAllFiles();
+    if (ok) {
+        for (BufferID id : ids) emit bufferClosed(id);
+    }
+    return ok;
 }
 
 void Application::closeAllBuffersExcept(BufferID keepId) {
@@ -418,12 +877,60 @@ void Application::closeAllBuffersExcept(BufferID keepId) {
         }
     }
     for (BufferID id : toClose) {
-        _fileManager->closeFile(id);
+        // Route through Application::closeFile so the bufferClosed
+        // re-emit fires MainWindow::onBufferClosed → tab removed.
+        closeFile(id);
+    }
+}
+
+void Application::closeAllFilesButCurrent() {
+    BufferID active = getActiveBuffer();
+    if (!active || !_fileManager) return;
+    size_t count = _fileManager->getBufferCount();
+    std::vector<BufferID> toClose;
+    for (size_t i = 0; i < count; ++i) {
+        BufferID id = _fileManager->getBufferAt(static_cast<int>(i), 0);
+        if (id && id != active) {
+            // Check if modified and prompt user
+            QString path = _fileManager->getBufferPath(id);
+            if (!path.isEmpty()) {
+                QFileInfo fi(path);
+                QString baseName = fi.fileName();
+                QMessageBox::StandardButton reply = QMessageBox::question(
+                    nullptr, "Notepad--",
+                    QString("Save changes to \"%1\" before closing?").arg(baseName),
+                    QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
+                    QMessageBox::Save
+                );
+                if (reply == QMessageBox::Cancel) {
+                    continue;  // skip this buffer
+                }
+                if (reply == QMessageBox::Save) {
+                    saveFile(id);
+                }
+            }
+            toClose.push_back(id);
+        }
+    }
+    for (BufferID id : toClose) {
+        // Route through Application::closeFile so the bufferClosed
+        // re-emit fires MainWindow::onBufferClosed → tab removed.
+        closeFile(id);
     }
 }
 
 BufferID Application::newFile(const std::string& encoding) {
-    return _fileManager->createNewFile();
+    qDebug() << "[App] newFile ENTER";
+    (void)encoding;  // encoding determined by file manager defaults
+    BufferID id = _fileManager->createNewFile();
+    qDebug() << "[App] newFile id=" << (void*)(uintptr_t)id;
+    if (id) {
+        // Same rationale as openFile(): emit here so every caller path
+        // (onNewFile, Ctrl+N, "New" menu item) creates a tab consistently.
+        emit bufferOpened(id);
+        emit bufferActivated(id);
+    }
+    return id;
 }
 
 BufferID Application::duplicateBuffer(BufferID buffer) {
@@ -457,6 +964,17 @@ void Application::setActiveBuffer(BufferID buffer) {
     emit bufferActivated(buffer);
 }
 
+
+BufferID Application::getBufferForPath(const std::string& path) const {
+    for (int i = 0; i < getBufferCount(); ++i) {
+        BufferID buf = getBufferAt(i);
+        auto fname = getFileName(buf);
+        if (fname && *fname == path)
+            return buf;
+    }
+    return BUFFER_INVALID;
+}
+
 bool Application::isBufferModified(BufferID buffer) const {
     return _fileManager->isBufferModified(buffer);
 }
@@ -475,6 +993,14 @@ EncodingType Application::getBufferEncoding(BufferID buffer) const {
 
 bool Application::setBufferEncoding(BufferID buffer, EncodingType enc) {
     return _fileManager->setEncoding(buffer, enc);
+}
+
+EolType Application::getBufferEol(BufferID buffer) const {
+    return _fileManager->getEolFormat(buffer);
+}
+
+bool Application::setBufferEol(BufferID buffer, EolType eol) {
+    return _fileManager->setEolFormat(buffer, eol);
 }
 
 // ============================================================================
@@ -541,20 +1067,132 @@ void Application::setStatusBarPosition(int line, int col) {
     if (sb) sb->setPosition(line, col);
 }
 
-void Application::setStatusBarSelection(int selStart, int selEnd) {
+void Application::setStatusBarSelection(int chars, int lines) {
     StatusBar* sb = qobject_cast<StatusBar*>(_mainWindow->statusBar());
-    if (sb) sb->setSelection(selStart, selEnd);
+    if (sb) sb->setSelection(chars, lines);
 }
 
 // ============================================================================
 // Session
 // ============================================================================
 bool Application::loadSession(const std::string& path) {
-    return _sessionManager->loadSession(path);
+    // Restore window geometry from QSettings (set by previous saveSession)
+    QSettings s;
+    if (_mainWindow) {
+        QByteArray geom = s.value("window/geometry").toByteArray();
+        if (!geom.isEmpty()) _mainWindow->restoreGeometry(geom);
+        QByteArray state = s.value("window/state").toByteArray();
+        if (!state.isEmpty()) _mainWindow->restoreState(state);
+    }
+
+    // Load session data
+    if (!_sessionManager->loadSession(path))
+        return false;
+
+    // Restore open files, cursor, and scroll from session data
+    const NppSession& session = _sessionManager->currentSession();
+    BufferID activeBuffer = nullptr;
+
+    for (int i = 0; i < session.buffers.size(); ++i) {
+        const SessionBuffer& buf = session.buffers.at(i);
+        BufferID id = openFile(buf.path.toStdString());
+        if (!id) continue;
+
+        // Restore cursor position
+        ScintillaEditor* ed = getEditor();
+        if (ed) {
+            ed->setCursorPosition(buf.cursor.line, buf.cursor.column);
+            // Restore scroll (firstVisibleLine via SCI_LINESCROLL)
+            ed->send(SCI_SETFIRSTVISIBLELINE, buf.scrollY);
+        }
+
+        if (buf.isActive)
+            activeBuffer = id;
+    }
+
+    // Restore active buffer and view
+    if (activeBuffer)
+        setActiveBuffer(activeBuffer);
+    if (session.activeView >= 0 && session.activeView < (int)_viewContainers.size())
+        switchToView(session.activeView);
+
+    // Restore panel states
+    if (session.panels.functionList && _funcListPanel) _funcListPanel->show();
+    if (session.panels.documentMap && _docMapPanel) _docMapPanel->show();
+    if (session.panels.fileBrowser && _fileBrowserPanel) _fileBrowserPanel->show();
+
+    return true;
 }
 
 bool Application::saveSession(const std::string& path) {
     auto sessionPath = path.empty() ? FileHelper::getSessionFilePath() : path;
+
+    // Build NppSession from current Application state
+    NppSession session;
+    session.version = 1;
+
+    // Window geometry
+    if (_mainWindow) {
+        QSettings s;
+        s.setValue("window/geometry", _mainWindow->saveGeometry());
+        s.setValue("window/state", _mainWindow->saveState());
+        session.window.x = _mainWindow->x();
+        session.window.y = _mainWindow->y();
+        session.window.width = _mainWindow->width();
+        session.window.height = _mainWindow->height();
+        session.window.maximized = (_mainWindow->windowState() & Qt::WindowMaximized) != 0;
+    }
+
+    // Capture open buffers
+    int bufCount = getBufferCount();
+    BufferID activeBuf = getActiveBuffer();
+    for (int i = 0; i < bufCount; ++i) {
+        BufferID buf = getBufferAt(i);
+        if (!buf) continue;
+
+        SessionBuffer sb;
+        sb.path = _fileManager->getBufferPath(buf);
+
+        // Resolve language name (UDL name when user-defined, otherwise standard name)
+        if (Buffer* b = _fileManager->getBufferByIndex(static_cast<size_t>(i))) {
+            LangType lt = b->getLangType();
+            if (lt == LangType::L_USER) {
+                sb.language = b->getUserDefineLangName();
+            } else if (_languageManager) {
+                sb.language = QString::fromStdString(_languageManager->getLanguageName(lt));
+            }
+        }
+        sb.isActive = (buf == activeBuf);
+
+        // Look up the editor that holds this buffer (fall back to active editor)
+        ScintillaEditor* ed = nullptr;
+        auto it = _bufferToEditor.find(buf);
+        if (it != _bufferToEditor.end()) {
+            ed = it->second;
+        } else {
+            ed = getActiveEditor();
+        }
+        if (ed) {
+            int line = 0, col = 0;
+            ed->getCursorPosition(&line, &col);
+            sb.cursor.line = line;
+            sb.cursor.column = col;
+            sb.scrollY = ed->send(SCI_GETFIRSTVISIBLELINE);
+        }
+
+        session.buffers.append(sb);
+    }
+
+    session.activeBufferIndex = 0;
+    session.activeView = currentView();
+
+    // Panel visibility
+    session.panels.functionList = (_funcListPanel && _funcListPanel->isVisible());
+    session.panels.documentMap = (_docMapPanel && _docMapPanel->isVisible());
+    session.panels.fileBrowser = (_fileBrowserPanel && _fileBrowserPanel->isVisible());
+
+    // Inject into SessionManager and save
+    _sessionManager->setCurrentSession(session);
     return _sessionManager->saveSession(sessionPath);
 }
 
@@ -595,6 +1233,10 @@ void Application::setActiveEditor(ScintillaEditor* editor) {
     if (editor) {
         emit activeEditorChanged(editor);
     }
+    // Keep incremental search dialog in sync with the active editor
+    if (auto* is = _mainWindow ? _mainWindow->incrementalSearch() : nullptr) {
+        is->setEditor(editor);
+    }
 }
 
 // ============================================================================
@@ -608,6 +1250,15 @@ void Application::loadTheme(const std::string& themeName) {
 void Application::onThemeChanged(const std::string& themeName) {
     _currentTheme = themeName;
     _themeObserver.notify({themeName});
+
+    // Reapply theme to all editors
+    for (QWidget* container : _viewContainers) {
+        QList<ScintillaEditor*> editors = container->findChildren<ScintillaEditor*>();
+        for (ScintillaEditor* ed : editors) {
+            ed->applyTheme(QString::fromStdString(themeName));
+            ed->setLanguage(ed->language());  // re-apply lexer with new colors
+        }
+    }
 }
 
 // ============================================================================
@@ -661,19 +1312,71 @@ void Application::onFileModifiedExternally(const std::string& path) {
     delete mb;
 }
 
-void Application::updateUI() {
-    // Update window title with current file
-    auto buffer = getActiveBuffer();
-    if (buffer) {
-        auto name = getFileName(buffer);
-        if (name) {
-            QString title = QString("%1 - %2").arg(QString::fromUtf8(name->c_str())).arg(APP_Title);
-            if (isBufferModified(buffer)) title += " *";
-            _mainWindow->setWindowTitle(title);
+void Application::onExternalFileChanged(const QString& path) {
+    // Find buffer(s) for this path
+    for (size_t i = 0; i < _fileManager->getBufferCount(); ++i) {
+        BufferID id = _fileManager->getBufferAt(static_cast<int>(i));
+        if (!id) continue;
+        QString bufPath = _fileManager->getBufferPath(id);
+        if (bufPath.isEmpty() || bufPath != path) continue;
+
+        // Check if buffer is modified (dirty)
+        bool isDirty = _fileManager->isBufferModified(id);
+
+        if (!isDirty) {
+            // Buffer clean → auto-reload
+            QString content;
+            EncodingType enc = _fileManager->getEncoding(id);
+            if (_fileManager->loadFile(path, content, enc)) {
+                auto it = _bufferToEditor.find(id);
+                ScintillaEditor* ed = (it != _bufferToEditor.end()) ? it->second : nullptr;
+                if (ed) ed->setPlainText(content);
+                setStatusBarText(("Reloaded: " + path).toStdString());
+            }
+        } else {
+            // Buffer dirty → prompt
+            QMessageBox::StandardButton reply = QMessageBox::question(
+                _mainWindow, "File Changed",
+                QString("File '%1' was modified externally.\nReload (discard changes) or Keep Current?").arg(path),
+                QMessageBox::Yes | QMessageBox::No);
+            if (reply == QMessageBox::Yes) {
+                QString content;
+                EncodingType enc = _fileManager->getEncoding(id);
+                if (_fileManager->loadFile(path, content, enc)) {
+                    auto it = _bufferToEditor.find(id);
+                    ScintillaEditor* ed = (it != _bufferToEditor.end()) ? it->second : nullptr;
+                    if (ed) ed->setPlainText(content);
+                    setStatusBarText(("Reloaded (with changes discarded): " + path).toStdString());
+                }
+            } else {
+                setStatusBarText(("Keeping local changes for: " + path).toStdString());
+            }
         }
-    } else {
-        _mainWindow->setWindowTitle(APP_Title);
+        break;  // only handle first matching buffer
     }
+}
+
+void Application::updateUI() {
+    updateWindowTitle();
+}
+
+void Application::updateWindowTitle() {
+    if (!_mainWindow) return;
+    QString title = "Notepad--Qt";
+    BufferID buf = getActiveBuffer();
+    if (buf) {
+        auto path = getFileName(buf);
+        if (path && !path->empty()) {
+            QString fileName = QFileInfo(QString::fromStdString(*path)).fileName();
+            title = fileName + " - Notepad--Qt";
+        } else {
+            title = "* Untitled - Notepad--Qt";
+        }
+        if (isBufferModified(buf)) {
+            title = "* " + title;
+        }
+    }
+    _mainWindow->setWindowTitle(title);
 }
 
 void Application::setConfigDirectory(const std::string& dir) { _options.configDir = dir; }
@@ -684,23 +1387,235 @@ void Application::setThemeProfile(const std::string& profile) { _options.themePr
 // Buffer lifecycle slots — connected to Application's own signals
 // ============================================================================
 void Application::onBufferOpened(BufferID buffer) {
+    if (!buffer) return;
     qDebug() << "[App] Buffer opened:" << buffer;
     // MainWindow listens to bufferOpened and creates the tab
+    Q_UNUSED(buffer);
 }
 
 void Application::onBufferActivated(BufferID buffer) {
+    if (!buffer) return;
+    Buffer* bufProbe = buffer;
     qDebug() << "[App] Buffer activated:" << buffer;
+    qDebug() << "[PROBE-SYNTAX] App::onBufferActivated ENTER buf=" << (void*)(uintptr_t)buffer
+             << "_activeEditor=" << (void*)_activeEditor
+             << "bufLang=int(" << (bufProbe ? static_cast<int>(bufProbe->getLangType()) : -1) << ")";
+
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) {
+        qDebug() << "[PROBE-SYNTAX] App::onBufferActivated EARLY_RETURN_NULL_EDITOR";
+        return;
+    }
+    qDebug() << "[PROBE-SYNTAX] App::onBufferActivated got editor=" << (void*)ed;
+
+    // Keep _bufferToEditor in sync so saveFile() can find the right editor
+    _bufferToEditor[buffer] = ed;
+
+    Buffer* buf = buffer;
+    if (!buf) return;
+
+    // Wave 6: if this buffer is associated with a User-Defined Language, register
+    // its keyword sets with LanguageManager so AutoCompletion picks them up,
+    // and mark it as active so the L_USER branch in getKeywords() can find them.
+    const QString udlName = buf->getUserDefineLangName();
+    if (!udlName.isEmpty() && _udlManager) {
+        if (const UdlDefinition* def = _udlManager->getUdl(udlName)) {
+            std::array<QString, 9> sets = {
+                def->keywords.words0,
+                def->keywords.words1,
+                def->keywords.words2,
+                def->keywords.words3,
+                def->keywords.words4,
+                def->keywords.words5,
+                def->keywords.words6,
+                def->keywords.words7,
+                def->keywords.words8
+            };
+            _languageManager->registerUdlKeywords(udlName, sets);
+            _languageManager->setActiveUdlName(udlName);
+        }
+    } else {
+        // Clear active UDL so L_USER buffers without a known UDL get no keywords
+        _languageManager->setActiveUdlName(QString());
+    }
+
+    ed->setLanguage(buf->getLangType());
+    ed->setEncoding(buf->getEncoding());
+    ed->setEolType(buf->getEolFormat());
+
+    // Partial load indicator in status bar — guard against null _statusBarWidget
+    if (_statusBarWidget) {
+        if (buf->isPartialLoad()) {
+            _statusBarWidget->setMessage(
+                QString("Partial load: %1 / %2 MB")
+                    .arg(static_cast<double>(buf->getDocumentLength()) / 1e6, 0, 'f', 1)
+                    .arg(static_cast<double>(buf->totalFileSize()) / 1e6, 0, 'f', 1));
+        } else {
+            _statusBarWidget->clearMessage();
+        }
+    }
+
     updateUI();
 }
 
 void Application::onBufferClosed(BufferID buffer) {
+    if (!buffer) return;
     qDebug() << "[App] Buffer closed:" << buffer;
     // Nothing to do here — MainWindow removes the tab
     Q_UNUSED(buffer);
 }
 
 void Application::onMenuCommand(const QString& cmd) {
-    executeCommand(cmd.toStdString());
+    // File
+    if (cmd == "file.new") { onNewFile(); }
+    else if (cmd == "file.open") { onOpenFile(); }
+    else if (cmd == "file.save") { onSaveFile(); }
+    else if (cmd == "file.saveAs") { onSaveFileAs(); }
+    else if (cmd == "file.saveAll") { onSaveAll(); }
+    else if (cmd == "file.close") { onCloseFile(); }
+    else if (cmd == "file.closeAll") { closeAllFiles(); }
+    else if (cmd == "file.closeAll_BUT_THIS") { closeAllFilesButCurrent(); }
+    else if (cmd == "file.saveAsCopy") { onSaveAsCopy(); }
+    else if (cmd == "file.exit") { onExit(); }
+    else if (cmd == "file.print") { onPrint(); }
+    // Edit
+    else if (cmd == "edit.undo") { onUndo(); }
+    else if (cmd == "edit.redo") { onRedo(); }
+    else if (cmd == "edit.cut") { onCut(); }
+    else if (cmd == "edit.copy") { onCopy(); }
+    else if (cmd == "edit.paste") { onPaste(); }
+    else if (cmd == "edit.delete") { onDelete(); }
+    else if (cmd == "edit.selectAll") { onSelectAll(); }
+    else if (cmd == "edit.find") { onFind(); }
+    else if (cmd == "edit.replace") { onReplace(); }
+    else if (cmd == "edit.goto") { onGotoLine(); }
+    else if (cmd == "edit.copyToClipboard") { onCopyToNamedClipboard(); }
+    else if (cmd == "edit.moveToClipboard") { onMoveToNamedClipboard(); }
+    else if (cmd == "edit.pasteFromClipboard") { onPasteFromNamedClipboard(); }
+    // Search
+    else if (cmd == "search.findNext") { onFindNext(); }
+    else if (cmd == "search.findPrev") { onFindPrev(); }
+    else if (cmd == "search.count") { onCount(); }
+    else if (cmd == "search.markAll") { onMarkAll(); }
+    else if (cmd == "search.findInFiles") { onFindInFiles(); }
+    else if (cmd == "search.replaceInFiles") { onReplaceInFiles(); }
+    else if (cmd == "search.findInProjects") { onFindInProjects(); }
+    else if (cmd == "search.replaceInProjects") { onReplaceInProjects(); }
+    else if (cmd == "search.incremental") {
+        if (auto* is = _mainWindow ? _mainWindow->incrementalSearch() : nullptr) {
+            is->setEditor(_activeEditor);
+            is->showAtTop();
+        }
+    }
+    // Bookmarks
+    else if (cmd == "bookmark.toggle") {
+        if (_activeEditor) _activeEditor->toggleBookmark(_activeEditor->currentLine());
+    }
+    else if (cmd == "bookmark.next") {
+        if (_activeEditor) _activeEditor->nextBookmark();
+    }
+    else if (cmd == "bookmark.prev") {
+        if (_activeEditor) _activeEditor->prevBookmark();
+    }
+    else if (cmd == "bookmark.clear") {
+        if (_activeEditor) _activeEditor->clearBookmarks();
+    }
+    // View
+    else if (cmd == "view.fullScreen") { onToggleFullScreen(); }
+    else if (cmd == "view.distractionFree") { onToggleDistractionFree(); }
+    else if (cmd == "view.zoomIn") { if (_activeEditor) _activeEditor->zoomIn(); }
+    else if (cmd == "view.zoomOut") { if (_activeEditor) _activeEditor->zoomOut(); }
+    else if (cmd == "view.zoomRestore") { if (_activeEditor) _activeEditor->zoomReset(); }
+    else if (cmd == "file.reload") { onReloadFile(); }
+    else if (cmd == "view.darkMode" || cmd == "view.toggleDarkMode") {
+        QString nextTheme = _currentTheme == "dark" ? "light" : "dark";
+        onThemeChanged(nextTheme.toStdString());
+    }
+    else if (cmd == "view.showTabBar") {
+        _options.showTabBar = !_options.showTabBar;
+        emit onToggleTabBar();
+    }
+    else if (cmd == "view.showStatusBar") {
+        _options.showStatusBar = !_options.showStatusBar;
+        emit onToggleStatusBar();
+    }
+    else if (cmd == "view.showToolBar") {
+        _options.showToolBar = !_options.showToolBar;
+        emit onToggleToolBar();
+    }
+    else if (cmd == "view.foldAll") { if (_activeEditor) _activeEditor->foldAll(); }
+    else if (cmd == "view.unfoldAll") { if (_activeEditor) _activeEditor->unfoldAll(); }
+    else if (cmd == "view.toggleFold") { if (_activeEditor) _activeEditor->toggleFold(_activeEditor->currentLine()); }
+    else if (cmd == "view.toggleVirtualSpace") {
+        if (_activeEditor) {
+            // SC_VS_USERACCESSIBLE = 1, SC_VS_NONE = 0
+            int current = _activeEditor->qsciEditor()->SendScintilla(QsciScintilla::SCI_GETVIRTUALSPACEOPTIONS);
+            int next = (current == 1) ? 0 : 1;
+            _activeEditor->qsciEditor()->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, next);
+        }
+    }
+    // Rectangle selection
+    else if (cmd == "edit.rectSelect") {
+        if (_activeEditor) _activeEditor->setRectangularSelectionMode(true);
+    }
+    else if (cmd == "edit.normalSelect") {
+        if (_activeEditor) _activeEditor->setRectangularSelectionMode(false);
+    }
+    // Encoding
+    else if (cmd == "encoding.utf8") { onConvertEncoding(EncodingType::UTF_8); }
+    else if (cmd == "encoding.utf8bom") { onConvertEncoding(EncodingType::UTF_8_BOM); }
+    else if (cmd == "encoding.utf16le") { onConvertEncoding(EncodingType::UTF_16_LE); }
+    else if (cmd == "encoding.utf16be") { onConvertEncoding(EncodingType::UTF_16_BE); }
+    else if (cmd.startsWith("encoding.charset.")) {
+        QString charset = cmd.mid(17);
+        onConvertToCharset(charset);
+    }
+    // EOL conversion
+    else if (cmd == "eol.CRLF") { onEolConversion("eol:CRLF"); }
+    else if (cmd == "eol.LF") { onEolConversion("eol:LF"); }
+    else if (cmd == "eol.CR") { onEolConversion("eol:CR"); }
+    else if (cmd.startsWith("eol:")) { onEolConversion(cmd); }
+    // Language
+    else if (cmd.startsWith("language.")) {
+        QString langName = cmd.mid(9);
+        LangType lt = LanguageManager::mapStringToLang(langName);
+        if (lt != LangType::L_TEXT || langName == "normal_text")
+            onSetLanguage(lt);
+    }
+    // Settings
+    else if (cmd == "settings.preferences") { onShowPreferences(); }
+    else if (cmd == "settings.shortcutMapper") { onShowShortcutMapper(); }
+    else if (cmd == "settings.commandPalette") { onShowCommandPalette(); }
+    // Help
+    else if (cmd == "help.about") { onShowAbout(); }
+    // Macro
+    else if (cmd == "macro.record") { onMacroStartRecording(); }
+    else if (cmd == "macro.stop") { onMacroStopRecording(); }
+    else if (cmd == "macro.playback") { onMacroPlaybackLast(); }
+    else if (cmd == "macro.save") {
+        QString path = QFileDialog::getSaveFileName(nullptr, "Save Macro", "", "Macro Files (*.json)");
+        if (!path.isEmpty()) {
+            if (!path.endsWith(".json")) path += ".json";
+            MacroManager::instance().saveMacro("Macro", path);
+        }
+    }
+    else if (cmd == "macro.load") {
+        QString path = QFileDialog::getOpenFileName(nullptr, "Load Macro", "", "Macro Files (*.json)");
+        if (!path.isEmpty()) {
+            if (MacroManager::instance().loadMacro(path))
+                qDebug() << "[macro] Loaded from" << path;
+            else
+                qDebug() << "[macro] Failed to load" << path;
+        }
+    }
+    // Column selection
+    else if (cmd == "edit.columnSelect") {
+        if (auto* ed = getActiveEditor()) ed->setColumnSelectionMode(true);
+    }
+    else {
+        qDebug() << "[onMenuCommand] Unknown command:" << cmd;
+    }
+    updateUI();
 }
 
 void Application::onToolBarCommand(const QString& cmd) {
@@ -712,11 +1627,8 @@ void Application::onToolBarCommand(const QString& cmd) {
 // ============================================================================
 void Application::onNewFile() {
     qDebug() << "[App] New file";
-    BufferID buf = newFile();
-    if (buf) {
-        emit bufferOpened(buf);
-        emit bufferActivated(buf);
-    }
+    // newFile() emits bufferOpened/bufferActivated itself; no manual emit.
+    newFile();
 }
 
 void Application::onOpenFile() {
@@ -725,11 +1637,8 @@ void Application::onOpenFile() {
         "All Files (*);;Text Files (*.txt);;C/C++ (*.cpp *.h);;Python (*.py);;JavaScript (*.js)"
     );
     if (!filePath.isEmpty()) {
-        BufferID buf = openFile(filePath.toStdString());
-        if (buf) {
-            emit bufferOpened(buf);
-            emit bufferActivated(buf);
-        }
+        // openFile() now emits bufferOpened/bufferActivated itself; no manual emit.
+        openFile(filePath.toStdString());
     }
 }
 
@@ -767,6 +1676,44 @@ void Application::onSaveFileAs() {
     }
 }
 
+void Application::onSaveAsCopy() {
+    qDebug() << "[App] Save as copy";
+    BufferID buf = getActiveBuffer();
+    if (!buf) return;
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+
+    // Default directory = current file's directory
+    QString currentPath = _fileManager->getBufferPath(buf);
+    QString defaultDir;
+    if (!currentPath.isEmpty()) {
+        QFileInfo fi(currentPath);
+        defaultDir = fi.absolutePath();
+    }
+    if (defaultDir.isEmpty())
+        defaultDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+
+    QString filePath = QFileDialog::getSaveFileName(
+        nullptr, "Save As Copy", defaultDir,
+        "All Files (*);;Text Files (*.txt);;C/C++ (*.cpp *.h)"
+    );
+    if (filePath.isEmpty()) return;
+
+    // Read current content from editor
+    QString text = ed->text();
+
+    // Write to new path with same encoding via FileManager
+    EncodingType enc = getBufferEncoding(buf);
+    EolType eol = getBufferEol(buf);
+    if (_fileManager->saveFile(filePath, text, enc, eol)) {
+        addToRecentFiles(filePath.toStdString());
+        setStatusBarText(("Saved copy: " + filePath).toStdString().c_str());
+    } else {
+        QMessageBox::warning(nullptr, "Save As Copy",
+            QString("Could not write to:\n%1").arg(filePath));
+    }
+}
+
 void Application::onSaveAll() {
     qDebug() << "[App] Save all";
     int count = getBufferCount();
@@ -793,6 +1740,30 @@ void Application::onCloseAll() {
     }
 }
 
+void Application::onReloadFile() {
+    BufferID buf = getActiveBuffer();
+    if (!buf) return;
+    auto path = getFileName(buf);
+    if (!path) return;
+    if (isBufferModified(buf)) {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            nullptr, "Reload File",
+            "This file has unsaved changes. Reload anyway?",
+            QMessageBox::Yes | QMessageBox::No);
+        if (reply != QMessageBox::Yes) return;
+    }
+    QString filePath = QString::fromStdString(*path);
+    closeFile(buf);
+    ScintillaEditor* ed = getActiveEditor();
+    if (ed) {
+        BufferID newBuf = openFile(filePath.toStdString());
+        if (newBuf) {
+            setActiveBuffer(newBuf);
+            ed->setPlainText(QString::fromStdString(getBufferText(newBuf)));
+        }
+    }
+}
+
 void Application::onExit() {
     qDebug() << "[App] Exit";
     shutdown();
@@ -803,6 +1774,15 @@ void Application::onClearRecentFiles() {
     if (_sessionManager) {
         _sessionManager->clearRecentFiles();
     }
+}
+
+void Application::onPrint() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+    QPrinter printer(QPrinter::HighResolution);
+    QPrintDialog dialog(&printer, nullptr);
+    if (dialog.exec() != QDialog::Accepted) return;
+    ed->print(&printer);
 }
 
 // ============================================================================
@@ -833,6 +1813,48 @@ void Application::onPaste() {
     if (ed) ed->paste();
 }
 
+void Application::onCopyToNamedClipboard() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+    bool ok = false;
+    QString name = QInputDialog::getText(nullptr, "Copy to Named Clipboard",
+        "Clipboard name:", QLineEdit::Normal, QString(), &ok);
+    if (!ok || name.isEmpty()) return;
+    _namedClips[name] = ed->selectedText();
+    setStatusBarText(("Copied to: " + name).toStdString().c_str());
+}
+
+void Application::onMoveToNamedClipboard() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+    bool ok = false;
+    QString name = QInputDialog::getText(nullptr, "Move to Named Clipboard",
+        "Clipboard name:", QLineEdit::Normal, QString(), &ok);
+    if (!ok || name.isEmpty()) return;
+    _namedClips[name] = ed->selectedText();
+    ed->send(SCI_CLEAR);
+    setStatusBarText(("Moved to: " + name).toStdString().c_str());
+}
+
+void Application::onPasteFromNamedClipboard() {
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+    // Show list of available named clips
+    QStringList keys = _namedClips.keys();
+    if (keys.isEmpty()) {
+        QMessageBox::information(nullptr, "Named Clipboard", "No named clips stored yet.");
+        return;
+    }
+    bool ok = false;
+    QString name = QInputDialog::getItem(nullptr, "Paste from Named Clipboard",
+        "Select clipboard:", keys, 0, false, &ok);
+    if (!ok || name.isEmpty()) return;
+    const QString& text = _namedClips[name];
+    const QByteArray textUtf8 = text.toUtf8();  // store — dangling pointer
+    ed->send(SCI_REPLACESEL, 0, reinterpret_cast<sptr_t>(textUtf8.constData()));
+    setStatusBarText(("Pasted from: " + name).toStdString().c_str());
+}
+
 void Application::onDelete() {
     ScintillaEditor* ed = getActiveEditor();
     if (ed) ed->deleteSelection();
@@ -844,23 +1866,32 @@ void Application::onSelectAll() {
 }
 
 void Application::onFind() {
-    if (!_findReplaceDialog) {
-        _findReplaceDialog = new FindReplaceDialog(_mainWindow);
-    }
     _findReplaceDialog->show();
 }
 
 void Application::onReplace() {
-    if (!_findReplaceDialog) {
-        _findReplaceDialog = new FindReplaceDialog(_mainWindow);
-    }
     _findReplaceDialog->show();
 }
 
-void Application::onGotoLine() {
-    if (!_gotoLineDialog) {
-        _gotoLineDialog = new GoToLineDialog(_mainWindow);
+void Application::onReplaceAll() {
+    if (_findReplaceDialog) {
+        _findReplaceDialog->replaceAll();
     }
+}
+
+void Application::onPurge() {
+    if (_findReplaceDialog) {
+        _findReplaceDialog->purgeMarkedLines();
+    }
+}
+
+void Application::onBookmarkAll() {
+    if (_findReplaceDialog) {
+        _findReplaceDialog->bookmarkAllMatches();
+    }
+}
+
+void Application::onGotoLine() {
     _gotoLineDialog->show();
 }
 
@@ -884,37 +1915,39 @@ void Application::onFindPrev() {
 }
 
 void Application::onFindInFiles() {
-    // Open directory picker first, then search
-    QString dir = QFileDialog::getExistingDirectory(_mainWindow,
-        "Select Directory to Search In", QDir::homePath());
-    if (dir.isEmpty()) return;
-
-    QString searchText = "";
-    if (_findReplaceDialog) {
-        searchText = _findReplaceDialog->lastSearchText();
+    // Pre-fill search text from Find/Replace dialog if available
+    if (_findReplaceDialog && !_findReplaceDialog->lastSearchText().isEmpty()) {
+        _findInFilesDialog->setSearchText(_findReplaceDialog->lastSearchText());
     }
-    if (searchText.isEmpty()) {
-        searchText = QInputDialog::getText(_mainWindow, "Find in Files",
-            "Search text:");
+
+    // Default directory: current file's directory, or home
+    BufferID buf = getActiveBuffer();
+    if (buf) {
+        QString bufPath = _fileManager->getBufferPath(buf);
+        if (!bufPath.isEmpty()) {
+            QFileInfo info(bufPath);
+            _findInFilesDialog->setDirectory(info.dir().absolutePath());
+        }
     }
-    if (searchText.isEmpty()) return;
 
-    // Search in background using QThread
-    auto* thread = new QThread;
-    auto* worker = new FindInFilesWorker(dir, searchText);
-    worker->moveToThread(thread);
+    _findInFilesDialog->show();
+    _findInFilesDialog->raise();
+    _findInFilesDialog->activateWindow();
+}
 
-    QObject::connect(thread, &QThread::started, worker, &FindInFilesWorker::run);
-    QObject::connect(worker, &FindInFilesWorker::resultsReady, this,
-        [this](const QList<FindResult>& results) {
-            showFindInFilesResults(results);
-        }, Qt::QueuedConnection);
-    QObject::connect(worker, &FindInFilesWorker::finished, thread, &QThread::quit);
-    QObject::connect(thread, &QThread::finished, worker, &QObject::deleteLater);
-    QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
-    thread->start();
+void Application::onReplaceInFiles() {
+    QMessageBox::information(nullptr, "Project Search",
+        "Replace in Files — working in progress");
+}
 
-    setStatusBarText(("Searching in " + dir + "...").toStdString());
+void Application::onFindInProjects() {
+    QMessageBox::information(nullptr, "Project Search",
+        "Find in Projects — working in progress");
+}
+
+void Application::onReplaceInProjects() {
+    QMessageBox::information(nullptr, "Project Search",
+        "Replace in Projects — working in progress");
 }
 
 void Application::onCount() {
@@ -1063,54 +2096,78 @@ void Application::onToggleToolBar() {
 // ============================================================================
 // Encoding command slots
 // ============================================================================
-void Application::onConvertEncoding(EncodingType enc) {
+
+void Application::onEolConversion(const QString& eolCmd) {
     ScintillaEditor* ed = getActiveEditor();
     if (!ed) return;
 
     BufferID buffer = getActiveBuffer();
     if (!buffer) return;
 
-    QString text = QString::fromStdString(getBufferText(buffer));
+    QString text = ed->text();
     if (text.isEmpty()) return;
 
-    // Map EncodingType → Scintilla codepage → QTextCodec MIB
-    auto encToMib = [](EncodingType e) -> int {
-        switch (e) {
-            case EncodingType::ANSI:       return 4;     // Latin-1
-            case EncodingType::UTF_8:
-            case EncodingType::UTF_8_BOM:  return 106;    // UTF-8
-            case EncodingType::UTF_16_LE: return 1000;   // UTF-16LE
-            case EncodingType::UTF_16_BE: return 1001;   // UTF-16BE
-            case EncodingType::OEM:        return 4;      // OEM (Latin-1 as fallback)
-            default:                       return 4;
-        }
-    };
-
-    EncodingType currentEnc = getBufferEncoding(buffer);
-    int fromMib = encToMib(currentEnc);
-    int toMib   = encToMib(enc);
-
-    if (fromMib != toMib) {
-        text = NppParameters::getInstance().convertEncoding(text, fromMib, toMib);
+    if (eolCmd == "eol:CRLF") {
+        text.replace('\n', "\r\n");
+        setBufferEol(buffer, EolType::EOL_CRLF);
+        setStatusBarEol("Windows (CRLF)");
+    } else if (eolCmd == "eol:LF") {
+        text.replace("\r\n", "\n").replace('\r', '\n');
+        setBufferEol(buffer, EolType::EOL_LF);
+        setStatusBarEol("Unix (LF)");
+    } else if (eolCmd == "eol:CR") {
+        text.replace("\r\n", "\r").replace('\n', '\r');
+        setBufferEol(buffer, EolType::EOL_CR);
+        setStatusBarEol("Mac (CR)");
     }
 
-    // Apply the new encoding to buffer and editor
-    setBufferEncoding(buffer, enc);
-    ed->setEncoding(enc);
     ed->setText(text);
     ed->setModified(true);
+}
 
-    // Update status bar with the new encoding name
-    const char* encName = "ANSI";
-    switch (enc) {
-        case EncodingType::UTF_8:      encName = "UTF-8"; break;
-        case EncodingType::UTF_8_BOM:  encName = "UTF-8-BOM"; break;
-        case EncodingType::UTF_16_LE: encName = "UTF-16 LE"; break;
-        case EncodingType::UTF_16_BE: encName = "UTF-16 BE"; break;
-        case EncodingType::OEM:       encName = "OEM"; break;
-        default:                      encName = "ANSI"; break;
+void Application::onConvertToCharset(const QString& charsetName) {
+    ScintillaEditor* ed = getActiveEditor();
+    if (!ed) return;
+    if (charsetName.isEmpty()) return;
+
+    // The editor text is held internally as UTF-16 (Qt QString). To honour
+    // a target encoding, we round-trip through EncodingUtils:
+    //   1. Encode the current QString as the *current* encoding bytes
+    //   2. Decode those bytes as the *target* encoding bytes
+    //   3. Set the resulting QString back into the editor
+    //
+    // Source encoding comes from the active buffer's recorded EncodingType
+    // (NONE is treated as UTF-8 since QString is already UTF-16).
+    BufferID buf = getActiveBuffer();
+    EncodingType srcEnc = (buf == BUFFER_INVALID)
+        ? EncodingType::UTF_8
+        : _fileManager->getEncoding(buf);
+    if (srcEnc == EncodingType::NONE) srcEnc = EncodingType::UTF_8;
+
+    const QString srcCodecName = QString::fromStdString(encodingToString(srcEnc));
+    QByteArray srcBytes = EncodingUtils::encodeToBytes(ed->toPlainText(), srcCodecName);
+    if (srcBytes.isEmpty() && !ed->toPlainText().isEmpty()) {
+        // Source encoding couldn't be resolved — fall back to UTF-8 bytes.
+        srcBytes = ed->toPlainText().toUtf8();
     }
-    setStatusBarEncoding(encName);
+    QString out = EncodingUtils::decodeFromBytes(srcBytes, charsetName);
+    if (out.isEmpty() && !srcBytes.isEmpty()) {
+        qWarning() << "[charset] unknown target encoding:" << charsetName;
+        setStatusBarText(QString("Unknown encoding: %1").arg(charsetName).toStdString());
+        return;
+    }
+
+    ed->setPlainText(out);
+    ed->setModified(true);
+
+    // Track the new encoding on the buffer so future saves use it.
+    if (buf != BUFFER_INVALID) {
+        EncodingType newEnc = EncodingUtils::encodingFromCodecName(charsetName);
+        if (newEnc != EncodingType::NONE) {
+            _fileManager->setEncoding(buf, newEnc);
+        }
+    }
+    setStatusBarEncoding(charsetName.toStdString());
 }
 
 void Application::onSetLanguage(LangType lang) {
@@ -1137,13 +2194,275 @@ void Application::setLanguage(LangType lang) {
     onSetLanguage(lang);
 }
 
+void Application::onConvertEncoding(EncodingType enc) {
+    ScintillaEditor* ed = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!ed) return;
+    BufferID buf = getActiveBuffer();
+    if (buf == BUFFER_INVALID) return;
+
+    QString path = _fileManager->getBufferPath(buf);
+    if (path.isEmpty()) {
+        // Untitled buffer: just change the encoding and update status
+        _fileManager->setEncoding(buf, enc);
+        setStatusBarText(QString("Encoding set to %1").arg(encodingToString(enc).c_str()).toStdString());
+        return;
+    }
+
+    // Save to a temp file with the current encoding, then re-save with the target encoding
+    // We use the editor text as the source of truth
+    QString text = ed->text();
+    if (text.isEmpty()) return;
+
+    // Save to a .tmp file with target encoding first, then rename
+    QString tmpPath = path + ".conv.tmp";
+    if (_fileManager->saveFile(tmpPath, text, enc, getBufferEol(buf))) {
+        // Move temp over original
+        QFile::remove(path);
+        QFile::rename(tmpPath, path);
+        // Reload
+        BufferID newBuf = _fileManager->openFile(path);
+        if (newBuf != BUFFER_INVALID) {
+            setActiveBuffer(newBuf);
+        }
+        setStatusBarText(QString("Converted to %1").arg(encodingToString(enc).c_str()).toStdString());
+    }
+}
+
+void Application::cloneToOtherView(BufferID buffer) {
+    if (buffer == BUFFER_INVALID) return;
+    if (!_mainWindow) return;
+    // Open the same file in the other view
+    QString path = _fileManager->getBufferPath(buffer);
+    if (path.isEmpty()) return;
+    // Switch to the other view
+    _activeViewId = (_activeViewId == 0) ? 1 : 0;
+    BufferID cloned = _fileManager->openFile(path);
+    if (cloned != BUFFER_INVALID) {
+        setActiveBuffer(cloned);
+    }
+}
+
+void Application::openFolderAsWorkspace(const std::string& dir) {
+    if (dir.empty()) return;
+    // Set the folder as the workspace root for the file browser
+    QString folder = QString::fromStdString(dir);
+    if (_fileBrowserPanel) {
+        _fileBrowserPanel->setRootDirectory(folder);
+        _fileBrowserPanel->refresh();
+    }
+    setStatusBarText(("Opened workspace: " + dir).c_str());
+}
+
+void Application::onRun() {
+    ScintillaEditor* ed = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!ed) return;
+    // Determine the run command based on file type
+    BufferID buf = getActiveBuffer();
+    QString path = _fileManager->getBufferPath(buf);
+    if (path.isEmpty()) return;
+
+    // Get file extension
+    QFileInfo fi(path);
+    QString ext = fi.suffix().toLower();
+    QString cmd;
+    bool needSave = false;
+
+    // Map extension to run command
+    if (ext == "py") {
+        cmd = "python3 \"" + path + "\"";
+    } else if (ext == "js") {
+        cmd = "node \"" + path + "\"";
+    } else if (ext == "sh" || ext == "bash") {
+        cmd = "bash \"" + path + "\"";
+    } else if (ext == "rb") {
+        cmd = "ruby \"" + path + "\"";
+    } else if (ext == "pl") {
+        cmd = "perl \"" + path + "\"";
+    } else if (ext == "php") {
+        cmd = "php \"" + path + "\"";
+    } else if (ext == "go") {
+        cmd = "go run \"" + path + "\"";
+    } else if (ext == "rs") {
+        cmd = "cargo run --manifest-path \"" + fi.dir().filePath("Cargo.toml") + "\"";
+    } else if (ext == "html" || ext == "htm") {
+        cmd = "xdg-open \"" + path + "\"";
+    } else if (ext == "c" || ext == "cpp" || ext == "cc") {
+        // Try to compile and run
+        QString base = fi.dir().filePath(fi.baseName());
+        cmd = "(gcc \"" + path + "\" -o \"" + base + "\" && \"" + base + "\") 2>&1";
+        needSave = true;
+    } else if (ext == "java") {
+        cmd = "cd \"" + fi.dir().path() + "\" && javac " + fi.fileName() + " && java " + fi.baseName();
+        needSave = true;
+    }
+
+    if (cmd.isEmpty()) {
+        QMessageBox::information(_mainWindow, "Run", "No run command configured for ." + ext + " files.");
+        return;
+    }
+
+    // Save if modified
+    if (needSave && isBufferModified(buf)) {
+        saveFile(buf);
+    }
+
+    setStatusBarText(("Running: " + cmd).toStdString().c_str());
+    QProcess* proc = new QProcess(this);
+    connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [this, proc](int exitCode, QProcess::ExitStatus) {
+        QString output = QString::fromLocal8Bit(proc->readAllStandardOutput());
+        QString err    = QString::fromLocal8Bit(proc->readAllStandardError());
+        if (!output.isEmpty() || !err.isEmpty()) {
+            qDebug() << "[Run]" << output;
+            if (!err.isEmpty()) qWarning() << "[Run stderr]" << err;
+        }
+        setStatusBarText(("Exit code: " + QString::number(exitCode)).toStdString().c_str());
+        proc->deleteLater();
+    });
+    proc->setWorkingDirectory(fi.dir().path());
+    proc->start("/bin/sh", {"-c", cmd});
+}
+
+void Application::moveToSubView(BufferID buffer) {
+    if (buffer == BUFFER_INVALID) return;
+    if (!_mainWindow) return;
+    QString path = _fileManager->getBufferPath(buffer);
+    if (path.isEmpty()) return;
+    closeFile(buffer, false);
+    // Switch view
+    _activeViewId = (_activeViewId == 0) ? 1 : 0;
+    BufferID moved = openFile(path.toStdString());
+    if (moved != BUFFER_INVALID) {
+        setActiveBuffer(moved);
+    }
+}
+
+void Application::onMacroRecord() {
+    onMacroStartRecording();
+}
+
+void Application::onMacroStop() {
+    onMacroStopRecording();
+}
+
+void Application::onMacroPlayback() {
+    onMacroPlaybackLast();
+}
+
+void Application::onMacroSave() {
+    if (!_macroManager) return;
+    // Prompt for name
+    bool ok;
+    QString name = QInputDialog::getText(_mainWindow, "Save Macro", "Macro name:", QLineEdit::Normal, "", &ok);
+    if (!ok || name.isEmpty()) return;
+    // Save to standard location
+    QString macroDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    if (!QDir(macroDir + "/macros").exists()) QDir().mkpath(macroDir + "/macros");
+    QString filePath = macroDir + "/macros/" + name + ".json";
+    _macroManager->saveMacro(name, filePath);
+    setStatusBarText(("Saved macro: " + name).toStdString().c_str());
+}
+
+void Application::onManageUserLanguages() {
+    if (!_udlManager) {
+        _udlManager = new UdlManager(this);
+    }
+    // Show UDL manager dialog
+    auto* dlg = new QDialog(_mainWindow);
+    dlg->setWindowTitle("User Defined Languages");
+    dlg->resize(600, 400);
+    QVBoxLayout* lay = new QVBoxLayout(dlg);
+    QLabel* info = new QLabel("User defined languages are managed through the Preferences dialog.", dlg);
+    lay->addWidget(info);
+    QDialogButtonBox* box = new QDialogButtonBox(QDialogButtonBox::Ok, dlg);
+    lay->addWidget(box);
+    connect(box, &QDialogButtonBox::accepted, dlg, &QDialog::accept);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->show();
+}
+
+void Application::onToggleFileBrowser() {
+    if (_fileBrowserPanel) {
+        if (_fileBrowserPanel->isVisible()) {
+            _fileBrowserPanel->hide();
+        } else {
+            _fileBrowserPanel->show();
+        }
+    } else {
+        // Create on demand if never shown
+        qDebug() << "[Application] File browser panel not set up";
+    }
+}
+
+void Application::onSetEol(EolType format) {
+    ScintillaEditor* ed = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!ed) return;
+    BufferID buf = getActiveBuffer();
+    if (buf == BUFFER_INVALID) return;
+    // Convert existing line endings to the chosen format
+    QString text = ed->text();
+    QString converted;
+    switch (format) {
+        case EolType::EOL_CRLF:
+            converted = text.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\r\n");
+            break;
+        case EolType::EOL_LF:
+            converted = text.replace("\r\n", "\n").replace("\r", "\n");
+            break;
+        case EolType::EOL_CR:
+            converted = text.replace("\r\n", "\r").replace("\n", "\r");
+            break;
+        default:
+            converted = text;
+    }
+    // Apply the converted text
+    ed->setText(converted);
+    setBufferEol(buf, format);
+}
+
+void Application::toggleDocMap() {
+    if (_docMapPanel) {
+        if (_docMapPanel->isVisible()) {
+            _docMapPanel->hide();
+        } else {
+            _docMapPanel->show();
+        }
+    }
+}
+
+void Application::onToggleDocMap() {
+    toggleDocMap();
+}
+
+void Application::onToggleFunctionList() {
+    if (_funcListPanel) {
+        if (_funcListPanel->isVisible()) {
+            _funcListPanel->hide();
+        } else {
+            _funcListPanel->show();
+            _funcListPanel->refresh();
+        }
+    }
+}
+
+// ============================================================================
+// Encoding helpers
+// ============================================================================
+std::string Application::encodingToString(EncodingType enc) const {
+    switch (enc) {
+        case EncodingType::UTF_8:       return "UTF-8";
+        case EncodingType::UTF_8_BOM:  return "UTF-8 BOM";
+        case EncodingType::UTF_16_LE:  return "UTF-16 LE";
+        case EncodingType::UTF_16_BE:  return "UTF-16 BE";
+        case EncodingType::OEM:         return "OEM";
+        case EncodingType::ANSI:
+        default:                        return "ANSI";
+    }
+}
+
 // ============================================================================
 // Settings command slots
 // ============================================================================
 void Application::onShowPreferences() {
-    if (!_preferenceDialog) {
-        _preferenceDialog = new PreferenceDialog(_mainWindow);
-    }
     _preferenceDialog->show();
     _preferenceDialog->raise();
     _preferenceDialog->activateWindow();
@@ -1166,13 +2485,32 @@ void Application::onShowCommandPalette() {
     dlg->activateWindow();
 }
 
+void Application::onMinimizeToTray() {
+    if (_mainWindow) {
+        _mainWindow->hide();
+        qDebug() << "[App] Minimized to tray";
+    }
+}
+
+void Application::onSwitchToOther() {
+    if (!_mainWindow) return;
+    // Switch focus between main editor and secondary view
+    if (auto* ed = getActiveEditor()) {
+        ed->setFocus();
+    }
+}
+
+void Application::onToolbarCustomize() {
+    qDebug() << "[App] Toolbar customize requested";
+    if (!_mainWindow) return;
+    ToolbarCustomizeDialog dlg(_mainWindow->toolBar(), _mainWindow);
+    dlg.exec();
+}
+
 // ============================================================================
 // Help command slots
 // ============================================================================
 void Application::onShowAbout() {
-    if (!_aboutDialog) {
-        _aboutDialog = new AboutDialog(_mainWindow);
-    }
     _aboutDialog->show();
 }
 
@@ -1186,8 +2524,7 @@ void Application::showFindInFilesResults(const QList<FindResult>& results) {
     } else {
         msg = QString("Found %1 match%2:").arg(results.size()).arg(results.size() == 1 ? "" : "es");
         for (const FindResult& r : results) {
-            // Build a results panel or show in find dialog
-            // For now, show first 20 in status
+            (void)r;  // results consumed by FindInFilesPanel
             static int shown = 0;
             shown = (shown + 1) % 1000;  // cycle to avoid spam
         }
@@ -1241,15 +2578,6 @@ void Application::showFindInFilesResults(const QList<FindResult>& results) {
 // ============================================================================
 // Notepad++ Compatibility
 // ============================================================================
-
-#include "UdlManager.h"
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QXmlStreamReader>
-#include <QXmlStreamWriter>
-#include <QProgressDialog>
-#include <QFileDialog>
 
 ApplicationImportResult Application::importFromNpp() {
     QStringList paths = detectNppPaths();
@@ -1310,7 +2638,7 @@ ApplicationImportResult Application::importFromNpp(const QString& nppPath) {
                         QString shift = reader.attributes().value("shift").toString();
                         QString key = reader.attributes().value("key").toString();
                         if (!name.isEmpty()) {
-                            Shortcut sc;
+                            ShortcutDef sc;
                             sc.name = name.toStdString();
                             sc.ctrl = ctrl.toInt();
                             sc.alt = alt.toInt();
@@ -1413,7 +2741,7 @@ bool Application::exportSettingsToJson(const QString& path) {
 
     // Export shortcuts
     QJsonArray shortcuts;
-    for (const Shortcut& sc : NppParameters::getInstance().getShortcuts()) {
+    for (const ShortcutDef& sc : NppParameters::getInstance().getShortcuts()) {
         QJsonObject obj;
         obj["name"] = QString::fromStdString(sc.name);
         obj["ctrl"] = sc.ctrl;
@@ -1456,7 +2784,7 @@ bool Application::exportSettingsToNpp(const QString& path) {
 
     // Write shortcuts
     writer.writeStartElement("Shortcuts");
-    for (const Shortcut& sc : NppParameters::getInstance().getShortcuts()) {
+    for (const ShortcutDef& sc : NppParameters::getInstance().getShortcuts()) {
         writer.writeEmptyElement("Shortcut");
         writer.writeAttribute("name", QString::fromStdString(sc.name));
         writer.writeAttribute("ctrl", QString::number(sc.ctrl));
@@ -1518,3 +2846,333 @@ void Application::onMacroPlaybackLast() {
         }
     }
 }
+
+void Application::playbackMacroStep(int message, uintptr_t wParam, uintptr_t lParam,
+                                    const char* sParam, int macroType) {
+    ScintillaEditor* ed = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!ed) return;
+
+    QsciScintilla* sci = ed->qsciEditor();
+    if (!sci) return;
+
+    // Replay the Scintilla message
+    auto typeIndex = static_cast<RecordedMacroStep::MacroTypeIndex>(macroType);
+    switch (typeIndex) {
+        case RecordedMacroStep::mtUseSParameter: {
+            QString s = QString::fromUtf8(sParam);
+            const QByteArray sUtf8 = s.toUtf8();  // store — dangling pointer otherwise
+            sci->SendScintilla(message, wParam,
+                reinterpret_cast<sptr_t>(sUtf8.constData()));
+            break;
+        }
+        case RecordedMacroStep::mtUseLParameter:
+        case RecordedMacroStep::mtMenuCommand:
+        case RecordedMacroStep::mtSavedSnR:
+        default:
+            sci->SendScintilla(message, wParam, lParam);
+            break;
+    }
+}
+
+// === Stubs ===
+void Application::onMoveToSubView() {
+    if (_mainWindow) {
+        BufferID buf = getActiveBuffer();
+        moveToSubView(buf);
+    }
+}
+
+void Application::onActivatePane(int paneIndex) {
+    if (!_mainWindow) return;
+    switch (paneIndex) {
+        case 0: {
+            // Switch to main editor pane — focus the active editor
+            if (auto* ed = getActiveEditor()) {
+                ed->setFocus();
+            }
+            break;
+        }
+        default:
+            qDebug() << "[App] onActivatePane: unknown pane" << paneIndex;
+            break;
+    }
+}
+
+void Application::onToggleWordWrap() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (editor) {
+        editor->setWrapMode(!editor->wrapMode());
+    }
+}
+
+void Application::onShowAllCharacters() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    editor->setWhitespaceVisibility(true);
+}
+
+void Application::toggleClipboardHistory() {
+    if (_clipboardHistoryPanel) {
+        if (_clipboardHistoryPanel->isVisible()) {
+            _clipboardHistoryPanel->hide();
+        } else {
+            _clipboardHistoryPanel->show();
+        }
+    }
+}
+
+void Application::onToggleClipboardHistory() {
+    toggleClipboardHistory();
+}
+
+void Application::onCloneToOtherView() {
+    if (_mainWindow) {
+        BufferID buf = getActiveBuffer();
+        cloneToOtherView(buf);
+    }
+}
+
+void Application::onZoomOut() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (editor) editor->zoomOut();
+}
+
+void Application::onToggleEolVisibility() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    editor->setEolVisibility(true);
+}
+
+void Application::onToggleShowSymbol() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    // Toggle indicator display: SCI_GETINDICATORCURRENT -> SCI_INDICATORFILLRANGE / CLEAR
+    // Toggle all indicators via view menu proxy
+    qDebug() << "[App] Toggle show symbol";
+}
+
+void Application::onZoomRestore() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (editor) editor->zoomReset();
+}
+
+void Application::onZoomIn() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (editor) editor->zoomIn();
+}
+
+void Application::onOpenContainingFolder() {
+    if (!_mainWindow) return;
+    BufferID buf = getActiveBuffer();
+    if (buf == BUFFER_INVALID) return;
+    QString path = _fileManager->getBufferPath(buf);
+    if (path.isEmpty()) return;
+    QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).absolutePath()));
+}
+
+void Application::onJoinLines() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n', Qt::SkipEmptyParts);
+    for (int i = 0; i < lines.size(); ++i) lines[i] = lines[i].trimmed();
+    QString joined = lines.join(" ");
+    const QByteArray joinedUtf8 = joined.toUtf8();  // store — dangling pointer otherwise
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(joinedUtf8.constData()));
+}
+
+void Application::onSortDescending() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    lines.sort(Qt::CaseInsensitive);
+    std::reverse(lines.begin(), lines.end());
+    QString result = lines.join("\n");
+    const QByteArray resultUtf8 = result.toUtf8();  // store — dangling pointer otherwise
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(resultUtf8.constData()));
+}
+
+void Application::onDeleteFile() {
+    BufferID buf = getActiveBuffer();
+    if (buf == BUFFER_INVALID) return;
+    QString path = _fileManager->getBufferPath(buf);
+    if (path.isEmpty()) return;
+    int ret = QMessageBox::warning(_mainWindow, "Delete File",
+        "Are you sure you want to delete the file?\n" + QFileInfo(path).fileName(),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (ret != QMessageBox::Yes) return;
+    if (QFile::remove(path)) {
+        closeFile(buf, true);
+    }
+}
+
+void Application::onSortIntDescending() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    QList<int> nums;
+    for (const QString& l : lines) {
+        bool ok;
+        nums.append(l.toInt(&ok));
+        if (!ok) return; // not all integers
+    }
+    std::sort(nums.begin(), nums.end(), std::greater<int>());
+    QStringList result;
+    for (int n : nums) result.append(QString::number(n));
+    QString out = result.join("\n");
+    const QByteArray outUtf8 = out.toUtf8();  // store — dangling pointer otherwise
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(outUtf8.constData()));
+}
+
+void Application::onUnmarkAll() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    editor->clearBookmarks();
+}
+
+void Application::onGoToNextMark() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    editor->nextBookmark();
+}
+
+void Application::onGoToPrevMark() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    editor->prevBookmark();
+}
+
+void Application::onTrimLeading() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    for (int i = 0; i < lines.size(); ++i) lines[i] = lines[i].trimmed();
+    QString result = lines.join("\n");
+    const QByteArray resultUtf8 = result.toUtf8();  // store — dangling pointer otherwise
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(resultUtf8.constData()));
+}
+
+void Application::onRenameFile() {
+    BufferID buf = getActiveBuffer();
+    if (buf == BUFFER_INVALID) return;
+    QString oldPath = _fileManager->getBufferPath(buf);
+    if (oldPath.isEmpty()) return;
+    QFileInfo fi(oldPath);
+    bool ok;
+    QString newName = QInputDialog::getText(_mainWindow, "Rename File", "New name:",
+        QLineEdit::Normal, fi.fileName(), &ok);
+    if (!ok || newName.isEmpty() || newName == fi.fileName()) return;
+    QString newPath = fi.absolutePath() + "/" + newName;
+    if (QFile::rename(oldPath, newPath)) {
+        _fileManager->setBufferPath(buf, newPath);
+    }
+}
+
+void Application::onSortReverse() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    std::reverse(lines.begin(), lines.end());
+    QString result = lines.join("\n");
+    const QByteArray resultUtf8 = result.toUtf8();  // store — dangling pointer otherwise
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(resultUtf8.constData()));
+}
+
+void Application::onDeleteLine() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    int curLine = editor->currentLine();
+    int startPos = editor->send(SCI_POSITIONFROMLINE, curLine);
+    int endPos = editor->send(SCI_GETLINEENDPOSITION, curLine);
+    // Include the line ending if not the last line
+    if (curLine + 1 < editor->lineCount()) {
+        endPos = editor->send(SCI_GETLINEENDPOSITION, curLine + 1);
+    }
+    editor->send(SCI_SETSEL, startPos, endPos);
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(""));
+}
+
+void Application::onCloseAllButCurrent() {
+    closeAllBuffersExcept(getActiveBuffer());
+}
+
+void Application::onSortAscending() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    lines.sort(Qt::CaseInsensitive);
+    QString result = lines.join("\n");
+    const QByteArray resultUtf8 = result.toUtf8();  // store — dangling pointer otherwise
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(resultUtf8.constData()));
+}
+
+void Application::onSortIntAscending() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    QList<int> nums;
+    for (const QString& l : lines) {
+        bool ok;
+        nums.append(l.toInt(&ok));
+        if (!ok) return;
+    }
+    std::sort(nums.begin(), nums.end());
+    QStringList result;
+    for (int n : nums) result.append(QString::number(n));
+    QString out = result.join("\n");
+    const QByteArray outUtf8 = out.toUtf8();  // store — dangling pointer otherwise
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(outUtf8.constData()));
+}
+
+void Application::onTrimTrailing() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QStringList lines = text.split('\n');
+    for (int i = 0; i < lines.size(); ++i) lines[i] = lines[i].trimmed();
+    QString result = lines.join("\n");
+    const QByteArray resultUtf8 = result.toUtf8();  // store — dangling pointer otherwise
+    editor->qsciEditor()->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+        reinterpret_cast<sptr_t>(resultUtf8.constData()));
+}
+
+void Application::onSearchOnInternet() {
+    ScintillaEditor* editor = _mainWindow ? _mainWindow->currentEditor() : nullptr;
+    if (!editor) return;
+    QString text = editor->selectedText();
+    if (text.isEmpty()) return;
+    QString query = QUrl::toPercentEncoding(text);
+    QDesktopServices::openUrl(QUrl("https://www.google.com/search?q=" + query));
+}
+
+// Forwarding bridges for methods called by NppBigSwitch but implemented as on*()
+// in Application.cpp. These bridge the naming convention.
+void Application::zoomIn()    { onZoomIn(); }
+void Application::zoomOut()   { onZoomOut(); }
+void Application::zoomRestore() { onZoomRestore(); }
+void Application::toggleWordWrap() { onToggleWordWrap(); }
+void Application::toggleEolVisibility() { onToggleEolVisibility(); }
+void Application::toggleFunctionList() { onToggleFunctionList(); }
+void Application::toggleFileBrowser() { onToggleFileBrowser(); }

@@ -6,14 +6,13 @@
 
 #include "common/NonCopyable.h"
 #include "common/Types.h"
+#include "ShortcutManager.h"
 #include <QObject>
 #include <QVector>
-#include "ShortcutManager.h"
-#include <string>
-#include <vector>
-#include <unordered_map>
-#include "ShortcutManager.h"
 #include <functional>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 class ScintillaEditor;
 class Application;
@@ -119,6 +118,8 @@ public:
     // Expose all registered commands for shortcut mapper
     struct CommandEntry { int id; std::string name; };
     QVector<CommandEntry> getAllCommands() const;
+    QString getShortcut(const QString& name) const;
+    void setShortcut(const QString& name, const QString& shortcut);
 
 Q_SIGNALS:
     void allShortcutsChanged();
@@ -129,6 +130,7 @@ private:
         std::function<void(ScintillaEditor*)> action;
     };
     std::unordered_map<int, CommandInfo> _commands;
+    std::unordered_map<std::string, QString> _shortcuts;  // command name → shortcut string
     std::unordered_map<std::string, int> _nameToId;
     std::unordered_map<std::string, int> _keyBindings;
 };

@@ -5,6 +5,9 @@
 #pragma once
 
 #include "Constants.h"
+#include "Types.h"
+#include <QString>
+#include <QStringList>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -70,12 +73,23 @@ public:
     void set(const std::string& section, const std::string& key, const std::string& val);
     void set(const std::string& section, const std::string& key, int val);
     void set(const std::string& section, const std::string& key, bool val);
+    // QString overload — converts to UTF-8
+    void set(const std::string& section, const std::string& key, const QString& val);
+    // String list — stored as comma-separated values
+    QStringList getStringList(const std::string& section, const std::string& key,
+                              const QStringList& defaultVal = {}) const;
+    void setStringList(const std::string& section, const std::string& key,
+                       const QStringList& val);
     bool hasSection(const std::string& section) const;
     void removeSection(const std::string& section);
     const std::vector<std::string>& sections() const { return _sections; }
 
 private:
+    int findKey(const std::string& section, const std::string& key) const;
+
+private:
     std::vector<std::string> _sections;
+    // Each entry: (section, key) -> value  [no separator needed]
     std::vector<std::pair<std::string, std::string>> _lines;
     std::string _path;
 };
@@ -239,3 +253,34 @@ int compareVersion(const std::string& a, const std::string& b);
 // Random
 // ============================================================================
 std::string generateRandomString(size_t length);
+
+// ============================================================================
+// Duration formatting
+// ============================================================================
+QString formatDuration(int64_t milliseconds);
+
+// ============================================================================
+// System utilities
+// ============================================================================
+int64_t getSystemUptime();  // seconds since boot
+QString getDesktopEnvironment();  // "KDE", "GNOME", "XFCE", etc.
+
+// ============================================================================
+// Application launching
+// ============================================================================
+bool launchApplication(const QString& app, const QStringList& args, QString& error);
+
+// ============================================================================
+// File comparison
+// ============================================================================
+bool compareFiles(const QString& a, const QString& b);  // content equality
+
+// ============================================================================
+// File name validation
+// ============================================================================
+bool isValidFileName(const QString& name);
+
+// ============================================================================
+// EOL normalization
+// ============================================================================
+QString normalizeEOL(const QString& text, EolType eol);

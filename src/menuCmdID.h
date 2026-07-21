@@ -1,0 +1,257 @@
+// menuCmdID.h - Menu command IDs for Notepad++
+#pragma once
+
+// IDM_* command IDs - main menu commands
+constexpr int IDM_FILE = 40000;
+constexpr int IDM_NEW = 40001;
+constexpr int IDM_OPEN = 40002;
+constexpr int IDM_CLOSE = 40003;
+constexpr int IDM_CLOSEALL = 40004;
+constexpr int IDM_SAVE = 40005;
+constexpr int IDM_SAVEAS = 40006;
+constexpr int IDM_SAVEALL = 40007;
+constexpr int IDM_CLOSEALLBUTTHIS = 40008;
+constexpr int IDM_CLOSEALL_TOLEFT = 40009;
+constexpr int IDM_CLOSEALL_TORIGHT = 40010;
+constexpr int IDM_PRINT = 40011;
+constexpr int IDM_PRINTNOW = 40012;
+constexpr int IDM_EXIT = 40013;
+constexpr int IDM_LOADSESSION = 40014;
+constexpr int IDM_SAVESESSION = 40015;
+constexpr int IDM_RELOAD = 40016;
+constexpr int IDM_SAVEACOPY = 40017;
+constexpr int IDM_DELETE = 40018;
+constexpr int IDM_RENAME = 40019;
+constexpr int IDM_OPENASFILE = 40020;
+constexpr int IDM_OPENFOLDER = 40021;
+constexpr int IDM_OPENDIR = 40022;
+constexpr int IDM_OPENCMD = 40023;
+constexpr int IDM_OPENPOWERSHELL = 40024;
+constexpr int IDM_OPEN_CYGWIN = 40025;
+constexpr int IDM_TRASH = 40026;
+constexpr int IDM_RESTARTASADMIN = 40027;
+constexpr int IDM_LAUNCH = 40028;
+constexpr int IDM_RESTART = 40029;
+
+// Edit commands
+constexpr int IDM_EDIT = 41000;
+constexpr int IDM_UNDO = 41001;
+constexpr int IDM_REDO = 41002;
+constexpr int IDM_CUT = 41003;
+constexpr int IDM_COPY = 41004;
+constexpr int IDM_PASTE = 41005;
+constexpr int IDM_SELECTALL = 41006;
+constexpr int IDM_BEGINSELECT = 41007;
+constexpr int IDM_SWAP = 41008;
+constexpr int IDM_PASTE_AS_HTML = 41009;
+constexpr int IDM_PASTE_BINARY = 41010;
+constexpr int IDM_DELETE_LINE = 41011;
+constexpr int IDM_DELETE_LINES = 41012;
+constexpr int IDM_JOIN_LINES = 41013;
+constexpr int IDM_SPLIT_LINES = 41014;
+constexpr int IDM_UPPERCASE = 41015;
+constexpr int IDM_LOWERCASE = 41016;
+constexpr int IDM_PROPERCASE = 41017;
+constexpr int IDM_SENTENCECASE = 41018;
+constexpr int IDM_INVERTCASE = 41019;
+constexpr int IDM_RANDOMCASE = 41020;
+constexpr int IDM_EXPAND_TAB = 41021;
+constexpr int IDM_UNEXPAND_TAB = 41022;
+constexpr int IDM_TAB_TO_SPACE = 41023;
+constexpr int IDM_SPACE_TO_TAB = 41024;
+constexpr int IDM_TRIMTRAILING = 41025;
+constexpr int IDM_TRIMLEADING = 41026;
+constexpr int IDM_TRIMBOTH = 41027;
+constexpr int IDM_EOL_DOS = 41028;
+constexpr int IDM_EOL_UNIX = 41029;
+constexpr int IDM_EOL_MAC = 41030;
+constexpr int IDM_UTF8 = 41031;
+constexpr int IDM_UTF8_BOM = 41032;
+constexpr int IDM_ANSI = 41033;
+constexpr int IDM_CONV_ASCII = 41034;
+constexpr int IDM_CONV_ANSI = 41035;
+constexpr int IDM_CONV_UTF8 = 41036;
+constexpr int IDM_CONV_UTF8_BOM = 41037;
+constexpr int IDM_CONV_UTF16_LE = 41038;
+constexpr int IDM_CONV_UTF16_BE = 41039;
+constexpr int IDM_CONV_UTF16_BE_BOM = 41040;
+
+// Search commands
+constexpr int IDM_SEARCH = 42000;
+constexpr int IDM_FIND = 42001;
+constexpr int IDM_REPLACE = 42002;
+constexpr int IDM_FINDNEXT = 42003;
+constexpr int IDM_FINDPREV = 42004;
+constexpr int IDM_FINDINCREMENT = 42005;
+constexpr int IDM_FINDCHAR = 42006;
+constexpr int IDM_GOTO = 42007;
+constexpr int IDM_MARK = 42008;
+constexpr int IDM_MARKALL = 42009;
+constexpr int IDM_UNMARKALL = 42010;
+constexpr int IDM_MARKONE = 42011;
+constexpr int IDM_NEXT_MARK = 42012;
+constexpr int IDM_PREV_MARK = 42013;
+constexpr int IDM_FINDMARKALL = 42014;
+constexpr int IDM_FINDREGEXP = 42015;
+constexpr int IDM_FINDINFILES = 42016;
+constexpr int IDM_FINDINPROJECTS = 42017;
+constexpr int IDM_TAB_SPACE = 42018;
+
+// View commands
+constexpr int IDM_VIEW = 43000;
+constexpr int IDM_TAB1 = 43001;
+constexpr int IDM_TAB2 = 43002;
+constexpr int IDM_TAB3 = 43003;
+constexpr int IDM_TAB4 = 43004;
+constexpr int IDM_TAB5 = 43005;
+constexpr int IDM_TAB6 = 43006;
+constexpr int IDM_TAB7 = 43007;
+constexpr int IDM_TAB8 = 43008;
+constexpr int IDM_TAB9 = 43009;
+constexpr int IDM_TAB_NEXT = 43010;
+constexpr int IDM_TAB_PREV = 43011;
+constexpr int IDM_LAST_TAB = 43012;
+constexpr int IDM_TOGGLE_FOLDALL = 43013;
+constexpr int IDM_FOLD_1 = 43014;
+constexpr int IDM_FOLD_2 = 43015;
+constexpr int IDM_FOLD_3 = 43016;
+constexpr int IDM_FOLD_4 = 43017;
+constexpr int IDM_FOLD_5 = 43018;
+constexpr int IDM_FOLD_6 = 43019;
+constexpr int IDM_FOLD_7 = 43020;
+constexpr int IDM_FOLD_8 = 43021;
+constexpr int IDM_UNFOLD_1 = 43022;
+constexpr int IDM_UNFOLD_2 = 43023;
+constexpr int IDM_UNFOLD_3 = 43024;
+constexpr int IDM_UNFOLD_4 = 43025;
+constexpr int IDM_UNFOLD_5 = 43026;
+constexpr int IDM_UNFOLD_6 = 43027;
+constexpr int IDM_UNFOLD_7 = 43028;
+constexpr int IDM_UNFOLD_8 = 43029;
+constexpr int IDM_FOLD_CURRENT = 43030;
+constexpr int IDM_UNFOLD_CURRENT = 43031;
+constexpr int IDM_SYNSCROLLV = 43032;
+constexpr int IDM_SYNSCROLLH = 43033;
+constexpr int IDM_ZOOMIN = 43034;
+constexpr int IDM_ZOOMOUT = 43035;
+constexpr int IDM_ZOOMRESTORE = 43036;
+constexpr int IDM_VIEW_DOC_MAP = 43037;
+constexpr int IDM_VIEW_DOC_LIST = 43038;
+constexpr int IDM_VIEW_FUNC_LIST = 43039;
+constexpr int IDM_VIEW_FILE_BROWSER = 43040;
+constexpr int IDM_VIEW_PROJECT_PANEL = 43041;
+constexpr int IDM_VIEW_FOLDER_AS_WORKSPACE = 43042;
+constexpr int IDM_VIEW_MONITORING = 43043;
+constexpr int IDM_VIEW_SYMBOL = 43044;
+constexpr int IDM_VIEW_TAB_SPACE = 43045;
+constexpr int IDM_VIEW_EOL = 43046;
+constexpr int IDM_VIEW_WRAP = 43047;
+constexpr int IDM_VIEW_ALL_CHAR = 43048;
+constexpr int IDM_VIEW_INDENT_GUIDE = 43049;
+constexpr int IDM_VIEW_LINE_NUMBER = 43050;
+constexpr int IDM_VIEW_SYMBOLMARGIN = 43051;
+constexpr int IDM_VIEW_FOLDERMAGIN = 43052;
+constexpr int IDM_VIEW_DROPDOWN = 43053;
+constexpr int IDM_VIEW_SUMMARY = 43054;
+constexpr int IDM_VIEW_PROJECT = 43055;
+constexpr int IDM_VIEW_CLONE = 43056;
+constexpr int IDM_VIEW_SWITCH_VIEW = 43057;
+constexpr int IDM_VIEW_HIDELINES = 43058;
+constexpr int IDM_VIEW_FOLDING = 43059;
+
+// Encoding commands
+constexpr int IDM_ENCODING = 44000;
+constexpr int IDM_CONV2_ANSI = 44001;
+constexpr int IDM_CONV2_UTF8 = 44002;
+constexpr int IDM_CONV2_UTF8_BOM = 44003;
+constexpr int IDM_CONV2_UCS2BE = 44004;
+constexpr int IDM_CONV2_UCS2LE = 44005;
+constexpr int IDM_CONV2_UTF16BE = 44006;
+constexpr int IDM_CONV2_UTF16LE = 44007;
+
+// Language commands
+constexpr int IDM_LANGUAGE = 45000;
+constexpr int IDM_LANG_C = 45001;
+constexpr int IDM_LANG_CPP = 45002;
+constexpr int IDM_LANG_JAVA = 45003;
+constexpr int IDM_LANG_HTML = 45004;
+constexpr int IDM_LANG_XML = 45005;
+constexpr int IDM_LANG_JS = 45006;
+constexpr int IDM_LANG_PHP = 45007;
+constexpr int IDM_LANG_PYTHON = 45008;
+constexpr int IDM_LANG_PERL = 45009;
+constexpr int IDM_LANG_RUBY = 45010;
+constexpr int IDM_LANG_LUA = 45011;
+constexpr int IDM_LANG_CSS = 45012;
+constexpr int IDM_LANG_SQL = 45013;
+constexpr int IDM_LANG_PASCAL = 45014;
+constexpr int IDM_LANG_BATCH = 45015;
+constexpr int IDM_LANG_MARKDOWN = 45016;
+constexpr int IDM_LANG_JSON = 45017;
+constexpr int IDM_LANG_YAML = 45018;
+constexpr int IDM_LANG_TOML = 45019;
+constexpr int IDM_LANG_GOLANG = 45020;
+constexpr int IDM_LANG_RUST = 45021;
+constexpr int IDM_LANG_Typescript = 45022;
+constexpr int IDM_LANG_POWERSHELL = 45023;
+constexpr int IDM_LANG_D = 45024;
+constexpr int IDM_LANG_R = 45025;
+constexpr int IDM_LANG_SWIFT = 45026;
+constexpr int IDM_LANG_KOTLIN = 45027;
+constexpr int IDM_LANG_NIM = 45028;
+constexpr int IDM_LANG_CMAKE = 45029;
+constexpr int IDM_LANG_DOCKER = 45030;
+
+// Settings commands
+constexpr int IDM_SETTING = 46000;
+constexpr int IDM_PREFS = 46001;
+constexpr int IDM_SHORTCUT_MAPPER = 46002;
+constexpr int IDM_RUN_LAUNCH = 46003;
+constexpr int IDM_EDITCONTEXTMENU = 46004;
+constexpr int IDM_EDITAPPLY = 46005;
+constexpr int IDM_EDITCLEAR = 46006;
+constexpr int IDM_EDITCLEARALL = 46007;
+constexpr int IDM_REFORMAT = 46008;
+constexpr int IDM_SETTING_SHORTCUT_MACRO = 46009;
+constexpr int IDM_SETTING_EDITCONTEXTMENU = 46010;
+constexpr int IDM_SETTING_IMPORTPLUGIN = 46011;
+constexpr int IDM_SETTING_IMPORTTHEME = 46012;
+constexpr int IDM_SETTING_EXPORTTHEME = 46013;
+
+// Macro commands
+constexpr int IDM_MACRO = 47000;
+constexpr int IDM_MACRO_START_RECORD = 47001;
+constexpr int IDM_MACRO_STOP_RECORD = 47002;
+constexpr int IDM_MACRO_PLAYBACK = 47003;
+constexpr int IDM_MACRO_SAVE = 47004;
+constexpr int IDM_MACRO_RUN = 47005;
+
+// Run commands
+constexpr int IDM_RUN = 48000;
+constexpr int IDM_RUN_OPEN = 48001;
+constexpr int IDM_LAUNCH_IN_BROWSER = 48002;
+constexpr int IDM_LAUNCH_IN_BROWSER_EDGE = 48003;
+constexpr int IDM_LAUNCH_IN_BROWSER_CHROME = 48004;
+constexpr int IDM_LAUNCH_IN_BROWSER_FIREFOX = 48005;
+constexpr int IDM_LAUNCH_IN_BROWSER_OPERA = 48006;
+constexpr int IDM_LAUNCH_IN_BROWSER_IE = 48007;
+constexpr int IDM_OPENINCMD = 48008;
+constexpr int IDM_OPENINPOWERSHELL = 48009;
+constexpr int IDM_OPENSYSTEMINFO = 48010;
+constexpr int IDM_WIKISEND = 48011;
+constexpr int IDM_DEBUGGER_COMPILE = 48012;
+constexpr int IDM_DEBUGGER_RUN = 48013;
+constexpr int IDM_PLUGIN_COMMANDS = 48014;
+
+// Window commands
+constexpr int IDM_WINDOW = 49000;
+constexpr int IDM_WINDOWS_DLG = 49001;
+constexpr int IDM_SYNC_H = 49002;
+constexpr int IDM_SYNC_V = 49003;
+constexpr int IDM_FINDSEL = 49004;
+constexpr int IDM_CLONE_TO_OTHER_VIEW = 49005;
+constexpr int IDM_GOTO_NEW_INSTANCE = 49006;
+constexpr int IDM_LOAD_IN_NEW_INSTANCE = 49007;
+
+// Plugin commands start at 49010
+constexpr int IDM_PLUGIN_BASE = 49010;

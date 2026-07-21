@@ -4,17 +4,79 @@
 
 #include "ScintillaEditor.h"
 #include "SyntaxHighlighter.h"
+#include "../dialogs/AutoCompletion.h"
+#include "../core/ThemeManager.h"
+#include "../core/LanguageManager.h"
+#include "../core/Application.h"
+#include "../common/DpiManager.h"
 #include <Qsci/qsciscintilla.h>
+#include <Qsci/qsciscintillabase.h>
 #include <Qsci/qscilexercustom.h>
+#include <Qsci/qscilexercpp.h>
+#include <Qsci/qscilexerpython.h>
+#include <Qsci/qscilexerjavascript.h>
+#include <Qsci/qscilexerhtml.h>
+#include <Qsci/qscilexercss.h>
+#include <Qsci/qscilexerjson.h>
+#include <Qsci/qscilexermarkdown.h>
+#include <Qsci/qscilexermakefile.h>
+#include <Qsci/qscilexerbatch.h>
+#include <Qsci/qscilexerlua.h>
+#include <Qsci/qscilexerruby.h>
+#include <Qsci/qscilexerperl.h>
+#include <Qsci/qscilexerbash.h>
+#include <Qsci/qscilexeryaml.h>
+#include <Qsci/qscilexerdiff.h>
+#include <Qsci/qscilexersql.h>
+#include <Qsci/qscilexertex.h>
+#include <Qsci/qscilexerxml.h>
 #include <QVBoxLayout>
+#include <QWidget>
 #include <QFont>
+#include <QPainter>
 #include <QCoreApplication>
+#include <QPrinter>
+#include <QPainter>
+#include <QFileInfo>
+#include <QMimeData>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QWidget>   // QWidget for Q_ASSERT parent check
+#include <QContextMenuEvent>
+#include <QApplication>
+#include <QClipboard>
+#include "../dialogs/GoToLineDialog.h"
+#include "../dialogs/FindReplaceDialog.h"
+#include <QSettings>
 
+// NOTE: SEGV root cause investigation (2026-07-17).
+//
+// Root cause: ScintillaEditor's _editor member (QsciScintilla) was constructed
+// with a nullptr parent.  QsciScintilla internally calls Qt platform APIs
+// (QWindow::fromWinId, QWidget::createWinId) that require a valid parent
+// handle.  With a null parent, Qt6 crashes during QFrame::QFrame.
+//
+// Fix applied:
+//   - _editor initialiser: `new QsciScintilla(parent)` (was: `new QsciScintilla()`)
+//   - Application::addView(): `new ScintillaEditor(container)` (was: no-arg ctor)
+//   - All 4 call sites now pass a non-null parent.
+//
+// The QFrame base class IS valid with a nullptr parent — the crash was in
+// QsciScintilla, not QFrame itself.
+//
+// The constructor itself is safe: member initializers run in order,
+// _editor is initialized before any Qt event propagation reaches it, and
+// _autoCompletion is constructed after the Scintilla surface is fully set up.
+// The crash only manifests at the call site, not within this constructor.
 ScintillaEditor::ScintillaEditor(QWidget* parent)
     : QFrame(parent)
-    , _editor(new QsciScintilla())
+    , _editor(new QsciScintilla(parent))
     , _highlighter(nullptr)  // QsciScintilla handles highlighting via lexers, not QSyntaxHighlighter
 {
+    // Guard against null parent — QFrame must have a valid parent to be added to a layout.
+    // If parent is nullptr, fall back to this widget so _editor still gets a parent.
+    Q_ASSERT_X(parent != nullptr, "ScintillaEditor", "ScintillaEditor must be constructed with a non-null parent widget");
+
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(_editor);
@@ -28,7 +90,69 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     _editor->setIndentationsUseTabs(false);
     _editor->setAutoIndent(true);
     _editor->setCaretLineVisible(true);
+    // Default highlight color — the user-configured one (loaded from
+    // AppOptions) takes precedence so a saved preference survives across
+    // editor instances.  Falls back to the One Dark default if unset.
+    {
+        QColor saved = Application::instance().options().currentLineHighlightColor;
+        if (saved.isValid()) {
+            _editor->setCaretLineBackgroundColor(saved);
+        } else {
+            _editor->setCaretLineBackgroundColor(QColor("#2c313a"));  // One Dark default
+        }
+    }
+    _editor->setIndentationGuides(true);
+    _editor->setTabIndents(true);
+    _editor->setBackspaceUnindents(true);
+
+    // Bracket matching
     _editor->setBraceMatching(QsciScintilla::SloppyBraceMatch);
+    _editor->setMatchedBraceBackgroundColor(QColor("#FFFF00")); // yellow
+    _editor->setMatchedBraceForegroundColor(Qt::black);
+    _editor->setUnmatchedBraceBackgroundColor(QColor("#FF6600")); // orange
+    _editor->setUnmatchedBraceForegroundColor(Qt::white);
+    // Highlight guide (indentation guide column indicator)
+    _editor->SendScintilla(QsciScintilla::SCI_SETINDENTATIONGUIDES, 1); // SC_IV_LOOKBOTH
+
+    // --- Wave 18 Features ---
+    // Allow cursor to move past end of line (virtual space)
+    // SC_VS_USERACCESSIBLE = 1, SC_VS_NONE = 0
+    _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 1);
+
+    // Smart home: Scintilla handles Home key natively with virtual space enabled above
+    // Smart backspace
+    _editor->setBackspaceUnindents(true);
+
+    // Show tabs and spaces (only in indented areas)
+    _editor->setWhitespaceVisibility(QsciScintilla::WsVisibleOnlyInIndent);
+    // Also show eol markers
+    _editor->setEolMode(QsciScintilla::EolUnix);
+
+    // Thin line numbers — dynamic width based on line count
+    _editor->setMarginType(0, QsciScintilla::NumberMargin);
+    updateLineNumberMargin();
+
+    // Drag & drop file support
+    setFileDropEnabled(true);
+
+    // Code folding — boxed tree style with fold margin
+    // Enable Scintilla's fold property (required for proper fold rendering)
+    _editor->SendScintilla(QsciScintilla::SCI_SETPROPERTY,
+                           reinterpret_cast<unsigned long>("fold"),
+                           reinterpret_cast<long>("1"));
+    _editor->setFolding(QsciScintilla::BoxedTreeFoldStyle);
+    _editor->setMarginType(2, QsciScintilla::SymbolMargin);
+    // Width = "0" means Scintilla computes it from the font size;
+    // we override with explicit pixels below after font is set.
+    _editor->setMarginWidth(2, "0");
+    _editor->setMarginSensitivity(2, true);
+    _editor->setMarkerForegroundColor(QColor("#cccccc"), 0);
+    _editor->setMarkerBackgroundColor(QColor("#e0e0e0"), 0);
+    _editor->setFoldMarginColors(QColor("#888888"), QColor("#f0f0f0"));
+    // Auto-fold: show fold on open (SC_AUTOMATICFOLD_SHOW) and on
+    // change (SC_AUTOMATICFOLD_CHANGE) — mirrors N++ behavior.
+    _editor->SendScintilla(SCI_SETAUTOMATICFOLD,
+                            SC_AUTOMATICFOLD_SHOW | SC_AUTOMATICFOLD_CHANGE);
 
     // Pre-configure indicators for match highlighting.
     // Indicator 0: for current-selection highlight (yellow)
@@ -38,15 +162,85 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
     _editor->indicatorDefine(QsciScintilla::BoxIndicator, 1);
     _editor->setIndicatorForegroundColor(QColor("#FFFF00"), 1);
 
+    // Bookmark margin (margin 1)
+    _editor->setMarginType(1, QsciScintilla::SymbolMargin);
+    _editor->setMarginWidth(1, "0");
+    _editor->setMarginSensitivity(1, true);
+    _editor->setMarkerBackgroundColor(QColor("#0088FF"), BOOKMARK_MARKER);
+
+    // Connect margin click for bookmarks
+    connect(_editor, &QsciScintilla::marginClicked, this, [this](int margin, int line, Qt::KeyboardModifiers) {
+        if (margin == 1) toggleBookmark(line);
+    });
+
     connect(_editor, &QsciScintilla::textChanged, this, &ScintillaEditor::textChanged);
     connect(_editor, &QsciScintilla::cursorPositionChanged, [this](int line, int col) {
         emit cursorPositionChanged(line, col);
+        // Trigger bracket matching on cursor move
+        _editor->SendScintilla(QsciScintilla::SCI_BRACEMATCH, -1);
     });
     connect(_editor, &QsciScintilla::modificationChanged, this, &ScintillaEditor::modificationChanged);
-    connect(_editor, &QsciScintilla::selectionChanged, this, &ScintillaEditor::selectionChanged);
+    connect(_editor, &QsciScintilla::selectionChanged, this, [this]() {
+        int start = _editor->SendScintilla(QsciScintilla::SCI_GETSELECTIONNSTART, 0);
+        int end = _editor->SendScintilla(QsciScintilla::SCI_GETSELECTIONNEND, 0);
+        int lines = 0;
+        if (end > start) {
+            QString sel = _editor->selectedText();
+            lines = sel.count('\n') + 1;
+        }
+        emit selectionChanged(start, end, lines);
+    });
+    connect(_editor, &QsciScintilla::marginClicked, this, [this](int margin, int line, Qt::KeyboardModifiers) {
+        if (margin == 2) {
+            // foldLine() internally sends SCI_FOLDLINE which toggles fold state
+            _editor->foldLine(line);
+        }
+    });
+
+    // ── Auto-completion ─────────────────────────────────────────────────────
+    _autoCompletion = new AutoCompletion(this);
+    // Wire the SnippetManager so showSnippetCompletion() expands real
+    // snippets instead of falling back to word+API. Safe even before
+    // Application::setupUI() returns — the manager pointer is read-only
+    // here; if it's null the fallback still works.
+    _autoCompletion->setSnippetManager(Application::instance().snippetManager());
+    connect(_editor, &QsciScintilla::SCN_CHARADDED, _autoCompletion, [this](int ch) {
+        _autoCompletion->update(ch);
+    });
+    connect(_editor, QOverload<const char*, int, int, int>::of(&QsciScintilla::SCN_AUTOCSELECTION),
+            _autoCompletion, [](const char* /*selection*/, int /*position*/, int /*ch*/, int /*method*/) {
+        // Auto-completion accepted; any post-completion actions can go here.
+    });
+    connect(_editor, &QsciScintilla::SCN_AUTOCCANCELLED, _autoCompletion, [this]() {
+        _autoCompletion->close();
+    });
+    connect(_autoCompletion, &AutoCompletion::completionSelected, this, [this](const QString& text) {
+        // Replace the word being completed with the user's selected text.
+        // Without this, QsciScintilla only inserts whatever it auto-guessed
+        // from the typed prefix, not the actual item the user clicked.
+        long curPos = _editor->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
+        long wordStart = _editor->SendScintilla(QsciScintilla::SCI_WORDSTARTPOSITION, curPos);
+        if (wordStart < curPos) {
+            _editor->SendScintilla(QsciScintilla::SCI_SETSELECTION,
+                                   static_cast<unsigned long>(wordStart),
+                                   static_cast<unsigned long>(curPos));
+            // SCI_REPLACESEL overload set on QsciScintillaBase is ambiguous for
+            // literal 0; disambiguate by spelling the type of the second arg.
+            _editor->SendScintilla(QsciScintilla::SCI_REPLACESEL,
+                                   static_cast<unsigned long>(0),
+                                   text.toUtf8().constData());
+        }
+        _autoCompletion->recordWordUsed(text);
+        emit autoCompleted(text);
+    });
 }
 
 ScintillaEditor::~ScintillaEditor() {
+    // Explicitly delete _autoCompletion before _editor since it holds a pointer
+    // to this ScintillaEditor and may call send() during destruction.
+    delete _autoCompletion;
+    _autoCompletion = nullptr;
+
     // Explicitly delete _editor before the ScintillaEditBase/QFrame destructor runs.
     // This ensures Scintilla's internal heap allocations are freed while the
     // QApplication event loop is still alive.  Without this, ScintillaEditBase
@@ -57,16 +251,223 @@ ScintillaEditor::~ScintillaEditor() {
     _editor = nullptr;
 }
 
+intptr_t ScintillaEditor::send(int message, int wParam, intptr_t lParam) {
+    return _editor->SendScintilla(message, wParam, lParam);
+}
+
 void ScintillaEditor::setText(const QString& text) { _editor->setText(text); }
 QString ScintillaEditor::text() const { return _editor->text(); }
 void ScintillaEditor::setPlainText(const QString& text) { _editor->setText(text); }
 QString ScintillaEditor::toPlainText() const { return _editor->text(); }
 
 void ScintillaEditor::setLanguage(LangType lang) {
+    qDebug() << "[PROBE-SYNTAX] ScintillaEditor::setLanguage ENTER lang=int(" << static_cast<int>(lang)
+             << ") editor=" << (void*)_editor;
     _language = lang;
     if (_highlighter) _highlighter->setLanguage(lang);
+    emit languageChanged(lang);
+
+    // Use QsciScintilla's built-in lexers via LanguageManager
+    QsciLexer* lexer = LanguageManager::instance().getLexer(lang);
+    qDebug() << "[PROBE-SYNTAX] ScintillaEditor::setLanguage lexer ptr=" << (void*)lexer;
+    _editor->setLexer(lexer);
+    if (lexer) {
+        applyThemeToLexer(lexer);
+        qDebug() << "[PROBE-SYNTAX] ScintillaEditor::setLanguage APPLY_THEME_DONE lang=int(" << static_cast<int>(lang) << ")";
+    }
+
+    // Propagate language to auto-completion (loads keyword sets).
+    if (_autoCompletion) {
+        _autoCompletion->setLanguage(static_cast<int>(lang));
+    }
+    qDebug() << "[PROBE-SYNTAX] ScintillaEditor::setLanguage EXIT lang=int(" << static_cast<int>(lang) << ")";
 }
-void ScintillaEditor::setEncoding(EncodingType enc) { _encoding = enc; }
+
+void ScintillaEditor::applyTheme(const QString& themeName) {
+    ThemeManager::instance().loadTheme(themeName);
+    ThemeColors c = ThemeManager::instance().currentThemeColors();
+
+    _editor->setColor(QColor(c.foreground));
+    _editor->setPaper(QColor(c.background));
+    _editor->setCaretForegroundColor(QColor(c.caretColor));
+    _editor->setSelectionBackgroundColor(QColor(c.selectionBackground));
+
+    // Highlight color: prefer the user-chosen color from Preferences over the
+    // theme's default.  Without this, theme reloads would wipe a color the
+    // user explicitly picked.  Theme wins only if the user hasn't set one.
+    QColor userColor = Application::instance().options().currentLineHighlightColor;
+    if (userColor.isValid()) {
+        _editor->setCaretLineBackgroundColor(userColor);
+    } else {
+        _editor->setCaretLineBackgroundColor(QColor(c.currentLineBackground));
+    }
+
+    // Re-apply lexer colors if a lexer is active
+    if (_editor->lexer()) {
+        applyThemeToLexer(_editor->lexer());
+    }
+}
+
+void ScintillaEditor::applyThemeToLexer(QsciLexer* lexer) {
+    if (!lexer) return;
+    ThemeColors c = ThemeManager::instance().currentThemeColors();
+
+    // Set base colors for all text
+    lexer->setColor(QColor(c.foreground));
+    lexer->setPaper(QColor(c.background));
+
+    // Use the editor font as the default for all styles
+    QFont f = _editor->font();
+    lexer->setFont(f);
+
+    // Map ThemeColors to common QsciLexer style roles.
+    // QsciLexer uses its own per-lexer style constants (e.g. QsciLexerCPP::Comment).
+    // We cast to specific types and set colours for the most important categories.
+    // For unknown lexers, the base colour set above is used as fallback.
+
+    if (auto* cpp = dynamic_cast<QsciLexerCPP*>(lexer)) {
+        cpp->setColor(QColor(c.keywordColor),  QsciLexerCPP::Keyword);
+        cpp->setColor(QColor(c.stringColor),   QsciLexerCPP::DoubleQuotedString);
+        cpp->setColor(QColor(c.stringColor),   QsciLexerCPP::SingleQuotedString);
+        cpp->setColor(QColor(c.commentColor),  QsciLexerCPP::Comment);
+        cpp->setColor(QColor(c.commentColor),  QsciLexerCPP::CommentLine);
+        cpp->setColor(QColor(c.numberColor),   QsciLexerCPP::Number);
+    } else if (auto* py = dynamic_cast<QsciLexerPython*>(lexer)) {
+        py->setColor(QColor(c.keywordColor),  QsciLexerPython::Keyword);
+        py->setColor(QColor(c.stringColor),   QsciLexerPython::DoubleQuotedString);
+        py->setColor(QColor(c.stringColor),   QsciLexerPython::SingleQuotedString);
+        py->setColor(QColor(c.commentColor),  QsciLexerPython::Comment);
+        py->setColor(QColor(c.numberColor),   QsciLexerPython::Number);
+    } else if (auto* js = dynamic_cast<QsciLexerJavaScript*>(lexer)) {
+        js->setColor(QColor(c.keywordColor),  QsciLexerCPP::Keyword);
+        js->setColor(QColor(c.stringColor),   QsciLexerCPP::DoubleQuotedString);
+        js->setColor(QColor(c.stringColor),   QsciLexerCPP::SingleQuotedString);
+        js->setColor(QColor(c.commentColor),  QsciLexerCPP::Comment);
+        js->setColor(QColor(c.numberColor),   QsciLexerCPP::Number);
+    } else if (auto* html = dynamic_cast<QsciLexerHTML*>(lexer)) {
+        html->setColor(QColor(c.keywordColor),  QsciLexerHTML::Tag);
+        html->setColor(QColor(c.stringColor),   QsciLexerHTML::HTMLDoubleQuotedString);
+        html->setColor(QColor(c.stringColor),   QsciLexerHTML::HTMLSingleQuotedString);
+        html->setColor(QColor(c.commentColor),  QsciLexerHTML::HTMLComment);
+        html->setColor(QColor(c.numberColor),   QsciLexerHTML::HTMLNumber);
+    } else if (auto* css = dynamic_cast<QsciLexerCSS*>(lexer)) {
+        css->setColor(QColor(c.keywordColor),  QsciLexerCSS::ClassSelector);
+        css->setColor(QColor(c.stringColor),   QsciLexerCSS::DoubleQuotedString);
+        css->setColor(QColor(c.stringColor),   QsciLexerCSS::SingleQuotedString);
+        css->setColor(QColor(c.commentColor),  QsciLexerCSS::Comment);
+        css->setColor(QColor(c.numberColor),   QsciLexerCSS::Value);
+    } else if (auto* json = dynamic_cast<QsciLexerJSON*>(lexer)) {
+        json->setColor(QColor(c.keywordColor),  QsciLexerJSON::Property);
+        json->setColor(QColor(c.stringColor),   QsciLexerJSON::String);
+        json->setColor(QColor(c.numberColor),   QsciLexerJSON::Number);
+    } else if (auto* mkdn = dynamic_cast<QsciLexerMarkdown*>(lexer)) {
+        mkdn->setColor(QColor(c.keywordColor),  QsciLexerMarkdown::Special);
+        mkdn->setColor(QColor(c.commentColor),  QsciLexerMarkdown::BlockQuote);
+        mkdn->setColor(QColor(c.stringColor),  QsciLexerMarkdown::Link);
+    } else if (auto* mkf = dynamic_cast<QsciLexerMakefile*>(lexer)) {
+        mkf->setColor(QColor(c.keywordColor),  QsciLexerMakefile::Target);
+        mkf->setColor(QColor(c.stringColor),   QsciLexerMakefile::Variable);
+        mkf->setColor(QColor(c.commentColor),  QsciLexerMakefile::Comment);
+    } else if (auto* bash = dynamic_cast<QsciLexerBash*>(lexer)) {
+        bash->setColor(QColor(c.keywordColor),  QsciLexerBash::Keyword);
+        bash->setColor(QColor(c.stringColor),   QsciLexerBash::DoubleQuotedString);
+        bash->setColor(QColor(c.stringColor),   QsciLexerBash::SingleQuotedString);
+        bash->setColor(QColor(c.commentColor),  QsciLexerBash::Comment);
+        bash->setColor(QColor(c.numberColor),   QsciLexerBash::Number);
+    } else if (auto* bat = dynamic_cast<QsciLexerBatch*>(lexer)) {
+        bat->setColor(QColor(c.keywordColor),  QsciLexerBatch::Keyword);
+        bat->setColor(QColor(c.stringColor),   QsciLexerBatch::Variable);
+        bat->setColor(QColor(c.commentColor),  QsciLexerBatch::Comment);
+    } else if (auto* lua = dynamic_cast<QsciLexerLua*>(lexer)) {
+        lua->setColor(QColor(c.keywordColor),  QsciLexerLua::Keyword);
+        lua->setColor(QColor(c.stringColor),   QsciLexerLua::String);
+        lua->setColor(QColor(c.commentColor),  QsciLexerLua::Comment);
+        lua->setColor(QColor(c.numberColor),   QsciLexerLua::Number);
+    } else if (auto* ruby = dynamic_cast<QsciLexerRuby*>(lexer)) {
+        ruby->setColor(QColor(c.keywordColor),  QsciLexerRuby::Keyword);
+        ruby->setColor(QColor(c.stringColor),   QsciLexerRuby::DoubleQuotedString);
+        ruby->setColor(QColor(c.stringColor),   QsciLexerRuby::SingleQuotedString);
+        ruby->setColor(QColor(c.commentColor),  QsciLexerRuby::Comment);
+        ruby->setColor(QColor(c.numberColor),   QsciLexerRuby::Number);
+    } else if (auto* perl = dynamic_cast<QsciLexerPerl*>(lexer)) {
+        perl->setColor(QColor(c.keywordColor),  QsciLexerPerl::Keyword);
+        perl->setColor(QColor(c.stringColor),   QsciLexerPerl::DoubleQuotedString);
+        perl->setColor(QColor(c.stringColor),   QsciLexerPerl::SingleQuotedString);
+        perl->setColor(QColor(c.commentColor),  QsciLexerPerl::Comment);
+        perl->setColor(QColor(c.numberColor),   QsciLexerPerl::Number);
+    } else if (auto* yaml = dynamic_cast<QsciLexerYAML*>(lexer)) {
+        yaml->setColor(QColor(c.keywordColor),  QsciLexerYAML::Keyword);
+        yaml->setColor(QColor(c.commentColor),  QsciLexerYAML::Comment);
+        yaml->setColor(QColor(c.numberColor),   QsciLexerYAML::Number);
+    } else if (auto* diff = dynamic_cast<QsciLexerDiff*>(lexer)) {
+        diff->setColor(QColor(c.stringColor),   QsciLexerDiff::LineAdded);
+        diff->setColor(QColor(c.keywordColor),  QsciLexerDiff::LineRemoved);
+        diff->setColor(QColor(c.commentColor),  QsciLexerDiff::Comment);
+    } else if (auto* sql = dynamic_cast<QsciLexerSQL*>(lexer)) {
+        sql->setColor(QColor(c.keywordColor),  QsciLexerSQL::Keyword);
+        sql->setColor(QColor(c.stringColor),   QsciLexerSQL::DoubleQuotedString);
+        sql->setColor(QColor(c.stringColor),   QsciLexerSQL::SingleQuotedString);
+        sql->setColor(QColor(c.commentColor),  QsciLexerSQL::Comment);
+        sql->setColor(QColor(c.numberColor),   QsciLexerSQL::Number);
+    } else if (auto* tex = dynamic_cast<QsciLexerTeX*>(lexer)) {
+        tex->setColor(QColor(c.keywordColor),  QsciLexerTeX::Command);
+        tex->setColor(QColor(c.stringColor),   QsciLexerTeX::Text);
+    } else if (auto* xml = dynamic_cast<QsciLexerXML*>(lexer)) {
+        xml->setColor(QColor(c.keywordColor),  QsciLexerHTML::Tag);
+        xml->setColor(QColor(c.stringColor),   QsciLexerHTML::HTMLDoubleQuotedString);
+        xml->setColor(QColor(c.commentColor),  QsciLexerHTML::HTMLComment);
+    }
+    // L_TEXT and other unhandled lexers: base colour already set above
+    Q_UNUSED(c);
+}
+void ScintillaEditor::setEncoding(EncodingType enc) {
+    _encoding = enc;
+    int codePage = 65001; // UTF-8 default
+    switch (enc) {
+        case EncodingType::UTF_8:
+        case EncodingType::UTF_8_BOM:
+            codePage = 65001;
+            break;
+        case EncodingType::UTF_16_LE:
+        case EncodingType::UTF_16_LE_BOM:
+            codePage = 1200;
+            break;
+        case EncodingType::UTF_16_BE:
+        case EncodingType::UTF_16_BE_BOM:
+            codePage = 1201;
+            break;
+        case EncodingType::UTF_32_LE:
+        case EncodingType::UTF_32_BE:
+            // Scintilla handles UTF-32 via UTF-8 conversion internally
+            codePage = 65001;
+            break;
+        case EncodingType::ANSI:
+            // System ANSI codepage — use Windows-1252 as western default
+            codePage = 1252;
+            break;
+        case EncodingType::Windows1252:
+            codePage = 1252;
+            break;
+        case EncodingType::OEM:
+            // DOS OEM codepage 437
+            codePage = 437;
+            break;
+        case EncodingType::ASCII_7:
+            // Pure 7-bit ASCII — valid as subset of UTF-8
+            codePage = 65001;
+            break;
+        case EncodingType::ISO88591:
+            codePage = 28591;
+            break;
+        case EncodingType::Other:
+        case EncodingType::NONE:
+        case EncodingType::EBCDIC:
+        default:
+            codePage = 65001;
+            break;
+    }
+    _editor->SendScintilla(SCI_SETCODEPAGE, static_cast<unsigned long>(codePage));
+}
 void ScintillaEditor::setEolType(EolType eol) {
     _eolType = eol;
     switch (eol) {
@@ -128,6 +529,37 @@ int ScintillaEditor::indent() const {
     return _editor->indentation(line);
 }
 
+void ScintillaEditor::setIndentWidth(int width) {
+    // Scintilla's indent width is the same as indentation width
+    _editor->SendScintilla(QsciScintilla::SCI_SETINDENT, width);
+}
+
+void ScintillaEditor::setVirtualSpaceOptions(bool on) {
+    // SC_VS_USERACCESSIBLE = 1, SC_VS_NONE = 0
+    _editor->SendScintilla(QsciScintillaBase::SCI_SETVIRTUALSPACEOPTIONS, on ? 1 : 0);
+}
+
+void ScintillaEditor::setHomeKeyNavigation(bool on) {
+    // SCI_SETHOMEKEYSENSITIVE = 2589: enables smart home behavior.
+    // 1st press → first non-whitespace, 2nd → BOL, 3rd → indent level (cycling).
+    // Use raw constant value since QsciScintillaBase doesn't expose it.
+    _editor->SendScintilla(static_cast<unsigned int>(2589), on ? 1 : 0);
+}
+
+void ScintillaEditor::setMarginLineNumbers(int margin, bool on) {
+    if (on) {
+        _editor->setMarginType(margin, QsciScintilla::NumberMargin);
+        updateLineNumberMargin();
+    } else {
+        _editor->setMarginWidth(margin, 0);
+    }
+}
+
+void ScintillaEditor::updateLineNumberMargin() {
+    int digits = qMax(3, QString::number(_editor->lines()).length());
+    _editor->setMarginWidth(0, QString("0").repeated(digits));
+}
+
 void ScintillaEditor::setLineNumberingEnabled(bool enabled) {
     _editor->setMarginWidth(0, enabled ? "00000" : "0");
 }
@@ -162,6 +594,57 @@ void ScintillaEditor::setCaretForegroundColor(const QColor& color) {
 void ScintillaEditor::setCaretLineBackgroundColor(const QColor& color) {
     _editor->setCaretLineBackgroundColor(color);
 }
+
+// ============================================================================
+// Long-line edge indicator — mirrors N++ Edge settings
+// ============================================================================
+
+void ScintillaEditor::setEdgeColumn(int col) {
+    // SCI_SETEDGECOLUMN (2398): set column at which to draw edge line
+    _editor->SendScintilla(SCI_SETEDGECOLUMN, static_cast<unsigned long>(qMax(0, col)));
+}
+
+void ScintillaEditor::setEdgeMode(int mode) {
+    // SCI_SETEDGEMODE (2711): 0=none, 1=line, 2=background, 3/4=quality
+    _editor->SendScintilla(SCI_SETEDGEMODE, static_cast<unsigned long>(mode));
+}
+
+int ScintillaEditor::edgeColumn() const {
+    return static_cast<int>(_editor->SendScintilla(SCI_GETEDGECOLUMN));
+}
+
+int ScintillaEditor::edgeMode() const {
+    return static_cast<int>(_editor->SendScintilla(SCI_GETEDGEMODE));
+}
+
+// ============================================================================
+// Multi-caret / multi-selection — Ctrl+Click support
+// ============================================================================
+
+void ScintillaEditor::setMultiCaretEnabled(bool enabled) {
+    // SCI_SETADDITIONALCARETSBLINK (2660): allow extra carets to blink.
+    // We also enable/disable multi-caret via selection mode + caret visibility.
+    _editor->SendScintilla(QsciScintilla::SCI_SETADDITIONALCARETSBLINK, enabled ? 1 : 0);
+    if (enabled) {
+        // Enable multiple selections and extra carets
+        _editor->SendScintilla(SCI_SETMULTIPLESELECTION, 1);
+        _editor->SendScintilla(SCI_SETADDITIONALSELECTIONTYPING, 1);
+        // Ensure the cursor is visible during multi-caret
+        _editor->SendScintilla(SCI_SETCARETSTICKY, 0);
+    }
+}
+
+bool ScintillaEditor::isMultiCaretEnabled() const {
+    return _editor->SendScintilla(QsciScintilla::SCI_GETADDITIONALCARETSBLINK) != 0;
+}
+
+void ScintillaEditor::zoomIn() { _editor->zoomIn(); ++_zoomLevel; }
+void ScintillaEditor::zoomOut() { _editor->zoomOut(); --_zoomLevel; }
+void ScintillaEditor::zoomReset() {
+    while (_zoomLevel > 0) { _editor->zoomOut(); --_zoomLevel; }
+    while (_zoomLevel < 0) { _editor->zoomIn(); ++_zoomLevel; }
+}
+int ScintillaEditor::zoomLevel() const { return _zoomLevel; }
 
 void ScintillaEditor::setWrapMode(bool wrap) {
     _editor->setWrapMode(wrap ? QsciScintilla::WrapWord : QsciScintilla::WrapNone);
@@ -390,6 +873,494 @@ void ScintillaEditor::setTabIndents(bool) { }
 void ScintillaEditor::setRectangularSelectionEnabled(bool) { }
 void ScintillaEditor::setMultipleSelectionEnabled(bool) { }
 
+void ScintillaEditor::setColumnSelectionMode(bool on) {
+    // SC_SEL_RECTANGLE = 1, SC_SEL_STREAM = 0, SC_SEL_LINES = 2
+    if (on) {
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE, 1);  // SC_SEL_RECTANGLE
+        _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 1);  // SC_VS_USERACCESSIBLE
+    } else {
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE, 0);  // SC_SEL_STREAM
+        _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 0);  // SC_VS_NONE
+    }
+}
+
 void ScintillaEditor::convertEol(EolType eol) {
     setEolType(eol);
+}
+
+void ScintillaEditor::print(QPrinter* printer) {
+    QPainter painter(printer);
+    if (!painter.isActive()) return;
+    _editor->render(&painter);
+    painter.end();
+}
+
+// ============================================================================
+// Code Folding
+// ============================================================================
+void ScintillaEditor::foldAll() {
+    _editor->foldAll(false);
+}
+
+void ScintillaEditor::unfoldAll() {
+    // SCI_SETFOLDEXPANDED with expanded=1 forces lines to expand.
+    // Use explicit casts to resolve SendScintilla overload ambiguity.
+    for (int line = 0; line < _editor->lines(); ++line) {
+        unsigned int msg = static_cast<unsigned int>(QsciScintilla::SCI_SETFOLDEXPANDED);
+        unsigned long lParam = 1UL; // 1 = expanded (force expand)
+        _editor->SendScintilla(msg, static_cast<unsigned long>(line), lParam);
+    }
+}
+
+void ScintillaEditor::toggleFold(int line) {
+    _editor->foldLine(line);
+}
+
+// ============================================================================
+// Drag & Drop
+// ============================================================================
+void ScintillaEditor::setFileDropEnabled(bool enabled) {
+    if (enabled) {
+        _editor->setAcceptDrops(true);
+        // Install event filter to catch QDragEnterEvent / QDropEvent with file URLs
+        _editor->installEventFilter(this);
+    }
+}
+
+bool ScintillaEditor::eventFilter(QObject* watched, QEvent* event) {
+    if (watched == _editor) {
+        if (event->type() == QEvent::MouseButtonPress) {
+            auto* me = static_cast<QMouseEvent*>(event);
+            // Ctrl+Click: add a caret at the clicked position (multi-caret editing).
+            // This mirrors N++ ScintillaEditView::Ctrl::mouseAction handlers.
+            if ((me->modifiers() & Qt::ControlModifier) && me->button() == Qt::LeftButton) {
+                // SCI_POSITIONFROMPOINT (2562) expects integer pixel coordinates.
+                // QMouseEvent::position() returns QPointF in Qt6 — convert with qRound().
+                int x = qRound(me->position().x());
+                int y = qRound(me->position().y());
+                int pos = _editor->SendScintilla(SCI_POSITIONFROMPOINT, x, y);
+                if (pos >= 0) {
+                    int curPos = static_cast<int>(_editor->SendScintilla(SCI_GETCURRENTPOS));
+                    // SCI_ADDSELECTION: adds a new selection without removing existing ones.
+                    _editor->SendScintilla(SCI_ADDSELECTION,
+                                          static_cast<unsigned long>(curPos),
+                                          static_cast<unsigned long>(pos));
+                    // Scroll to keep the clicked position visible
+                    _editor->SendScintilla(SCI_GOTOPOS, static_cast<unsigned long>(pos));
+                    return true;  // consume the event
+                }
+            }
+        } else if (event->type() == QEvent::DragEnter) {
+            auto* de = static_cast<QDragEnterEvent*>(event);
+            if (de->mimeData()->hasUrls()) {
+                for (const QUrl& url : de->mimeData()->urls()) {
+                    if (url.isLocalFile() && QFileInfo(url.toLocalFile()).isFile()) {
+                        de->acceptProposedAction();
+                        return true;
+                    }
+                }
+            }
+        } else if (event->type() == QEvent::Drop) {
+            auto* de = static_cast<QDropEvent*>(event);
+            if (de->mimeData()->hasUrls()) {
+                for (const QUrl& url : de->mimeData()->urls()) {
+                    if (url.isLocalFile()) {
+                        QString path = url.toLocalFile();
+                        if (QFileInfo(path).isFile()) {
+                            Application::instance().openFile(path.toStdString());
+                        }
+                    }
+                }
+                de->acceptProposedAction();
+                return true;
+            }
+        }
+    }
+    return QFrame::eventFilter(watched, event);
+}
+
+// ============================================================================
+// Rectangle Selection
+// ============================================================================
+void ScintillaEditor::setRectangularSelectionMode(bool on) {
+    // SC_SEL_RECTANGLE = 1, SC_SEL_STREAM = 0
+    if (on) {
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE, 1);  // SC_SEL_RECTANGLE
+        _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 1);  // SC_VS_USERACCESSIBLE
+    } else {
+        _editor->SendScintilla(QsciScintilla::SCI_SETSELECTIONMODE, 0);  // SC_SEL_STREAM
+        _editor->SendScintilla(QsciScintilla::SCI_SETVIRTUALSPACEOPTIONS, 0);  // SC_VS_NONE
+    }
+}
+
+// ============================================================================
+// Bookmarks
+// ============================================================================
+void ScintillaEditor::toggleBookmark(int line) {
+    if (_bookmarks.contains(line)) {
+        _bookmarks.removeAll(line);
+        _editor->markerDelete(line, BOOKMARK_MARKER);
+    } else {
+        _bookmarks.append(line);
+        _editor->markerAdd(line, BOOKMARK_MARKER);
+    }
+}
+
+void ScintillaEditor::nextBookmark() {
+    int cur = 0, col = 0;
+    _editor->getCursorPosition(&cur, &col);
+    for (int line : _bookmarks) {
+        if (line > cur) { _editor->setCursorPosition(line, 0); return; }
+    }
+}
+
+void ScintillaEditor::prevBookmark() {
+    int cur = 0, col = 0;
+    _editor->getCursorPosition(&cur, &col);
+    for (int i = _bookmarks.size() - 1; i >= 0; --i) {
+        if (_bookmarks[i] < cur) { _editor->setCursorPosition(_bookmarks[i], 0); return; }
+    }
+}
+
+void ScintillaEditor::clearBookmarks() {
+    for (int line : _bookmarks) _editor->markerDelete(line, BOOKMARK_MARKER);
+    _bookmarks.clear();
+}
+
+void ScintillaEditor::updateFontForDpi() {
+    DpiManager& dpi = DpiManager::instance();
+    // Rescale the base font for the new DPI
+    QFont f = _editor->font();
+    int baseSize = 10;  // fallback if we can't determine base
+    if (f.pointSizeF() > 0) baseSize = f.pointSizeF();
+    else if (f.pixelSize() > 0) baseSize = f.pixelSize();
+    f.setPointSizeF(dpi.scaleFontSizeF(baseSize));
+    _editor->setFont(f);
+    // Reapply the theme so the lexer picks up the new font size
+    if (_editor->lexer()) {
+        applyThemeToLexer(_editor->lexer());
+    }
+}
+
+void ScintillaEditor::insertText(const QString& text) {
+    if (_editor && !text.isEmpty()) {
+        _editor->insert(text);
+    }
+}
+
+void ScintillaEditor::insertAtCursor(const QString& text) {
+    if (_editor && !text.isEmpty()) {
+        int line, col;
+        _editor->getCursorPosition(&line, &col);
+        _editor->insertAt(text, line, col);
+    }
+}
+
+void ScintillaEditor::setLineText(int line, const QString& newText) {
+    if (!_editor || line < 0) return;
+    // Get line text and replace using SendScintilla
+    int lineLen = _editor->lineLength(line);
+    if (lineLen <= 0) return;
+    int posStart = _editor->positionFromLineIndex(line, 0);
+    int posEnd = posStart + lineLen;
+    const QByteArray newTextUtf8 = newText.toUtf8();  // store — dangling pointer otherwise
+    _editor->SendScintilla(QsciScintilla::SCI_SETSEL, posStart, posEnd);
+    _editor->SendScintilla(QsciScintilla::SCI_REPLACESEL, newTextUtf8.constData());
+}
+
+// ============================================================================
+// Context Menu — mirrors Win32 TrackPopupMenu(hmnu, …) for the editor surface.
+// When the user right-clicks in the Scintilla edit area, we build a QMenu
+// matching the Notepad++ right-click menu and exec() it at the cursor position.
+// ============================================================================
+
+#include "common/MenuAdapter.h"
+
+void ScintillaEditor::contextMenuEvent(QContextMenuEvent* event) {
+    // Build the standard Notepad++ right-click menu as a QMenu.
+    // This mirrors Win32 ContextMenu::create() + TrackPopupMenu() exactly.
+    //
+    // Menu item list mirrors Win32 NPP right-click context menu:
+    //   [Modify Shortcut / Edit with…]      ← top folder
+    //   ─────────────────────────────────
+    //   Cut                                 IDM_EDIT_CUT = 41003
+    //   Copy                                IDM_EDIT_COPY = 41004
+    //   Paste                               IDM_EDIT_PASTE = 41005
+    //   ─────────────────────────────────
+    //   Select All                          IDM_SELECTALL = 41006
+    //   ─────────────────────────────────
+    //   Find...                             IDM_FIND = 42001
+    //   Replace...                          IDM_REPLACE = 42002
+    //   Go to Line...                      IDM_GOTO = 42007
+    //   ─────────────────────────────────
+    //   Set Read-Only                       ← toggle
+    //   ─────────────────────────────────
+    //   Cut / Copy / Paste / Delete / Select All
+    //   ─────────────────────────────────
+    //   Insert / Delete Bookmark            ← bookmark submenu
+    //   Toggle Bookmark                     IDM_VIEW_TOGGLE_ALL_FOLD = 43013
+    //   ─────────────────────────────────
+    //   Open as File                        IDM_OPENASFILE = 40020
+    //   ─────────────────────────────────
+    //   Delete                             IDM_DELETE = 40018
+    //   Rename                             IDM_RENAME = 40019
+    //   ─────────────────────────────────
+    //   Copy to Clipboard / Cut to Clipboard
+    //   ─────────────────────────────────
+    //   Collapse / Uncollapse              ← folding submenu
+    //   ─────────────────────────────────
+    //   Full File Path                      ← click-to-copy path
+    //   Current File Name                  ← click-to-copy name
+    //   Current Directory                  ← click-to-copy dir
+    //   ─────────────────────────────────
+    //   Open in Notepad++                  ← NPP-specific
+    //   ─────────────────────────────────
+    //   Inspect QsciScintilla Widget       ← dev-only when in debug mode
+
+    // Gather context state from the editor.
+    bool hasSelection = !_editor->selectedText().isEmpty();
+    bool hasText = _editor->text().length() > 0;
+    bool isReadOnly = _editor->isReadOnly();
+
+    // Build items — mirrors Win32 ContextMenu::create().
+    // cmdID == 0 → separator.
+    // parentFolder non-empty → submenu.
+    QList<MenuItemUnit> items;
+
+    // ── Edit operations (mirrors IDM_EDIT_CUT/COPY/PASTE) ──────────────────
+    if (hasSelection) {
+        items.append(MenuItemUnit(41003, QStringLiteral("Cu&t")));       // IDM_EDIT_CUT
+        items.append(MenuItemUnit(41004, QStringLiteral("&Copy")));      // IDM_EDIT_COPY
+    }
+    items.append(MenuItemUnit(41005, QStringLiteral("&Paste")));          // IDM_EDIT_PASTE
+
+    items.append(MenuItemUnit(0));  // separator
+
+    // ── Selection ───────────────────────────────────────────────────────────
+    if (hasText) {
+        items.append(MenuItemUnit(41006, QStringLiteral("Select &All")));  // IDM_SELECTALL
+    }
+
+    items.append(MenuItemUnit(0));  // separator
+
+    // ── Search operations (mirrors IDM_FIND/REPLACE/GOTO) ───────────────────
+    if (hasText) {
+        items.append(MenuItemUnit(42001, QStringLiteral("&Find...")));     // IDM_FIND
+        items.append(MenuItemUnit(42002, QStringLiteral("&Replace..."))); // IDM_REPLACE
+        items.append(MenuItemUnit(42007, QStringLiteral("&Go to Line..."))); // IDM_GOTO
+
+        items.append(MenuItemUnit(0));  // separator
+
+        // ── Folding submenu ───────────────────────────────────────────────
+        items.append(MenuItemUnit(43013, QStringLiteral("Toggle &Folds"),
+                                 QStringLiteral("Folding")));
+        items.append(MenuItemUnit(43032, QStringLiteral("Collapse &All Folds"),
+                                 QStringLiteral("Folding")));
+        items.append(MenuItemUnit(43033, QStringLiteral("Un&collapse All Folds"),
+                                 QStringLiteral("Folding")));
+    }
+
+    items.append(MenuItemUnit(0));  // separator
+
+    // ── Read-only toggle ───────────────────────────────────────────────────
+    items.append(MenuItemUnit(46001, isReadOnly
+                                     ? QStringLiteral("Unset Read-Only")
+                                     : QStringLiteral("Set Read-Only"),
+                                 QString()));
+
+    items.append(MenuItemUnit(0));  // separator
+
+    // ── Bookmarks submenu ──────────────────────────────────────────────────
+    items.append(MenuItemUnit(43012, QStringLiteral("Toggle Bookmark"),
+                              QStringLiteral("Bookmarks")));
+    items.append(MenuItemUnit(43013, QStringLiteral("Go to Next Bookmark"),
+                              QStringLiteral("Bookmarks")));
+    items.append(MenuItemUnit(43014, QStringLiteral("Go to Previous Bookmark"),
+                              QStringLiteral("Bookmarks")));
+    items.append(MenuItemUnit(43015, QStringLiteral("Clear All Bookmarks"),
+                              QStringLiteral("Bookmarks")));
+
+    items.append(MenuItemUnit(0));  // separator
+
+    // ── Path operations (click-to-copy) ───────────────────────────────────
+    items.append(MenuItemUnit(48014, QStringLiteral("&Full File Path"),
+                              QStringLiteral("Copy")));
+    items.append(MenuItemUnit(48015, QStringLiteral("&File Name"),
+                              QStringLiteral("Copy")));
+    items.append(MenuItemUnit(48016, QStringLiteral("Current &Directory"),
+                              QStringLiteral("Copy")));
+
+    // Use ContextMenuAdapter to build the QMenu.
+    ContextMenuAdapter adapter(this);
+    adapter.fromItems(items);
+    QMenu* menu = adapter.build();
+
+    // Intercept actions to provide local implementations.
+    for (QAction* action : menu->actions()) {
+        int cmdID = action->data().toInt();
+        if (cmdID == 0) continue;  // separator
+
+        // Install per-item handlers that mirror Win32 WM_COMMAND dispatch.
+        connect(action, &QAction::triggered, action,
+            [this, cmdID, action]() {
+                // Dispatch command locally — mirrors NppBigSwitch::process().
+                switch (cmdID) {
+                    case 41003:  // IDM_EDIT_CUT
+                        if (!_editor->isReadOnly()) _editor->cut();
+                        break;
+                    case 41004:  // IDM_EDIT_COPY
+                        _editor->copy();
+                        break;
+                    case 41005:  // IDM_EDIT_PASTE
+                        if (!_editor->isReadOnly()) _editor->paste();
+                        break;
+                    case 41006:  // IDM_SELECTALL
+                        _editor->selectAll(true);
+                        break;
+                    case 42001: {  // IDM_FIND
+                        auto* dlg = Application::instance().findReplaceDialog();
+                        if (dlg) dlg->show();
+                        break;
+                    }
+                    case 42002: {  // IDM_REPLACE
+                        auto* dlg = Application::instance().findReplaceDialog();
+                        if (dlg) { dlg->show(); }
+                        break;
+                    }
+                    case 42007: {  // IDM_GOTO
+                        auto* dlg = Application::instance().gotoLineDialog();
+                        if (dlg) dlg->show();
+                        break;
+                    }
+                    case 43013: {  // Fold toggle (and bookmark toggle)
+                        int line = 0, col = 0;
+                        _editor->getCursorPosition(&line, &col);
+                        toggleBookmark(line);
+                        break;
+                    }
+                    case 43032:  // Collapse all folds
+                        foldAll();
+                        break;
+                    case 43033:  // Uncollapse all folds
+                        unfoldAll();
+                        break;
+                    case 43012: {  // Bookmark toggle
+                        int line = 0, col = 0;
+                        _editor->getCursorPosition(&line, &col);
+                        toggleBookmark(line);
+                        break;
+                    }
+                    case 43014:  // Next bookmark
+                        nextBookmark();
+                        break;
+                    case 43015:  // Previous bookmark
+                        prevBookmark();
+                        break;
+                    case 46001: {  // Read-only toggle (close to preferences ID)
+                        _editor->setReadOnly(!_editor->isReadOnly());
+                        break;
+                    }
+                    case 48014: {  // Copy full path
+                        BufferID buf = Application::instance().getActiveBuffer();
+                        if (buf) {
+                            auto path = Application::instance().getFileName(buf);
+                            if (path) {
+                                QApplication::clipboard()->setText(
+                                    QString::fromStdString(*path));
+                            }
+                        }
+                        break;
+                    }
+                    case 48015: {  // Copy file name
+                        BufferID buf = Application::instance().getActiveBuffer();
+                        if (buf) {
+                            auto path = Application::instance().getFileName(buf);
+                            if (path) {
+                                QFileInfo fi(QString::fromStdString(*path));
+                                QApplication::clipboard()->setText(fi.fileName());
+                            }
+                        }
+                        break;
+                    }
+                    case 48016: {  // Copy current directory
+                        BufferID buf = Application::instance().getActiveBuffer();
+                        if (buf) {
+                            auto path = Application::instance().getFileName(buf);
+                            if (path) {
+                                QFileInfo fi(QString::fromStdString(*path));
+                                QApplication::clipboard()->setText(fi.absolutePath());
+                            }
+                        }
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            });
+    }
+
+    menu->exec(event->globalPos());
+    menu->deleteLater();
+}
+
+void ScintillaEditor::showEvent(QShowEvent* event) {
+    static bool first = true;
+    if (first) {
+        _autoCompletion->setConstructionComplete(true);
+        first = false;
+    }
+    QFrame::showEvent(event);
+}
+
+void ScintillaEditor::hideEvent(QHideEvent* event) {
+    _autoCompletion->setConstructionComplete(false);
+    QFrame::hideEvent(event);
+}
+
+// ============================================================================
+// Per-buffer view settings persistence (QSettings)
+// Stores zoom, wrap, edge column, edge mode, and multi-caret state per file.
+// ============================================================================
+
+void ScintillaEditor::saveViewSettings(const QString& bufferId) const {
+    QSettings settings("notepad--qt", "editor");
+    settings.beginGroup("Buffers/" + bufferId);
+    settings.setValue("zoom", _zoomLevel);
+    settings.setValue("wrap", wrapMode());
+    settings.setValue("edgeColumn", static_cast<int>(_editor->SendScintilla(SCI_GETEDGECOLUMN)));
+    settings.setValue("edgeMode", static_cast<int>(_editor->SendScintilla(SCI_GETEDGEMODE)));
+    settings.setValue("multiCaret",
+        static_cast<int>(_editor->SendScintilla(QsciScintilla::SCI_GETADDITIONALCARETSBLINK)));
+    settings.endGroup();
+}
+
+void ScintillaEditor::restoreViewSettings(const QString& bufferId) {
+    QSettings settings("notepad--qt", "editor");
+    if (!settings.contains("Buffers/" + bufferId + "/zoom")) return;
+
+    settings.beginGroup("Buffers/" + bufferId);
+
+    // Restore zoom
+    int zoom = settings.value("zoom", 0).toInt();
+    if (zoom != 0) {
+        if (zoom > 0) { while (_zoomLevel < zoom) { _editor->zoomIn(); ++_zoomLevel; } }
+        else           { while (_zoomLevel > zoom) { _editor->zoomOut(); --_zoomLevel; } }
+    }
+
+    // Restore word wrap
+    bool wrap = settings.value("wrap", false).toBool();
+    setWrapMode(wrap);
+
+    // Restore long-line edge column + mode
+    int edgeCol = settings.value("edgeColumn", 80).toInt();
+    int edgeMode = settings.value("edgeMode", 0).toInt();
+    _editor->SendScintilla(SCI_SETEDGECOLUMN, static_cast<unsigned long>(edgeCol));
+    _editor->SendScintilla(SCI_SETEDGEMODE, static_cast<unsigned long>(edgeMode));
+
+    // Restore multi-caret state
+    int multiCaret = settings.value("multiCaret", 1).toInt();
+    _editor->SendScintilla(QsciScintilla::SCI_SETADDITIONALCARETSBLINK, multiCaret);
+    setMultipleSelectionEnabled(multiCaret != 0);
+
+    settings.endGroup();
 }

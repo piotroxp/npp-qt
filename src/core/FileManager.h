@@ -15,6 +15,13 @@
 #include <QString>
 #include <QFileSystemWatcher>
 #include <QDateTime>
+#include <QThread>
+
+// Forward declaration of the global FileLoaderWorker (defined in
+// src/workers/FileLoaderWorker.h). Done at file scope so the class name
+// inside class FileManager resolves to the global type, not a nested type.
+// The full definition is only needed inside FileManager.cpp.
+class FileLoaderWorker;
 
 // Forward declaration - FileNotification is defined in Application.h
 struct FileNotification;
@@ -83,6 +90,15 @@ public:
     BufferID createBuffer(const QString& fileName = QString(), bool isLargeFile = false);
     Buffer* bufferFromId(BufferID id) const;
     BufferID openFile(const QString& path, bool readOnly = false);
+
+    // Async variant: returns immediately, emits `fileLoaded` once the load
+    // is complete. Uses the bundled FileLoaderWorker on a dedicated worker
+    // thread so the GUI thread never blocks on QFile::readAll() for large
+    // files. While loading, `loadingProgress(percent)` fires from the
+    // worker. The sync `openFile()` path remains unchanged for callers
+    // that need immediate access (tests, command-line paths).
+    void openFileAsync(const QString& path, bool readOnly = false);
+
     BufferID createNewFile();
     BufferID duplicateBuffer(BufferID buffer);
 
@@ -102,6 +118,8 @@ public:
     bool setBufferText(BufferID buffer, const QString& text);
     EncodingType getEncoding(BufferID buffer) const;
     bool setEncoding(BufferID buffer, EncodingType enc);
+    EolType getEolFormat(BufferID buffer) const;
+    bool setEolFormat(BufferID buffer, EolType eol);
     QString getBufferPath(BufferID buffer) const;
     bool setBufferPath(BufferID buffer, const QString& path);
     bool saveFile(BufferID buffer, const QString& path = QString());
@@ -139,13 +157,29 @@ public:
     void disableAutoDetectEncoding() { _autoDetectEncoding = false; }
     bool isAutoDetectEncodingEnabled() const { return _autoDetectEncoding; }
 
+    // ============================================================================
+    // Buffer→Editor sync (used by saveFile to retrieve live document text)
+    // ============================================================================
+
+    // Returned function should fill `outText` with the current editor content
+    // for the given buffer. Return true if content was filled, false to skip.
+    using BufferTextProvider = std::function<bool(BufferID buffer, QString& outText)>;
+    void setBufferTextProvider(BufferTextProvider fn) { _bufferTextProvider = std::move(fn); }
+
 signals:
     void bufferChanged(BufferID buffer, int changeMask);
     void bufferCreated(BufferID buffer);
     void bufferClosed(BufferID buffer);
     void fileSystemChanged(const QString& path);
+    void loadingProgress(int percent);
+    void fileLoaded(bool success, BufferID buffer, const QString& error);
 
 private:
+    // FileLoaderWorker is forward-declared at file scope (above this class)
+    // to avoid the nested-class trap. Only a pointer is held in FileManager;
+    // the full type is used inside the .cpp where FileLoaderWorker.h is included.
+    FileLoaderWorker* _loader = nullptr;
+    QThread* _loaderThread = nullptr;
     // Internal helpers
     bool loadFileIntoBuffer(BufferID id, const QString& path);
     EncodingType detectEncoding(const QByteArray& data) const;
@@ -161,4 +195,6 @@ private:
     BufferID _nextBufferId = reinterpret_cast<BufferID>(1);
     BufferID _activeBuffer = BUFFER_INVALID;
     bool _autoDetectEncoding = true;
+    std::unordered_map<BufferID, QString> _bufferText;
+    BufferTextProvider _bufferTextProvider;
 };

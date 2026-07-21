@@ -6,6 +6,7 @@
 #include "Buffer.h"
 #include "FileManager.h"
 #include "LanguageManager.h"
+#include "common/FileWatcherAdapter.h"
 #include "common/Util.h"
 #include <QFile>
 #include <QFileInfo>
@@ -40,12 +41,14 @@ namespace {
 // Construction / Lifecycle
 // ============================================================================
 
-Buffer::Buffer(FileManager* pManager, BufferID id, const QString& fileName, bool isLargeFile)
+Buffer::Buffer(FileManager* pManager, const QString& fileName, bool isLargeFile)
     : QObject()
     , _pManager(pManager)
-    , _id(id)
     , _isLargeFile(isLargeFile)
 {
+    // ID is now the Buffer's own address (this)
+    // Do NOT set _id here — it's a Buffer* and default-initialized to nullptr
+    // getID() returns this pointer directly
     _currentStatus = DocFileStatus::DOC_REGULAR;
 
     // Set the filename which also determines language
@@ -106,13 +109,24 @@ void Buffer::setFileName(const QString& filePath) {
 
     updateTimeStamp();
 
+    qDebug() << "[PROBE-SYNTAX] Buffer::Buffer file=" << _fileName
+             << "isLargeFile=" << _isLargeFile
+             << "determinedLang=int(" << static_cast<int>(determinedLang) << ")"
+             << "currentLang=int(" << static_cast<int>(_langType) << ")"
+             << "hasLangBeenSetFromMenu=" << _hasLangBeenSetFromMenu;
+
     // Set language if not already set from menu
     int langChange = 0;
     if (!_hasLangBeenSetFromMenu && (determinedLang != _langType || _langType == LangType::L_TEXT)) {
         if (_isLargeFile) {
             _langType = LangType::L_TEXT;
+            qDebug() << "[PROBE-SYNTAX] Buffer::Buffer LARGE_FILE_FORCED_LANG_TEXT file=" << _fileName
+                     << "sizeKB=" << (QFileInfo(_fileName).size() / 1024);
         } else {
             _langType = determinedLang;
+            qDebug() << "[PROBE-SYNTAX] Buffer::Buffer DETECTED_LANG file=" << _fileName
+                     << "determinedLang=int(" << static_cast<int>(determinedLang) << ")"
+                     << "finalLang=int(" << static_cast<int>(_langType) << ")";
             langChange = static_cast<int>(BufferStatusInfo::BufferChangeLanguage);
         }
     }
@@ -238,6 +252,10 @@ void Buffer::setEolFormat(EolType format) {
 // ============================================================================
 
 void Buffer::setLangType(LangType lang, const QString& userLangName) {
+    qDebug() << "[PROBE-SYNTAX] Buffer::setLangType CALLED file=" << _fileName
+             << "newLang=int(" << static_cast<int>(lang) << ")"
+             << "oldLang=int(" << static_cast<int>(_langType) << ")"
+             << "userLangName=" << userLangName;
     if (lang == _langType && lang != LangType::L_USER)
         return;
 
@@ -363,7 +381,7 @@ bool Buffer::checkFileState() {
             mask |= static_cast<int>(BufferStatusInfo::BufferChangeTimestamp);
             _currentStatus = DocFileStatus::DOC_MODIFIED;
             changed = true;
-            emit fileExternallyModified();
+            emit fileExternallyModified(_fullPathName);
         }
 
         if (changed) {
@@ -541,8 +559,7 @@ void Buffer::setHideLineChanged(bool isHide, size_t location) {
 // ============================================================================
 
 bool Buffer::allowBraceMatch() const {
-    // TODO: Read from application settings for large file restrictions
-    // For now, always allow
+    // Disable brace matching for very large files to avoid performance issues
     return !_isLargeFile;
 }
 
@@ -567,18 +584,44 @@ void Buffer::startMonitoring() {
 
     _isMonitoringOn = true;
 
-    // Create file watcher if needed
+    // Create FileWatcherAdapter if needed — owned by this Buffer
     if (!_fileWatcher) {
-        _fileWatcher = new QFileSystemWatcher(this);
-        connect(_fileWatcher, &QFileSystemWatcher::fileChanged,
-                this, [this](const QString& path) {
-            Q_UNUSED(path);
+        _fileWatcher = new FileWatcherAdapter(this);
+
+        // Wire debounced fileChanged → checkFileState (reload prompt)
+        QObject::connect(_fileWatcher, &FileWatcherAdapter::fileChanged,
+                this, [this](const QString& /*path*/) {
+            // Debounce (500 ms) is handled inside FileWatcherAdapter.
+            // checkFileState() emits fileExternallyModified when needed,
+            // which triggers the reload prompt in the UI layer.
             checkFileState();
+        });
+
+        // Warn if inotify limit is being approached
+        QObject::connect(_fileWatcher, &FileWatcherAdapter::inotifyLimitWarning,
+                this, [](int currentLimit, int recommendedMinimum) {
+            qWarning().noquote()
+                << "Buffer: approaching inotify watch limit.\n"
+                   "  current:"
+                << recommendedMinimum << "/ max:" << currentLimit << "\n"
+                   "  Consider raising the limit:\n"
+                   "    echo 524288 | sudo tee /proc/sys/fs/inotify/max_user_watches";
+        });
+
+        // Surface watcher errors
+        QObject::connect(_fileWatcher, &FileWatcherAdapter::error,
+                this, [](const QString& msg) {
+            qWarning() << "Buffer FileWatcherAdapter:" << msg;
         });
     }
 
     if (!_fullPathName.isEmpty()) {
-        _fileWatcher->addPath(_fullPathName);
+        // watchFile() is idempotent — safe to call if already watched.
+        // FileWatcherAdapter handles debounce internally (500 ms).
+        // Pass a no-op callback; the real work is done via the fileChanged
+        // signal connected above.  watchFile() must receive a non-null
+        // callback or it rejects the addPath call entirely.
+        _fileWatcher->watchFile(_fullPathName, [](const QString&) {});
     }
 }
 
@@ -588,7 +631,7 @@ void Buffer::stopMonitoring() {
     _isMonitoringOn = false;
 
     if (_fileWatcher && !_fullPathName.isEmpty()) {
-        _fileWatcher->removePath(_fullPathName);
+        _fileWatcher->unwatch(_fullPathName);
     }
 }
 

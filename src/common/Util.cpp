@@ -3,6 +3,12 @@
 #include "Constants.h"
 #include "StringHelper.h"
 #include "FileHelper.h"
+#include <QString>
+#include <QFile>
+#include <QProcess>
+#include <QGuiApplication>
+#include <QClipboard>
+#include <QSysInfo>
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -21,15 +27,8 @@
 #include <string.h>
 #include <QByteArray>
 #include <QCryptographicHash>
-#include <QFile>
-
-#if defined(_WIN32) || defined(_WIN64)
-#include <windows.h>
-#include <shlobj.h>
-#else
 #include <sys/sysinfo.h>
 #include <pwd.h>
-#endif
 
 // ============================================================================
 // Logging
@@ -86,24 +85,27 @@ void assertionFailed(const char* expr, const char* file, int line) {
     std::ostringstream oss;
     oss << "ASSERTION FAILED: " << expr << " at " << file << ":" << line;
     logError(oss.str());
-#if defined(_WIN32) || defined(_WIN64)
-    DebugBreak();
-#else
     __builtin_trap();
-#endif
 }
 
 void debugOutput(const std::string& msg) {
-#if defined(_WIN32) || defined(_WIN64)
-    OutputDebugStringA(msg.c_str());
-#else
     fputs(msg.c_str(), stderr);
-#endif
 }
 
 // ============================================================================
 // INI Parser
 // ============================================================================
+
+static std::string iniKey(const std::string& section, const std::string& key) {
+    return section + "\x1F" + key;
+}
+
+static std::string iniSectionFromKey(const std::string& compound) {
+    size_t pos = compound.find("\x1F");
+    if (pos == std::string::npos) return "";
+    return compound.substr(0, pos);
+}
+
 bool IniParser::load(const std::string& path) {
     _path = path;
     std::ifstream fin(path);
@@ -124,9 +126,9 @@ bool IniParser::load(const std::string& path) {
         } else {
             auto eq = line.find('=');
             if (eq != std::string::npos) {
-                _lines.emplace_back(currentSection + "\x1F" +
-                    StringHelper::trim(line.substr(0, eq)),
-                    StringHelper::trim(line.substr(eq + 1)));
+                std::string k = StringHelper::trim(line.substr(0, eq));
+                std::string v = StringHelper::trim(line.substr(eq + 1));
+                _lines.emplace_back(iniKey(currentSection, k), v);
             }
         }
     }
@@ -138,30 +140,23 @@ bool IniParser::save(const std::string& path) {
     if (!fout) return false;
     std::string currentSection;
     for (size_t i = 0; i < _lines.size(); ++i) {
-        auto sep = _lines[i].first.find('\x1F');
-        std::string section, key;
-        if (sep != std::string::npos) {
-            section = _lines[i].first.substr(0, sep);
-            key = _lines[i].first.substr(sep + 1);
-        } else {
-            section = "";
-            key = _lines[i].first;
-        }
-        if (section != currentSection) {
+        std::string s = iniSectionFromKey(_lines[i].first);
+        std::string k = _lines[i].first.substr(s.size() + 1);
+        if (s != currentSection) {
             if (i > 0) fout << "\n";
-            if (!section.empty()) fout << "[" << section << "]\n";
-            currentSection = section;
+            if (!s.empty()) fout << "[" << s << "]\n";
+            currentSection = s;
         }
-        fout << key << "=" << _lines[i].second << "\n";
+        fout << k << "=" << _lines[i].second << "\n";
     }
     return fout.good();
 }
 
 std::string IniParser::get(const std::string& section, const std::string& key,
                              const std::string& defaultVal) const {
-    std::string prefix = section + "\x1F" + key;
+    std::string compound = iniKey(section, key);
     for (const auto& [k, v] : _lines) {
-        if (k == prefix) return v;
+        if (k == compound) return v;
     }
     return defaultVal;
 }
@@ -171,18 +166,30 @@ int IniParser::getInt(const std::string& section, const std::string& key, int de
 }
 
 bool IniParser::getBool(const std::string& section, const std::string& key, bool defaultVal) const {
-    auto val = get(section, "");
+    std::string val = get(section, key, "");
     if (val.empty()) return defaultVal;
-    return val == "1" || StringHelper::equalsIgnoreCase(val, "true") ||
-           StringHelper::equalsIgnoreCase(val, "yes");
+
+    if (val == "1" || val == "0") {
+        return val == "1";
+    }
+
+    QString qval = QString::fromUtf8(val.c_str()).toLower();
+    if (qval == "true" || qval == "yes" || qval == "on" || qval == "enabled") {
+        return true;
+    }
+    if (qval == "false" || qval == "no" || qval == "off" || qval == "disabled") {
+        return false;
+    }
+
+    return defaultVal;
 }
 
 void IniParser::set(const std::string& section, const std::string& key, const std::string& val) {
-    std::string prefix = section + "\x1F" + key;
+    std::string compound = iniKey(section, key);
     for (auto& [k, v] : _lines) {
-        if (k == prefix) { v = val; return; }
+        if (k == compound) { v = val; return; }
     }
-    _lines.emplace_back(prefix, val);
+    _lines.emplace_back(compound, val);
     if (!hasSection(section)) _sections.push_back(section);
 }
 
@@ -191,7 +198,28 @@ void IniParser::set(const std::string& section, const std::string& key, int val)
 }
 
 void IniParser::set(const std::string& section, const std::string& key, bool val) {
-    set(section, key, std::string(val ? "1" : "0"));
+    set(section, key, static_cast<std::string>(val ? "1" : "0"));
+}
+
+void IniParser::set(const std::string& section, const std::string& key, const QString& val) {
+    set(section, key, std::string(val.toUtf8().constData()));
+}
+
+QStringList IniParser::getStringList(const std::string& section, const std::string& key,
+                                     const QStringList& defaultVal) const {
+    std::string raw = get(section, key, std::string());
+    if (raw.empty()) return defaultVal;
+    QStringList out;
+    for (const QString& s : QString::fromUtf8(raw.c_str()).split(',')) {
+        QString trimmed = s.trimmed();
+        if (!trimmed.isEmpty()) out.append(trimmed);
+    }
+    return out;
+}
+
+void IniParser::setStringList(const std::string& section, const std::string& key,
+                              const QStringList& val) {
+    set(section, key, std::string(val.join(",").toUtf8().constData()));
 }
 
 bool IniParser::hasSection(const std::string& section) const {
@@ -199,34 +227,23 @@ bool IniParser::hasSection(const std::string& section) const {
 }
 
 void IniParser::removeSection(const std::string& section) {
+    std::string prefix = section + "\x1F";
     _lines.erase(
         std::remove_if(_lines.begin(), _lines.end(),
-            [&](const auto& p) { return p.first.find(section + "\x1F") == 0; }),
+            [&](const auto& p) { return p.first.find(prefix) == 0; }),
         _lines.end());
     _sections.erase(std::remove(_sections.begin(), _sections.end(), section), _sections.end());
 }
 
-// ============================================================================
-// Process info
-// ============================================================================
+
 std::string getProcessId() {
     char buf[64];
-#if defined(_WIN32) || defined(_WIN64)
-    snprintf(buf, sizeof(buf), "%lu", GetCurrentProcessId());
-#else
     snprintf(buf, sizeof(buf), "%d", getpid());
-#endif
     return std::string(buf);
 }
 
 int getNumberOfProcessors() {
-#if defined(_WIN32) || defined(_WIN64)
-    SYSTEM_INFO si;
-    GetSystemInfo(&si);
-    return si.dwNumberOfProcessors;
-#else
     return sysconf(_SC_NPROCESSORS_ONLN);
-#endif
 }
 
 // ============================================================================
@@ -238,29 +255,14 @@ std::string getEnvironmentVariable(const std::string& name) {
 }
 
 bool setEnvironmentVariable(const std::string& name, const std::string& value) {
-#if defined(_WIN32) || defined(_WIN64)
-    return SetEnvironmentVariableA(name.c_str(), value.c_str()) != 0;
-#else
     return setenv(name.c_str(), value.c_str(), 1) == 0;
-#endif
 }
 
 std::vector<std::string> getEnvironmentVariables() {
     std::vector<std::string> result;
-#if defined(_WIN32) || defined(_WIN64)
-    char* env = GetEnvironmentStrings();
-    if (env) {
-        for (char* p = env; *p; ) {
-            result.push_back(p);
-            p += strlen(p) + 1;
-        }
-        FreeEnvironmentStrings(env);
-    }
-#else
     for (char** env = environ; *env; ++env) {
         result.push_back(*env);
     }
-#endif
     return result;
 }
 
@@ -269,13 +271,9 @@ std::vector<std::string> getEnvironmentVariables() {
 // ============================================================================
 std::string getSystemInfo() {
     std::ostringstream oss;
-#if defined(_WIN32) || defined(_WIN64)
-    oss << "Windows ";
-    OSVERSIONINFOA vi = { sizeof(vi) };
-    if (GetVersionExA(&vi))
-        oss << vi.dwMajorVersion << "." << vi.dwMinorVersion;
-#elif defined(__APPLE__)
-    oss << "macOS";
+#if defined(__APPLE__)
+    oss << "macOS ";
+    oss << QSysInfo::productVersion().toStdString();
 #elif defined(__linux__)
     oss << "Linux";
 #else
@@ -301,20 +299,13 @@ std::string getCPUInfo() {
 }
 
 int64_t getTotalPhysicalMemory() {
-#if defined(_WIN32) || defined(_WIN64)
-    MEMORYSTATUSEX mse;
-    mse.dwLength = sizeof(mse);
-    if (GlobalMemoryStatusEx(&mse)) return mse.ullTotalPhys;
-    return 0;
-#elif defined(__linux__)
     struct sysinfo si;
     if (sysinfo(&si) == 0) return (int64_t)si.totalram * si.mem_unit;
-#endif
     return 0;
 }
 
 // ============================================================================
-// Hashing (simplified - for production would use proper crypto library)
+// Hashing
 // ============================================================================
 std::string md5String(const std::string& input) {
     QByteArray data(input.c_str(), static_cast<int>(input.size()));
@@ -338,9 +329,9 @@ std::string fileMD5(const std::string& path) {
 // URL helpers
 // ============================================================================
 bool isValidUrl(const std::string& url) {
-    return StringHelper::startsWith(url, "http://") ||
-           StringHelper::startsWith(url, "https://") ||
-           StringHelper::startsWith(url, "file://");
+    return StringHelper::startsWith(std::string_view(url), "http://") ||
+           StringHelper::startsWith(std::string_view(url), "https://") ||
+           StringHelper::startsWith(std::string_view(url), "file://");
 }
 
 std::string urlEncode(const std::string& s) {
@@ -389,55 +380,22 @@ std::string getUrlHost(const std::string& url) {
 // Clipboard
 // ============================================================================
 std::string getClipboardText() {
-#if defined(_WIN32) || defined(_WIN64)
-    if (!OpenClipboard(nullptr)) return "";
-    HANDLE data = GetClipboardData(CF_TEXT);
-    if (!data) { CloseClipboard(); return ""; }
-    const char* text = static_cast<const char*>(GlobalLock(data));
-    std::string result(text ? text : "");
-    GlobalUnlock(data);
-    CloseClipboard();
-    return result;
-#else
-    // Use xclip or xsel or pbpaste
-    FILE* f = popen("xclip -selection clipboard -o 2>/dev/null", "r");
-    if (!f) f = popen("xsel --clipboard 2>/dev/null", "r");
-    if (!f) f = popen("pbpaste 2>/dev/null", "r");
-    if (!f) return "";
-    std::string result;
-    char buf[256];
-    while (size_t n = fread(buf, 1, sizeof(buf) - 1, f)) {
-        result.append(buf, n);
-    }
-    pclose(f);
-    return result;
-#endif
+    QClipboard* clipboard = QGuiApplication::clipboard();
+    if (!clipboard) return "";
+    return clipboard->text().toStdString();
 }
 
 bool setClipboardText(const std::string& text) {
-#if defined(_WIN32) || defined(_WIN64)
-    if (!OpenClipboard(nullptr)) return false;
-    EmptyClipboard();
-    HGLOBAL mem = GlobalAlloc(GMEM_MOVEABLE, text.size() + 1);
-    if (!mem) { CloseClipboard(); return false; }
-    memcpy(GlobalLock(mem), text.data(), text.size() + 1);
-    GlobalUnlock(mem);
-    bool ok = SetClipboardData(CF_TEXT, mem) != 0;
-    CloseClipboard();
-    return ok;
-#else
-    FILE* f = popen("xclip -selection clipboard 2>/dev/null", "w");
-    if (!f) f = popen("xsel --clipboard 2>/dev/null", "w");
-    if (!f) f = popen("pbcopy 2>/dev/null", "w");
-    if (!f) return false;
-    fwrite(text.data(), 1, text.size(), f);
-    pclose(f);
+    QClipboard* clipboard = QGuiApplication::clipboard();
+    if (!clipboard) return false;
+    clipboard->setText(QString::fromStdString(text));
     return true;
-#endif
 }
 
 bool hasClipboardText() {
-    return !getClipboardText().empty();
+    QClipboard* clipboard = QGuiApplication::clipboard();
+    if (!clipboard) return false;
+    return !clipboard->text().isEmpty();
 }
 
 // ============================================================================
@@ -483,5 +441,154 @@ std::string generateRandomString(size_t length) {
     result.reserve(length);
     for (size_t i = 0; i < length; ++i)
         result += charset[dist(gen)];
+    return result;
+}
+
+// ============================================================================
+// Duration formatting
+// ============================================================================
+QString formatDuration(int64_t ms) {
+    if (ms < 0) return QString("0s");
+
+    int64_t seconds = ms / 1000;
+    int64_t minutes = seconds / 60;
+    int64_t hours = minutes / 60;
+    int64_t days = hours / 24;
+
+    if (days > 0) {
+        return QString("%1d %2h").arg(days).arg(hours % 24);
+    }
+    if (hours > 0) {
+        return QString("%1h %2m").arg(hours).arg(minutes % 60);
+    }
+    if (minutes > 0) {
+        return QString("%1m %2s").arg(minutes).arg(seconds % 60);
+    }
+    return QString("%1s").arg(seconds);
+}
+
+// ============================================================================
+// System utilities
+// ============================================================================
+int64_t getSystemUptime() {
+    struct sysinfo si;
+    if (sysinfo(&si) == 0) {
+        return static_cast<int64_t>(si.uptime);
+    }
+    return -1;
+}
+
+QString getDesktopEnvironment() {
+    const char* xdgDe = getenv("XDG_CURRENT_DESKTOP");
+    if (xdgDe) {
+        QString de = QString(xdgDe).toLower();
+        if (de.contains("kde")) return "KDE";
+        if (de.contains("gnome")) return "GNOME";
+        if (de.contains("xfce")) return "XFCE";
+        if (de.contains("lxde")) return "LXDE";
+        if (de.contains("lxqt")) return "LXQt";
+        if (de.contains("mate")) return "MATE";
+        if (de.contains("cinnamon")) return "Cinnamon";
+        if (de.contains("unity")) return "Unity";
+        if (de.contains("budgie")) return "Budgie";
+        if (de.contains("deepin")) return "Deepin";
+        if (de.contains("pantheon")) return "Pantheon";
+        return QString(xdgDe);
+    }
+
+    const char* session = getenv("DESKTOP_SESSION");
+    if (session) {
+        QString de = QString(session).toLower();
+        if (de.contains("kde") || de.contains("plasma")) return "KDE";
+        if (de.contains("gnome")) return "GNOME";
+        if (de.contains("xfce")) return "XFCE";
+        if (de.contains("lxde")) return "LXDE";
+        if (de.contains("lxqt")) return "LXQt";
+        if (de.contains("mate")) return "MATE";
+        if (de.contains("cinnamon")) return "Cinnamon";
+        return QString(session);
+    }
+
+    if (getenv("KDE_FULL_SESSION") || getenv("KDE_SESSION_VERSION")) return "KDE";
+    if (getenv("GNOME_DESKTOP_SESSION_ID")) return "GNOME";
+    if (getenv("XFCE4")) return "XFCE";
+    return "Unknown";
+}
+
+// ============================================================================
+// Application launching
+// ============================================================================
+bool launchApplication(const QString& app, const QStringList& args, QString& error) {
+    QProcess* process = new QProcess();
+    QStringList allArgs = args;
+    process->setProgram(app);
+    process->setArguments(allArgs);
+    process->start();
+    if (!process->waitForStarted(5000)) {
+        error = QString("Failed to start process: %1").arg(process->errorString());
+        delete process;
+        return false;
+    }
+    process->disconnect();
+    delete process;
+    return true;
+}
+
+// ============================================================================
+// File comparison
+// ============================================================================
+bool compareFiles(const QString& a, const QString& b) {
+    QFile fa(a);
+    QFile fb(b);
+    if (!fa.open(QIODevice::ReadOnly) || !fb.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+    if (fa.size() != fb.size()) return false;
+
+    const int chunkSize = 65536;
+    QByteArray ca, cb;
+    while (!fa.atEnd() && !fb.atEnd()) {
+        ca = fa.read(chunkSize);
+        cb = fb.read(chunkSize);
+        if (ca != cb) return false;
+    }
+    return true;
+}
+
+// ============================================================================
+// File name validation
+// ============================================================================
+bool isValidFileName(const QString& name) {
+    if (name.isEmpty()) return false;
+    static const QString invalidChars = "/\\:*?\"<>|";
+    for (const QChar& c : invalidChars) {
+        if (name.contains(c)) return false;
+    }
+    static const QStringList reserved = {"CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
+    QString upperName = name.toUpper();
+    if (reserved.contains(upperName)) return false;
+    if (name.endsWith('.') || name.endsWith(' ')) return false;
+    if (name.length() > 255) return false;
+    return true;
+}
+
+// ============================================================================
+// EOL normalization
+// ============================================================================
+QString normalizeEOL(const QString& text, EolType eol) {
+    QString result = text;
+    QString eolStr;
+    switch (eol) {
+        case EolType::EOL_CRLF: eolStr = "\r\n"; break;
+        case EolType::EOL_LF: eolStr = "\n"; break;
+        case EolType::EOL_CR: eolStr = "\r"; break;
+        default: eolStr = "\n"; break;
+    }
+
+    result.replace("\r\n", "\n");
+    result.replace("\r", "\n");
+    result.replace("\n", eolStr);
     return result;
 }

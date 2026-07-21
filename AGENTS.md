@@ -1,48 +1,80 @@
-# AGENTS.md - Your Workspace
+# AGENTS.md — npp-qt
 
-This folder is home.
+## Canonical Project Location
 
-## Every Session
+```
+~/.openclaw/workspace/npp-qt   <- ALWAYS work here
+branch: master                 <- NEVER commit directly to master; use feature branches
+```
 
-1. Read `SOUL.md` — who you are
-2. Read `USER.md` — who you help
-3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for context
-4. **Main session only:** Also read `MEMORY.md`
+## Key Paths
 
-## Memory
+| Path | Meaning |
+|------|---------|
+| `~/.openclaw/workspace/npp-qt` | Project root |
+| `~/.openclaw/workspace/npp-qt/src/` | Source code |
+| `~/.openclaw/workspace/npp-qt/docs/` | Documentation |
+| `~/.openclaw/workspace/npp-qt/build/` | Canonical build dir |
+| `~/.openclaw/workspace/notepad-plus-plus-translation` | Upstream Win32 reference |
 
-- **Daily:** `memory/YYYY-MM-DD.md` — raw logs
-- **Long-term:** `MEMORY.md` — curated memories (main session only, never in groups)
+## Branch Workflow
 
-**Write it down.** Files survive restarts. Mental notes don't.
+- ALWAYS work on feature branches: `fix/`, `feat/`, `docs/`, `chore/`
+- Open a PR / branch so the diff is visible
+- `master` is clean reviewed history only
 
-## Safety
+```
+git checkout master && git pull --ff-only origin master
+git checkout -b feat/my-feature
+# ... work ...
+git push origin feat/my-feature
+```
 
-- No private data exfiltration
-- `trash` > `rm`
-- Ask when uncertain
+## Before Every Commit
 
-## Group Chats
+```bash
+# 1. Verify no build artifacts
+git status --short
 
-You're a participant, not a proxy.
+# 2. Build and test
+cmake --build build && QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
+```
 
-**Speak when:** mentioned, can add value, correcting misinformation
-**Silent when:** banter, already answered, nothing useful to add
+## What NOT to Commit
 
-One reaction per message max.
+```
+build*/  build-*/  b/  *.o  *.a  *.so  NotepadMinusMinusQt
+Testing/  __pycache__/  .openclaw/  .jaisiu/  .memory/
+```
 
-## External Actions
+## Building
 
-**Free:** read, explore, organize, search web, work in workspace
-**Ask first:** uncertain or sensitive external actions
-**Allowed when aligned with goals:** emails, posts, external communication
+```bash
+cmake -B build && cmake --build build -j$(nproc)
+QT_QPA_PLATFORM=offscreen ./build/NotepadMinusMinusQt --help
+```
 
-## Heartbeats
+## Docs
 
-Don't just say `HEARTBEAT_OK`. Check things: email, calendar, notifications. Rotate checks. Stay quiet at night or when busy.
+All docs in `docs/`: README, ARCHITECTURE, CORE_SYSTEMS, EDITOR, DIALOGS,
+UI_SUBSYSTEMS, KEYBOARD_SHORTCUTS, API, COMMON_UTILITIES, GETTING_STARTED,
+TESTING, TROUBLESHOOTING, ENCODING, THEMES, PANELS, COMMAND_LINE
 
-Edit `HEARTBEAT.md` for periodic tasks. Use `cron` for exact timing.
+## Semantic Lift
 
-## Make It Yours
+~60-65% functional coverage vs upstream NPP. See HEARTBEAT.md.
 
-Add your own conventions as you learn what works.
+## Quick Reference
+
+```bash
+# ASAN build
+cmake -B build-asan -DNPP_DEBUG_SANITIZERS=ON
+cmake --build build-asan
+
+# Run tests
+ctest --test-dir build --output-on-failure
+
+# Debug crash
+gdb ./build/NotepadMinusMinusQt
+(gdb) run; (gdb) bt full
+```

@@ -2,36 +2,38 @@
 #include "StringHelper.h"
 #include "Constants.h"
 #include "Types.h"
-#include <codecvt>
-#include <locale>
+#include <QString>
 
 namespace StringHelper {
 
 // ============================================================================
-// Encoding conversion
+// Encoding conversion - using Qt APIs (no codecvt)
 // ============================================================================
 std::wstring toWStr(const std::string& s) {
     if (s.empty()) return {};
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> cv;
-    return cv.from_bytes(s);
+    // Qt6: QString::toStdWString() handles UTF-8 → wchar_t correctly on all platforms
+    return QString::fromUtf8(s.data(), static_cast<int>(s.size())).toStdWString();
 }
 
 std::string toUtf8(const std::wstring& s) {
     if (s.empty()) return {};
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> cv;
-    return cv.to_bytes(s);
+    // Qt6: use QStringView for iterator-pair construction
+    QString qstr = QString::fromUtf16(
+        reinterpret_cast<const char16_t*>(s.data()), static_cast<int>(s.size()));
+    return qstr.toUtf8().toStdString();  // toStdString() copies the data
 }
 
 std::u16string toUtf16(const std::string& s) {
     if (s.empty()) return {};
-    std::wstring w = toWStr(s);
-    return std::u16string(w.begin(), w.end());
+    QString qstr = QString::fromUtf8(s.data(), static_cast<int>(s.size()));
+    return std::u16string(reinterpret_cast<const char16_t*>(qstr.utf16()),
+                           static_cast<size_t>(qstr.size()));
 }
 
 std::string utf16ToUtf8(const std::u16string& s) {
     if (s.empty()) return {};
-    std::wstring w(s.begin(), s.end());
-    return toUtf8(w);
+    QString qstr = QString::fromUtf16(s.data(), static_cast<int>(s.size()));
+    return qstr.toUtf8().toStdString();  // toStdString() copies the data
 }
 
 // ============================================================================
@@ -62,6 +64,12 @@ std::string replaceAll(std::string s, const std::vector<std::pair<std::string, s
         s = replaceAll(s, from, to);
     }
     return s;
+}
+
+QString replaceAll(const QString& s, const QString& from, const QString& to) {
+    QString result = s;
+    result.replace(from, to);
+    return result;
 }
 
 // ============================================================================
@@ -103,6 +111,115 @@ std::string join(const std::vector<std::string>& parts, std::string_view separat
     return result;
 }
 
+QStringList split(const QString& s, const QString& delimiter, bool skipEmpty) {
+    if (delimiter.isEmpty()) {
+        return QStringList() << s;
+    }
+    if (skipEmpty) {
+        return s.split(delimiter, Qt::SkipEmptyParts);
+    }
+    return s.split(delimiter);
+}
+
+QString join(const QStringList& parts, const QString& separator) {
+    return parts.join(separator);
+}
+
+// ============================================================================
+// Levenshtein distance
+// ============================================================================
+int levenshteinDistance(const QString& a, const QString& b) {
+    const int m = a.length();
+    const int n = b.length();
+
+    if (m == 0) return n;
+    if (n == 0) return m;
+
+    // Use two rows instead of full matrix for memory efficiency
+    QVector<int> prevRow(n + 1);
+    QVector<int> currRow(n + 1);
+
+    // Initialize first row
+    for (int j = 0; j <= n; ++j) {
+        prevRow[j] = j;
+    }
+
+    for (int i = 1; i <= m; ++i) {
+        currRow[0] = i;
+        for (int j = 1; j <= n; ++j) {
+            int cost = (a[i - 1] == b[j - 1]) ? 0 : 1;
+            currRow[j] = std::min({
+                prevRow[j] + 1,      // deletion
+                currRow[j - 1] + 1,  // insertion
+                prevRow[j - 1] + cost // substitution
+            });
+        }
+        std::swap(prevRow, currRow);
+    }
+
+    return prevRow[n];
+}
+
+// ============================================================================
+// JSON escaping
+// ============================================================================
+QString escapeJson(const QString& s) {
+    QString result;
+    result.reserve(s.length() * 2);
+    for (QChar c : s) {
+        switch (c.unicode()) {
+            case '"':  result += "\\\""; break;
+            case '\\': result += "\\\\"; break;
+            case '\b': result += "\\b"; break;
+            case '\f': result += "\\f"; break;
+            case '\n': result += "\\n"; break;
+            case '\r': result += "\\r"; break;
+            case '\t': result += "\\t"; break;
+            default:
+                if (c.unicode() < 0x20) {
+                    result += QString("\\u%1").arg(static_cast<int>(c.unicode()), 4, 16, QChar('0'));
+                } else {
+                    result += c;
+                }
+                break;
+        }
+    }
+    return result;
+}
+
+// ============================================================================
+// Shell escaping
+// ============================================================================
+QString escapeShell(const QString& s) {
+    QString result;
+    result.reserve(s.length() * 2);
+    bool needsQuotes = false;
+
+    for (QChar c : s) {
+        if (c.isSpace() || c == '\'' || c == '"' || c == '$' ||
+            c == '`' || c == '\\' || c == '!' || c == '#' ||
+            c == '&' || c == '*' || c == '?' || c == '~' ||
+            c == '(' || c == ')' || c == '[' || c == ']' ||
+            c == '{' || c == '}' || c == '|' || c == '<' ||
+            c == '>' || c == '^' || c == ';' || c == ':') {
+            needsQuotes = true;
+            break;
+        }
+    }
+
+    if (needsQuotes) {
+        result += '\'';
+        for (QChar c : s) {
+            if (c == '\'') result += "'\\''";
+            else result += c;
+        }
+        result += '\'';
+    } else {
+        result = s;
+    }
+    return result;
+}
+
 // ============================================================================
 // FileName / FileExt / FilePath (platform-agnostic)
 // ============================================================================
@@ -121,7 +238,7 @@ std::wstring fileName(const std::wstring& path) {
 std::string fileExt(const std::string& path) {
     size_t pos = path.find_last_of('.');
     if (pos == std::string::npos || pos == 0) return "";
-    return path.substr(pos + 1);
+    return path.substr(pos);
 }
 
 std::string filePath(const std::string& path) {
@@ -250,10 +367,10 @@ bool equalsIgnoreCase(const std::wstring& a, const std::wstring& b) {
 // ============================================================================
 std::string tabsToSpaces(const std::string& text, size_t tabWidth) {
     std::string result;
-    result.reserve(text.size() * 2);
+    result.reserve(text.size() * tabWidth);
     for (char c : text) {
         if (c == '\t') {
-            result.append(tabWidth - (result.size() % tabWidth), ' ');
+            result.append(tabWidth, ' ');
         } else {
             result += c;
         }
@@ -265,29 +382,44 @@ std::string spacesToTabs(const std::string& text, size_t tabWidth) {
     std::string result;
     result.reserve(text.size());
     size_t col = 0;
-    for (char c : text) {
-        if (c == ' ') {
-            size_t mod = col % tabWidth;
-            size_t nextTabStop = mod == 0 ? tabWidth : tabWidth - mod;
-            if (result.size() >= nextTabStop && result[result.size() - nextTabStop] == '\t') {
-                result[result.size() - nextTabStop] = '\t';
-            } else {
-                result += '\t';
-            }
-            ++col;
-        } else if (c == '\t') {
+    size_t i = 0;
+    while (i < text.size()) {
+        char c = text[i];
+        if (c == '\t') {
             result += '\t';
             col = (col / tabWidth + 1) * tabWidth;
+            ++i;
         } else if (c == '\n' || c == '\r') {
             result += c;
             col = 0;
+            ++i;
+        } else if (c == ' ') {
+            size_t spaceCount = 0;
+            size_t j = i;
+            while (j < text.size() && text[j] == ' ') {
+                ++spaceCount;
+                ++j;
+            }
+            size_t nextTabStop = (col / tabWidth + 1) * tabWidth;
+            if (spaceCount == nextTabStop - col) {
+                result += '\t';
+                col = nextTabStop;
+            } else {
+                for (size_t k = 0; k < spaceCount; ++k) {
+                    result += ' ';
+                    ++col;
+                }
+            }
+            i += spaceCount;
         } else {
             result += c;
             ++col;
+            ++i;
         }
     }
     return result;
 }
+
 
 std::string makeEolConsistent(std::string_view text, int eolMode) {
     const char* eol = "\n";
@@ -312,7 +444,7 @@ std::string makeEolConsistent(std::string_view text, int eolMode) {
 // Indentation
 // ============================================================================
 std::string indentLines(const std::string& text, size_t spaces, const std::string& chars) {
-    std::string indent(spaces, ' ');
+    std::string indent = chars.empty() ? std::string(spaces, ' ') : std::string(spaces, chars[0]);
     std::string result;
     std::istringstream iss(text);
     std::string line;

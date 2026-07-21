@@ -2,6 +2,12 @@
 #include "FileHelper.h"
 #include "Constants.h"
 #include "StringHelper.h"
+#include <QFile>
+#include <QTextStream>
+#include <QDir>
+#include <QFileInfo>
+#include <QCryptographicHash>
+#include <QDebug>
 #include <fstream>
 #include <sstream>
 #include <cstdio>
@@ -10,13 +16,9 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <cerrno>
-
-#if defined(_WIN32) || defined(_WIN64)
-#include <windows.h>
-#else
 #include <sys/mman.h>
 #include <fcntl.h>
-#endif
+#include <utime.h>
 
 namespace fs = std::filesystem;
 using namespace std::chrono_literals;
@@ -240,7 +242,6 @@ std::chrono::system_clock::time_point lastModifiedTime(const std::string& path) 
 bool setLastModifiedTime(const std::string& path,
                                      const std::chrono::system_clock::time_point& t) {
     (void)path; (void)t;
-    // Platform-specific - would need utimes/mtime syscall
     return false;
 }
 
@@ -248,16 +249,10 @@ bool setLastModifiedTime(const std::string& path,
 // Temporary files
 // ============================================================================
 std::string getTempDirectory() {
-#if defined(_WIN32) || defined(_WIN64)
-    char tempPath[MAX_PATH];
-    GetTempPathA(MAX_PATH, tempPath);
-    return std::string(tempPath);
-#else
     const char* tmp = getenv("TMPDIR");
     if (!tmp) tmp = getenv("TMP");
     if (!tmp) tmp = "/tmp";
     return std::string(tmp);
-#endif
 }
 
 std::string getTempFileName(const std::string& prefix) {
@@ -265,16 +260,12 @@ std::string getTempFileName(const std::string& prefix) {
     std::string templatePath = tmpDir + "/" + prefix + "XXXXXX";
     char buf[1024];
     strcpy(buf, templatePath.c_str());
-#if defined(_WIN32) || defined(_WIN64)
-    _mktemp_s(buf);
-#else
-    mkstemp(buf);
-#endif
+    if (mkstemp(buf) == -1) return {};
     return std::string(buf);
 }
 
 std::string getTempPath() {
-    return getTempFileName("npp_XXXXXX");
+    return getTempFileName(std::string("npp_XXXXXX"));
 }
 
 // ============================================================================
@@ -333,12 +324,10 @@ EncodingType detectEncoding(const std::string& path) {
         if (content->size() >= 2 && content->substr(0, 2) == "\xFF\xFE") return EncodingType::UTF_16_LE;
         if (content->size() >= 2 && content->substr(0, 2) == "\xFE\xFF") return EncodingType::UTF_16_BE;
     }
-    // Try to detect UTF-8 without BOM
     bool looksLikeUtf8 = true;
     for (size_t i = 0; i < content->size() && looksLikeUtf8; ++i) {
         unsigned char c = (*content)[i];
         if (c >= 0x80) {
-            // Check for valid UTF-8 sequence
             int cont = 0;
             if ((c & 0xE0) == 0xC0) cont = 1;
             else if ((c & 0xF0) == 0xE0) cont = 2;
@@ -358,7 +347,7 @@ EncodingType detectEncoding(const std::string& path) {
 // Scintilla document
 // ============================================================================
 ScintillaDocument createDocument() {
-    return nullptr;  // Will be implemented via ScintillaEditor
+    return nullptr;
 }
 
 void releaseDocument(ScintillaDocument doc) {
@@ -368,19 +357,7 @@ void releaseDocument(ScintillaDocument doc) {
 // ============================================================================
 // Memory mapped file
 // ============================================================================
-MemoryMappedFile::MemoryMappedFile(const std::string& path, bool readOnly) : _path(path), _readOnly(readOnly) {
-#if defined(_WIN32) || defined(_WIN64)
-    _fileHandle = CreateFileA(path.c_str(),
-        readOnly ? GENERIC_READ : (GENERIC_READ | GENERIC_WRITE),
-        FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (_fileHandle == INVALID_HANDLE_VALUE) return;
-    _size = GetFileSize(_fileHandle, nullptr);
-    _mappingHandle = CreateFileMapping(_fileHandle, nullptr,
-        readOnly ? PAGE_READONLY : PAGE_READWRITE, 0, 0, nullptr);
-    if (!_mappingHandle) return;
-    _data = static_cast<char*>(MapViewOfFile(_mappingHandle,
-        readOnly ? FILE_MAP_READ : FILE_MAP_WRITE, 0, 0, 0));
-#else
+MemoryMappedFile::MemoryMappedFile(const std::string& path, bool readOnly) : _readOnly(readOnly), _path(path) {
     int flags = readOnly ? O_RDONLY : O_RDWR;
     int fd = open(path.c_str(), flags);
     if (fd < 0) return;
@@ -390,18 +367,11 @@ MemoryMappedFile::MemoryMappedFile(const std::string& path, bool readOnly) : _pa
     _data = static_cast<char*>(mmap(nullptr, _size, readOnly ? PROT_READ : PROT_READ | PROT_WRITE,
         MAP_PRIVATE, fd, 0));
     close(fd);
-#endif
-    _isOpen = true;
+    _isOpen = (_data != MAP_FAILED);
 }
 
 MemoryMappedFile::~MemoryMappedFile() {
-#if defined(_WIN32) || defined(_WIN64)
-    if (_data) UnmapViewOfFile(_data);
-    if (_mappingHandle) CloseHandle(_mappingHandle);
-    if (_fileHandle != INVALID_HANDLE_VALUE) CloseHandle(_fileHandle);
-#else
-    if (_data) munmap(_data, _size);
-#endif
+    if (_data && _data != MAP_FAILED) munmap(_data, _size);
 }
 
 MemoryMappedFile::MemoryMappedFile(MemoryMappedFile&& other) noexcept {
@@ -429,11 +399,242 @@ MemoryMappedFile& MemoryMappedFile::operator=(MemoryMappedFile&& other) noexcept
 }
 
 void MemoryMappedFile::flush() {
-#if defined(_WIN32) || defined(_WIN64)
-    if (_data) FlushViewOfFile(_data, 0);
-#else
-    if (_data) msync(_data, _size, MS_SYNC);
-#endif
+    if (_data && _data != MAP_FAILED) msync(_data, _size, MS_SYNC);
+}
+
+// ============================================================================
+// Qt-style text/binary file operations
+// ============================================================================
+QString readTextFile(const QString& path, const QString& encoding, QString* error) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        if (error) *error = QString("Failed to open file for reading: %1").arg(file.errorString());
+        return QString();
+    }
+    QTextStream stream(&file);
+    Q_UNUSED(encoding);
+    QString content = stream.readAll();
+    file.close();
+    return content;
+}
+
+bool writeTextFile(const QString& path, const QString& content, const QString& encoding, QString* error) {
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        if (error) *error = QString("Failed to open file for writing: %1").arg(file.errorString());
+        return false;
+    }
+    QTextStream stream(&file);
+    Q_UNUSED(encoding);
+    stream << content;
+    stream.flush();
+    bool success = file.flush();
+    if (!success && error) {
+        *error = QString("Failed to write file: %1").arg(file.errorString());
+    }
+    file.close();
+    return success;
+}
+
+QByteArray readBinaryFile(const QString& path, QString* error) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (error) *error = QString("Failed to open file for reading: %1").arg(file.errorString());
+        return QByteArray();
+    }
+    QByteArray data = file.readAll();
+    file.close();
+    return data;
+}
+
+bool writeBinaryFile(const QString& path, const QByteArray& data, QString* error) {
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) {
+        if (error) *error = QString("Failed to open file for writing: %1").arg(file.errorString());
+        return false;
+    }
+    qint64 written = file.write(data);
+    if (written != data.size()) {
+        if (error) *error = QString("Failed to write complete file: %1").arg(file.errorString());
+        file.close();
+        return false;
+    }
+    file.close();
+    return true;
+}
+
+// ============================================================================
+// File info helpers
+// ============================================================================
+qint64 getFileSize(const QString& path) {
+    QFileInfo info(path);
+    return info.size();
+}
+
+QDateTime getCreationTime(const QString& path) {
+    QFileInfo info(path);
+    return info.birthTime();
+}
+
+QDateTime getModificationTime(const QString& path) {
+    QFileInfo info(path);
+    return info.lastModified();
+}
+
+bool setModificationTime(const QString& path, const QDateTime& time) {
+    QFile file(path);
+    if (!file.exists()) return false;
+    return file.setFileTime(time, QFileDevice::FileTime::FileModificationTime);
+}
+
+// ============================================================================
+// Qt-style temp file/directory
+// ============================================================================
+QString getTempFileName(const QString& prefix) {
+    QString templateName = QDir::temp().filePath(prefix + "XXXXXX");
+    QByteArray tpl = templateName.toLocal8Bit();
+    int fd = mkstemp(tpl.data());
+    if (fd < 0) return QString();
+    ::close(fd);
+    const QString resultPath = QString::fromLocal8Bit(tpl);
+    ::remove(tpl.constData());
+    return resultPath;
+}
+
+QString getTempDir() {
+    return QDir::tempPath();
+}
+
+// ============================================================================
+// Qt-style directory listing
+// ============================================================================
+QStringList listFiles(const QString& dir, const QString& filter, bool recursive) {
+    QStringList result;
+    if (!QDir(dir).exists()) return result;
+
+    QDirIterator::IteratorFlags flags = recursive ? QDirIterator::Subdirectories : QDirIterator::NoIteratorFlags;
+    QDirIterator it(dir, QStringList() << filter, QDir::Files, flags);
+    while (it.hasNext()) {
+        result.append(it.next());
+    }
+    return result;
+}
+
+QStringList listDirs(const QString& dir, const QString& filter, bool recursive) {
+    QStringList result;
+    if (!QDir(dir).exists()) return result;
+
+    QDirIterator::IteratorFlags flags = recursive ? QDirIterator::Subdirectories : QDirIterator::NoIteratorFlags;
+    QDirIterator it(dir, QStringList() << filter, QDir::Dirs | QDir::NoDotAndDotDot, flags);
+    while (it.hasNext()) {
+        result.append(it.next());
+    }
+    return result;
+}
+
+// ============================================================================
+// Recursive copy/remove
+// ============================================================================
+bool copyRecursive(const QString& src, const QString& dst, QString* error) {
+    QFileInfo srcInfo(src);
+    if (srcInfo.isDir()) {
+        QDir dstDir(dst);
+        if (!dstDir.exists()) {
+            if (!dstDir.mkpath(".")) {
+                if (error) *error = QString("Failed to create directory: %1").arg(dst);
+                return false;
+            }
+        }
+        QDir srcDir(src);
+        for (const QFileInfo& info : srcDir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot)) {
+            QString srcPath = info.absoluteFilePath();
+            QString dstPath = dstDir.filePath(info.fileName());
+            if (info.isDir()) {
+                if (!copyRecursive(srcPath, dstPath, error)) return false;
+            } else {
+                if (!QFile::copy(srcPath, dstPath)) {
+                    if (error) *error = QString("Failed to copy file: %1 -> %2").arg(srcPath, dstPath);
+                    return false;
+                }
+            }
+        }
+        return true;
+    } else {
+        if (!QFile::copy(src, dst)) {
+            if (error) *error = QString("Failed to copy file: %1 -> %2").arg(src, dst);
+            return false;
+        }
+        return true;
+    }
+}
+
+bool removeRecursive(const QString& path, QString* error) {
+    QFileInfo info(path);
+    if (info.isDir()) {
+        QDir dir(path);
+        for (const QFileInfo& entry : dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot)) {
+            QString entryPath = entry.absoluteFilePath();
+            if (entry.isDir()) {
+                if (!removeRecursive(entryPath, error)) return false;
+            } else {
+                if (!QFile::remove(entryPath)) {
+                    if (error) *error = QString("Failed to remove file: %1").arg(entryPath);
+                    return false;
+                }
+            }
+        }
+        if (!dir.rmdir(path)) {
+            if (error) *error = QString("Failed to remove directory: %1").arg(path);
+            return false;
+        }
+        return true;
+    } else {
+        if (!QFile::remove(path)) {
+            if (error) *error = QString("Failed to remove file: %1").arg(path);
+            return false;
+        }
+        return true;
+    }
+}
+
+// ============================================================================
+// Hash computation
+// ============================================================================
+QString computeMD5(const QString& path) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return QString();
+    QCryptographicHash hash(QCryptographicHash::Md5);
+    hash.addData(&file);
+    file.close();
+    return QString::fromLatin1(hash.result().toHex());
+}
+
+QString computeSHA256(const QString& path) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return QString();
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    hash.addData(&file);
+    file.close();
+    return QString::fromLatin1(hash.result().toHex());
+}
+
+// ============================================================================
+// Binary file detection
+// ============================================================================
+bool isBinaryFile(const QString& path, int checkBytes) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return false;
+
+    QByteArray data = file.read(checkBytes);
+    file.close();
+
+    for (char byte : data) {
+        unsigned char c = static_cast<unsigned char>(byte);
+        if (c == 0 || (c < 32 && c != 9 && c != 10 && c != 13)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace FileHelper

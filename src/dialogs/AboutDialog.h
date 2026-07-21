@@ -1,14 +1,15 @@
-// AboutDialog.h - About dialog
+// AboutDialog.h - About dialog with credits, license, and build info
 // Copyright (C) 2026 Agent Army
-// GPL v3
+// SPDX-License-Identifier: GPL-3.0-only
 
 #pragma once
 
 #include <QDialog>
-
-class QLabel;
-class QPushButton;
-class QTextBrowser;
+#include <QLabel>
+#include <QPushButton>
+#include <QTextBrowser>
+#include <QPalette>
+#include <QStackedWidget>
 
 class AboutDialog : public QDialog {
     Q_OBJECT
@@ -17,10 +18,36 @@ public:
     ~AboutDialog() override;
 
     void setVersion(const QString& version);
-    void setDescription(const QString& desc);
+    void setBuildInfo(const QString& info);
+
+private slots:
+    void onShowCredits();
+    void onShowLicense();
+    void onShowInfo();
+    void onOpenWebsite();
 
 private:
-    QLabel* _titleLabel = nullptr;
-    QLabel* _versionLabel = nullptr;
-    QTextBrowser* _descriptionBrowser = nullptr;
+    void setupUi();
+    void loadCredits();
+    void loadLicense();
+    void loadInfo();
+    void applyStyle();
+
+    QLabel* logoLabel = nullptr;
+    QLabel* titleLabel = nullptr;
+    QLabel* subtitleLabel = nullptr;
+    QLabel* versionLabel = nullptr;
+    QLabel* descriptionLabel = nullptr;
+    QPushButton* creditsBtn = nullptr;
+    QPushButton* licenseBtn = nullptr;
+    QPushButton* websiteBtn = nullptr;
+    QPushButton* closeBtn = nullptr;
+    QPushButton* infoBtn = nullptr;
+    QStackedWidget* tabStack = nullptr;
+    QTextBrowser* creditsBrowser = nullptr;
+    QTextBrowser* licenseBrowser = nullptr;
+    QTextBrowser* infoBrowser = nullptr;
+
+    QString _currentVersion;
+    QString _buildInfo;
 };

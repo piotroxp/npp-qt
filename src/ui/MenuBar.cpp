@@ -8,6 +8,7 @@
 #include <QAction>
 #include <QKeySequence>
 #include <QStyle>
+#include <QSettings>
 #include "../core/RecentFilesManager.h"
 #include <QApplication>
 #include <QShortcut>
@@ -175,6 +176,11 @@ void MenuBar::buildMenus() {
     findInFilesAction->setData("search.findInFiles");
     _searchMenu->addAction(findInFilesAction);
     
+    QAction* incSearchAction = new QAction("&Incremental Search", this);
+    incSearchAction->setShortcut(QKeySequence("Ctrl+I"));
+    incSearchAction->setData("search.incrementalSearch");
+    _searchMenu->addAction(incSearchAction);
+    
     _searchMenu->addSeparator();
     
     QAction* countAction = new QAction("&Count", this);
@@ -187,6 +193,26 @@ void MenuBar::buildMenus() {
     
     // View menu
     _viewMenu = addMenu("&View");
+    
+    QAction* darkModeAction = new QAction("&Dark Mode", this);
+    darkModeAction->setCheckable(true);
+    darkModeAction->setChecked(true);  // default dark
+    darkModeAction->setData("view.darkMode");
+    _viewMenu->addAction(darkModeAction);
+    
+    QAction* lightModeAction = new QAction("&Light Mode", this);
+    lightModeAction->setCheckable(true);
+    lightModeAction->setChecked(false);
+    lightModeAction->setData("view.lightMode");
+    _viewMenu->addAction(lightModeAction);
+    
+    // Make dark/light mutually exclusive
+    QObject::connect(darkModeAction, &QAction::toggled,
+                     lightModeAction, &QAction::setChecked, Qt::UniqueConnection);
+    QObject::connect(lightModeAction, &QAction::toggled,
+                     darkModeAction, &QAction::setChecked, Qt::UniqueConnection);
+    
+    _viewMenu->addSeparator();
     
     QAction* fullScreenAction = new QAction("Toggle F&ull Screen", this);
     fullScreenAction->setShortcut(QKeySequence("F11"));
@@ -217,6 +243,44 @@ void MenuBar::buildMenus() {
     showToolBarAction->setChecked(true);
     showToolBarAction->setData("view.showToolBar");
     _viewMenu->addAction(showToolBarAction);
+    
+    _viewMenu->addSeparator();
+    
+    QAction* fileBrowserAction = new QAction("&File Browser", this);
+    fileBrowserAction->setCheckable(true);
+    fileBrowserAction->setChecked(true);
+    fileBrowserAction->setData("view.fileBrowser");
+    _viewMenu->addAction(fileBrowserAction);
+    
+    QAction* funcListAction = new QAction("F&unction List", this);
+    funcListAction->setCheckable(true);
+    funcListAction->setChecked(true);
+    funcListAction->setData("view.functionList");
+    _viewMenu->addAction(funcListAction);
+    
+    QAction* docMapAction = new QAction("&Document Map", this);
+    docMapAction->setCheckable(true);
+    docMapAction->setChecked(true);
+    docMapAction->setData("view.documentMap");
+    _viewMenu->addAction(docMapAction);
+
+    QAction* projPanel1Action = new QAction("&Project Panel 1", this);
+    projPanel1Action->setCheckable(true);
+    projPanel1Action->setChecked(false);
+    projPanel1Action->setData("view.projectPanel_1");
+    _viewMenu->addAction(projPanel1Action);
+
+    QAction* projPanel2Action = new QAction("Project P&anel 2", this);
+    projPanel2Action->setCheckable(true);
+    projPanel2Action->setChecked(false);
+    projPanel2Action->setData("view.projectPanel_2");
+    _viewMenu->addAction(projPanel2Action);
+
+    QAction* projPanel3Action = new QAction("Project Pan&el 3", this);
+    projPanel3Action->setCheckable(true);
+    projPanel3Action->setChecked(false);
+    projPanel3Action->setData("view.projectPanel_3");
+    _viewMenu->addAction(projPanel3Action);
     
     // Encoding menu
     _encodingMenu = addMenu("&Encoding");
@@ -360,3 +424,22 @@ void MenuBar::buildMenus() {
         }
     }
 }
+
+// === Recent File Handlers ===
+void MenuBar::onOpenRecentFile(const QString& filePath) {
+    // Emit signal so listeners can react
+    emit recentFileClicked(filePath);
+    // Open the file via Application (takes std::string)
+    Application::instance().openFile(filePath.toStdString());
+}
+
+void MenuBar::onOpenRecentClear() {
+    // Clear the recent files list via RecentFilesManager
+    RecentFilesManager::instance().clear();
+    // Also save the cleared list to QSettings directly (for direct MenuBar usage)
+    QSettings settings;
+    settings.setValue("recentFiles", QStringList());
+    // Rebuild the UI by repopulating the submenu
+    RecentFilesManager::instance().populateMenu(_recentFilesMenu);
+}
+

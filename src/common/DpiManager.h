@@ -118,6 +118,10 @@ public:
     void setLogicalDpi(int dpi) { _logicalDpi = dpi; }
     int logicalDpi() const { return _logicalDpi; }
 
+public:
+    // public so inline helpers in the header can call it
+    void recalculateDpi();
+
 signals:
     void dpiChanged(int newDpi, qreal newScaleFactor);
 
@@ -129,7 +133,6 @@ private:
     explicit DpiManager(QObject* parent = nullptr);
     ~DpiManager() override;
 
-    void recalculateDpi();
     int detectScreenDpi() const;
 
     qreal _scaleFactor = 1.0;
@@ -157,3 +160,15 @@ inline qreal dpf(qreal logical) { return DpiManager::instance().scaleF(logical);
 inline int iconSize() { return DpiManager::instance().iconSize(); }
 inline int margin() { return DpiManager::instance().standardMargin(); }
 inline int spacing() { return DpiManager::instance().standardSpacing(); }
+
+// ============================================================================
+// Additional DPI utilities
+// ============================================================================
+inline qreal getScaleFactor() { return DpiManager::instance().scaleFactor(); }
+inline QSize scaleSize(const QSize& size) { return DpiManager::instance().scale(size); }
+inline int scaleInt(int value) { return DpiManager::instance().scale(value); }
+
+// ============================================================================
+// Cache invalidation for theme/size changes
+// ============================================================================
+inline void invalidateDpiCaches() { DpiManager::instance().recalculateDpi(); }

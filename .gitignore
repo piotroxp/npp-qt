@@ -1,12 +1,22 @@
 # Build artifacts
-npp-qt-build/
 build/
+npp-qt-build/
 npp-qt-tests-build/
 src/tests/*.o
 src/tests/*.a
 *.o
 *.a
 *.exe
+*.dll
+*.so
+*.dylib
+build-asan/
+build-host/
+build3/
+build_clean/
+build_fresh/
+build_w1/
+build_nppqt/
 
 # OS
 .DS_Store
@@ -17,23 +27,29 @@ Thumbs.db
 *_autogen/
 *.moc
 *.qrc.*
+*.uic/
+*.qsb
 
-# Agent artifacts
+# Agent / runtime artifacts
 .jaisiu/
 .openclaw/
 memory/
 __pycache__/
+*.pyc
 
 # IDE
 .vscode/
 .idea/
 
-# Agent artifacts
-.jaisiu/
-.openclaw/
-memory/
-__pycache__/
+# Installer / packaging
+*.deb
+*.rpm
+*.pkg.tar.zst
+build2/
 
-# IDE
-.vscode/
-.idea/
+# Agent cleanup artifacts
+delete_duplicates.sh
+deleted_files.log
+sessions/
+Testing/
+.DS_Store

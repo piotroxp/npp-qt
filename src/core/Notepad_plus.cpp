@@ -3,6 +3,7 @@
 
 #include "Notepad_plus.h"
 #include "Application.h"
+#include "common/Types.h"
 
 Notepad_plus& Notepad_plus::getInstance() {
     static Notepad_plus instance;
@@ -44,6 +45,8 @@ void Notepad_plus::changeEncoding(int enc) {
     Application::instance().onConvertEncoding(static_cast<EncodingType>(enc));
 }
 
-void Notepad_plus::changeEol(int) {
-    // TODO: Application needs EOL conversion slot
+void Notepad_plus::changeEol(int mode) {
+    static const EolType modes[] = { EolType::EOL_CRLF, EolType::EOL_LF, EolType::EOL_CR };
+    if (mode < 0 || mode > 2) return;
+    Application::instance().setBufferEol(Application::instance().getActiveBuffer(), modes[mode]);
 }

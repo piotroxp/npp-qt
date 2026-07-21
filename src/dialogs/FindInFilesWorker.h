@@ -1,55 +1,49 @@
-// FindInFilesWorker.h - Background worker for Find in Files
-// Copyright (C) 2026 Agent Army
-// GPL v3
+// FindInFilesWorker.h - Background search worker for Find in Files
+// Copyright (C) 2026 Agent Army | GPL v3
 
 #pragma once
 
 #include <QObject>
 #include <QString>
-#include <QStringList>
-#include <QDir>
-#include <QFileInfo>
-#include <QFile>
-#include <QTextStream>
 #include <QList>
+#include <QThread>
+#include <QFile>
 #include "common/Types.h"
+#include <QTextStream>
 
-// ============================================================================
-// FindInFilesWorker — threaded search worker
-// ============================================================================
+// Background worker that searches files in a directory tree
 class FindInFilesWorker : public QObject {
     Q_OBJECT
-
 public:
-    explicit FindInFilesWorker(const QString& dir,
-                                const QString& text,
-                                const QStringList& extensions = QStringList(),
-                                QObject* parent = nullptr);
-    ~FindInFilesWorker() override;
-
-    // Configure search options
-    void setRecursive(bool recursive) { _recursive = recursive; }
-    void setMaxResults(int max) { _maxResults = max; }
+    explicit FindInFilesWorker(const QString& directory, const QString& text,
+                                const QString& filters = "*",
+                                bool caseSensitive = true, bool wholeWord = false,
+                                bool regex = false);
+    ~FindInFilesWorker();
 
 public slots:
     void run();
 
 signals:
     void resultsReady(const QList<FindResult>& results);
-    void progress(int current, int total);
+    void progress(const QString& currentFile, int filesSearched);
     void finished();
-    void error(const QString& message);
 
 private:
-    void searchDirectory(const QDir& dir, const QString& text,
-                         QList<FindResult>& results, int depth);
-    bool matchesFile(const QString& filePath) const;
-    bool searchInFile(const QString& filePath, const QString& text,
-                      QList<FindResult>& results);
+    void searchDirectory(const QString& dir);
+    void searchInFile(const QString& filePath);
+    bool lineMatches(const QString& line) const;
+    bool matchesPattern(const QString& text) const;
+    bool matchesWholeWord(const QString& text) const;
+    bool matchesRegex(const QString& text) const;
 
-    QString _dir;
+    QString _directory;
     QString _text;
-    QStringList _extensions;
-    bool _recursive = true;
-    int _maxResults = 10000;
+    QStringList _filters;
+    bool _caseSensitive;
+    bool _wholeWord;
+    bool _regex;
+
+    QList<FindResult> _results;
+    int _filesSearched = 0;
 };

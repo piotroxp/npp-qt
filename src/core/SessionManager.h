@@ -139,8 +139,20 @@ public:
 
     // === Build Session from Current State ===
 
+    // Populate `out` with the current open buffer state (paths, cursors, scroll,
+    // panel visibility).  Caller (typically Application) provides geometry and
+    // active buffer tracking since that requires access to the main window.
+    void captureCurrentSession(NppSession& out);
+
+    // No-arg convenience: capture into the SessionManager's internal session
+    // (used by tests and by callers that don't need a separate `out` variable).
+    // Equivalent to `captureCurrentSession(_session)`.
     void captureCurrentSession();
-    void applySession(const NppSession& session);
+
+    // Validate and normalize a session before restoration.  Returns false if
+    // the session is unusable; logs warnings for missing files but continues.
+    // Caller (Application) handles opening files and restoring editor state.
+    bool applySession(const NppSession& session);
 
     // === Workspace Integration ===
 

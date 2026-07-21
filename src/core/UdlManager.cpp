@@ -131,6 +131,18 @@ QString UdlManager::findUdlForExtension(const QString& ext) const {
 }
 
 // ============================================================================
+// Mutators
+// ============================================================================
+
+void UdlManager::setUdl(const QString& name, const UdlDefinition& def) {
+    _udls[name] = def;
+    // Rebuild extension index for this UDL
+    for (const QString& ext : def.extensions) {
+        _extToUdl[ext.toLower()] = name;
+    }
+}
+
+// ============================================================================
 // Apply to Buffer
 // ============================================================================
 

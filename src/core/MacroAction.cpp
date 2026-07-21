@@ -2,30 +2,36 @@
 // Copyright (C) 2026 Agent Army | GPL v3
 
 #include "MacroAction.h"
-#include "../editor/ScintillaEditor.h"
+#include "editor/ScintillaEditor.h"
 #include <Qsci/qsciscintilla.h>
+#include <QByteArray>
+#include <QMetaType>
 
 // ============================================================================
 // MacroAction
 // ============================================================================
+
 MacroAction::MacroAction(int sciCommand, int param)
-    : _command(sciCommand), _hasStringParam(false), _intParam(param)
-{}
+    : _command(sciCommand), _hasStringParam(false), _intParam(param), _stringParam() {}
 
 MacroAction::MacroAction(int sciCommand, const QString& stringParam)
-    : _command(sciCommand), _hasStringParam(true), _intParam(0), _stringParam(stringParam)
-{}
+    : _command(sciCommand), _hasStringParam(true), _intParam(0), _stringParam(stringParam) {}
 
 void MacroAction::playback(ScintillaEditor* editor) const {
     if (!editor) return;
-    QsciScintilla* sci = editor->qsciEditor();
-    if (!sci) return;
-
+    QsciScintilla* qs = editor->qsciEditor();
+    if (!qs) return;
     if (_hasStringParam) {
-        QByteArray ba = _stringParam.toUtf8();
-        sci->SendScintilla(_command, ba.size(), ba.constData());
+        // Most recorded string-param macros are SCI_REPLACESEL / SCI_ADDTEXT /
+        // SCI_INSERTTEXT — all of which take a (const char*) pointer as the
+        // sptr_t arg. SCI_REPLACESEL is the safest replay target because it
+        // replaces the current selection (or inserts at cursor with no sel),
+        // matching how Notepad++ macros are recorded.
+        QByteArray utf8 = _stringParam.toUtf8();
+        qs->SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+                          reinterpret_cast<sptr_t>(utf8.constData()));
     } else {
-        sci->SendScintilla(_command, _intParam);
+        qs->SendScintilla(_command, _intParam);
     }
 }
 
@@ -43,35 +49,39 @@ QVariantMap MacroAction::toJson() const {
 void MacroAction::fromJson(const QVariantMap& map) {
     _command = map["id"].toInt();
     QVariant v = map["param"];
-    if (v.canConvert<QString>()) {
+    // Discriminate by actual stored type, not by canConvert. Qt6's QVariant
+    // is permissive enough that QVariant(7).canConvert<QString>() returns
+    // true, which would silently round-trip int actions as string actions.
+    if (v.typeId() == QMetaType::QString) {
         _hasStringParam = true;
         _stringParam = v.toString();
+        _intParam = 0;
     } else {
         _hasStringParam = false;
         _intParam = v.toInt();
+        _stringParam.clear();
     }
 }
 
 // ============================================================================
 // MacroActionList
 // ============================================================================
+
 QVariantMap MacroActionList::toJson() const {
     QVariantMap m;
     m["name"] = name;
-    m["shortcut"] = shortcut;
     QVariantList actionsList;
-    for (const MacroAction& a : actions)
+    for (const auto& a : actions) {
         actionsList.append(a.toJson());
+    }
     m["actions"] = actionsList;
     return m;
 }
 
 void MacroActionList::fromJson(const QVariantMap& map) {
     name = map["name"].toString();
-    shortcut = map["shortcut"].toString();
-    QVariantList actionsList = map["actions"].toList();
     actions.clear();
-    for (const QVariant& v : actionsList) {
+    for (const auto& v : map["actions"].toList()) {
         MacroAction a;
         a.fromJson(v.toMap());
         actions.append(a);

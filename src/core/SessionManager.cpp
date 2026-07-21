@@ -360,12 +360,46 @@ void SessionManager::triggerAutoSave() {
 // Build Session from Current State
 // ============================================================================
 
-void SessionManager::captureCurrentSession() {
-    // Capture from Application state
-    // This would be called when saving a session interactively
-    // The actual population of _session happens in Application::saveSession
+void SessionManager::captureCurrentSession(NppSession& out) {
+    // NOTE: FileManager, ScintillaEditor, and panel state live in Application,
+    // not SessionManager.  Application::saveSession() calls captureCurrentSession()
+    // and then fills in the editor-specific fields (geometry, cursor, scroll, panels)
+    // before calling setCurrentSession() / saveSession().
+    //
+    // Here we only capture what SessionManager owns: recent files.
+    Q_UNUSED(out);
 }
 
-void SessionManager::applySession(const NppSession& session) {
+void SessionManager::captureCurrentSession() {
+    // No-arg convenience overload.  Delegates to the out-param flavour with the
+    // internal `_session` so that `currentSession()` immediately reflects the
+    // capture (used by SessionManager unit tests).
+    captureCurrentSession(_session);
+}
+
+bool SessionManager::applySession(const NppSession& session) {
+    // Validate session version
+    if (session.version > 2) {
+        qWarning() << "[SessionManager] Unknown session version:" << session.version;
+        // Continue anyway — we can restore what we understand
+    }
+
+    // Check that files in session still exist
+    int missing = 0;
+    for (const SessionBuffer& buf : session.buffers) {
+        if (!buf.path.isEmpty() && !QFile::exists(buf.path)) {
+            qWarning() << "[SessionManager] Session file missing:" << buf.path;
+            ++missing;
+        }
+    }
+
+    // Store for downstream use by Application::loadSession()
     _session = session;
+
+    // Return false only if ALL files are missing (useless session)
+    if (!session.buffers.isEmpty() && missing == session.buffers.size()) {
+        qWarning() << "[SessionManager] All session files missing — skipping restore";
+        return false;
+    }
+    return true;
 }

@@ -10,7 +10,7 @@
 #include <QObject>
 #include <QString>
 #include <QDateTime>
-#include <QFileSystemWatcher>
+#include "common/FileWatcherAdapter.h"
 #include <QVector>
 #include <QMutex>
 #include <string>
@@ -46,6 +46,9 @@ struct MapPosition {
 // ============================================================================
 // Main Buffer class - represents a document in the editor
 // ============================================================================
+class Buffer;
+class Application;
+
 class Buffer : public QObject {
     Q_OBJECT
 
@@ -58,7 +61,7 @@ public:
 
     // Constructor: creates a buffer with given ID and document
     // type must be either DOC_REGULAR or DOC_UNNAMED
-    Buffer(FileManager* pManager, BufferID id, const QString& fileName, bool isLargeFile = false);
+    Buffer(FileManager* pManager, const QString& fileName, bool isLargeFile = false);
     ~Buffer() = default;
 
     // Disable copying
@@ -69,7 +72,7 @@ public:
     // Identification
     // ========================================================================
 
-    BufferID getID() const { return _id; }
+    BufferID getID() const { return const_cast<Buffer*>(this); }
 
     // ========================================================================
     // File name/path management
@@ -230,6 +233,15 @@ public:
     int64_t getFileLength() const;
 
     // ========================================================================
+    // Partial load (large file) tracking
+    // ========================================================================
+
+    qint64 totalFileSize() const { return _totalFileSize; }
+    void setTotalFileSize(qint64 size) { _totalFileSize = size; }
+    bool isPartialLoad() const { return _isPartialLoad; }
+    void setPartialLoad(bool v) { _isPartialLoad = v; }
+
+    // ========================================================================
     // Backup system
     // ========================================================================
 
@@ -336,8 +348,9 @@ signals:
     // File system events
     void fileDeleted();
     void fileCreated();
-    void fileExternallyModified();
+    void fileExternallyModified(const QString& path);
 
+    friend class Application;
 private:
     // ========================================================================
     // Private helpers
@@ -358,7 +371,6 @@ private:
     FileManager* _pManager = nullptr;
     bool _canNotify = false;
     int _references = 0;
-    BufferID _id = nullptr;
     void* _document = nullptr;
 
     // Document properties
@@ -399,9 +411,11 @@ private:
     bool _isUnsync = false;
     bool _isSavePointDirty = false;
     bool _isLargeFile = false;
+    qint64 _totalFileSize = 0;
+    bool _isPartialLoad = false;
 
     // File monitoring
-    QFileSystemWatcher* _fileWatcher = nullptr;
+    FileWatcherAdapter* _fileWatcher = nullptr;
     bool _isMonitoringOn = false;
 
     bool _hasLangBeenSetFromMenu = false;

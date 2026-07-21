@@ -7,13 +7,16 @@
 #include "Buffer.h"
 #include "EncodingDetector.h"
 #include "LanguageManager.h"
+#include "../workers/FileLoaderWorker.h"
 #include "common/Util.h"
+#include "../dialogs/LargeFileWarningDialog.h"
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
 #include <QTextStream>
 #include <QSaveFile>
 #include <QApplication>
+#include <functional>
 
 // ============================================================================
 // Construction / Lifecycle
@@ -42,7 +45,49 @@ FileManager::~FileManager() {
 // File I/O
 // ============================================================================
 
+// Helper: convert QByteArray (UTF-16 raw bytes) to QString
+static QString decodeUtf16(const QByteArray& data, bool littleEndian) {
+    QString result;
+    result.reserve(data.size() / 2);
+    for (int i = 0; i + 1 < data.size(); i += 2) {
+        ushort code;
+        if (littleEndian) {
+            code = static_cast<uchar>(data[i]) | (static_cast<uchar>(data[i + 1]) << 8);
+        } else {
+            code = (static_cast<uchar>(data[i]) << 8) | static_cast<uchar>(data[i + 1]);
+        }
+        result.append(QChar(code));
+    }
+    return result;
+}
+
+// Helper: convert QString to QByteArray (raw UTF-16 bytes)
+static QByteArray encodeUtf16(const QString& str, bool littleEndian) {
+    QByteArray result;
+    result.reserve(str.length() * 2);
+    for (QChar c : str) {
+        ushort code = c.unicode();
+        if (littleEndian) {
+            result.append(static_cast<char>(code & 0xFF));
+            result.append(static_cast<char>((code >> 8) & 0xFF));
+        } else {
+            result.append(static_cast<char>((code >> 8) & 0xFF));
+            result.append(static_cast<char>(code & 0xFF));
+        }
+    }
+    return result;
+}
+
 bool FileManager::loadFile(const QString& path, QString& outContent, EncodingType encoding) {
+    // Large file detection: warn for files > 5MB
+    static constexpr qint64 LARGE_FILE_WARNING_THRESHOLD = 5 * 1024 * 1024; // 5MB
+    QFileInfo info(path);
+    if (info.size() > LARGE_FILE_WARNING_THRESHOLD) {
+        qWarning() << "[FileManager] Large file loading:" << path
+                   << "(" << info.size() << "bytes,"
+                   << QString::number(info.size() / 1e6, 'f', 1) << "MB)";
+    }
+
     QFile file(path);
     if (!file.exists())
         return false;
@@ -53,79 +98,68 @@ bool FileManager::loadFile(const QString& path, QString& outContent, EncodingTyp
     QByteArray data = file.readAll();
     file.close();
 
-    // Convert bytes to QString based on encoding
+    // Strip BOM if present
+    QByteArray content = data;
+    if (content.size() >= 3 && (uchar)content[0] == 0xEF && (uchar)content[1] == 0xBB && (uchar)content[2] == 0xBF)
+        content = content.mid(3);
+    if (content.size() >= 2) {
+        if ((uchar)content[0] == 0xFF && (uchar)content[1] == 0xFE) content = content.mid(2);
+        if ((uchar)content[0] == 0xFE && (uchar)content[1] == 0xFF) content = content.mid(2);
+    }
+
+    // Decode based on encoding
     switch (encoding) {
         case EncodingType::UTF_8:
         case EncodingType::UTF_8_BOM:
-            outContent = QString::fromUtf8(data);
+            outContent = QString::fromUtf8(content);
             break;
         case EncodingType::UTF_16_LE:
-            outContent = QString::fromUtf8(data);  // Qt handles UTF-16 internally
+            outContent = decodeUtf16(content, true);
             break;
         case EncodingType::UTF_16_BE:
-            outContent = QString::fromUtf8(data);  // Handle BE if needed
+            outContent = decodeUtf16(content, false);
             break;
-        default:
-            outContent = QString::fromLocal8Bit(data);
+        default: {
+            // Try UTF-8 first, fall back to locale
+            if (EncodingDetector::instance().isValidUtf8(content.toStdString()))
+                outContent = QString::fromUtf8(content);
+            else
+                outContent = QString::fromLocal8Bit(content);
             break;
+        }
     }
 
     return true;
 }
 
 bool FileManager::saveFile(const QString& path, const QString& content, EncodingType encoding, EolType eol) {
-    // Convert line endings if needed
-    QString processedContent = content;
-    if (eol != EolType::EOL_LF) {
-        processedContent.replace("\n",
-            eol == EolType::EOL_CRLF ? "\r\n" : "\r");
-    }
+    // Convert EOL first
+    QString processed = content;
+    if (eol == EolType::EOL_CRLF) processed.replace('\n', "\r\n");
+    else if (eol == EolType::EOL_CR) processed.replace('\n', "\r");
 
     QByteArray bytes;
     switch (encoding) {
         case EncodingType::UTF_8:
+            bytes = processed.toUtf8();
+            break;
         case EncodingType::UTF_8_BOM:
-            bytes = processedContent.toUtf8();
-            if (encoding == EncodingType::UTF_8_BOM) {
-                bytes.prepend("\xEF\xBB\xBF");  // Add BOM
-            }
+            bytes = QByteArray("\xEF\xBB\xBF", 3) + processed.toUtf8();
             break;
-        case EncodingType::UTF_16_LE: {
-            QByteArray contentBytes = processedContent.toUtf8();  // Convert to UTF-8 first
-            // Convert to UTF-16LE manually
-            QString u16 = QString::fromUtf8(contentBytes);
-            QByteArray u16bytes;
-            u16bytes.reserve(u16.length() * 2);
-            for (QChar c : u16) {
-                ushort uc = c.unicode();
-                u16bytes.append(static_cast<char>(uc & 0xFF));
-                u16bytes.append(static_cast<char>((uc >> 8) & 0xFF));
-            }
-            bytes = u16bytes;
+        case EncodingType::UTF_16_LE:
+            bytes = encodeUtf16(processed, true);
             break;
-        }
-        case EncodingType::UTF_16_BE: {
-            QByteArray contentBytes = processedContent.toUtf8();
-            QString u16 = QString::fromUtf8(contentBytes);
-            QByteArray u16bytes;
-            u16bytes.reserve(u16.length() * 2);
-            for (QChar c : u16) {
-                ushort uc = c.unicode();
-                u16bytes.append(static_cast<char>((uc >> 8) & 0xFF));
-                u16bytes.append(static_cast<char>(uc & 0xFF));
-            }
-            bytes = u16bytes;
+        case EncodingType::UTF_16_BE:
+            bytes = encodeUtf16(processed, false);
             break;
-        }
         default:
-            bytes = processedContent.toLocal8Bit();
+            bytes = processed.toLocal8Bit();
             break;
     }
 
     QFile file(path);
-    if (!file.open(QIODevice::WriteOnly))
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
         return false;
-
     qint64 written = file.write(bytes);
     file.close();
 
@@ -269,7 +303,7 @@ int64_t FileManager::getFileSize(const QString& path) const {
 // ============================================================================
 
 BufferID FileManager::createBuffer(const QString& fileName, bool isLargeFile) {
-    Buffer* buf = new Buffer(this, _nextBufferId, fileName, isLargeFile);
+    Buffer* buf = new Buffer(this, fileName, isLargeFile);
     _buffers.push_back(buf);
     ++_nextBufferId;
     emit bufferCreated(buf->getID());
@@ -285,17 +319,77 @@ Buffer* FileManager::bufferFromId(BufferID id) const {
 }
 
 BufferID FileManager::openFile(const QString& path, bool readOnly) {
-    Buffer* buf = new Buffer(this, _nextBufferId, path, false);
-    ++_nextBufferId;
+    // Check file can be opened before allocating a Buffer (avoids ID waste on failure)
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return nullptr;
+    }
 
-    // Load content
-    QString content;
-    EncodingType detectedEnc = EncodingDetector::detectFromPath(path.toStdString());
+    Buffer* buf = new Buffer(this, path, false);
+    ++_nextBufferId;
+    QFileInfo fileInfo(path);
+    qint64 fileSize = fileInfo.size();
+    QByteArray raw = file.readAll();
+    file.close();
+
+    // Large file warning: prompt user for files > 10MB
+    constexpr qint64 LARGE_FILE_THRESHOLD = 10 * 1024 * 1024; // 10MB
+    if (fileSize > LARGE_FILE_THRESHOLD) {
+        LargeFileWarningDialog::OpenMode mode = LargeFileWarningDialog::prompt(
+            path, fileSize, nullptr);
+        if (mode == LargeFileWarningDialog::OpenMode::Cancel) {
+            delete buf;
+            return BUFFER_INVALID;
+        }
+        if (mode == LargeFileWarningDialog::OpenMode::ReadOnly) {
+            readOnly = true;
+        }
+    }
+
+    // Large file handling: partial load for very large files (>100MB)
+    constexpr qint64 VERY_LARGE = 100 * 1024 * 1024; // 100MB
+    if (fileSize > VERY_LARGE) {
+        // Partial load: read first 10MB only
+        QFile f(path);
+        if (f.open(QIODevice::ReadOnly)) {
+            QByteArray chunk = f.read(10 * 1024 * 1024);
+            f.close();
+            QString text = QString::fromUtf8(chunk);
+            _bufferText[buf->getID()] = text;
+            buf->setDocumentLength(text.length());
+            buf->setPartialLoad(true);
+            buf->setTotalFileSize(fileSize);
+            buf->setEncoding(EncodingType::UTF_8);
+            buf->setEolFormat(EolType::EOL_LF);
+            buf->setLangType(LangType::L_TEXT);
+            buf->setFileName(path);
+            if (readOnly) buf->setFileReadOnly(true);
+            if (!readOnly) watchFile(path);
+            _buffers.push_back(buf);
+            emit bufferCreated(buf->getID());
+            emit fileLoaded(true, buf->getID(), QString());
+            return buf->getID();
+        }
+    }
+
+    // Detect encoding from BOM + content
+    EncodingType detectedEnc = EncodingDetector::instance().detect(raw.toStdString());
     buf->setEncoding(detectedEnc);
 
-    if (loadFile(path, content, detectedEnc)) {
-        buf->setDocumentLength(content.length());
-    }
+    // Decode content using detected encoding
+    QString content;
+    loadFile(path, content, detectedEnc);
+
+    // Store decoded text in the buffer map — getBufferText() reads from here
+    _bufferText[buf->getID()] = content;
+
+    // Detect EOL from decoded content
+    EolType eol = EolType::EOL_LF;
+    if (content.contains("\r\n")) eol = EolType::EOL_CRLF;
+    else if (content.contains('\r')) eol = EolType::EOL_CR;
+    buf->setEolFormat(eol);
+
+    buf->setDocumentLength(content.length());
 
     // Detect language from extension
     QString ext = getFileExtension(path).toLower();
@@ -316,8 +410,88 @@ BufferID FileManager::openFile(const QString& path, bool readOnly) {
 
     _buffers.push_back(buf);
     emit bufferCreated(buf->getID());
+    emit fileLoaded(true, buf->getID(), QString());
 
     return buf->getID();
+}
+
+// ---------------------------------------------------------------------------
+// openFileAsync — non-blocking openFile() that uses FileLoaderWorker on a
+// dedicated worker thread so the GUI thread never freezes on QFile::readAll().
+// Listeners get the result via the existing `fileLoaded(success, BufferID,
+// errorString)` signal — same signature as the sync path — so existing
+// Application::connect() sites need no changes. While loading, the existing
+// `loadingProgress(percent)` signal is forwarded from the worker thread.
+//
+// Implementation note: we spawn a fresh QThread per call (rather than
+// reusing a persistent one) because Qt's moveToThread() only takes effect
+// after the calling thread finishes processing its event queue — using a
+// fresh thread sidesteps the "worker still on calling thread" trap and
+// matches the lifecycle of a one-shot load operation.
+// ---------------------------------------------------------------------------
+void FileManager::openFileAsync(const QString& path, bool readOnly) {
+    auto* thread = new QThread(this);
+    thread->setObjectName(QStringLiteral("FileManager::FileLoaderWorker:%1")
+                              .arg(path));
+    auto* worker = new FileLoaderWorker(path);
+    worker->moveToThread(thread);
+
+    // Worker-thread cleanup: when the worker emits its terminal signal
+    // (success, error, or cancel), quit the thread and schedule destruction.
+    auto finish = [thread, worker]() {
+        thread->quit();
+        worker->deleteLater();
+        thread->deleteLater();
+    };
+
+    connect(worker, &FileLoaderWorker::progress,
+            this, &FileManager::loadingProgress);
+    connect(worker, &FileLoaderWorker::cancelled, this,
+            [this, path, finish](void) {
+                emit fileLoaded(false, BUFFER_INVALID,
+                                QStringLiteral("load cancelled: %1").arg(path));
+                finish();
+            });
+    connect(worker, &FileLoaderWorker::loadError, this,
+            [this, path, finish](const QString& err, int /*code*/) {
+                emit fileLoaded(false, BUFFER_INVALID, err);
+                finish();
+            });
+
+    // Final hook: when the worker is done, materialize a Buffer on the main
+    // thread (Buffer objects own Scintilla handle state and MUST be created
+    // and mutated from the GUI thread).
+    connect(worker, &FileLoaderWorker::loadComplete, this,
+            [this, worker, path, readOnly, finish](const QString& content,
+                                                   EncodingType encoding,
+                                                   bool /*isPartial*/,
+                                                   const QString& /*checksum*/,
+                                                   qint64 /*totalSize*/) {
+        Buffer* buf = new Buffer(this, path, false);
+        ++_nextBufferId;
+        buf->setEncoding(encoding);
+        _bufferText[buf->getID()] = content;
+        EolType eol = EolType::EOL_LF;
+        if (content.contains("\r\n"))      eol = EolType::EOL_CRLF;
+        else if (content.contains('\r'))   eol = EolType::EOL_CR;
+        buf->setEolFormat(eol);
+        buf->setDocumentLength(content.length());
+        QString ext = getFileExtension(path).toLower();
+        LangType lang = LanguageManager::detect(ext.toStdString());
+        buf->setLangType(lang);
+        if (readOnly) buf->setFileReadOnly(true);
+        buf->setFileName(path);
+        if (!readOnly) watchFile(path);
+        _buffers.push_back(buf);
+        emit bufferCreated(buf->getID());
+        emit fileLoaded(true, buf->getID(), QString());
+        finish();
+    });
+
+    thread->start();
+    // Now that the worker is on its own thread and the thread is running,
+    // queue the start() call onto the worker thread.
+    QMetaObject::invokeMethod(worker, "start", Qt::QueuedConnection);
 }
 
 BufferID FileManager::createNewFile() {
@@ -340,7 +514,7 @@ BufferID FileManager::duplicateBuffer(BufferID buffer) {
     if (!src)
         return BUFFER_INVALID;
 
-    Buffer* dup = new Buffer(this, _nextBufferId, src->getFileName(), src->isLargeFile());
+    Buffer* dup = new Buffer(this, src->getFileName(), src->isLargeFile());
     ++_nextBufferId;
 
     dup->setLangType(src->getLangType());
@@ -410,9 +584,11 @@ bool FileManager::isBufferModified(BufferID buffer) const {
 
 QString FileManager::getBufferText(BufferID buffer) const {
     Buffer* buf = bufferFromId(buffer);
-    // In a real implementation, this would get text from the Scintilla editor
-    // For now, we return empty - actual text is managed by Scintilla
-    Q_UNUSED(buf);
+    if (!buf)
+        return QString();
+    auto it = _bufferText.find(buffer);
+    if (it != _bufferText.end())
+        return it->second;
     return QString();
 }
 
@@ -420,6 +596,7 @@ bool FileManager::setBufferText(BufferID buffer, const QString& text) {
     Buffer* buf = bufferFromId(buffer);
     if (!buf)
         return false;
+    _bufferText[buffer] = text;
     buf->setDocumentLength(text.length());
     buf->setDirty(true);
     return true;
@@ -435,6 +612,19 @@ bool FileManager::setEncoding(BufferID buffer, EncodingType enc) {
     if (!buf)
         return false;
     buf->setEncoding(enc);
+    return true;
+}
+
+EolType FileManager::getEolFormat(BufferID buffer) const {
+    Buffer* buf = bufferFromId(buffer);
+    return buf ? buf->getEolFormat() : EolType::EOL_LF;
+}
+
+bool FileManager::setEolFormat(BufferID buffer, EolType eol) {
+    Buffer* buf = bufferFromId(buffer);
+    if (!buf)
+        return false;
+    buf->setEolFormat(eol);
     return true;
 }
 
@@ -460,8 +650,21 @@ bool FileManager::saveFile(BufferID buffer, const QString& path) {
     if (savePath.isEmpty())
         return false;
 
-    // In real implementation, would get text from Scintilla editor
-    QString content;  // Would come from Scintilla
+    // Primary: retrieve live content from the Scintilla editor via registered provider.
+    // This returns what the user is currently looking at (including unsaved edits).
+    // Fallback: the _bufferText map stores the last loaded/reloaded content.
+    QString content;
+    bool fromEditor = false;
+    if (_bufferTextProvider) {
+        fromEditor = _bufferTextProvider(buffer, content);
+    }
+    if (!fromEditor) {
+        auto it = _bufferText.find(buffer);
+        if (it != _bufferText.end()) {
+            content = it->second;
+        }
+        // content is empty if file was never loaded (e.g. session placeholder)
+    }
     return saveFile(savePath, content, buf->getEncoding(), buf->getEolFormat());
 }
 

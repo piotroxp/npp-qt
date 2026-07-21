@@ -69,6 +69,7 @@ enum class SavingStatus : int {
 // Encoding Types
 // ============================================================================
 enum class EncodingType : int {
+    NONE       = -1,  // No encoding detected / unknown
     ANSI       = 0,
     UTF_8      = 1,
     UTF_8_BOM  = 2,
@@ -77,7 +78,13 @@ enum class EncodingType : int {
     UTF_32_LE  = 5,
     UTF_32_BE  = 6,
     EBCDIC     = 7,
-    OEM        = 8  // DOS code page
+    OEM        = 8,  // DOS code page
+    ASCII_7    = 9,  // ASCII (7-bit)
+    UTF_16_LE_BOM  = 10,
+    UTF_16_BE_BOM  = 11,
+    ISO88591       = 12,
+    Windows1252   = 13,
+    Other          = 14,
 };
 
 enum class NewDocDefaultSettings : int {
@@ -126,6 +133,43 @@ enum class LangType : int {
     L_BATCH      = 21,
     L_INI        = 22,
     L_NFO        = 23,
+    L_GO         = 24,
+    L_RUST       = 25,
+    L_SWIFT      = 26,
+    L_KOTLIN     = 27,
+    L_SCALA      = 28,
+    L_TS         = 29,
+    L_RUBY2      = 30,
+    L_LISP       = 31,
+    L_CLOJURE    = 32,
+    L_HASKELL    = 33,
+    L_ERLANG     = 34,
+    L_ELIXIR     = 35,
+    L_FORTRAN    = 36,
+    L_PASCAL     = 37,
+    L_ADA        = 38,
+    L_VERILOG    = 39,
+    L_VHDL       = 40,
+    L_ASM        = 41,
+    L_TCL        = 42,
+    L_BASH       = 43,
+    L_POWERSHELL = 44,
+    L_NSIS       = 45,
+    L_NSIS2      = 46,
+    L_DOCKERFILE = 47,
+    L_CMAKE      = 48,
+    L_R          = 49,
+    L_JULIA      = 50,
+    L_MATLAB     = 51,
+    L_DIFF       = 52,
+    L_TEX        = 53,
+    L_REGEX      = 55,
+    L_GRAPHVIZ   = 56,
+    L_SQL        = 57,
+    L_FSHARP     = 58,
+    L_GROOVY     = 59,
+    L_WEBASSEMBLY = 60,
+    L_PROPERTIES  = 61,
     L_USER       = 1000,  // User-defined languages start here
     L_EXTERNAL   = 2000,
     L_REGISTRY   = 3000
@@ -360,7 +404,9 @@ struct FindHistory {
     int  _counter3 = 0;
 };
 
-struct Shortcut {
+// ShortcutDef — plain data struct (for serialization). Named to avoid clash
+// with MISC::Common::Shortcut (QObject subclass in shortcut.h).
+struct ShortcutDef {
     std::string name;
     int id = 0;
     int ctrl = 0;

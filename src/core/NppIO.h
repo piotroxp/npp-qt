@@ -636,8 +636,6 @@ inline NppIO::NppIO(QObject* parent)
     _fileWatcher.moveToThread(this->thread());
     connect(&_fileWatcher, &QFileSystemWatcher::fileChanged,
             this, &NppIO::onFileChanged, Qt::QueuedConnection);
-    connect(&_fileWatcher, &QFileSystemWatcher::errorOccurred,
-            this, &NppIO::onFileWatchError, Qt::QueuedConnection);
 }
 
 inline EncodingType NppIO::detectEncodingBOM(const QByteArray& rawBytes) const
@@ -744,7 +742,7 @@ inline bool NppIO::isReadOnly(const QString& filePath) const
 {
     QFileInfo info(filePath);
     // Check both permissions and the read-only attribute
-    return !info.isWritable() || info.exists() && (info.permissions() & QFile::ReadOwner) == 0;
+    return !info.isWritable() || (info.exists() && (info.permissions() & QFile::ReadOwner) == 0);
 }
 
 inline QString NppIO::parentDirectory(const QString& filePath) const

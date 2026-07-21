@@ -1,139 +1,126 @@
-// FindInFilesWorker.cpp - Background worker for Find in Files
-// Copyright (C) 2026 Agent Army
-// GPL v3
+// FindInFilesWorker.cpp - Background search worker for Find in Files
+// Copyright (C) 2026 Agent Army | GPL v3
 
 #include "FindInFilesWorker.h"
-#include <QDebug>
+#include <QDir>
+#include <QStringConverter>
+#include <QFileInfo>
+#include <QRegularExpression>
+#include <QtDebug>
 
-// ============================================================================
-// Construction
-// ============================================================================
-
-FindInFilesWorker::FindInFilesWorker(const QString& dir,
-                                     const QString& text,
-                                     const QStringList& extensions,
-                                     QObject* parent)
-    : QObject(parent)
-    , _dir(dir)
-    , _text(text)
-    , _extensions(extensions)
+FindInFilesWorker::FindInFilesWorker(const QString& directory, const QString& text,
+                                     const QString& filters, bool caseSensitive,
+                                     bool wholeWord, bool regex)
+    : _directory(directory), _text(text),
+      _caseSensitive(caseSensitive), _wholeWord(wholeWord), _regex(regex)
 {
+    if (!filters.isEmpty() && filters != "*") {
+        _filters = filters.split(' ', Qt::SkipEmptyParts);
+    } else {
+        _filters = {"*"};
+    }
 }
 
 FindInFilesWorker::~FindInFilesWorker() = default;
 
-// ============================================================================
-// Main Run
-// ============================================================================
-
 void FindInFilesWorker::run() {
-    QList<FindResult> results;
-
-    if (!_recursive) {
-        // Non-recursive: only top-level files
-        QDir d(_dir);
-        const QFileInfoList entries = d.entryInfoList(QDir::Files);
-        for (const QFileInfo& fi : entries) {
-            if (results.size() >= _maxResults) break;
-            searchInFile(fi.absoluteFilePath(), _text, results);
-        }
-    } else {
-        // Recursive search
-        searchDirectory(QDir(_dir), _text, results, 0);
-    }
-
-    emit resultsReady(results);
+    searchDirectory(_directory);
+    emit resultsReady(_results);
     emit finished();
 }
 
-// ============================================================================
-// Directory Search
-// ============================================================================
+void FindInFilesWorker::searchDirectory(const QString& dir) {
+    QDir qdir(dir);
+    QFileInfoList entries = qdir.entryInfoList(
+        QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
 
-void FindInFilesWorker::searchDirectory(const QDir& dir, const QString& text,
-                                          QList<FindResult>& results, int depth) {
-    if (depth > 10) return;  // max recursion depth
-    if (results.size() >= _maxResults) return;
+    for (const QFileInfo& info : entries) {
+        if (info.isDir()) {
+            // Recurse into subdirectories (limit depth to avoid runaway traversal)
+            static int depth = 0;
+            if (depth < 20)
+                searchDirectory(info.filePath());
+            continue;
+        }
 
-    const QFileInfoList entries = dir.entryInfoList(
-        QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot,
-        QDir::Name | QDir::IgnoreCase);
-
-    for (const QFileInfo& fi : entries) {
-        if (results.size() >= _maxResults) break;
-
-        if (fi.isDir()) {
-            // Skip hidden and common non-source directories
-            if (fi.fileName().startsWith('.') ||
-                fi.fileName() == "node_modules" ||
-                fi.fileName() == "__pycache__" ||
-                fi.fileName() == "build" ||
-                fi.fileName() == "target") {
-                continue;
-            }
-            searchDirectory(QDir(fi.absoluteFilePath()), text, results, depth + 1);
-        } else {
-            if (matchesFile(fi.absoluteFilePath())) {
-                searchInFile(fi.absoluteFilePath(), text, results);
+        // Check file extension against filters
+        bool matchesFilter = false;
+        for (const QString& filter : _filters) {
+            QRegularExpression re = QRegularExpression::fromWildcard(filter, Qt::CaseInsensitive);
+            if (re.match(info.fileName()).hasMatch()) {
+                matchesFilter = true;
+                break;
             }
         }
+        if (!matchesFilter && _filters.first() != "*") {
+            // If no filters set, accept all; otherwise only matched above
+        }
+
+        searchInFile(info.filePath());
+        ++_filesSearched;
+        emit progress(info.filePath(), _filesSearched);
     }
 }
 
-bool FindInFilesWorker::matchesFile(const QString& filePath) const {
-    if (_extensions.isEmpty()) {
-        // Default: skip binary/compiled file types
-        static QStringList skipExts = {
-            "exe","dll","so","dylib","o","obj","a","lib",
-            "png","jpg","jpeg","gif","ico","bmp","svg","ttf","otf","woff","woff2","eot",
-            "mp3","wav","mp4","avi","mkv","mov","flac","ogg",
-            "zip","tar","gz","bz2","xz","rar","7z",
-            "pdf","doc","docx","xls","xlsx","ppt","pptx",
-            "db","sqlite","mdb"
-        };
-        QString ext = QFileInfo(filePath).suffix().toLower();
-        if (skipExts.contains(ext))
-            return false;
-        return true;
-    }
-
-    QString ext = QFileInfo(filePath).suffix().toLower();
-    return _extensions.contains(ext, Qt::CaseInsensitive);
-}
-
-bool FindInFilesWorker::searchInFile(const QString& filePath,
-                                      const QString& text,
-                                      QList<FindResult>& results) {
+void FindInFilesWorker::searchInFile(const QString& filePath) {
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-        return false;
-
-    // Quick binary check
-    QByteArray sample = file.read(256);
-    if (sample.contains('\0')) return false;
-    file.seek(0);
+        return;
 
     QTextStream in(&file);
     in.setEncoding(QStringConverter::Utf8);
+    int lineNumber = 0;
 
-    int lineNum = 0;
     while (!in.atEnd()) {
-        ++lineNum;
+        ++lineNumber;
         QString line = in.readLine();
 
-        int idx = line.indexOf(text, 0, Qt::CaseInsensitive);
-        if (idx >= 0) {
-            FindResult r;
-            r.filePath = filePath;
-            r.lineNumber = lineNum;
-            r.lineContent = line;
-            r.column = idx;
-            results.append(r);
+        if (!lineMatches(line))
+            continue;
 
-            if (results.size() >= _maxResults)
-                return true;
+        // Find all match positions in this line
+        Qt::CaseSensitivity searchFlags = _caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+        int pos = 0;
+        while ((pos = line.indexOf(_text, pos, searchFlags)) != -1) {
+            int endPos = pos + _text.length();
+
+            // Apply whole-word constraint
+            if (_wholeWord) {
+                bool validStart = (pos == 0 || !line[pos - 1].isLetterOrNumber());
+                bool validEnd   = (endPos >= line.length() || !line[endPos].isLetterOrNumber());
+                if (!validStart || !validEnd) {
+                    pos = endPos;
+                    continue;
+                }
+            }
+
+            _results.append(FindResult{filePath, lineNumber, pos, line, {}});
+            pos = endPos;
+
+            // Limit matches per file to avoid huge result sets
+            if (_results.size() >= 1000)
+                return;
         }
     }
+}
 
-    return true;
+bool FindInFilesWorker::lineMatches(const QString& line) const {
+    if (_regex) {
+        return matchesRegex(line);
+    }
+    return matchesPattern(line);
+}
+
+bool FindInFilesWorker::matchesPattern(const QString& line) const {
+    Qt::CaseSensitivity cs = _caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    return line.contains(_text, cs);
+}
+
+bool FindInFilesWorker::matchesRegex(const QString& line) const {
+    QRegularExpression::PatternOptions opts = QRegularExpression::NoPatternOption;
+    if (!_caseSensitive)
+        opts |= QRegularExpression::CaseInsensitiveOption;
+
+    QRegularExpression re(_text, opts);
+    return re.match(line).hasMatch();
 }

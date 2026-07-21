@@ -68,15 +68,8 @@ static int _parseKeyCode(const QString& keyName) {
     return Qt::Key_unknown;
 }
 
-static int _parseModifiers(const QString& str) {
-    int mods = 0;
-    QString s = str.toUpper();
-    if (s.contains("CTRL") || s.contains("CTRL")) mods |= Qt::ControlModifier;
-    if (s.contains("ALT")) mods |= Qt::AltModifier;
-    if (s.contains("SHIFT")) mods |= Qt::ShiftModifier;
-    if (s.contains("META") || s.contains("WIN") || s.contains("CMD")) mods |= Qt::MetaModifier;
-    return mods;
-}
+// Unused — reserved for future shortcut modifier parsing
+// static int _parseModifiers(const QString& str) { ... }
 
 QString KeyBinding::toString() const {
     if (shortcutText.isEmpty()) return QString();
@@ -326,4 +319,45 @@ void ShortcutManager::saveToJson(const QString& path) const {
         file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
         file.close();
     }
+}
+
+// ============================================================================
+// Macro shortcuts
+// ============================================================================
+void ShortcutManager::bindMacro(int macroIndex, const QString& shortcut) {
+    int key = _makeKey(shortcut);
+    _macroShortcutMap[key] = macroIndex;
+    emit allShortcutsChanged();
+}
+
+void ShortcutManager::unbindMacro(const QString& shortcut) {
+    int key = _makeKey(shortcut);
+    _macroShortcutMap.remove(key);
+    emit allShortcutsChanged();
+}
+
+int ShortcutManager::getMacroForShortcut(const QString& shortcut) const {
+    int key = _makeKey(shortcut);
+    auto it = _macroShortcutMap.find(key);
+    return (it != _macroShortcutMap.end()) ? it.value() : -1;
+}
+
+QString ShortcutManager::makeShortcutText(int keyCode, int modifiers) const {
+    return _makeShortcutText(keyCode, modifiers);
+}
+
+// ============================================================================
+// Macro command registration
+// ============================================================================
+void ShortcutManager::registerMacroCommand(const QString& command, const QString& macroName) {
+    macroCommands_[command] = macroName;
+}
+
+bool ShortcutManager::resolveMacroBinding(const QString& command, QString& outMacroName) const {
+    auto it = macroCommands_.find(command);
+    if (it != macroCommands_.end()) {
+        outMacroName = it.value();
+        return true;
+    }
+    return false;
 }

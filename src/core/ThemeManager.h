@@ -33,6 +33,8 @@ struct ThemeColors {
 // ============================================================================
 class ThemeManager {
 public:
+    static ThemeManager& instance();
+
     ThemeManager();
     ~ThemeManager();
 

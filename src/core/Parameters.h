@@ -9,7 +9,6 @@
 #include <QObject>
 #include <QSettings>
 #include <QtGui/QFontDatabase>
-#include <QStringList>
 #include <QString>
 #include <QStringList>
 #include <memory>
@@ -95,9 +94,9 @@ public:
     NppTheme* findTheme(const QString& name);
 
     // Shortcuts
-    const std::vector<Shortcut>& getShortcuts() const { return _shortcuts; }
-    void setShortcuts(const std::vector<Shortcut>& shortcuts);
-    Shortcut* findShortcut(const QString& name);
+    const std::vector<ShortcutDef>& getShortcuts() const { return _shortcuts; }
+    void setShortcuts(const std::vector<ShortcutDef>& shortcuts);
+    ShortcutDef* findShortcut(const QString& name);
 
     // User-defined languages path
     QString getUserDefineLangDir() const;
@@ -119,7 +118,6 @@ public:
 
     // Encoding conversion (QTextCodec wrapper)
     QString convertEncoding(const QString& text, int fromSciCp, int toSciCp);
-    static int scintillaCpToMib(int sciCp);
 
     // Font list
     QStringList getFontList() const;
@@ -170,7 +168,7 @@ private:
     QString _associatedFile;
     QString _nppHomePath;
     QStringList _cmdLineArgs;
-    std::vector<Shortcut> _shortcuts;
+    std::vector<ShortcutDef> _shortcuts;
     std::unordered_map<QString, int> _shortcutIndex;
     QString _userDefineLangDir;
     QStringList _searchPaths;
