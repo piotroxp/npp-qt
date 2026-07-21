@@ -1,6 +1,9 @@
 // Application.cpp - Main application controller implementation
 #include "Application.h"
 
+#include <cstdio>
+#include <unistd.h>
+
 #include <QApplication>
 #include <QClipboard>
 #include <QCloseEvent>
@@ -84,7 +87,20 @@
 // ============================================================================
 // Singleton
 // ============================================================================
+// DIAG (transient): one-shot re-entry counter for the __cxa_guard_acquire
+// stall. Logs to fd 2 directly (NOT qDebug) so the instrumentation cannot
+// itself recurse through Qt globals. Tag on the line makes it trivial to
+// grep /tmp/npp-gdb.log for "APPINST".
+static void diag_inst_enter(const char* site) {
+    static int n = 0;
+    ++n;
+    char buf[160];
+    int len = std::snprintf(buf, sizeof(buf),
+        "APPINST site=%s n=%d\n", site, n);
+    if (len > 0) ::write(2, buf, static_cast<size_t>(len));
+}
 Application& Application::instance() {
+    diag_inst_enter("instance()");
     static Application inst;
     return inst;
 }
