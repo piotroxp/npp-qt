@@ -2,6 +2,7 @@
 
 #include "core/MacroManager.h"
 #include "core/MacroAction.h"
+#include "common/ScintillaComponent.h"   // for sptr_t
 #include <Qsci/qsciscintilla.h>
 #include <QCoreApplication>
 #include <QDebug>
