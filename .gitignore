@@ -11,6 +11,12 @@ src/tests/*.a
 *.so
 *.dylib
 build-asan/
+build-host/
+build3/
+build_clean/
+build_fresh/
+build_w1/
+build_nppqt/
 
 # OS
 .DS_Store
