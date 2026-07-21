@@ -455,15 +455,28 @@ void Application::setupUI() {
 }
 
 void Application::setupMenuBar() {
-    _menuBar = new MenuBar(_mainWindow);
-    _mainWindow->setMenuBar(_menuBar);
-    connect(_menuBar, &MenuBar::menuCommand, this, &Application::onMenuCommand);
+    // CRITICAL: do NOT create a second MenuBar here.  MainWindow already
+    // created one (src/ui/MainWindow.cpp line 61) and registered it via
+    // setMenuBar().  Creating a second one and calling setMenuBar() again
+    // deletes the first widget; any captured-this pointers in lambda
+    // connects inside MainWindow (e.g. the dynamic menu rebuild callbacks
+    // on MainWindow::rebuildFileMenu / rebuildEditMenu, and the menu/toolbar
+    // theme setStyleSheet calls) then dangle and SIGSEGV the next time the
+    // user opens the File menu or switches theme.
+    //
+    // Use the existing MainWindow MenuBar as our _menuBar so that
+    // Application's menu helpers (setMenuBarVisible, etc.) all operate on
+    // the same widget MainWindow's own connects reference.
+    _menuBar = _mainWindow->menuBar();
 }
 
 void Application::setupToolBar() {
-    _toolBar = new ToolBar(_mainWindow);
-    _mainWindow->addToolBar(_toolBar);
-    connect(_toolBar, &ToolBar::toolBarCommand, this, &Application::onToolBarCommand);
+    // Same rationale as setupMenuBar(): MainWindow already created a
+    // ToolBar (src/ui/MainWindow.cpp line 69) and registered it via
+    // addToolBar().  Creating a second one and addToolBar()'ing again
+    // produces a duplicate toolbar row plus the same dangling-capture
+    // hazard for the theme/style callbacks in MainWindow.
+    _toolBar = _mainWindow->toolBar();
 }
 
 void Application::setupStatusBar() {
@@ -483,8 +496,12 @@ void Application::setupDockingPanels() {
 }
 
 void Application::setupConnections() {
-    // Menu/ToolBar commands → command dispatch (menu already connected in setupMenuBar)
-    connect(_toolBar, &ToolBar::toolBarCommand, this, &Application::onToolBarCommand);
+    // Menu/ToolBar commands → already wired by MainWindow::setupConnections
+    // (which connects its own MenuBar/ToolBar to MainWindow::onMenuCommand/
+    //  onToolBarCommand → MainWindow::dispatchCommand → Application handlers).
+    // Application no longer creates its own MenuBar/ToolBar (see
+    // setupMenuBar/setupToolBar comments), so connecting Application's
+    // _menuBar/_toolBar here would duplicate-dispatch every command.
 
     // Buffer lifecycle signals
     connect(this, &Application::bufferOpened, this, &Application::onBufferOpened);
