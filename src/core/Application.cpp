@@ -112,6 +112,21 @@ Application::Application() : QObject(qApp) {
     _mainWindow = new MainWindow(this);
     _centralWidget = new QWidget();
     _viewStack = new QStackedWidget();
+
+    // FIX (recursion deadlock): MainWindow's ctor used to wire Application::bufferOpened
+    // via the inline app() helper, which re-entered Application::instance() while the
+    // static-init guard was still held. Wire it here, after MainWindow construction
+    // returns and the singleton is fully constructed.
+    connect(this, &Application::bufferOpened, _mainWindow, &MainWindow::onBufferOpened);
+
+    // FIX (cherry-picked from 337e570 on semantic-lift/wip): also forward
+    // bufferClosed the same way.  Application::closeFile() and
+    // closeAllFiles() (re-)emit bufferClosed; MainWindow::onBufferClosed is
+    // the handler that drops the tab from the QTabWidget.  Without this
+    // connect, closing a file via File→Close or Close All leaves a stale
+    // empty tab in the UI (X-button-on-tab worked only because that path
+    // manually calls _tabWidget->removeTab()).
+    connect(this, &Application::bufferClosed, _mainWindow, &MainWindow::onBufferClosed);
 }
 
 Application::~Application() {
@@ -680,11 +695,39 @@ bool Application::saveAllFiles() {
 
 bool Application::closeFile(BufferID buffer, bool force) {
     (void)force;
-    return _fileManager->closeFile(buffer);
+    bool ok = _fileManager->closeFile(buffer);
+    if (ok) {
+        // Forward FileManager's bufferClosed to anyone listening on
+        // Application::bufferClosed.  Before this re-emit, the buffer
+        // lifecycle signals were wired (line ~503) but no close path
+        // actually fired them, so MainWindow::onBufferClosed (which is
+        // the tab-removal handler — see MainWindow.cpp:1426) was dead.
+        // Buffer path File→Close → onCloseFile → closeFile now finally
+        // drops the tab in the UI.
+        emit bufferClosed(buffer);
+    }
+    return ok;
 }
 
 bool Application::closeAllFiles() {
-    return _fileManager->closeAllFiles();
+    // Capture the buffer list BEFORE delegating: FileManager::closeAllFiles
+    // emits bufferClosed per-file and destroys each buffer; the per-file
+    // emit fires MainWindow::onBufferClosed → removeEditorTab, which is
+    // idempotent so multiple tabs are removed sequentially.
+    std::vector<BufferID> ids;
+    if (_fileManager) {
+        const size_t n = _fileManager->getBufferCount();
+        ids.reserve(n);
+        for (size_t i = 0; i < n; ++i) {
+            BufferID id = _fileManager->getBufferAt(static_cast<int>(i), 0);
+            if (id) ids.push_back(id);
+        }
+    }
+    bool ok = _fileManager->closeAllFiles();
+    if (ok) {
+        for (BufferID id : ids) emit bufferClosed(id);
+    }
+    return ok;
 }
 
 void Application::closeAllBuffersExcept(BufferID keepId) {
@@ -698,7 +741,9 @@ void Application::closeAllBuffersExcept(BufferID keepId) {
         }
     }
     for (BufferID id : toClose) {
-        _fileManager->closeFile(id);
+        // Route through Application::closeFile so the bufferClosed
+        // re-emit fires MainWindow::onBufferClosed → tab removed.
+        closeFile(id);
     }
 }
 
@@ -732,7 +777,9 @@ void Application::closeAllFilesButCurrent() {
         }
     }
     for (BufferID id : toClose) {
-        _fileManager->closeFile(id);
+        // Route through Application::closeFile so the bufferClosed
+        // re-emit fires MainWindow::onBufferClosed → tab removed.
+        closeFile(id);
     }
 }
 
