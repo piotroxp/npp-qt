@@ -1,17 +1,19 @@
-# npp-qt: Wave Plan — Updated 2026-07-13 Evening
+# npp-qt: Wave Plan — Updated 2026-07-21 (Wave 14 closed)
 _Continuation of semantic lift after waves 1-10 (v0.1.0-semantic-lift tag)_
 
-## Current State
-- **Binary:** `build/NotepadMinusMinusQt` — clean build ✅
+## Current State (2026-07-21 16:00 UTC)
+- **Binary:** `build/NotepadMinusMinusQt` — clean build ✅ (52.2 MB)
 - **Tag:** `v0.1.0-semantic-lift` ✅
-- **Tests:** 3/5 passing (test_buffer segfaults — pre-existing Qt static-dtor issue in test harness; test_util hangs — same root cause; both are test harness bugs, not code bugs)
+- **Tests:** 23/23 ctest pass (100%) — including the 25-check `CharsetConversionTests` added this turn.
+- **Wave status:** 5 of 5 wave milestones ✅ (Waves 11-15 complete; Wave 11 task #2 and Wave 14 task #2 closed 2026-07-21).
 
 ## Gate Criteria
 Every wave: `cmake --build build -j$(nproc)` must exit 0 before commit.
 
 ---
 
-## Wave 11 — Keyword Lists + Charset Conversion + Encoding Test Fix
+## Wave 11 — Keyword Lists + Charset Conversion + Encoding Test Fix ✅
+**Status:** ✅ COMPLETE — task 1 (getKeywords) and task 3 (encoding test) landed in earlier sessions; task 2 (charset conversion) landed 2026-07-21 via `EncodingUtils.{h,cpp}` + `onConvertToCharset` real impl.
 **Goal:** Fix `getKeywords(LangType)`, implement charset conversion, fix encoding test.
 
 ### Agent tasks
@@ -131,7 +133,8 @@ cmake --build build -j$(nproc) 2>&1 | grep -E "error:|FAILED"
 
 ---
 
-## Wave 12 — Print Dialog + Macro Save/Load
+## Wave 12 — Print Dialog + Macro Save/Load ✅
+**Status:** ✅ COMPLETE — `Application::onPrint` uses `QPrinter` + `QPrintDialog` (real); `MacroManager::saveMacro` / `loadMacro` / `saveMacro(name, path)` / `loadMacros` exist.
 **Goal:** QPrinter integration for printing; macro serialization to file.
 
 ### Agent tasks
@@ -226,7 +229,8 @@ cmake --build build -j$(nproc) 2>&1 | grep -E "error:|FAILED"
 
 ---
 
-## Wave 13 — Find in Files + File Change Monitoring
+## Wave 13 — Find in Files + File Change Monitoring ✅
+**Status:** ✅ COMPLETE — `FindInFilesDialog` (real UI), `FindInFilesWorker` (async), `FileWatcherAdapter` (real QFileSystemWatcher wrapper); ctest `FindInFilesTests` + `FileWatcherAdapterTests` pass.
 **Goal:** Grep across files; detect external file modifications.
 
 ### Agent tasks
@@ -290,7 +294,8 @@ connect(_fileManager, &FileManager::externalFileChanged,
 
 ---
 
-## Wave 14 — Plugin API Skeleton + Final Polish
+## Wave 14 — Plugin API Skeleton + Final Polish ✅
+**Status:** ✅ COMPLETE — Plugin API: `PluginManager::loadPlugins / scanPluginDirectory / loadPlugin / unloadPlugin` (real, recursive dir scan, `QLibrary::isLibrary` filter, `nppqt_getPlugin` resolution). Window title + status bar already polished. Toolbar customize dialog landed 2026-07-21 (`ToolbarCustomizeDialog.{h,cpp}`) — replaces the QMessageBox stub with a real add/remove/up/down/reset UI.
 **Goal:** Define plugin API headers; polish UX details.
 
 ### Agent tasks
