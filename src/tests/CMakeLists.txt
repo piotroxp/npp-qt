@@ -185,6 +185,22 @@ add_core_test(test_syntax_highlighter test_syntax_highlighter.cpp)
 add_test(NAME SyntaxHighlighterTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_syntax_highlighter>)
 set_tests_properties(SyntaxHighlighterTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+# Regression tests for the syntax-highlighting extension-normalization fix.
+# Pins down that LanguageManager handles dot-less suffixes from QFileInfo::suffix(),
+# that all QScintilla-covered languages produce a real lexer, and that L_OBJ
+# no longer aliases to QsciLexerBash. See commit 26fe60e.
+add_core_test(test_lexer_regression test_lexer_regression.cpp)
+add_test(NAME LexerRegressionTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_lexer_regression>)
+set_tests_properties(LexerRegressionTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# Functional config-persistence test: round-trip every AppOptions field through
+# IniParser disk ↔ Application saveConfig/loadConfig. Catches the "silent data
+# loss" bug class where a UI field writes to memory but never reaches disk.
+add_core_test(test_config_persistence test_config_persistence.cpp)
+target_link_libraries(test_config_persistence PRIVATE stdc++fs)
+add_test(NAME ConfigPersistenceTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_config_persistence>)
+set_tests_properties(ConfigPersistenceTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_core_test(test_util test_util.cpp)
 add_test(NAME UtilTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_util>)
 set_tests_properties(UtilTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

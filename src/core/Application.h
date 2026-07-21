@@ -169,6 +169,7 @@ public:
     void setThemeProfile(const std::string& profile);
     void setSkipPlugins(bool skip) { _skipPlugins = skip; }
     bool saveConfig(const std::string& path = "");
+    bool loadConfig();
     const AppOptions& options() const { return _options; }
     AppOptions& options() { return _options; }
 
@@ -484,7 +485,6 @@ protected:
     ~Application() override;
 
 private:
-    bool loadConfig();
     bool setupDirectories();
     void setupUI();
     void setupMenuBar();

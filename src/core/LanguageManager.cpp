@@ -138,6 +138,31 @@ void LanguageManager::initDefaultMappings() {
 }
 
 LangType LanguageManager::detectLanguage(const std::string& fileName, const std::string& firstLine) const {
+    // Strip directory components so we look at just the basename.
+    const std::string base = [&] {
+        size_t sep = fileName.find_last_of("/\\");
+        return sep == std::string::npos ? fileName : fileName.substr(sep + 1);
+    }();
+
+    // Exact-filename match for files that have no extension but are
+    // unambiguous (Makefile, GNUmakefile, CMakeLists.txt, Dockerfile, ...).
+    // Case-insensitive on the basename. This catches the very common case of
+    // /tmp/Makefile (no dot in name) and Makefile.ci at the repo root.
+    static const std::pair<std::string, LangType> exactNames[] = {
+        {"makefile",       LangType::L_MAKEFILE},
+        {"gnumakefile",    LangType::L_MAKEFILE},
+        {"cmakelists.txt", LangType::L_CMAKE},
+        {"dockerfile",     LangType::L_DOCKERFILE},
+        {"rakefile",       LangType::L_RUBY},
+        {"gemfile",        LangType::L_RUBY},
+        {"podspec",        LangType::L_RUBY},
+    };
+    std::string baseLower = base;
+    std::transform(baseLower.begin(), baseLower.end(), baseLower.begin(), ::tolower);
+    for (const auto& [name, lang] : exactNames) {
+        if (baseLower == name) return lang;
+    }
+
     size_t dot = fileName.rfind('.');
     if (dot != std::string::npos) {
         std::string ext = fileName.substr(dot);
