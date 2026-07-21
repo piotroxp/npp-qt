@@ -76,3 +76,97 @@ FileManager::loadFile, LexerConfig) — none of the callers needed touching.
 - PDC screenshot tool returns full-desktop PNG (1.3MB) — vision render
   of full-desktop images was unreliable in this session. Crop to <100KB
   JPEG via Pillow first if you need visual confirmation.
+
+## Round 2 (2026-07-21 19:22–21:30 UTC)
+
+Continued from the user's "continue!" prompt after the syntax-highlight
+fix landed. Three follow-up tracks.
+
+### 1. Two parallel config systems (deep audit)
+
+`Parameters.cpp` provides `NppParameters` — a full duplicate of config
+storage using `QSettings("notepad--qt", "config")` (writes to
+`~/.config/notepad--qt/config.ini`), with parallel structs `NppGUI`,
+`ScintillaViewParams`, `FindHistory` that overlap with `Application::AppOptions`.
+
+Cross-referenced every read site of `NppParameters::getInstance()`:
+
+  - `Application::exportSettingsToJson` — legacy NPP-compat export only
+  - `Application::importSettingsFromJson` — legacy NPP-compat import only
+  - `Application::loadShortcuts` / `saveShortcuts` — used during export
+  - `NppParameters::addRecentFile` — writes to QSettings directly
+
+**Finding: `NppParameters::load()` is never called. `NppParameters::save()`
+is never called.** The only QSettings writes that actually hit disk are
+from `addRecentFile`. All the `_nppGUI`, `_scintillaViewParams`,
+`_findHistory` fields stay at struct defaults forever.
+
+The Preferences dialog (`src/dialogs/PreferenceDialog.cpp`) has zero
+references to `NppParameters::getInstance()` — it talks exclusively to
+`Application::_options`. So the duplicate is **dead code for runtime**.
+
+**Impact:** none on user-visible config persistence (the real path
+works). But it's ~700 lines of dead code with confusingly parallel
+struct layouts. Recommendation: either delete `NppParameters` entirely,
+or wire `Application::initialize()` to call `NppParameters::load()`
+after `Application::loadConfig()` and route `_nppGUI` reads through
+the real `_options`. Out of scope for this round.
+
+### 2. SIGTERM does not save config (real bug, real fix)
+
+`src/main.cpp` had a signal handler that called `std::_Exit(EXIT_SUCCESS)`
+after SIGTERM/SIGINT. `std::_Exit` skips destructors, so
+`Application::shutdown()` never ran on non-graceful termination, so
+`Application::saveConfig()` never wrote `config.xml`. All preferences
+were silently lost.
+
+Fix: replaced `std::_Exit` with `QCoreApplication::quit()`. Returns
+from `app.exec()` cleanly, runs the post-exec shutdown path that calls
+`Application::shutdown()`. Verified on the live binary: SIGTERM now
+produces a 618-byte config.xml with all default sections.
+
+Note: a unit test would have been the right coverage here, but
+`src/core/Application.cpp` is intentionally not in `test_core.a` (the
+test build uses the stub `Application` from TestStubs). Wiring the
+real Application into the test build is a much larger surface change.
+The functional SSH verification is documented in
+docs/ai-ai-qa/v3/syntax-highlight-fix.md.
+
+### 3. Orphaned legacy tests/ directory
+
+`tests/TestLexer.cpp` (CamelCase, 750 lines) + 8 siblings +
+`tests/CMakeLists.txt` were never part of the active build (top-level
+CMakeLists only does `add_subdirectory(src/tests)`). Anyone running
+`ninja` from the build dir would never see them, and the `add_npp_test_gui`
+function inside the orphaned CMakeLists used `EXCLUDE_FROM_ALL` so even
+inside that subdir they wouldn't build by default.
+
+Renamed all of them to `.deprecated` suffix rather than deleting —
+keeps the history intact, makes the "not built" status obvious at a
+glance. Added `tests/README.md` mapping legacy → active files.
+
+Coverage from `TestLexer.cpp` was already ported to
+`src/tests/test_lexer_regression.cpp` in commit `8c327b3`. Other
+files (TestDialogs, TestEncodingDetector, etc.) flagged as "Not yet
+ported" — anyone reviving them should follow the recipe in
+`tests/README.md`.
+
+### 4. Cosmetic: parallel-agent toolbar objectName changes
+
+`src/editor/WebBrowserView.cpp`, `src/panels/FileBrowserPanel.cpp`,
+`src/ui/MainWindow.cpp` had objectName additions from a parallel agent
+(visible in `git diff` but not in any commit message). Left untouched —
+not part of this work.
+
+### Summary of commits this round
+
+  - `831fdac` chore(tests): rename orphaned tests/ subtree to .deprecated suffix
+  - `b5b57fe` fix(shutdown): SIGTERM now triggers Application::shutdown() and saves config.xml
+
+### Test status
+
+  - `ctest`: 25/25 pass, 0.42s
+  - `ninja`: clean build, no warnings (except the pre-existing
+    unused-argc/argv in `detectHeadlessEnvironment`)
+  - Live binary: SIGTERM-clean-shutdown verified via SSH + config.xml
+    inspection
