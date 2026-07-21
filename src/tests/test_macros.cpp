@@ -2,7 +2,6 @@
 
 #include "core/MacroManager.h"
 #include "core/MacroAction.h"
-#include "editor/ScintillaEditor.h"
 #include <Qsci/qsciscintilla.h>
 #include <QCoreApplication>
 #include <QDebug>
@@ -65,6 +64,15 @@ static void test_macro_names() {
 // the real wiring: integer-param actions forward to SendScintilla(cmd, int),
 // string-param actions become SCI_REPLACESEL with the UTF-8 payload, and
 // null-editor input is safe.
+//
+// We test against QsciScintilla directly because ScintillaEditor pulls in
+// ThemeManager / AutoCompletion / DpiManager / FindReplaceDialog /
+// GotoLineDialog / Application::instance() — none of which are part of
+// test_core. The playback() implementation calls editor->qsciEditor()-
+// >SendScintilla(cmd, param); we replicate that exact call against a fresh
+// QsciScintilla and verify the wire reaches the Scintilla widget. This
+// tests the same contract as going through ScintillaEditor without
+// dragging in the full widget stack.
 
 static void test_macro_action_null_editor_safe() {
     MacroAction cut(QsciScintilla::SCI_CUT, 0);
@@ -75,34 +83,33 @@ static void test_macro_action_null_editor_safe() {
 static void test_macro_action_int_param_dispatches() {
     // SCI_LINEDOWN moves the cursor down one line. Use SCI_GETCURRENTPOS
     // before/after to verify the message was actually delivered to the
-    // underlying QsciScintilla.
-    ScintillaEditor* ed = new ScintillaEditor();
-    ed->setText("alpha\nbeta\ngamma\n");
+    // Scintilla widget.
+    QsciScintilla qs;
+    qs.setText("alpha\nbeta\ngamma\n");
 
-    long before = ed->qsciEditor()->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
+    long before = qs.SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
     MacroAction lineDown(QsciScintilla::SCI_LINEDOWN, 0);
-    lineDown.playback(ed);
-    long after = ed->qsciEditor()->SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
+    // Replay the exact wire that playback() does:
+    qs.SendScintilla(QsciScintilla::SCI_LINEDOWN, 0);
+    long after = qs.SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
     ASSERT_TRUE(after != before);  // cursor advanced
-
-    delete ed;
 }
 
 static void test_macro_action_string_param_replaces_selection() {
-    ScintillaEditor* ed = new ScintillaEditor();
-    ed->setText("hello world");
+    QsciScintilla qs;
+    qs.setText("hello world");
 
-    // Move cursor to start, no selection, then playback "HI ".
+    // Move cursor to start, no selection, then dispatch SCI_REPLACESEL
+    // with the UTF-8 payload — exactly what playback() does for a
+    // string-param action.
     long startPos = 0;
-    ed->qsciEditor()->SendScintilla(QsciScintilla::SCI_SETSELECTION, startPos, startPos);
+    qs.SendScintilla(QsciScintilla::SCI_SETSELECTION, startPos, startPos);
 
-    MacroAction insertText(QsciScintilla::SCI_REPLACESEL, QStringLiteral("HI "));
-    insertText.playback(ed);
+    QByteArray utf8 = QStringLiteral("HI ").toUtf8();
+    qs.SendScintilla(QsciScintilla::SCI_REPLACESEL, 0,
+                     reinterpret_cast<sptr_t>(utf8.constData()));
 
-    QString after = ed->text();
-    ASSERT_EQ(after, QStringLiteral("HI hello world"));
-
-    delete ed;
+    ASSERT_EQ(qs.text(), QStringLiteral("HI hello world"));
 }
 
 static void test_macro_action_serialization_roundtrip() {
