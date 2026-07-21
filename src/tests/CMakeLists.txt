@@ -55,6 +55,7 @@ target_compile_options(test_stubs PRIVATE -w)
 add_library(test_core STATIC
     ${REL_ROOT}/core/Buffer.cpp
     ${REL_ROOT}/core/EncodingDetector.cpp
+    ${REL_ROOT}/core/EncodingUtils.cpp
     ${REL_ROOT}/core/FileManager.cpp
     # CharsetDetector.cpp must be in test_core because EncodingDetector.h now
     # includes its header and instantiates CharsetDetector in detectWithHints.
@@ -80,7 +81,7 @@ add_library(test_core STATIC
     ${REL_ROOT}/editor/SyntaxHighlighter.cpp
     ${REL_ROOT}/editor/SyntaxHighlighterImpl.cpp
 )
-target_link_libraries(test_core PUBLIC test_stubs Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Network ${QSCINTILLA_LIBRARY})
+target_link_libraries(test_core PUBLIC test_stubs Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Network Qt6::Core5Compat ${QSCINTILLA_LIBRARY})
 target_include_directories(test_core PUBLIC ${TEST_INC} ${REL_ROOT}/workers ${QSCINTILLA_INCLUDE_DIR})
 target_compile_options(test_core PRIVATE -w)
 
@@ -109,6 +110,9 @@ add_test(NAME StringHelperTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=
 
 add_core_test(test_buffer test_buffer.cpp)
 add_test(NAME BufferTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_buffer>)
+
+add_core_test(test_charset_conversion test_charset_conversion.cpp)
+add_test(NAME CharsetConversionTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_charset_conversion>)
 
 add_executable(test_menus test_menus.cpp ${REL_ROOT}/common/MenuAdapter.cpp)
 target_include_directories(test_menus PRIVATE ${TEST_INC} ${REL_ROOT}/workers)

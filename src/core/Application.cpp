@@ -1,5 +1,6 @@
 // Application.cpp - Main application controller implementation
 #include "Application.h"
+#include "EncodingUtils.h"
 #include "SnippetManager.h"
 
 #include <atomic>
@@ -2126,10 +2127,45 @@ void Application::onEolConversion(const QString& eolCmd) {
 void Application::onConvertToCharset(const QString& charsetName) {
     ScintillaEditor* ed = getActiveEditor();
     if (!ed) return;
-    QString text = ed->toPlainText();
-    // Convert to UTF-8 bytes, treating charset as a rough encoding hint
-    Q_UNUSED(charsetName);
-    ed->setPlainText(text);
+    if (charsetName.isEmpty()) return;
+
+    // The editor text is held internally as UTF-16 (Qt QString). To honour
+    // a target encoding, we round-trip through EncodingUtils:
+    //   1. Encode the current QString as the *current* encoding bytes
+    //   2. Decode those bytes as the *target* encoding bytes
+    //   3. Set the resulting QString back into the editor
+    //
+    // Source encoding comes from the active buffer's recorded EncodingType
+    // (NONE is treated as UTF-8 since QString is already UTF-16).
+    BufferID buf = getActiveBuffer();
+    EncodingType srcEnc = (buf == BUFFER_INVALID)
+        ? EncodingType::UTF_8
+        : _fileManager->getEncoding(buf);
+    if (srcEnc == EncodingType::NONE) srcEnc = EncodingType::UTF_8;
+
+    const QString srcCodecName = QString::fromStdString(encodingToString(srcEnc));
+    QByteArray srcBytes = EncodingUtils::encodeToBytes(ed->toPlainText(), srcCodecName);
+    if (srcBytes.isEmpty() && !ed->toPlainText().isEmpty()) {
+        // Source encoding couldn't be resolved — fall back to UTF-8 bytes.
+        srcBytes = ed->toPlainText().toUtf8();
+    }
+    QString out = EncodingUtils::decodeFromBytes(srcBytes, charsetName);
+    if (out.isEmpty() && !srcBytes.isEmpty()) {
+        qWarning() << "[charset] unknown target encoding:" << charsetName;
+        setStatusBarText(QString("Unknown encoding: %1").arg(charsetName).toStdString());
+        return;
+    }
+
+    ed->setPlainText(out);
+    ed->setModified(true);
+
+    // Track the new encoding on the buffer so future saves use it.
+    if (buf != BUFFER_INVALID) {
+        EncodingType newEnc = EncodingUtils::encodingFromCodecName(charsetName);
+        if (newEnc != EncodingType::NONE) {
+            _fileManager->setEncoding(buf, newEnc);
+        }
+    }
     setStatusBarEncoding(charsetName.toStdString());
 }
 

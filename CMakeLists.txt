@@ -9,6 +9,7 @@ set(CMAKE_AUTOUIC ON)
 
 # ─── Qt6 ────────────────────────────────────────────────────────────────────
 find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core Network Xml PrintSupport)
+find_package(Qt6 QUIET COMPONENTS Core5Compat)
 find_package(Qt6 QUIET COMPONENTS WebEngineWidgets)
 if(Qt6WebEngineWidgets_FOUND)
     set(NPP_HAVE_WEBENGINE TRUE)
@@ -63,6 +64,7 @@ set(SOURCES
     src/core/Buffer.cpp
     src/core/Parameters.cpp
     src/core/Application.cpp
+    src/core/EncodingUtils.cpp
     src/core/EditorCommandManager.cpp
     src/core/EncodingDetector.cpp
     # Wave 7: EncodingDetector::detectWithHints() now instantiates
@@ -144,6 +146,7 @@ set(SOURCES
 set(HEADERS
     src/core/Buffer.h
     src/core/Application.h
+    src/core/EncodingUtils.h
     src/core/ThemeManager.h
     src/core/NppIO.h
     src/core/EditorCommandManager.h
@@ -248,6 +251,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Network
     Qt6::Xml
     Qt6::PrintSupport
+    Qt6::Core5Compat
     ${QSCINTILLA_LIBRARIES}
 )
 
