@@ -307,10 +307,6 @@ QWidget* PreferenceDialog::createAppearancePage() {
     QGroupBox* editorApprGroup = new QGroupBox("Editor Appearance", page);
     QVBoxLayout* edApprLayout = new QVBoxLayout(editorApprGroup);
 
-    _chkCurrentLineHighlight = new QCheckBox(
-        "Highlight current line background", editorApprGroup);
-    edApprLayout->addWidget(_chkCurrentLineHighlight);
-
     _chkShowIndentGuide = new QCheckBox(
         "Show indentation guide", editorApprGroup);
     edApprLayout->addWidget(_chkShowIndentGuide);
@@ -756,7 +752,6 @@ void PreferenceDialog::loadSettings() {
     _chkShowTabbar->setChecked(opts.showTabBar);
     _chkShowStatusbar->setChecked(opts.showStatusBar);
     _chkShowMenubar->setChecked(opts.showMenuBar);
-    _chkCurrentLineHighlight->setChecked(opts.currentLineHighlight);
     _chkShowIndentGuide->setChecked(opts.showIndentGuide);
 
     // File Associations
@@ -827,7 +822,6 @@ void PreferenceDialog::loadSettings() {
     _originalSettings.backspaceUnindent = opts.backspaceUnindent;
     _originalSettings.theme = _cmbTheme->currentData().toString();
     _originalSettings.showToolbar = opts.showToolBar;
-    _originalSettings.currentLineHighlight = opts.currentLineHighlight;
     _originalSettings.showIndentGuide = opts.showIndentGuide;
     _originalSettings.showTabbar = opts.showTabBar;
     _originalSettings.showStatusbar = opts.showStatusBar;
@@ -873,7 +867,7 @@ void PreferenceDialog::applySettings() {
     opts.showTabBar = _chkShowTabbar->isChecked();
     opts.showStatusBar = _chkShowStatusbar->isChecked();
     opts.showMenuBar = _chkShowMenubar->isChecked();
-    opts.currentLineHighlight = _chkCurrentLineHighlight->isChecked();
+    opts.currentLineHighlightColor = _currentLineColor;
     opts.showIndentGuide = _chkShowIndentGuide->isChecked();
 
     // File Associations — collect from list widget
@@ -976,7 +970,6 @@ void PreferenceDialog::applySettings() {
     _originalSettings.backspaceUnindent = opts.backspaceUnindent;
     _originalSettings.theme = _cmbTheme->currentData().toString();
     _originalSettings.showToolbar = opts.showToolBar;
-    _originalSettings.currentLineHighlight = opts.currentLineHighlight;
     _originalSettings.showIndentGuide = opts.showIndentGuide;
     _originalSettings.showTabbar = opts.showTabBar;
     _originalSettings.showStatusbar = opts.showStatusBar;
@@ -1147,7 +1140,6 @@ void PreferenceDialog::resetToDefaults() {
     _chkShowToolbar->setChecked(true);
     _chkShowTabbar->setChecked(true);
     _chkShowStatusbar->setChecked(true);
-    _chkCurrentLineHighlight->setChecked(true);
     _chkShowIndentGuide->setChecked(false);
 
     // File Associations — clear custom

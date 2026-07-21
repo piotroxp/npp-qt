@@ -90,7 +90,6 @@ private:
     QCheckBox* _chkShowTabbar = nullptr;
     QCheckBox* _chkShowStatusbar = nullptr;
     QCheckBox* _chkShowMenubar = nullptr;
-    QCheckBox* _chkCurrentLineHighlight = nullptr;
     QCheckBox* _chkShowIndentGuide = nullptr;
 
     // File Associations page widgets
@@ -159,7 +158,6 @@ private:
         bool showTabbar;
         bool showStatusbar;
         bool showMenubar;
-        bool currentLineHighlight;
         bool showIndentGuide;
         int lineNumberWidth;
         bool showSymbols;

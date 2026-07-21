@@ -109,7 +109,7 @@ struct AppOptions {
     bool         autoSaveInBackground = true;
     // Editor Appearance
     bool         showIndentGuide = false;
-    bool         currentLineHighlight = true;
+    QColor       currentLineHighlightColor = QColor("#FFFFD0");  // user-selected highlight color
     // Search
     int          maxHighlightWords = 1000;
     bool         matchCaseDefault = false;
