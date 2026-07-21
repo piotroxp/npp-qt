@@ -704,8 +704,15 @@ int Application::currentView() const {
 // ============================================================================
 BufferID Application::openFile(const std::string& path, bool readOnly) {
     BufferID id = _fileManager->openFile(QString::fromStdString(path), readOnly);
-    if (id && !path.empty())
+    if (id && !path.empty()) {
         RecentFilesManager::instance().addFile(QString::fromStdString(path));
+        // Single source of truth: openFile() always emits the signals itself,
+        // so all callers (onOpenFile, openFileInTab, recent-menu lambda, CLI)
+        // get consistent bufferOpened/bufferActivated without each having to
+        // remember to emit. MainWindow::onBufferOpened creates the tab.
+        emit bufferOpened(id);
+        emit bufferActivated(id);
+    }
     return id;
 }
 
@@ -1541,11 +1548,8 @@ void Application::onToolBarCommand(const QString& cmd) {
 // ============================================================================
 void Application::onNewFile() {
     qDebug() << "[App] New file";
-    BufferID buf = newFile();
-    if (buf) {
-        emit bufferOpened(buf);
-        emit bufferActivated(buf);
-    }
+    // newFile() emits bufferOpened/bufferActivated itself; no manual emit.
+    newFile();
 }
 
 void Application::onOpenFile() {
@@ -1554,11 +1558,8 @@ void Application::onOpenFile() {
         "All Files (*);;Text Files (*.txt);;C/C++ (*.cpp *.h);;Python (*.py);;JavaScript (*.js)"
     );
     if (!filePath.isEmpty()) {
-        BufferID buf = openFile(filePath.toStdString());
-        if (buf) {
-            emit bufferOpened(buf);
-            emit bufferActivated(buf);
-        }
+        // openFile() now emits bufferOpened/bufferActivated itself; no manual emit.
+        openFile(filePath.toStdString());
     }
 }
 

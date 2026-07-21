@@ -226,6 +226,7 @@ ScintillaEditor::ScintillaEditor(QWidget* parent)
                                    text.toUtf8().constData());
         }
         _autoCompletion->recordWordUsed(text);
+        emit autoCompleted(text);
     });
 }
 

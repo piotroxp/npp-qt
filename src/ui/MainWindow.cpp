@@ -876,8 +876,20 @@ void MainWindow::onNewFile() {
     });
     auto& appRef = Application::instance();
     BufferID buf = appRef.newFile();
+    if (!buf) {
+        QMessageBox::warning(this, "New File", "Could not create new file.");
+        return;
+    }
 
-    // Create editor
+    // With Application::newFile() now emitting bufferOpened, MainWindow::onBufferOpened
+    // has already created the tab and editor for this buffer. If we still have a tab
+    // mapping for it, switch to it and bail out (don't create a duplicate tab).
+    if (_bufferToTab.contains(buf)) {
+        _tabWidget->setCurrentIndex(_bufferToTab[buf]);
+        return;
+    }
+
+    // Fallback: tab not created (e.g. onBufferOpened early-returned). Create it.
     ScintillaEditor* editor = new ScintillaEditor(_tabWidget);
     reconnectGuard.dismiss();  // normal completion -- no need to reconnect
     editor->applyTheme(ThemeManager::instance().currentTheme());  // apply current theme to status bar
