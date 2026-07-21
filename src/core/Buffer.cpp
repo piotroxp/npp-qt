@@ -109,13 +109,24 @@ void Buffer::setFileName(const QString& filePath) {
 
     updateTimeStamp();
 
+    qDebug() << "[PROBE-SYNTAX] Buffer::Buffer file=" << _fileName
+             << "isLargeFile=" << _isLargeFile
+             << "determinedLang=int(" << static_cast<int>(determinedLang) << ")"
+             << "currentLang=int(" << static_cast<int>(_langType) << ")"
+             << "hasLangBeenSetFromMenu=" << _hasLangBeenSetFromMenu;
+
     // Set language if not already set from menu
     int langChange = 0;
     if (!_hasLangBeenSetFromMenu && (determinedLang != _langType || _langType == LangType::L_TEXT)) {
         if (_isLargeFile) {
             _langType = LangType::L_TEXT;
+            qDebug() << "[PROBE-SYNTAX] Buffer::Buffer LARGE_FILE_FORCED_LANG_TEXT file=" << _fileName
+                     << "sizeKB=" << (QFileInfo(_fileName).size() / 1024);
         } else {
             _langType = determinedLang;
+            qDebug() << "[PROBE-SYNTAX] Buffer::Buffer DETECTED_LANG file=" << _fileName
+                     << "determinedLang=int(" << static_cast<int>(determinedLang) << ")"
+                     << "finalLang=int(" << static_cast<int>(_langType) << ")";
             langChange = static_cast<int>(BufferStatusInfo::BufferChangeLanguage);
         }
     }
@@ -241,6 +252,10 @@ void Buffer::setEolFormat(EolType format) {
 // ============================================================================
 
 void Buffer::setLangType(LangType lang, const QString& userLangName) {
+    qDebug() << "[PROBE-SYNTAX] Buffer::setLangType CALLED file=" << _fileName
+             << "newLang=int(" << static_cast<int>(lang) << ")"
+             << "oldLang=int(" << static_cast<int>(_langType) << ")"
+             << "userLangName=" << userLangName;
     if (lang == _langType && lang != LangType::L_USER)
         return;
 

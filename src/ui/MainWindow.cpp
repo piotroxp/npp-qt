@@ -1004,6 +1004,11 @@ void MainWindow::openFileInTab(const QString& path) {
 
     // Create editor (signal is already disconnected above)
     ScintillaEditor* editor = new ScintillaEditor(_tabWidget);
+    Buffer* bufForProbe2 = buf;
+    qDebug() << "[PROBE-SYNTAX] MainWindow::openFileInTab FALLBACK_PATH buf=" << (void*)(uintptr_t)buf
+             << "editor=" << (void*)editor
+             << "bufLang=int(" << (bufForProbe2 ? static_cast<int>(bufForProbe2->getLangType()) : -1) << ")"
+             << "NOTE: language NOT explicitly applied here — relies on bufferActivated";
     reconnectGuard.dismiss();  // normal completion — signal reconnected by scope guard
 
     // Wire cursor position to status bar
@@ -1344,6 +1349,11 @@ void MainWindow::onBufferOpened(BufferID buffer) {
 
     // Register this editor as the active one
     app().setActiveEditor(editor);
+    Buffer* bufForProbe = buffer;
+    qDebug() << "[PROBE-SYNTAX] MainWindow::onBufferOpened END buf=" << (void*)(uintptr_t)buffer
+             << "editor=" << (void*)editor
+             << "bufLang=int(" << (bufForProbe ? static_cast<int>(bufForProbe->getLangType()) : -1) << ")"
+             << "appActiveEditor=" << (void*)app().getActiveEditor();
 }
 
 void MainWindow::onFileExternallyModified(const QString& filePath) {

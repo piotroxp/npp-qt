@@ -1190,10 +1190,18 @@ void Application::onBufferOpened(BufferID buffer) {
 
 void Application::onBufferActivated(BufferID buffer) {
     if (!buffer) return;
+    Buffer* bufProbe = buffer;
     qDebug() << "[App] Buffer activated:" << buffer;
+    qDebug() << "[PROBE-SYNTAX] App::onBufferActivated ENTER buf=" << (void*)(uintptr_t)buffer
+             << "_activeEditor=" << (void*)_activeEditor
+             << "bufLang=int(" << (bufProbe ? static_cast<int>(bufProbe->getLangType()) : -1) << ")";
 
     ScintillaEditor* ed = getActiveEditor();
-    if (!ed) return;
+    if (!ed) {
+        qDebug() << "[PROBE-SYNTAX] App::onBufferActivated EARLY_RETURN_NULL_EDITOR";
+        return;
+    }
+    qDebug() << "[PROBE-SYNTAX] App::onBufferActivated got editor=" << (void*)ed;
 
     // Keep _bufferToEditor in sync so saveFile() can find the right editor
     _bufferToEditor[buffer] = ed;

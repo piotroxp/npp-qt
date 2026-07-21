@@ -230,21 +230,26 @@ void ScintillaEditor::setPlainText(const QString& text) { _editor->setText(text)
 QString ScintillaEditor::toPlainText() const { return _editor->text(); }
 
 void ScintillaEditor::setLanguage(LangType lang) {
+    qDebug() << "[PROBE-SYNTAX] ScintillaEditor::setLanguage ENTER lang=int(" << static_cast<int>(lang)
+             << ") editor=" << (void*)_editor;
     _language = lang;
     if (_highlighter) _highlighter->setLanguage(lang);
     emit languageChanged(lang);
 
     // Use QsciScintilla's built-in lexers via LanguageManager
     QsciLexer* lexer = LanguageManager::instance().getLexer(lang);
+    qDebug() << "[PROBE-SYNTAX] ScintillaEditor::setLanguage lexer ptr=" << (void*)lexer;
     _editor->setLexer(lexer);
     if (lexer) {
         applyThemeToLexer(lexer);
+        qDebug() << "[PROBE-SYNTAX] ScintillaEditor::setLanguage APPLY_THEME_DONE lang=int(" << static_cast<int>(lang) << ")";
     }
 
     // Propagate language to auto-completion (loads keyword sets).
     if (_autoCompletion) {
         _autoCompletion->setLanguage(static_cast<int>(lang));
     }
+    qDebug() << "[PROBE-SYNTAX] ScintillaEditor::setLanguage EXIT lang=int(" << static_cast<int>(lang) << ")";
 }
 
 void ScintillaEditor::applyTheme(const QString& themeName) {
