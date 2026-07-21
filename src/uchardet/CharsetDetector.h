@@ -207,14 +207,16 @@ private:
     double m_confidenceThreshold = 0.0;
 
     // Current confidence score
-    double m_confidence = 0.0;
+    // mutable: assigned from const getCharsetName() (cached detection result).
+    mutable double m_confidence = 0.0;
 
     // Error message
     QString m_errorString;
 
     // BOM detection state
-    bool m_bomChecked = false;
-    QString m_bomCharset;  // charset determined by BOM
+    // mutable: assigned from const getCharsetName() while caching the result.
+    mutable bool m_bomChecked = false;
+    mutable QString m_bomCharset;  // charset determined by BOM
 
     // High-byte statistics for heuristic detection
     int m_highByteCount = 0;    // bytes in 0x80-0xFF range

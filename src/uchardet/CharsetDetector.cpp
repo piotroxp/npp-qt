@@ -391,7 +391,7 @@ QStringConverter::Encoding CharsetDetector::getEncoding() const {
     if (cs == u"UTF-32-BE")
         return QStringConverter::Utf32;  // Qt 6 handles via BOM
     if (cs == u"ASCII" || cs == u"ANSI_X3.4-1968")
-        return QStringConverter::Ascii;
+        return QStringConverter::Utf8;  // ASCII is a strict subset of UTF-8
     if (cs == u"ISO-8859-1" || cs == u"latin1" || cs == u"LATIN1")
         return QStringConverter::Latin1;
 

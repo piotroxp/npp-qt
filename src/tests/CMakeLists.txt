@@ -54,6 +54,11 @@ add_library(test_core STATIC
     ${REL_ROOT}/core/Buffer.cpp
     ${REL_ROOT}/core/EncodingDetector.cpp
     ${REL_ROOT}/core/FileManager.cpp
+    # CharsetDetector.cpp must be in test_core because EncodingDetector.h now
+    # includes its header and instantiates CharsetDetector in detectWithHints.
+    # The main app links it via UCHARDET_SOURCES glob in src/CMakeLists.txt,
+    # but the test build needs the .cpp explicitly.
+    ${REL_ROOT}/uchardet/CharsetDetector.cpp
     ${REL_ROOT}/core/LanguageManager.cpp
     ${REL_ROOT}/core/SessionManager.cpp
     ${REL_ROOT}/core/MacroManager.cpp

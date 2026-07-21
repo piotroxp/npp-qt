@@ -5,6 +5,7 @@
 #pragma once
 
 #include "common/Types.h"
+#include "../uchardet/CharsetDetector.h"
 #include <string>
 #include <string_view>
 #include <vector>
@@ -71,4 +72,13 @@ private:
 
     // Check for HTML/XML encoding declaration
     EncodingType detectFromMetaCharset(const std::string& bytes) const;
+
+    // Last-resort: use CharsetDetector (uchardet / Qt fallback) to identify
+    // an encoding when BOM, meta, UTF-8 validation, and extension hint all
+    // come up empty. Returns ANSI if confidence is below threshold.
+    EncodingType detectWithCharsetDetector(const std::string& bytes) const;
+
+    // Minimum confidence (0.0-1.0) required to accept CharsetDetector's result.
+    // Below this threshold we fall back to ANSI to avoid misdetection.
+    static constexpr double m_charsetConfidenceThreshold = 0.5;
 };

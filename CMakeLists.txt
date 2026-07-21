@@ -65,6 +65,11 @@ set(SOURCES
     src/core/Application.cpp
     src/core/EditorCommandManager.cpp
     src/core/EncodingDetector.cpp
+    # Wave 7: EncodingDetector::detectWithHints() now instantiates
+    # CharsetDetector as a last-resort fallback. The src/uchardet/*.cpp glob
+    # in src/CMakeLists.txt is orphaned (no add_subdirectory), so this
+    # top-level list is the only path that links CharsetDetector into npp-qt.
+    src/uchardet/CharsetDetector.cpp
     src/core/FileManager.cpp
     src/core/LanguageManager.cpp
     src/core/SessionManager.cpp

@@ -315,6 +315,54 @@ TEST(test_to_utf8_from_ansi) {
 }
 
 // ============================================================================
+// CharsetDetector Integration Tests (Wave 7)
+// ============================================================================
+// These exercise the last-resort CharsetDetector path inside detectWithHints:
+// when BOM, meta-charset, UTF-8 validation, and extension hint all come up
+// empty (e.g. extension is `.txt` so hint is ANSI), we fall through to
+// CharsetDetector and map its named charset onto EncodingType.
+TEST(test_charset_integration_latin1) {
+    // ISO-8859-1 bytes: pure ASCII + a few Latin-1 accented characters
+    // (e.g. é=0xE9, ñ=0xF1, ü=0xFC). No BOM, no UTF-8 multi-byte sequences.
+    // Filename has no recognized extension so hintFromExtension returns ANSI,
+    // forcing the detector through the CharsetDetector fallback path.
+    std::string data;
+    data += "Cafe ";
+    data.push_back(static_cast<char>(0xE9));  // é
+    data += " au lait, ";
+    data.push_back(static_cast<char>(0xF1));  // ñ
+    data += " ";
+    data.push_back(static_cast<char>(0xFC));  // ü
+    data += " und M";
+    data.push_back(static_cast<char>(0xF6));  // ö
+    data += "nchense";
+
+    EncodingDetector detector;
+    EncodingType enc = detector.detectWithHints(data, "latin1_sample.txt");
+    // CharsetDetector should recognize ISO-8859-1 (or Windows-1252 in fallback)
+    // and we map to the matching EncodingType slot. Either is acceptable per
+    // the Wave 7 brief — the enum cannot distinguish them perfectly.
+    ASSERT_TRUE(enc == EncodingType::ISO88591 || enc == EncodingType::Windows1252);
+}
+
+TEST(test_charset_integration_cyrillic_utf8) {
+    // Mixed Cyrillic UTF-8 — valid multi-byte sequences should already be
+    // caught by isValidUtf8() earlier in the chain and return UTF_8 directly.
+    // This test guards the order of operations: the CharsetDetector step must
+    // not override the UTF-8 fast path.
+    std::string data;
+    data += "Privet ";                              // ASCII prefix
+    data += "\xD0\x9F\xD1\x80\xD0\xB8\xD0\xB2\xD0\xB5\xD1\x82"; // "Привет"
+    data += " ";
+    data += "\xD0\xBC\xD0\xB8\xD1\x80";             // "мир"
+    data += " (hello, world)";
+
+    EncodingDetector detector;
+    EncodingType enc = detector.detectWithHints(data, "greeting_ru.txt");
+    ASSERT_EQ(enc, EncodingType::UTF_8);
+}
+
+// ============================================================================
 // Main
 // ============================================================================
 int main() {
@@ -363,6 +411,10 @@ int main() {
     RUN(test_to_utf8_passthrough);
     RUN(test_from_utf8_passthrough);
     RUN(test_to_utf8_from_ansi);
+
+    std::cout << "\nCharsetDetector Integration (Wave 7):\n";
+    RUN(test_charset_integration_latin1);
+    RUN(test_charset_integration_cyrillic_utf8);
 
     std::cout << "\n=== All tests passed! ===\n";
     return 0;

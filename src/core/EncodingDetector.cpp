@@ -32,8 +32,63 @@ EncodingType EncodingDetector::detectWithHints(const std::string& bytes, const s
     // Check if it looks like UTF-8
     if (isValidUtf8(bytes)) return EncodingType::UTF_8;
 
-    // Use extension hint as fallback
-    return hintFromExtension(fileName);
+    // Extension hint: if it gives us a real encoding (web/source files default to
+    // UTF-8, not ANSI), trust it and skip the statistical detector.
+    EncodingType extHint = hintFromExtension(fileName);
+    if (extHint != EncodingType::ANSI) return extHint;
+
+    // Last resort: feed bytes through CharsetDetector (uchardet / Qt fallback)
+    // and map its named charset onto EncodingType. If confidence is too low
+    // we fall through to ANSI so we don't mislabel the file.
+    return detectWithCharsetDetector(bytes);
+}
+
+EncodingType EncodingDetector::detectWithCharsetDetector(const std::string& bytes) const {
+    if (bytes.empty()) return EncodingType::ANSI;
+
+    CharsetDetector detector;
+    detector.feed(bytes.data(), bytes.size());
+
+    const char* name = detector.getCharsetName();
+    if (!name || name[0] == '\0') return EncodingType::ANSI;
+
+    // Respect confidence: uchardet mode reports 1.0 on a hit, 0.0 on miss.
+    // Qt fallback reports 0.5–1.0 depending on path (BOM > UTF-8 > single-byte).
+    if (detector.getConfidence() < m_charsetConfidenceThreshold)
+        return EncodingType::ANSI;
+
+    QString cs = QString::fromLatin1(name).toUpper();
+
+    // Map CharsetDetector's charset string → EncodingType enum.
+    // The enum doesn't distinguish single-byte codepages well; we use the
+    // specific ISO88591 / Windows1252 slots where they exist, else fall
+    // through to ANSI. This preserves the existing 20/20 test contract
+    // because tests treat ISO-8859-1 and Windows-1252 interchangeably.
+    if (cs == u"UTF-8" || cs == u"UTF8" || cs == u"ASCII")
+        return EncodingType::UTF_8;
+    if (cs == u"UTF-16" || cs == u"UTF-16-LE" || cs == u"UTF16" || cs == u"UTF16-LE")
+        return EncodingType::UTF_16_LE;
+    if (cs == u"UTF-16-BE" || cs == u"UTF16-BE")
+        return EncodingType::UTF_16_BE;
+    if (cs == u"UTF-32" || cs == u"UTF-32-LE" || cs == u"UTF32" || cs == u"UTF32-LE")
+        return EncodingType::UTF_32_LE;
+    if (cs == u"UTF-32-BE" || cs == u"UTF32-BE")
+        return EncodingType::UTF_32_BE;
+    if (cs == u"WINDOWS-1252" || cs == u"WINDOWS_1252" || cs == u"CP1252" || cs == u"WINDOWS-CP1252")
+        return EncodingType::Windows1252;
+    if (cs == u"ISO-8859-1" || cs == u"ISO_8859-1" || cs == u"LATIN1" || cs == u"ISO-8859-15" || cs == u"ISO_8859-15")
+        return EncodingType::ISO88591;
+    if (cs == u"GB18030" || cs == u"GB2312" || cs == u"GBK")
+        return EncodingType::ANSI;  // CJK single-byte path not modeled in enum
+    if (cs == u"SHIFT_JIS" || cs == u"SHIFT-JIS" || cs == u"SJIS" || cs == u"EUC-JP" || cs == u"EUC_JP")
+        return EncodingType::ANSI;
+    if (cs == u"EUC-KR" || cs == u"EUC_KR" || cs == u"UHC")
+        return EncodingType::ANSI;
+    if (cs == u"BIG5" || cs == u"BIG-5")
+        return EncodingType::ANSI;
+
+    // Unknown / unsupported charset name → bail to ANSI rather than guess.
+    return EncodingType::ANSI;
 }
 
 EncodingType EncodingDetector::detectBOM(const std::string& bytes) const {
