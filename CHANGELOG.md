@@ -2,7 +2,25 @@
 
 ## [Unreleased]
 
+### Added
+- **EncodingUtils** (`src/core/EncodingUtils.{h,cpp}`) — pure helpers for
+  mapping between `EncodingType` and Qt6's `QStringConverter` /
+  Qt5Compat's `QTextCodec`. Used by `Application::onConvertToCharset`
+  (which was previously a stub — see "Fixed" below) and by
+  `tests/test_charset_conversion.cpp` (25 checks, 100% pass).
+- **ToolbarCustomizeDialog** (`src/dialogs/ToolbarCustomizeDialog.{h,cpp}`)
+  — real toolbar-customize UI with Available/Visible list widgets,
+  Add/Remove/Move Up/Move Down/Reset buttons, and drag-to-reorder
+  internal-move. Replaces the QMessageBox stub in
+  `Application::onToolbarCustomize`.
+
 ### Fixed
+- **Application::onConvertToCharset(Q_UNUSED(charsetName))** — the
+  previous body re-set the same text and updated the status bar but
+  did no actual charset conversion. Now uses `EncodingUtils::encodeToBytes`
+  + `EncodingUtils::decodeFromBytes` to round-trip the editor text
+  through the codec chain. Tracks the new encoding on the active
+  buffer so future saves use it. (Wave 11 task #2.)
 - **Application singleton deadlock at `__cxa_guard_acquire`** —
   Replaced `static Application inst;` (compiler-emitted guard around
   the ctor) with Construct-On-First-Use heap idiom
