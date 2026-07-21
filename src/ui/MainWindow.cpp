@@ -934,7 +934,10 @@ void MainWindow::openFileInTab(const QString& path) {
     //   (b) a prior call already handled this file — suppress it.
     // Use > 0 (NOT > 1) to match onNewFile() and to catch the nested call
     // that arrives while ScintillaEditor's QFrame construction is in progress.
-    if (_openingFileDepth > 0) return;
+    if (_openingFileDepth > 0) {
+        qDebug() << "[MainWindow] openFileInTab blocked-by-depth (re-entry guard)";
+        return;
+    }
     ++_openingFileDepth;
     auto depthGuard = qScopeGuard([this]() { --_openingFileDepth; });
 
@@ -958,6 +961,7 @@ void MainWindow::openFileInTab(const QString& path) {
 
     // Guard: empty path — reject before touching any subsystem
     if (path.isEmpty()) {
+        qDebug() << "[MainWindow] openFileInTab early-return: empty path";
         QMessageBox::warning(this, "Open Error", "File path is empty.");
         return;
     }
@@ -967,6 +971,7 @@ void MainWindow::openFileInTab(const QString& path) {
     // to directories, or invalid paths.  FileBrowserPanel already validates this,
     // but double-click from external sources or drag-and-drop can bypass it.
     if (!QFileInfo(path).isFile()) {
+        qDebug() << "[MainWindow] openFileInTab early-return: !isFile path=" << path;
         QMessageBox::warning(this, "Open Error",
             "Path is not a valid file: " + path);
         return;
@@ -974,16 +979,17 @@ void MainWindow::openFileInTab(const QString& path) {
 
     // Guard: _tabWidget may be null during early initialization if a panel
     // emits a file signal before MainWindow::setupUI() has completed.
-    if (!_tabWidget) return;
+    if (!_tabWidget) { qDebug() << "[MainWindow] openFileInTab early-return: !_tabWidget"; return; }
 
     // Guard: _tabBar must be valid (initialized before _tabWidget in constructor).
-    if (!_tabBar) return;
+    if (!_tabBar) { qDebug() << "[MainWindow] openFileInTab early-return: !_tabBar"; return; }
 
     // Guard: _fileBrowserPanel is required for the signal-reconnect workaround
     // used below. If it is absent we cannot safely construct a ScintillaEditor
     // (double-click events would be lost and could leave _openingFileDepth
     // in an inconsistent state). Return early with a user-visible error.
     if (!_fileBrowserPanel) {
+        qDebug() << "[MainWindow] openFileInTab early-return: !_fileBrowserPanel";
         QMessageBox::warning(this, "Open Error",
             "File browser panel is not available. Cannot open: " + path);
         return;
@@ -992,12 +998,14 @@ void MainWindow::openFileInTab(const QString& path) {
     auto& appRef = Application::instance();
     BufferID buf = appRef.openFile(path.toStdString());
     if (!buf) {
+        qDebug() << "[MainWindow] openFileInTab early-return: appRef.openFile failed";
         QMessageBox::warning(this, "Open Error", "Could not open: " + path);
         return;
     }
 
     // Check if already open — switch to existing tab
     if (_bufferToTab.contains(buf)) {
+        qDebug() << "[MainWindow] openFileInTab switch-to-existing tab idx=" << _bufferToTab[buf];
         _tabWidget->setCurrentIndex(_bufferToTab[buf]);
         return;  // reconnectGuard fires — signal reconnected
     }
@@ -1060,10 +1068,23 @@ void MainWindow::openFileInTab(const QString& path) {
     updateTabBar();
     updateTitleBar();
 
+    // (cherry-picked from 4dea0ef on semantic-lift/wip — Bug 2/4 fix:
+    // active-editor wiring is handled by MainWindow::onBufferOpened, which
+    // runs synchronously from Application::openFile()'s emit. If this
+    // fallback path runs, the editor here is the freshly-created one and
+    // onBufferOpened was skipped; register it as active.)
+    if (app().getActiveEditor() != editor) {
+        app().setActiveEditor(editor);
+        app().setActiveBuffer(buf);
+    }
+
     // Connect Function List panel to the new editor
     if (app().functionListPanel()) {
         app().functionListPanel()->setEditor(editor);
     }
+
+    qDebug() << "[MainWindow] openFileInTab END tab=" << idx << "file=" << fileName
+             << "totalTabs=" << _tabWidget->count();
 }
 
 void MainWindow::updateTabTitle(BufferID buf, bool dirty) {
