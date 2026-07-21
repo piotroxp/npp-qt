@@ -480,8 +480,23 @@ void Application::setupToolBar() {
 }
 
 void Application::setupStatusBar() {
-    _statusBarWidget = new StatusBar(_mainWindow);
-    _mainWindow->setStatusBar(_statusBarWidget);
+    // CRITICAL: do NOT replace MainWindow's status bar here.  MainWindow
+    // already created a StatusBar (line 92 in MainWindow.cpp) and registered
+    // it via setStatusBar().  Calling setStatusBar() again deletes the old
+    // widget; any captured-this pointers in lambda connects (e.g.
+    // MainWindow::onBufferOpened line 1368's
+    //   connect(editor, &ScintillaEditor::cursorPositionChanged,
+    //           _statusBarWidget, [this](int,int) {
+    //               _statusBarWidget->setPosition(...);
+    //           })
+    // ) then dangle and SIGSEGV inside QLabel::setText the next time the
+    // cursor moves (or any other event fires the lambda).
+    //
+    // Use the existing MainWindow StatusBar as our _statusBarWidget so that
+    // the rest of Application's status-bar helpers (setStatusBarText,
+    // setStatusBarEncoding, etc.) all operate on the same widget that
+    // MainWindow's UI connects reference.
+    _statusBarWidget = _mainWindow->statusBarWidget();
 }
 
 void Application::setupDockingPanels() {
