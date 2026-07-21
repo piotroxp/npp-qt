@@ -428,13 +428,31 @@ bool Application::saveConfig(const std::string& path) {
 // ============================================================================
 void Application::setupUI() {
     _mainWindow->setWindowTitle(APP_Title);
-    _mainWindow->setCentralWidget(_centralWidget);
 
-    QHBoxLayout* centralLayout = new QHBoxLayout(_centralWidget);
-    centralLayout->setContentsMargins(0, 0, 0, 0);
-    centralLayout->addWidget(_viewStack);
+    // CRITICAL: Do NOT replace the central widget that MainWindow::MainWindow
+    // already set up.  The MainWindow ctor created _tabBar + _tabWidget inside
+    // a centralContainer, and Qt reparents them when addWidget() is called.
+    // Replacing the central widget here would destroy both _tabBar and
+    // _tabWidget (their QPointers become null), and any later call to
+    // MainWindow::openFileInTab / onBufferOpened would silently early-return
+    // on `if (!_tabBar) return;` — which was the user-visible "no tab appears"
+    // bug.
+    //
+    // Strategy: parent the view stack to the main window (hidden), and let
+    // MainWindow's _tabWidget own the editor pages.  addView() creates a
+    // ScintillaEditor inside a view container that lives in _viewStack;
+    // when there is exactly one view (the common case), the ScintillaEditor
+    // is reparented into a fresh tab in MainWindow's _tabWidget.  Split-view
+    // (clone-to-other-view) populates additional tabs in _tabWidget and
+    // toggles the view stack visible — but for now, single-view is the
+    // default and matches every existing test.
+    _viewStack->setParent(_mainWindow);
+    _viewStack->hide();   // hidden: editors live as tab pages, not in the stack
+    _viewStack->setObjectName("ApplicationViewStack");
 
-    // Add initial view and set it as the active editor
+    // Add the initial view.  In single-view mode the resulting ScintillaEditor
+    // is reparented into the tab widget by syncEditorToBuffer(); split-view
+    // would keep multiple editors in the stack.
     _activeEditor = addView();
 
     setupMenuBar();

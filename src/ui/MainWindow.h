@@ -67,6 +67,7 @@ public:
     ToolBar* toolBar() const { return _toolBar; }
     StatusBar* statusBarWidget() const { return _statusBarWidget; }
     IncrementalSearchDialog* incrementalSearch() const { return _incrementalSearch; }
+    QTabWidget* tabWidget() const { return _tabWidget; }
 
 public slots:
     void onNewFile();
