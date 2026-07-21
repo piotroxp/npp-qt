@@ -3,6 +3,44 @@
 ## [Unreleased]
 
 ### Added
+- **SnippetsManager**: `src/core/SnippetManager.{h,cpp}` — INI-backed code-snippet
+  storage with `$VAR` / `$1` / `$0` / `|` placeholder expansion and cursor-offset
+  translation. Wired into `Application::instance()` and into
+  `AutoCompletion::showSnippetCompletion()` so the snippet list is driven by
+  the real manager instead of the previous stub fallback. Six unit test blocks
+  in `src/tests/test_snippets.cpp` cover INI round-trip, hot reload, numbered
+  and named tab stops, and cursor offset.
+- **MacroAction::playback()** lifted from a `Q_UNUSED` stub to a real
+  Scintilla dispatcher. Integer-param actions forward to
+  `editor->qsciEditor()->SendScintilla(cmd, intParam)`. String-param actions
+  (SCI_REPLACESEL / SCI_ADDTEXT / SCI_INSERTTEXT) route through SCI_REPLACESEL
+  with the UTF-8 payload. Null-editor and null-qsciEditor() inputs are
+  safe no-ops. New `test_macros.cpp` test cases
+  (`test_macro_action_int_param_dispatches`,
+  `test_macro_action_string_param_replaces_selection`,
+  `test_macro_action_serialization_roundtrip`,
+  `test_macro_action_null_editor_safe`) verify each branch reaches the
+  underlying editor.
+
+### Fixed
+- **Misleading "stub" comments**: renamed three places where the word
+  "stub" was used to describe code that is not stub-shaped:
+  `Application::zoomIn/zoomOut/...` "forwarding stubs" → "forwarding bridges";
+  `Application.h` "NppBigSwitch compatibility stubs" → "compatibility
+  bridges"; `UserDefineDialog::setupOperatorTable` "Keyword table helpers
+  (stubs resolved)" → "reset to defaults".
+- **Application::onToolbarCustomize()** message no longer claims "not yet
+  implemented"; it now points users at the existing Shortcut Mapper
+  workflow until the dedicated toolbar-customize dialog lands.
+
+### Build / docs
+- **CONTRIBUTING.md** — development workflow, build instructions,
+  test-suite overview, plugin authoring guide.
+- **GitHub Actions CI** workflow (`.github/workflows/ci.yml`) —
+  Ubuntu + Qt 6.5 + qtscintilla, build + ctest on push / PR.
+- **CMake install target** — `install(TARGETS NotepadMinusMinusQt ...)`,
+  themes in `share/notepad--qt/themes`, README in
+  `share/doc/notepad--qt`.
 - **ColourPicker widget**: Qt6 swatch button (`ColourPicker`) + popup grid (`ColourPopup`) with all 48 N++ palette colours and "More Colours…" button opening `QColorDialog`. Win32→Qt6 conversion: `HWND`/`CreateWindowEx` → `QWidget` constructor, `WM_PAINT`/`HDC` → `paintEvent`/`QPainter`, `WM_ERASEBKGND` → merged into `paintEvent`, `WM_LBUTTONDOWN/DBLCLK` → `mousePressEvent`/`mouseDoubleClickEvent`, `WM_RBUTTONDOWN` → right-click toggle, `Subclassing`/`WNDPROC` → Qt event overrides, `ChooseColor` → `QColorDialog`, `COLORREF`/`RGB()` → `QColor`.
 - **AnsiCharPanel**: Character panel as `QDockWidget` with a 16×16 grid (`QTableWidget`) covering all 256 byte values, with a combo box to switch between 15 code pages (437, 850, 1250–1258, 874, 932, 936, 949, 950). Cells are colour-coded by character class (control/printable/extended). Double-click inserts the character into the active editor via `ScintillaEditView`. Win32→Qt6: `ListView` (commctrl) → `QTableWidget`, `WM_NOTIFY`/`NM_DBLCLK` → `itemDoubleClicked()` signal, `LoadString` → `tr()`.
 - **ClipboardHistoryControl**: Clipboard monitoring widget using `QClipboard::changed`, `QListWidget` history list with search/filter, context menu (copy/paste/delete/clear), and `QSettings` persistence. Win32→Qt6: `OpenClipboard`/`GetClipboardData` → `QApplication::clipboard()->text()`, `SetClipboardViewer`/`ChangeClipboardChain` → `QClipboard::changed` signal, `SendDlgItemMessage(LB_*)` → `QListWidget` methods, `GlobalLock`/`GlobalUnlock` → `QByteArray`, `GetPrivateProfileString` → `QSettings`, `DrawText` on `HDC` → `QListWidgetItem` data roles.
