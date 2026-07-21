@@ -110,6 +110,7 @@ set(SOURCES
     src/dialogs/FindInFilesDialog.cpp
     src/dialogs/FindInFilesWorker.cpp
     src/dialogs/ShortcutMapperDialog.cpp
+    src/dialogs/ToolbarCustomizeDialog.cpp
     src/dialogs/CommandPaletteDialog.cpp
     src/dialogs/LargeFileWarningDialog.cpp
     src/dialogs/FileReloadDialog.cpp
@@ -183,6 +184,7 @@ set(HEADERS
     src/dialogs/PreferenceDialog.h
     src/dialogs/AboutDialog.h
     src/dialogs/ShortcutMapperDialog.h
+    src/dialogs/ToolbarCustomizeDialog.h
     src/dialogs/CommandPaletteDialog.h
     src/dialogs/LargeFileWarningDialog.h
     src/dialogs/FileReloadDialog.h
