@@ -11,9 +11,14 @@
 #include <QMouseEvent>
 #include <QResizeEvent>
 #include <QPen>
+#include <QPointer>
 #include <Qsci/qsciscintilla.h>
 
-class ScintillaEditor;
+// Needed for QPointer<ScintillaEditor> and the inline editor() accessor:
+// QPointer's data() casts QObject* -> T*, which requires T to be a complete
+// type so the compiler can see the inheritance.
+#include "editor/ScintillaEditor.h"
+
 class QsciLexer;
 
 // MapTextView: a read-only QsciScintilla used as the minimap canvas.
@@ -78,7 +83,10 @@ private:
     void syncMapToEditor();
     void syncEditorToMapFirstLine(int miniFirstLine);
 
-    ScintillaEditor* _editor = nullptr;
+    // QPointer so we can null-check safely after a tab-close that deleted the
+    // underlying ScintillaEditor mid-method (see SIGSEGV in
+    // QsciScintilla::lineIndexFromPosition from updateCursorMarker).
+    QPointer<ScintillaEditor> _editor;
     QWidget* _content = nullptr;
     MapTextView* _mapEditor = nullptr;
     QTimer* _viewportTimer = nullptr;

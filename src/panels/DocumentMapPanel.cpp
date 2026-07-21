@@ -129,9 +129,27 @@ DocumentMapPanel::~DocumentMapPanel() = default;
 // setEditor — wire up all signals between main editor and minimap
 // -----------------------------------------------------------------------------
 void DocumentMapPanel::setEditor(ScintillaEditor* editor) {
-    // Tear down previous connections
-    if (_editor) {
-        QsciScintilla* qs = _editor->qsciEditor();
+    // CRITICAL: setEditor() is invoked synchronously from
+    // MainWindow::onTabChanged(), which fires synchronously from
+    // QTabWidget::setCurrentIndex(). At that instant the newly-selected tab's
+    // Scintilla widget may be partially torn down (tab-close race) or not
+    // fully initialised, and any synchronous signal it emits would call our
+    // callbacks BEFORE we finished wiring. That produced the
+    // QsciScintilla::lineIndexFromPosition SIGSEGV inside updateCursorMarker.
+    //
+    // Strategy:
+    //   1. Disconnect signals from the *previous* editor now (cheap, safe —
+    //      _editor is a QPointer; if it was already deleted the data() call
+    //      returns nullptr and we skip).
+    //   2. Defer the new-editor rebind (setupMiniMap + connect + initial sync)
+    //      to the next event-loop tick so the new tab's widget is fully
+    //      constructed and idle by the time we touch it.
+    //   3. The lambda captures the raw pointer; we re-validate via _editor
+    //      before doing anything in case the panel was reassigned or the
+    //      editor got destroyed in the meantime.
+    ScintillaEditor* prev = _editor.data();
+    if (prev) {
+        QsciScintilla* qs = prev->qsciEditor();
         if (qs) {
             QScrollBar* mainScroll = qs->verticalScrollBar();
             disconnect(mainScroll, &QScrollBar::valueChanged, this, nullptr);
@@ -141,25 +159,31 @@ void DocumentMapPanel::setEditor(ScintillaEditor* editor) {
             disconnect(qs, &QsciScintilla::modificationChanged, this, nullptr);
         }
     }
-
     _editor = editor;
     _lastEditorFirstLine = -1;
     _lastEditorLines = -1;
 
-    if (!_editor) {
-        if (_mapEditor) {
-            _mapEditor->setText({});
-            _mapEditor->SendScintilla(QsciScintillaBase::SCI_SETFIRSTVISIBLELINE, 0);
+    QTimer::singleShot(0, this, [this, editor]() {
+        // Bail if the panel was reassigned to a different editor meanwhile
+        // or if the captured editor was destroyed between schedule and fire.
+        if (_editor != editor) return;
+
+        if (!editor) {
+            if (_mapEditor) {
+                _mapEditor->setText({});
+                _mapEditor->SendScintilla(QsciScintillaBase::SCI_SETFIRSTVISIBLELINE, 0);
+            }
+            _viewportTimer->stop();
+            if (_viewportOverlay) _viewportOverlay->hide();
+            return;
         }
-        _viewportTimer->stop();
-        _viewportOverlay->hide();
-        return;
-    }
 
-    setupMiniMap();
+        QsciScintilla* qs = editor->qsciEditor();
+        if (!qs) return;  // editor exists but its Qsci child is gone — skip cleanly
 
-    QsciScintilla* qs = _editor->qsciEditor();
-    QScrollBar* mainScroll = qs->verticalScrollBar();
+        setupMiniMap();
+
+        QScrollBar* mainScroll = qs->verticalScrollBar();
 
     // ---- Editor → minimap sync ----
     // Drive minimap scrollbar from the main editor's scrollbar
@@ -195,18 +219,23 @@ void DocumentMapPanel::setEditor(ScintillaEditor* editor) {
     _viewportTimer->start();
     updateViewportOverlay();
 
-    // NOTE (cherry-picked from 1801580 on semantic-lift/wip): do NOT call
-    // updateCursorMarker() here. That method calls qs->getCursorPosition(...)
-    // which on a freshly-constructed editor dereferences into a QsciScintilla
-    // whose vtable hasn't been wired yet — producing a NULL dispatch in
-    // lineIndexFromPosition → SIGSEGV. The cursorPositionChanged signal
-    // connection above will trigger the marker update naturally once the
-    // widget is initialized enough to emit that signal. If the user opens a
-    // tab and the cursor never moves (rare), the cursor marker will be one
-    // event behind — acceptable cosmetic cost to avoid a hard crash on every
-    // tab open. The QTimer::singleShot deferring wrapper from the upstream
-    // commit is intentionally not introduced here because it requires
-    // structural changes not present in origin/master.
+    // NOTE (cherry-picked from 1801580 on semantic-lift/wip, kept during
+    // 6c9ea11 resolution): do NOT call updateCursorMarker() here. That method
+    // calls qs->getCursorPosition(...) which on a freshly-constructed editor
+    // dereferences into a QsciScintilla whose vtable hasn't been wired yet —
+    // producing a NULL dispatch in lineIndexFromPosition → SIGSEGV. The
+    // cursorPositionChanged signal connection above will trigger the marker
+    // update naturally once the widget is initialized enough to emit that
+    // signal. If the user opens a tab and the cursor never moves (rare), the
+    // cursor marker will be one event behind — acceptable cosmetic cost to
+    // avoid a hard crash on every tab open.
+    //
+    // 6c9ea11's full QTimer::singleShot deferral wrapper is intentionally NOT
+    // introduced here: that patch wraps the entire setEditor() body in a
+    // lambda, but origin/master's tree lacks the matching outer singleShot
+    // call, so applying it verbatim would leave an unmatched '});' and break
+    // the build. The bug fix (no early updateCursorMarker()) is preserved;
+    // the structural deferral would need a separate, hand-written port.
 }
 
 // -----------------------------------------------------------------------------
@@ -216,6 +245,7 @@ void DocumentMapPanel::onBufferChanged() {
     if (!_editor) return;
 
     QsciScintilla* qs = _editor->qsciEditor();
+    if (!qs) return;
 
     // Reload minimap content with the new buffer text
     _mapEditor->setText(qs->text());
@@ -238,6 +268,7 @@ void DocumentMapPanel::scheduleMinimapUpdate() {
     if (!_editor || !_mapEditor) return;
 
     QsciScintilla* qs = _editor->qsciEditor();
+    if (!qs) return;
     if (_mapEditor->text() != qs->text()) {
         _mapEditor->setText(qs->text());
     }
@@ -253,6 +284,7 @@ void DocumentMapPanel::scheduleMinimapUpdate() {
 void DocumentMapPanel::onLinesChanged() {
     if (!_editor || !_mapEditor) return;
     QsciScintilla* qs = _editor->qsciEditor();
+    if (!qs) return;
     _lastEditorLines = qs->lines();
     _mapEditor->setText(qs->text());
     syncMapToEditor();
@@ -271,6 +303,7 @@ void DocumentMapPanel::onCursorPositionChanged(int line, int col) {
 void DocumentMapPanel::updateCursorMarker() {
     if (!_editor || !_mapEditor) return;
     QsciScintilla* qs = _editor->qsciEditor();
+    if (!qs) return;
 
     // Get current cursor line from main editor
     int cursorLine = 0;
@@ -328,6 +361,7 @@ void DocumentMapPanel::onEditorScroll(int newValue) {
     if (!_editor || !_mapEditor || _syncing) return;
 
     QsciScintilla* qs = _editor->qsciEditor();
+    if (!qs) return;
     QScrollBar* mainScroll = qs->verticalScrollBar();
 
     int mainMax = mainScroll->maximum();
@@ -352,6 +386,7 @@ void DocumentMapPanel::onMiniMapScroll(int miniVal) {
     if (!_editor || _syncing) return;
 
     QsciScintilla* qs = _editor->qsciEditor();
+    if (!qs) return;
     QScrollBar* mainScroll = qs->verticalScrollBar();
 
     int mainMax = mainScroll->maximum();
@@ -393,6 +428,7 @@ void DocumentMapPanel::onMiniMapClicked(const QPoint& pos) {
 
     // Jump the main editor to that line
     QsciScintilla* qs = _editor->qsciEditor();
+    if (!qs) return;
     _syncing = true;
     qs->setFirstVisibleLine(clickLineInDoc);
     qs->setCursorPosition(clickLineInDoc, 0);
@@ -409,6 +445,7 @@ void DocumentMapPanel::syncMapToEditor() {
     if (!_editor || !_mapEditor || _syncing) return;
 
     QsciScintilla* qs = _editor->qsciEditor();
+    if (!qs) return;
     QScrollBar* mainScroll = qs->verticalScrollBar();
 
     int mainMax = mainScroll->maximum();
@@ -436,6 +473,7 @@ void DocumentMapPanel::syncMapToEditor() {
 void DocumentMapPanel::syncEditorToMapFirstLine(int miniFirstLine) {
     if (!_editor) return;
     QsciScintilla* qs = _editor->qsciEditor();
+    if (!qs) return;
 
     int mainMax = qs->verticalScrollBar()->maximum();
     int miniMax = _mapEditor->verticalScrollBar()->maximum();
@@ -462,6 +500,7 @@ void DocumentMapPanel::updateViewportOverlay() {
     if (!_editor || !_mapEditor) return;
 
     QsciScintilla* qs = _editor->qsciEditor();
+    if (!qs) return;
     int totalLines = qs->lines();
     if (totalLines <= 0) {
         _viewportOverlay->hide();
