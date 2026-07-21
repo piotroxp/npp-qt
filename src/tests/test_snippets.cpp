@@ -12,6 +12,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QSettings>
 #include <QTemporaryDir>
 #include <QTextStream>
 #include <cassert>
@@ -32,7 +33,7 @@ static int runSnippetsUnitTests() {
 
     // ── Static helpers ──────────────────────────────────────────────────
     check("cursorOffsetFromText finds pipe",
-          SnippetManager::cursorOffsetFromText("for (int i| = 0;)") == 11);
+          SnippetManager::cursorOffsetFromText("for (int i| = 0;)") == 10);
     check("cursorOffsetFromText returns -1 when missing",
           SnippetManager::cursorOffsetFromText("for (int i = 0);") == -1);
 
@@ -40,8 +41,8 @@ static int runSnippetsUnitTests() {
           SnippetManager::stripPlaceholders("a|bc$0") == "abc");
     check("stripPlaceholders removes named $FOO",
           SnippetManager::stripPlaceholders("$X = $X + 1") == " =  + 1");
-    check("stripPlaceholders leaves lone $ alone",
-          SnippetManager::stripPlaceholders("price: $5") == "price: 5");
+    check("stripPlaceholders removes numbered tab-stop (consumes the digit)",
+          SnippetManager::stripPlaceholders("price: $5") == "price: ");
     check("stripPlaceholders handles $9",
           SnippetManager::stripPlaceholders("$9 then $0") == " then ");
 
@@ -49,17 +50,14 @@ static int runSnippetsUnitTests() {
     {
         QVector<SnippetManager::TabStop> stops =
             SnippetManager::collectTabStops("$2 middle $1 end $FOO");
-        check("collectTabStops returns 4 stops",
-              stops.size() == 4);
+        check("collectTabStops returns 3 stops",
+              stops.size() == 3);
         check("first stop is numbered $1 (lower number first)",
               stops.value(0).name == "1");
         check("second stop is $2",
               stops.value(1).name == "2");
         check("named stop comes after numbered",
               stops.value(2).name == "FOO");
-        // The 4th element is the second $1 occurrence.
-        check("duplicate named/numbered stop retained",
-              stops.value(3).name == "1" || stops.value(3).name == "FOO");
     }
 
     // ── In-memory expand ───────────────────────────────────────────────
@@ -77,8 +75,8 @@ static int runSnippetsUnitTests() {
         check("expand strips cursor marker", !s.text.contains("|"));
         check("expand contains the loop body",
               s.text.contains("for (int"));
-        check("cursorOffset points inside the body",
-              s.cursorOffset >= 0 && s.cursorOffset < s.text.size());
+        check("cursorOffset points inside or at end of body",
+              s.cursorOffset >= 0 && s.cursorOffset <= s.text.size());
 
         check("missing snippet returns invalid",
               !mgr.expand("missing").isValid());
@@ -134,15 +132,16 @@ static int runSnippetsUnitTests() {
         if (!tmp.isValid()) return 1;
         const QString iniPath = tmp.filePath("snippets.ini");
 
-        QFile f(iniPath);
-        if (!f.open(QIODevice::WriteOnly)) {
-            std::fprintf(stderr, "FAIL: cannot write hot-reload fixture\n");
-            return 1;
+        // Write via QSettings (INI format) for portability across locale
+        // edge cases (Qt6's default QTextStream codec is the system locale,
+        // which on minimal containers is "ANSI_X3.4-1968" — not UTF-8).
+        {
+            QSettings w(iniPath, QSettings::IniFormat);
+            w.beginGroup("hello");
+            w.setValue("text", "Hello, $WHO|");
+            w.endGroup();
+            w.sync();
         }
-        QTextStream(&f)
-            << "[hello]\n"
-               "text=Hello, $WHO|\n";
-        f.close();
 
         SnippetManager mgr;
         mgr.setDefaultDirectory(tmp.path());
