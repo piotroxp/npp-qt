@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Application singleton deadlock at `__cxa_guard_acquire`** —
+  Replaced `static Application inst;` (compiler-emitted guard around
+  the ctor) with Construct-On-First-Use heap idiom
+  (`static Application* inst = nullptr; … inst = new Application();`).
+  The atomic-pointer store has no ctor in its critical section, so a
+  re-entrant call from inside `Application::Application()` returns
+  the partially-constructed pointer rather than blocking on a guard
+  that's still held. Multi-thread contention is serialised by an
+  `std::atomic<bool> in_progress` flag with `std::this_thread::yield()`
+  spin-wait instead of the compiler-generated guard's opaque blocking.
+  This was the headline deadlock surfaced in the prior live QA cycle
+  (QFileOpenEvent handler racing the static-init guard). New
+  `test_application_singleton.cpp` exercises 16 concurrent + 64000
+  contention-stress calls; the test would deadlock under the old
+  pattern. `StubApplication.cpp`'s singleton mirror is updated to
+  the same idiom so the test verifies the right contract.
+
 ### Added
 - **SnippetsManager**: `src/core/SnippetManager.{h,cpp}` — INI-backed code-snippet
   storage with `$VAR` / `$1` / `$0` / `|` placeholder expansion and cursor-offset
