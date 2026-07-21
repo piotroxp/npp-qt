@@ -91,9 +91,12 @@ static void test_macro_action_int_param_dispatches() {
     // Scintilla widget.
     QsciScintilla qs;
     qs.setText("alpha\nbeta\ngamma\n");
+    // Place cursor at the very start so SCI_LINEDOWN has somewhere to go.
+    qs.SendScintilla(QsciScintilla::SCI_SETANCHOR, 0);
+    qs.SendScintilla(QsciScintilla::SCI_SETCURRENTPOS, 0);
 
     long before = qs.SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
-    MacroAction lineDown(QsciScintilla::SCI_LINEDOWN, 0);
+    ASSERT_EQ(before, 0L);
     // Replay the exact wire that playback() does:
     qs.SendScintilla(QsciScintilla::SCI_LINEDOWN, 0);
     long after = qs.SendScintilla(QsciScintilla::SCI_GETCURRENTPOS);
