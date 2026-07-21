@@ -219,23 +219,15 @@ void DocumentMapPanel::setEditor(ScintillaEditor* editor) {
     _viewportTimer->start();
     updateViewportOverlay();
 
-    // NOTE (cherry-picked from 1801580 on semantic-lift/wip, kept during
-    // 6c9ea11 resolution): do NOT call updateCursorMarker() here. That method
-    // calls qs->getCursorPosition(...) which on a freshly-constructed editor
-    // dereferences into a QsciScintilla whose vtable hasn't been wired yet —
-    // producing a NULL dispatch in lineIndexFromPosition → SIGSEGV. The
-    // cursorPositionChanged signal connection above will trigger the marker
-    // update naturally once the widget is initialized enough to emit that
-    // signal. If the user opens a tab and the cursor never moves (rare), the
-    // cursor marker will be one event behind — acceptable cosmetic cost to
-    // avoid a hard crash on every tab open.
-    //
-    // 6c9ea11's full QTimer::singleShot deferral wrapper is intentionally NOT
-    // introduced here: that patch wraps the entire setEditor() body in a
-    // lambda, but origin/master's tree lacks the matching outer singleShot
-    // call, so applying it verbatim would leave an unmatched '});' and break
-    // the build. The bug fix (no early updateCursorMarker()) is preserved;
-    // the structural deferral would need a separate, hand-written port.
+    // NOTE: do NOT call updateCursorMarker() here. It calls
+    // qs->getCursorPosition(...) which on a freshly-constructed editor
+    // dereferences into a QsciScintilla whose vtable hasn't been wired yet,
+    // producing a NULL dispatch in lineIndexFromPosition → SIGSEGV.
+    // The cursorPositionChanged signal connection above will trigger the
+    // marker update naturally once the widget is initialized enough to
+    // emit that signal. If the user opens a tab and the cursor never moves
+    // (rare), the cursor marker will be one event behind — acceptable
+    // cosmetic cost to avoid a hard crash on every tab open. (1801580)
 });
 }
 
