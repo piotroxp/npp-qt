@@ -87,10 +87,14 @@ target_compile_options(test_core PRIVATE -w)
 add_library(test_core_interface INTERFACE)
 target_include_directories(test_core_interface INTERFACE ${TEST_INC} ${REL_ROOT}/workers)
 
+# std::thread / std::atomic threading primitives require Threads::Threads
+# on POSIX systems. find_package here once and reference in add_core_test.
+find_package(Threads REQUIRED)
+
 macro(add_core_test TARGET)
     add_executable(${TARGET} ${ARGN})
     target_include_directories(${TARGET} PRIVATE ${TEST_INC} ${REL_ROOT}/workers ${QSCINTILLA_INCLUDE_DIR})
-    target_link_libraries(${TARGET} PRIVATE test_core test_stubs Qt6::Core Qt6::Widgets Qt6::Gui)
+    target_link_libraries(${TARGET} PRIVATE test_core test_stubs Qt6::Core Qt6::Widgets Qt6::Gui Threads::Threads)
 endmacro()
 
 # ── Test executables ───────────────────────────────────────────────────────────
@@ -142,6 +146,10 @@ set_tests_properties(SessionTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscr
 add_core_test(test_macros test_macros.cpp)
 add_test(NAME MacroTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_macros>)
 set_tests_properties(MacroTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_core_test(test_application_singleton test_application_singleton.cpp)
+add_test(NAME ApplicationSingletonTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_application_singleton>)
+set_tests_properties(ApplicationSingletonTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_core_test(test_findinfiles test_findinfiles.cpp)
 add_test(NAME FindInFilesTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_findinfiles>)

@@ -25,9 +25,36 @@ ThemeManager::~ThemeManager() = default;
 QStringList ThemeManager::availableThemes() const { return {"default"}; }
 
 // ─── Application singleton + constructor ────────────────────────────────────────
+//
+// Mirror the real Application::instance() idiom (Construct-On-First-Use
+// + atomic re-entry guard). See src/core/Application.cpp for the full
+// rationale. The stub deliberately reproduces the multi-thread safety
+// property so that test_application_singleton can verify it under
+// contention without dragging in the full Application initialisation
+// path (which needs MainWindow, QApplication, Qt platform plugin, etc.).
+
+#include <atomic>
+#include <thread>
+
 Application& Application::instance() {
-    static Application inst;
-    return inst;
+    static Application* inst = nullptr;
+    if (inst) return *inst;
+
+    static std::atomic<bool> in_progress{false};
+    bool expected = false;
+    while (!in_progress.compare_exchange_strong(expected, true)) {
+        std::this_thread::yield();
+        expected = false;
+    }
+
+    if (inst) {
+        in_progress.store(false);
+        return *inst;
+    }
+
+    inst = new Application();
+    in_progress.store(false);
+    return *inst;
 }
 Application::Application() : QObject(QCoreApplication::instance()), _state(AppState::Starting) {}
 Application::~Application() { }

@@ -2,7 +2,9 @@
 #include "Application.h"
 #include "SnippetManager.h"
 
+#include <atomic>
 #include <cstdio>
+#include <thread>
 #include <unistd.h>
 
 #include <QApplication>
@@ -88,6 +90,37 @@
 // ============================================================================
 // Singleton
 // ============================================================================
+//
+// Construct-On-First-Use idiom (Meyers singleton with heap allocation):
+//
+//   static Application* inst = new Application();
+//
+// Rationale: the previous implementation used
+//
+//   static Application inst;
+//
+// which forces the compiler to emit __cxa_guard_acquire / __cxa_guard_release
+// around the constructor call. If instance() is re-entered from another thread
+// (or from a code path that fires during Application's own constructor, e.g.
+// via connect()/ShortcutManager::instance() inside MainWindow's ctor), the
+// second thread blocks on the guard while the first thread is still running
+// Application's ctor body — classic recursive deadlock at
+// __cxa_guard_acquire.
+//
+// The heap-allocated-pointer variant replaces that guard with a pointer store
+// that's still atomic under C++11, but has no ctor in its critical section.
+// The Application constructor body itself can call instance() and we will
+// just return the partially-constructed pointer rather than recursing
+// through the guard. The deliberate new/delete asymmetry (we new but never
+// delete) matches the Meyers singleton: process exit cleans the singleton up.
+//
+// The std::atomic<bool> in_progress flag serialises the slow path so two
+// threads racing on the first call don't both construct. The CAS loop
+// uses std::this_thread::yield() instead of a mutex so a re-entrant call
+// from inside the ctor body on the same thread is impossible (we're
+// already past the CAS), and a re-entrant call from a different thread
+// spin-yields until the constructor returns.
+//
 // DIAG (transient): one-shot re-entry counter for the __cxa_guard_acquire
 // stall. Logs to fd 2 directly (NOT qDebug) so the instrumentation cannot
 // itself recurse through Qt globals. Tag on the line makes it trivial to
@@ -100,10 +133,41 @@ static void diag_inst_enter(const char* site) {
         "APPINST site=%s n=%d\n", site, n);
     if (len > 0) ::write(2, buf, static_cast<size_t>(len));
 }
+
 Application& Application::instance() {
     diag_inst_enter("instance()");
-    static Application inst;
-    return inst;
+
+    // Construct-On-First-Use: heap allocation, no compiler guard around
+    // the ctor call. Atomic under C++11; the pointer is fully written
+    // before instance() returns.
+    static Application* inst = nullptr;
+    if (inst) {
+        return *inst;
+    }
+
+    // First call. Slow path: serialize construction. We use a plain
+    // CAS loop here rather than a std::once_flag because we want the
+    // secondary thread to spin-yield on the same flag the ctor uses,
+    // so a re-entrant call from inside the ctor body on the same
+    // thread returns the partially-constructed object immediately.
+    static std::atomic<bool> in_progress{false};
+    bool expected = false;
+    while (!in_progress.compare_exchange_strong(expected, true)) {
+        // Another thread is in the ctor body. Spin-yield until it's done.
+        std::this_thread::yield();
+        expected = false;
+    }
+
+    if (inst) {
+        // Some other thread raced ahead while we were spinning.
+        in_progress.store(false);
+        return *inst;
+    }
+
+    Application* fresh = new Application();
+    inst = fresh;
+    in_progress.store(false);
+    return *fresh;
 }
 
 // ============================================================================
