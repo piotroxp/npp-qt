@@ -451,7 +451,9 @@ void MainWindow::setupConnections() {
     
     // Connect toolbar commands
     connect(_toolBar, &ToolBar::toolBarCommand, this, &MainWindow::onToolBarCommand);
-    connect(&app(), &Application::bufferOpened, this, &MainWindow::onBufferOpened);
+    // NOTE: &Application::bufferOpened is wired by Application's ctor, not here.
+    // Calling app() from inside MainWindow's ctor re-enters Application::instance()
+    // while the static-init guard is still held by the outer call -> deadlock.
 }
 
 void MainWindow::updateRecentFilesMenu() {
