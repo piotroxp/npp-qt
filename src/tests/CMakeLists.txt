@@ -35,6 +35,7 @@ add_moc("common/DpiManager.h" DpiManager)
 add_moc("core/ThemeManager.h" ThemeManager)
 add_moc("panels/FileBrowserPanel.h" FileBrowserPanel)
 add_moc("panels/DocumentMapPanel.h" DocumentMapPanel)
+add_moc("workers/FileLoaderWorker.h" FileLoaderWorker)
 
 # ── Stub library — AUTOMOC OFF (our explicit moc provides all Q_OBJECT symbols) ───────
 # Panel .cpp files are here (not test_core) so MOC vtables link into this SHARED lib.
@@ -42,11 +43,12 @@ add_library(test_stubs SHARED
     StubApplication.cpp
     ${MOC_SOURCES}
     ${REL_ROOT}/panels/FileBrowserPanel.cpp
+    ${REL_ROOT}/workers/FileLoaderWorker.cpp
     ${REL_ROOT}/panels/DocumentMapPanel.cpp
 )
 set_target_properties(test_stubs PROPERTIES AUTOMOC OFF)
-target_include_directories(test_stubs PUBLIC ${TEST_INC} ${QSCINTILLA_INCLUDE_DIR})
-target_link_libraries(test_stubs PUBLIC Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Xml Qt6::PrintSupport)
+target_include_directories(test_stubs PUBLIC ${TEST_INC} ${REL_ROOT}/workers ${QSCINTILLA_INCLUDE_DIR})
+target_link_libraries(test_stubs PUBLIC Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Xml Qt6::PrintSupport Qt6::Network)
 target_compile_options(test_stubs PRIVATE -w)
 
 # ── Test library (core sources only — no Q_OBJECT classes) ─────────────────────
@@ -77,16 +79,16 @@ add_library(test_core STATIC
     ${REL_ROOT}/editor/SyntaxHighlighter.cpp
     ${REL_ROOT}/editor/SyntaxHighlighterImpl.cpp
 )
-target_link_libraries(test_core PUBLIC test_stubs Qt6::Core Qt6::Widgets Qt6::Gui ${QSCINTILLA_LIBRARY})
-target_include_directories(test_core PUBLIC ${TEST_INC} ${QSCINTILLA_INCLUDE_DIR})
+target_link_libraries(test_core PUBLIC test_stubs Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Network ${QSCINTILLA_LIBRARY})
+target_include_directories(test_core PUBLIC ${TEST_INC} ${REL_ROOT}/workers ${QSCINTILLA_INCLUDE_DIR})
 target_compile_options(test_core PRIVATE -w)
 
 add_library(test_core_interface INTERFACE)
-target_include_directories(test_core_interface INTERFACE ${TEST_INC})
+target_include_directories(test_core_interface INTERFACE ${TEST_INC} ${REL_ROOT}/workers)
 
 macro(add_core_test TARGET)
     add_executable(${TARGET} ${ARGN})
-    target_include_directories(${TARGET} PRIVATE ${TEST_INC} ${QSCINTILLA_INCLUDE_DIR})
+    target_include_directories(${TARGET} PRIVATE ${TEST_INC} ${REL_ROOT}/workers ${QSCINTILLA_INCLUDE_DIR})
     target_link_libraries(${TARGET} PRIVATE test_core test_stubs Qt6::Core Qt6::Widgets Qt6::Gui)
 endmacro()
 
@@ -104,7 +106,7 @@ add_core_test(test_buffer test_buffer.cpp)
 add_test(NAME BufferTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_buffer>)
 
 add_executable(test_menus test_menus.cpp ${REL_ROOT}/common/MenuAdapter.cpp)
-target_include_directories(test_menus PRIVATE ${TEST_INC})
+target_include_directories(test_menus PRIVATE ${TEST_INC} ${REL_ROOT}/workers)
 target_link_libraries(test_menus PRIVATE Qt6::Widgets Qt6::Core)
 add_test(NAME MenuTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_menus>)
 set_tests_properties(MenuTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
@@ -149,7 +151,7 @@ add_test(NAME NamedClipboardTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFOR
 set_tests_properties(NamedClipboardTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(test_snippets test_snippets.cpp)
-target_include_directories(test_snippets PRIVATE ${TEST_INC})
+target_include_directories(test_snippets PRIVATE ${TEST_INC} ${REL_ROOT}/workers)
 target_link_libraries(test_snippets PRIVATE Qt6::Core Qt6::Widgets)
 add_test(NAME SnippetTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_snippets>)
 set_tests_properties(SnippetTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
@@ -182,6 +184,9 @@ add_core_test(test_functioncalltip test_functioncalltip.cpp)
 add_test(NAME FunctionCallTipTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_functioncalltip>)
 set_tests_properties(FunctionCallTipTests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+add_executable(test_file_loader_worker test_file_loader_worker.cpp)
+target_link_libraries(test_file_loader_worker PRIVATE test_core test_stubs Qt6::Core Qt6::Widgets Qt6::Gui Qt6::Network Qt6::Test)
+add_test(NAME FileLoaderWorkerTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_file_loader_worker>)
 add_executable(test_udl_keywords test_udl_keywords.cpp)
 target_link_libraries(test_udl_keywords PRIVATE test_core Qt6::Core)
 add_test(NAME UdlKeywordTests COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen $<TARGET_FILE:test_udl_keywords>)

@@ -7,6 +7,7 @@
 #include "Buffer.h"
 #include "EncodingDetector.h"
 #include "LanguageManager.h"
+#include "../workers/FileLoaderWorker.h"
 #include "common/Util.h"
 #include "../dialogs/LargeFileWarningDialog.h"
 #include <QFile>
@@ -412,6 +413,85 @@ BufferID FileManager::openFile(const QString& path, bool readOnly) {
     emit fileLoaded(true, buf->getID(), QString());
 
     return buf->getID();
+}
+
+// ---------------------------------------------------------------------------
+// openFileAsync — non-blocking openFile() that uses FileLoaderWorker on a
+// dedicated worker thread so the GUI thread never freezes on QFile::readAll().
+// Listeners get the result via the existing `fileLoaded(success, BufferID,
+// errorString)` signal — same signature as the sync path — so existing
+// Application::connect() sites need no changes. While loading, the existing
+// `loadingProgress(percent)` signal is forwarded from the worker thread.
+//
+// Implementation note: we spawn a fresh QThread per call (rather than
+// reusing a persistent one) because Qt's moveToThread() only takes effect
+// after the calling thread finishes processing its event queue — using a
+// fresh thread sidesteps the "worker still on calling thread" trap and
+// matches the lifecycle of a one-shot load operation.
+// ---------------------------------------------------------------------------
+void FileManager::openFileAsync(const QString& path, bool readOnly) {
+    auto* thread = new QThread(this);
+    thread->setObjectName(QStringLiteral("FileManager::FileLoaderWorker:%1")
+                              .arg(path));
+    auto* worker = new FileLoaderWorker(path);
+    worker->moveToThread(thread);
+
+    // Worker-thread cleanup: when the worker emits its terminal signal
+    // (success, error, or cancel), quit the thread and schedule destruction.
+    auto finish = [thread, worker]() {
+        thread->quit();
+        worker->deleteLater();
+        thread->deleteLater();
+    };
+
+    connect(worker, &FileLoaderWorker::progress,
+            this, &FileManager::loadingProgress);
+    connect(worker, &FileLoaderWorker::cancelled, this,
+            [this, path, finish](void) {
+                emit fileLoaded(false, BUFFER_INVALID,
+                                QStringLiteral("load cancelled: %1").arg(path));
+                finish();
+            });
+    connect(worker, &FileLoaderWorker::loadError, this,
+            [this, path, finish](const QString& err, int /*code*/) {
+                emit fileLoaded(false, BUFFER_INVALID, err);
+                finish();
+            });
+
+    // Final hook: when the worker is done, materialize a Buffer on the main
+    // thread (Buffer objects own Scintilla handle state and MUST be created
+    // and mutated from the GUI thread).
+    connect(worker, &FileLoaderWorker::loadComplete, this,
+            [this, worker, path, readOnly, finish](const QString& content,
+                                                   EncodingType encoding,
+                                                   bool /*isPartial*/,
+                                                   const QString& /*checksum*/,
+                                                   qint64 /*totalSize*/) {
+        Buffer* buf = new Buffer(this, path, false);
+        ++_nextBufferId;
+        buf->setEncoding(encoding);
+        _bufferText[buf->getID()] = content;
+        EolType eol = EolType::EOL_LF;
+        if (content.contains("\r\n"))      eol = EolType::EOL_CRLF;
+        else if (content.contains('\r'))   eol = EolType::EOL_CR;
+        buf->setEolFormat(eol);
+        buf->setDocumentLength(content.length());
+        QString ext = getFileExtension(path).toLower();
+        LangType lang = LanguageManager::detect(ext.toStdString());
+        buf->setLangType(lang);
+        if (readOnly) buf->setFileReadOnly(true);
+        buf->setFileName(path);
+        if (!readOnly) watchFile(path);
+        _buffers.push_back(buf);
+        emit bufferCreated(buf->getID());
+        emit fileLoaded(true, buf->getID(), QString());
+        finish();
+    });
+
+    thread->start();
+    // Now that the worker is on its own thread and the thread is running,
+    // queue the start() call onto the worker thread.
+    QMetaObject::invokeMethod(worker, "start", Qt::QueuedConnection);
 }
 
 BufferID FileManager::createNewFile() {

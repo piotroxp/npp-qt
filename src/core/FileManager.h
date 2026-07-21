@@ -17,6 +17,12 @@
 #include <QDateTime>
 #include <QThread>
 
+// Forward declaration of the global FileLoaderWorker (defined in
+// src/workers/FileLoaderWorker.h). Done at file scope so the class name
+// inside class FileManager resolves to the global type, not a nested type.
+// The full definition is only needed inside FileManager.cpp.
+class FileLoaderWorker;
+
 // Forward declaration - FileNotification is defined in Application.h
 struct FileNotification;
 
@@ -84,6 +90,15 @@ public:
     BufferID createBuffer(const QString& fileName = QString(), bool isLargeFile = false);
     Buffer* bufferFromId(BufferID id) const;
     BufferID openFile(const QString& path, bool readOnly = false);
+
+    // Async variant: returns immediately, emits `fileLoaded` once the load
+    // is complete. Uses the bundled FileLoaderWorker on a dedicated worker
+    // thread so the GUI thread never blocks on QFile::readAll() for large
+    // files. While loading, `loadingProgress(percent)` fires from the
+    // worker. The sync `openFile()` path remains unchanged for callers
+    // that need immediate access (tests, command-line paths).
+    void openFileAsync(const QString& path, bool readOnly = false);
+
     BufferID createNewFile();
     BufferID duplicateBuffer(BufferID buffer);
 
@@ -160,8 +175,9 @@ signals:
     void fileLoaded(bool success, BufferID buffer, const QString& error);
 
 private:
-    // Forward declare to avoid circular dependency with FileLoaderWorker
-    class FileLoaderWorker;
+    // FileLoaderWorker is forward-declared at file scope (above this class)
+    // to avoid the nested-class trap. Only a pointer is held in FileManager;
+    // the full type is used inside the .cpp where FileLoaderWorker.h is included.
     FileLoaderWorker* _loader = nullptr;
     QThread* _loaderThread = nullptr;
     // Internal helpers

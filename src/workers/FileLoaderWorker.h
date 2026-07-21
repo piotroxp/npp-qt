@@ -46,7 +46,10 @@ public:
     void setOptions(const FileLoadOptions& options) { _options = options; }
     void setLoadFromStdin(bool value) { _loadFromStdin = value; if (value) _source = LoadSource::Stdin; }
 
-    // Control
+public slots:
+    // Control — declared as slots so QMetaObject::invokeMethod from a
+    // different thread (FileManager::openFileAsync) can dispatch them
+    // via QueuedConnection.
     void start();
     void cancel();
 
