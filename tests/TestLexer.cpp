@@ -61,6 +61,17 @@ private slots:
     void test_detect_php();
     void test_detect_unknown();
     void test_detect_fromContent();
+    void test_detect_dotlessSuffix_normalized();
+
+    // -- Lexer creation (regression: each langtype should yield a working lexer
+    //    or a deliberate nullptr for plain text / unsupported languages)
+    void test_createLexer_python_not_null();
+    void test_createLexer_cpp_not_null();
+    void test_createLexer_sql_not_null();
+    void test_createLexer_bash_not_null();
+    void test_createLexer_tex_not_null();
+    void test_createLexer_diff_not_null();
+    void test_createLexer_text_is_null();
 
     // -- Language -> name round-trip
     void test_getLanguageName_cpp();
@@ -352,6 +363,101 @@ void TestLexer::test_detect_unknown()
     QVERIFY2(t == L_TEXT,
              qPrintable(QString("detectLanguage(\"foo.xyzzy\") = %1, expected L_TEXT (%2)")
                         .arg(int(t)).arg(int(L_TEXT))));
+}
+
+// Regression: QFileInfo::suffix() returns the suffix without the leading dot,
+// but the extension map keys include the dot. Without normalization in
+// LanguageManager::getLanguageForExtension, every file would be detected as
+// L_TEXT and no lexer would be attached.
+void TestLexer::test_detect_dotlessSuffix_normalized()
+{
+    // Bare suffix from QFileInfo::suffix() (no leading dot)
+    QVERIFY2(_mgr.getLanguageForExtension("py") == L_PYTHON,
+             "bare suffix 'py' must map to L_PYTHON");
+    QVERIFY2(_mgr.getLanguageForExtension("cpp") == L_CPP,
+             "bare suffix 'cpp' must map to L_CPP");
+    QVERIFY2(_mgr.getLanguageForExtension("js") == L_JS,
+             "bare suffix 'js' must map to L_JS");
+    QVERIFY2(_mgr.getLanguageForExtension("sh") == L_BASH,
+             "bare suffix 'sh' must map to L_BASH");
+    QVERIFY2(_mgr.getLanguageForExtension("json") == L_JSON,
+             "bare suffix 'json' must map to L_JSON");
+    QVERIFY2(_mgr.getLanguageForExtension("md") == L_MARKDOWN,
+             "bare suffix 'md' must map to L_MARKDOWN");
+    // Dotted form must keep working
+    QVERIFY2(_mgr.getLanguageForExtension(".py") == L_PYTHON,
+             "dotted suffix '.py' must map to L_PYTHON");
+    QVERIFY2(_mgr.getLanguageForExtension(".cpp") == L_CPP,
+             "dotted suffix '.cpp' must map to L_CPP");
+    // Case-insensitive
+    QVERIFY2(_mgr.getLanguageForExtension("PY") == L_PYTHON,
+             "uppercase suffix 'PY' must map to L_PYTHON");
+    QVERIFY2(_mgr.getLanguageForExtension(".CPP") == L_CPP,
+             "uppercase dotted suffix '.CPP' must map to L_CPP");
+    // Empty / unknown still returns L_TEXT
+    QVERIFY2(_mgr.getLanguageForExtension("") == L_TEXT,
+             "empty extension must return L_TEXT");
+    QVERIFY2(_mgr.getLanguageForExtension("xyzzy") == L_TEXT,
+             "unknown extension 'xyzzy' must return L_TEXT");
+}
+
+void TestLexer::test_createLexer_python_not_null()
+{
+    // After the dot-normalization fix, opening a .py file must attach a
+    // Python lexer (not nullptr). This is the user-visible bug: python
+    // files were rendered as plain text.
+    QsciLexer* lex = _mgr.getLexer(L_PYTHON);
+    QVERIFY2(lex != nullptr,
+             "L_PYTHON must produce a non-null QsciLexer (was the user-visible bug)");
+    delete lex;
+}
+
+void TestLexer::test_createLexer_cpp_not_null()
+{
+    QsciLexer* lex = _mgr.getLexer(L_CPP);
+    QVERIFY2(lex != nullptr,
+             "L_CPP must produce a non-null QsciLexer");
+    delete lex;
+}
+
+void TestLexer::test_createLexer_sql_not_null()
+{
+    QsciLexer* lex = _mgr.getLexer(L_SQL);
+    QVERIFY2(lex != nullptr,
+             "L_SQL must produce a non-null QsciLexer (QsciLexerSQL)");
+    delete lex;
+}
+
+void TestLexer::test_createLexer_bash_not_null()
+{
+    QsciLexer* lex = _mgr.getLexer(L_BASH);
+    QVERIFY2(lex != nullptr,
+             "L_BASH must produce a non-null QsciLexer (QsciLexerBash)");
+    delete lex;
+}
+
+void TestLexer::test_createLexer_tex_not_null()
+{
+    QsciLexer* lex = _mgr.getLexer(L_TEX);
+    QVERIFY2(lex != nullptr,
+             "L_TEX must produce a non-null QsciLexer (QsciLexerTeX)");
+    delete lex;
+}
+
+void TestLexer::test_createLexer_diff_not_null()
+{
+    QsciLexer* lex = _mgr.getLexer(L_DIFF);
+    QVERIFY2(lex != nullptr,
+             "L_DIFF must produce a non-null QsciLexer (QsciLexerDiff)");
+    delete lex;
+}
+
+void TestLexer::test_createLexer_text_is_null()
+{
+    // L_TEXT must remain null (plain text -> no lexer)
+    QsciLexer* lex = _mgr.getLexer(L_TEXT);
+    QVERIFY2(lex == nullptr,
+             "L_TEXT must produce a nullptr QsciLexer (plain text)");
 }
 
 void TestLexer::test_detect_fromContent()

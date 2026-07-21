@@ -56,30 +56,85 @@ void LanguageManager::initDefaultMappings() {
 
     _extToLang[".c"] = LangType::L_C;
     _extToLang[".cpp"] = LangType::L_CPP;
+    _extToLang[".cxx"] = LangType::L_CPP;
+    _extToLang[".cc"] = LangType::L_CPP;
     _extToLang[".h"] = LangType::L_CPP;
     _extToLang[".hpp"] = LangType::L_CPP;
+    _extToLang[".hh"] = LangType::L_CPP;
     _extToLang[".java"] = LangType::L_JAVA;
     _extToLang[".cs"] = LangType::L_CS;
     _extToLang[".m"] = LangType::L_OBJC;
+    _extToLang[".mm"] = LangType::L_OBJC;
     _extToLang[".html"] = LangType::L_HTML;
     _extToLang[".htm"] = LangType::L_HTML;
     _extToLang[".xml"] = LangType::L_XML;
     _extToLang[".xaml"] = LangType::L_XAML;
     _extToLang[".php"] = LangType::L_PHP;
+    _extToLang[".phtml"] = LangType::L_PHP;
     _extToLang[".py"] = LangType::L_PYTHON;
+    _extToLang[".pyw"] = LangType::L_PYTHON;
+    _extToLang[".pyx"] = LangType::L_PYTHON;
     _extToLang[".js"] = LangType::L_JS;
+    _extToLang[".jsx"] = LangType::L_JS;
+    _extToLang[".mjs"] = LangType::L_JS;
+    _extToLang[".cjs"] = LangType::L_JS;
     _extToLang[".json"] = LangType::L_JSON;
     _extToLang[".css"] = LangType::L_CSS;
+    _extToLang[".scss"] = LangType::L_CSS;
     _extToLang[".yaml"] = LangType::L_YAML;
     _extToLang[".yml"] = LangType::L_YAML;
     _extToLang[".makefile"] = LangType::L_MAKEFILE;
+    _extToLang[".mk"] = LangType::L_MAKEFILE;
     _extToLang[".rb"] = LangType::L_RUBY;
     _extToLang[".pl"] = LangType::L_PERL;
+    _extToLang[".pm"] = LangType::L_PERL;
     _extToLang[".lua"] = LangType::L_LUA;
     _extToLang[".md"] = LangType::L_MARKDOWN;
+    _extToLang[".markdown"] = LangType::L_MARKDOWN;
     _extToLang[".bat"] = LangType::L_BATCH;
     _extToLang[".cmd"] = LangType::L_BATCH;
     _extToLang[".ini"] = LangType::L_INI;
+    _extToLang[".sh"] = LangType::L_BASH;
+    _extToLang[".bash"] = LangType::L_BASH;
+    _extToLang[".zsh"] = LangType::L_BASH;
+    _extToLang[".sql"] = LangType::L_SQL;
+    _extToLang[".tex"] = LangType::L_TEX;
+    _extToLang[".diff"] = LangType::L_DIFF;
+    _extToLang[".patch"] = LangType::L_DIFF;
+    _extToLang[".go"] = LangType::L_GO;
+    _extToLang[".rs"] = LangType::L_RUST;
+    _extToLang[".swift"] = LangType::L_SWIFT;
+    _extToLang[".kt"] = LangType::L_KOTLIN;
+    _extToLang[".kts"] = LangType::L_KOTLIN;
+    _extToLang[".scala"] = LangType::L_SCALA;
+    _extToLang[".ts"] = LangType::L_TS;
+    _extToLang[".tsx"] = LangType::L_TS;
+    _extToLang[".lisp"] = LangType::L_LISP;
+    _extToLang[".clj"] = LangType::L_CLOJURE;
+    _extToLang[".hs"] = LangType::L_HASKELL;
+    _extToLang[".erl"] = LangType::L_ERLANG;
+    _extToLang[".ex"] = LangType::L_ELIXIR;
+    _extToLang[".exs"] = LangType::L_ELIXIR;
+    _extToLang[".f90"] = LangType::L_FORTRAN;
+    _extToLang[".f95"] = LangType::L_FORTRAN;
+    _extToLang[".pas"] = LangType::L_PASCAL;
+    _extToLang[".pp"] = LangType::L_PASCAL;
+    _extToLang[".ada"] = LangType::L_ADA;
+    _extToLang[".adb"] = LangType::L_ADA;
+    _extToLang[".v"] = LangType::L_VERILOG;
+    _extToLang[".sv"] = LangType::L_VERILOG;
+    _extToLang[".vhd"] = LangType::L_VHDL;
+    _extToLang[".vhdl"] = LangType::L_VHDL;
+    _extToLang[".asm"] = LangType::L_ASM;
+    _extToLang[".s"] = LangType::L_ASM;
+    _extToLang[".tcl"] = LangType::L_TCL;
+    _extToLang[".ps1"] = LangType::L_POWERSHELL;
+    _extToLang[".psm1"] = LangType::L_POWERSHELL;
+    _extToLang[".nsi"] = LangType::L_NSIS;
+    _extToLang[".dockerfile"] = LangType::L_DOCKERFILE;
+    _extToLang[".cmake"] = LangType::L_CMAKE;
+    _extToLang[".r"] = LangType::L_R;
+    _extToLang[".jl"] = LangType::L_JULIA;
 }
 
 LangType LanguageManager::detectLanguage(const std::string& fileName, const std::string& firstLine) const {
@@ -95,7 +150,9 @@ LangType LanguageManager::detectLanguage(const std::string& fileName, const std:
 }
 
 LangType LanguageManager::detectLanguageFromContent(const std::string& content) const {
-    if (content.find("#!/bin/bash") == 0 || content.find("#!/bin/sh") == 0) return LangType::L_BATCH;
+    if (content.find("#!/bin/bash") == 0 || content.find("#!/bin/sh") == 0 ||
+        content.find("#!/usr/bin/env bash") == 0 || content.find("#!/usr/bin/env sh") == 0)
+        return LangType::L_BASH;
     if (content.find("<?php") != std::string::npos) return LangType::L_PHP;
     if (content.find("<html") != std::string::npos) return LangType::L_HTML;
     if (content.find("{") != std::string::npos && content.find(":") != std::string::npos) return LangType::L_JSON;
@@ -148,7 +205,22 @@ void LanguageManager::setLanguageForExtension(const std::string& ext, LangType l
 }
 
 LangType LanguageManager::getLanguageForExtension(const std::string& ext) const {
-    auto it = _extToLang.find(ext);
+    // Normalize: callers (Buffer ctor, FileManager::detectLanguage) feed us
+    // the bare suffix from QFileInfo::suffix() which excludes the leading dot.
+    // Internal map keys include the dot (".py", ".cpp", ...). Without this
+    // normalization every file ends up mapped to L_TEXT and no lexer is
+    // attached, so syntax highlighting is silently disabled. Accept both forms
+    // and lowercase the input so ".PY" / "PY" work too.
+    if (ext.empty()) return LangType::L_TEXT;
+    std::string e = ext;
+    std::transform(e.begin(), e.end(), e.begin(), ::tolower);
+    if (e.front() != '.') e.insert(e.begin(), '.');
+    auto it = _extToLang.find(e);
+    if (it != _extToLang.end()) return it->second;
+    // Also try without the dot in case the key was inserted bare (defensive:
+    // supports existing callers that prepended a dot via setLanguageForExtension).
+    std::string bare = e.substr(1);
+    it = _extToLang.find(bare);
     return it != _extToLang.end() ? it->second : LangType::L_TEXT;
 }
 
@@ -340,22 +412,73 @@ QsciLexer* LanguageManager::createLexer(LangType lang) {
         case LangType::L_CPP:
         case LangType::L_C:        return new QsciLexerCPP;
         case LangType::L_JAVA:      return new QsciLexerJava;
-        case LangType::L_CS:        return new QsciLexerCSharp;
+        case LangType::L_CS:
+        case LangType::L_CSHARP:    return new QsciLexerCSharp;
         case LangType::L_HTML:      return new QsciLexerHTML;
-        case LangType::L_XML:       return new QsciLexerXML;
+        case LangType::L_XML:
+        case LangType::L_XAML:      return new QsciLexerXML;
         case LangType::L_CSS:       return new QsciLexerCSS;
         case LangType::L_JS:        return new QsciLexerJavaScript;
         case LangType::L_JSON:      return new QsciLexerJSON;
         case LangType::L_MARKDOWN:  return new QsciLexerMarkdown;
-        case LangType::L_MAKEFILE:  return new QsciLexerMakefile;
+        case LangType::L_MAKEFILE:
+        case LangType::L_CMAKE:     return new QsciLexerMakefile;
         case LangType::L_LUA:       return new QsciLexerLua;
         case LangType::L_BATCH:     return new QsciLexerBatch;
+        case LangType::L_BASH:      return new QsciLexerBash;
         case LangType::L_RUBY:      return new QsciLexerRuby;
         case LangType::L_PERL:      return new QsciLexerPerl;
         case LangType::L_PYTHON:    return new QsciLexerPython;
         case LangType::L_YAML:      return new QsciLexerYAML;
-        case LangType::L_OBJC:      return new QsciLexerBash;     // Shell/ObjC scripts use Bash lexer
-        default:                     return nullptr;
+        case LangType::L_OBJC:      return new QsciLexerCPP;     // QScintilla ships no ObjC lexer; fall back to C++ (closest grammar)
+        case LangType::L_SQL:       return new QsciLexerSQL;
+        case LangType::L_TEX:       return new QsciLexerTeX;
+        case LangType::L_DIFF:      return new QsciLexerDiff;
+        // PHP/HTML have no dedicated QScintilla lexer; falling back to HTML is
+        // a best-effort (highlights tags within <?php ... ?> blocks). Returning
+        // nullptr would mean plain text — better to give partial coloring.
+        case LangType::L_PHP:       return new QsciLexerHTML;
+        // Languages without QScintilla coverage -> plain text highlighting.
+        case LangType::L_GO:
+        case LangType::L_RUST:
+        case LangType::L_SWIFT:
+        case LangType::L_KOTLIN:
+        case LangType::L_SCALA:
+        case LangType::L_TS:
+        case LangType::L_LISP:
+        case LangType::L_CLOJURE:
+        case LangType::L_HASKELL:
+        case LangType::L_ERLANG:
+        case LangType::L_ELIXIR:
+        case LangType::L_FORTRAN:
+        case LangType::L_PASCAL:
+        case LangType::L_ADA:
+        case LangType::L_VERILOG:
+        case LangType::L_VHDL:
+        case LangType::L_ASM:
+        case LangType::L_TCL:
+        case LangType::L_POWERSHELL:
+        case LangType::L_NSIS:
+        case LangType::L_NSIS2:
+        case LangType::L_DOCKERFILE:
+        case LangType::L_R:
+        case LangType::L_JULIA:
+        case LangType::L_MATLAB:
+        case LangType::L_NFO:
+        case LangType::L_REGEX:
+        case LangType::L_GRAPHVIZ:
+        case LangType::L_FSHARP:
+        case LangType::L_GROOVY:
+        case LangType::L_WEBASSEMBLY:
+        case LangType::L_PROPERTIES:
+            // No QScintilla coverage — leave as plain text (lexer == nullptr).
+            return nullptr;
+        case LangType::L_TEXT:
+        case LangType::L_USER:
+        case LangType::L_EXTERNAL:
+        case LangType::L_REGISTRY:
+        default:
+            return nullptr;
     }
 }
 
