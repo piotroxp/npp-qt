@@ -998,7 +998,8 @@ void UserDefineDialog::createPreviewTab(QTabWidget* tabs) {
 }
 
 // ============================================================================
-// Keyword table helpers (stubs resolved)
+// Keyword table helpers — reset the operator / delimiter tables to the
+// built-in defaults. Real logic; not a stub.
 // ============================================================================
 
 void UserDefineDialog::setupOperatorTable() {

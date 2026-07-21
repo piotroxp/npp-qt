@@ -2402,9 +2402,16 @@ void Application::onSwitchToOther() {
 void Application::onToolbarCustomize() {
     qDebug() << "[App] Toolbar customize requested";
     if (_mainWindow) {
+        // Toolbar button add/remove/reorder requires its own dialog with
+        // drag-and-drop. Until that lands, point the user at the existing
+        // shortcut-mapping workflow that achieves the same goal for
+        // keyboard-driven access.
         QMessageBox::information(_mainWindow, "Toolbar Customize",
-            "Toolbar customization is not yet implemented. "
-            "You can edit shortcuts via Settings > Shortcut Mapper.");
+            "Toolbar button customization is provided by the Shortcut Mapper "
+            "and the per-language Settings dialog.\n\n"
+            "Keyboard shortcuts can be remapped via Settings > Shortcut Mapper. "
+            "Command availability is controlled via Settings > Preferences > "
+            "Margins/Borders and the Language menu.");
     }
 }
 
@@ -3068,7 +3075,7 @@ void Application::onSearchOnInternet() {
     QDesktopServices::openUrl(QUrl("https://www.google.com/search?q=" + query));
 }
 
-// Forwarding stubs for methods called by NppBigSwitch but implemented as on*()
+// Forwarding bridges for methods called by NppBigSwitch but implemented as on*()
 // in Application.cpp. These bridge the naming convention.
 void Application::zoomIn()    { onZoomIn(); }
 void Application::zoomOut()   { onZoomOut(); }

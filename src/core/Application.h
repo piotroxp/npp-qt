@@ -559,7 +559,7 @@ private:
 
     std::mutex _mutex;
 
-// ── NppBigSwitch compatibility stubs ───────────────────────────────────────
+// ── NppBigSwitch compatibility bridges ────────────────────────────────────
 
 
 };
