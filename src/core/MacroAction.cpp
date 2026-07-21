@@ -5,6 +5,7 @@
 #include "editor/ScintillaEditor.h"
 #include <Qsci/qsciscintilla.h>
 #include <QByteArray>
+#include <QMetaType>
 
 // ============================================================================
 // MacroAction
@@ -48,7 +49,10 @@ QVariantMap MacroAction::toJson() const {
 void MacroAction::fromJson(const QVariantMap& map) {
     _command = map["id"].toInt();
     QVariant v = map["param"];
-    if (v.canConvert<QString>()) {
+    // Discriminate by actual stored type, not by canConvert. Qt6's QVariant
+    // is permissive enough that QVariant(7).canConvert<QString>() returns
+    // true, which would silently round-trip int actions as string actions.
+    if (v.typeId() == QMetaType::QString) {
         _hasStringParam = true;
         _stringParam = v.toString();
         _intParam = 0;
